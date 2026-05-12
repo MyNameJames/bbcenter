@@ -1,0 +1,41 @@
+{# ════════════════════════════════════════════════════════════════════
+   Notification Panel (dropdown)
+   ใช้ร่วมกับ notification.js + notification.css
+   วาง <div> ภายใน _header.html โดยครอบ button + panel ไว้ใน wrapper เดียวกัน
+   ════════════════════════════════════════════════════════════════════ #}
+
+<div class="notif-bell-wrap" id="notifBellWrap">
+    {# ── Bell button ── #}
+    <button type="button" class="ds-btn-icon rounded-3 bg-white"
+            id="notifBellBtn" title="การแจ้งเตือน" aria-label="การแจ้งเตือน">
+        <i class="fa-regular fa-bell" style="font-size:.9rem;"></i>
+        <span id="notifBadge" class="notif-badge" aria-hidden="true"></span>
+    </button>
+
+    {# ── Dropdown panel ── #}
+    <div class="notif-panel" id="notifPanel" role="dialog" aria-label="การแจ้งเตือน">
+        {# Header #}
+        <div class="notif-panel-head d-flex align-items-center justify-content-between">
+            <button type="button" class="notif-mobile-back" id="notifMobileBack"
+                    aria-label="ย้อนกลับ">
+                <i class="fa-solid fa-arrow-left ps-3"></i>
+            </button>
+            <div class="notif-panel-title p-3">
+                <i class="fa-regular fa-bell"></i>
+                <span class="ps-2 fw-bold">การแจ้งเตือน</span>
+            </div>
+            <div class="notif-panel-title p-3">
+            </div>
+        </div>
+
+        {# Tabs #}
+        <div class="notif-tabs" id="notifTabs" role="tablist"></div>
+
+        {# Body — sticky payment + list #}
+        <div class="notif-body" id="notifBody">
+            <div class="notif-sticky-section notif-sticky-section-empty"
+                 id="notifStickySection"></div>
+            <div class="notif-list" id="notifList"></div>
+        </div>
+    </div>
+</div>

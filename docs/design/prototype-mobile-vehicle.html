@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototype — Mobile Card + Animation</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+/* ════════════════════════════════════════
+   TOKENS
+════════════════════════════════════════ */
+:root {
+  --primary:     #4F46E5;
+  --primary-lt:  #EEF2FF;
+  --amber:       #F59E0B; --amber-lt: #FEF3C7; --amber-dk: #92400E;
+  --blue:        #3B82F6; --blue-lt:  #DBEAFE; --blue-dk:  #1E40AF;
+  --green:       #10B981; --green-lt: #D1FAE5; --green-dk: #065F46;
+  --red:         #EF4444; --red-lt:   #FEE2E2; --red-dk:   #991B1B;
+  --purple:      #7C3AED; --purple-lt:#EDE9FE; --purple-dk:#4C1D95;
+  --text:   #1C1433;
+  --text-2: #6B7280;
+  --text-3: #9CA3AF;
+  --border: #E5E7EB;
+  --bg:     #F3F4F6;
+  --white:  #ffffff;
+  --radius: 12px;
+  --font: 'Sarabun', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: #0f0f1a;
+  min-height: 100vh;
+  padding: 0;
+  color: var(--text);
+}
+
+/* ════════════════════════════════════════
+   PAGE LAYOUT
+════════════════════════════════════════ */
+.page-wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+.page-title {
+  text-align: center;
+  color: #fff;
+  margin-bottom: 40px;
+}
+.page-title h1 {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+.page-title p { font-size: .95rem; color: #aaa; margin-top: 4px; }
+
+/* ════════════════════════════════════════
+   SECTION HEADER
+════════════════════════════════════════ */
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.section-num {
+  width: 32px; height: 32px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: .9rem;
+  flex-shrink: 0;
+}
+.section-title { color: #fff; font-size: 1.25rem; font-weight: 700; }
+.section-sub   { color: #888; font-size: .85rem; margin-top: 2px; }
+
+/* ════════════════════════════════════════
+   PHONE FRAME
+════════════════════════════════════════ */
+.phone-shell {
+  width: 360px;
+  flex-shrink: 0;
+  background: #1c1c2e;
+  border-radius: 36px;
+  padding: 16px;
+  box-shadow:
+    0 0 0 2px #333,
+    0 0 0 6px #111,
+    0 30px 60px rgba(0,0,0,.7);
+  position: relative;
+}
+.phone-shell::before {
+  content: '';
+  position: absolute;
+  top: 28px; left: 50%; transform: translateX(-50%);
+  width: 80px; height: 6px;
+  background: #333;
+  border-radius: 3px;
+}
+.phone-screen {
+  background: var(--bg);
+  border-radius: 22px;
+  overflow: hidden;
+  height: 680px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ── Status bar ── */
+.p-statusbar {
+  height: 32px;
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  font-size: .72rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ── Header ── */
+.p-header {
+  height: 50px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.p-header-icon { font-size: 1.1rem; color: var(--text-2); }
+.p-header-title { font-weight: 700; font-size: .95rem; flex: 1; }
+.p-avatar {
+  width: 28px; height: 28px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem; font-weight: 700;
+}
+
+/* ── Scrollable body ── */
+.p-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.p-body::-webkit-scrollbar { display: none; }
+
+.p-inner { padding: 12px 12px 24px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ── Toolbar ── */
+.p-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.p-nav-group { display: flex; align-items: center; gap: 4px; }
+.p-nav-btn {
+  width: 28px; height: 28px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem;
+  cursor: pointer;
+}
+.p-month-label { font-weight: 700; font-size: .88rem; padding: 0 8px; }
+
+/* ── Calendar (compact mobile) ── */
+.p-calendar {
+  background: var(--white);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: height .35s cubic-bezier(.4,0,.2,1);
+}
+.p-cal-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--border);
+  padding: 4px 0;
+}
+.p-cal-head span {
+  text-align: center;
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--text-2);
+  padding: 3px 0;
+}
+.p-cal-head span:first-child { color: var(--red); }
+.p-cal-head span:last-child  { color: var(--blue); }
+
+.p-cal-body { display: flex; flex-direction: column; }
+.p-cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  overflow: hidden;
+  /* --- animation states set by JS --- */
+}
+
+/* ── Animation A: max-height ── */
+.anim-maxheight .p-cal-week {
+  transition: max-height .35s cubic-bezier(.4,0,.2,1), opacity .35s ease;
+}
+.anim-maxheight .p-cal-week.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+.anim-maxheight .p-cal-week.visible {
+  max-height: 60px;
+  opacity: 1;
+}
+
+/* ── Animation B: transform + opacity ── */
+.anim-transform .p-cal-week {
+  transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease, max-height .35s ease;
+}
+.anim-transform .p-cal-week.collapsed {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.anim-transform .p-cal-week.visible {
+  max-height: 60px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Animation C: instant ── */
+.anim-instant .p-cal-week.collapsed { display: none; }
+.anim-instant .p-cal-week.visible   { display: grid; }
+
+/* ── Day cell ── */
+.p-day {
+  padding: 5px 2px 4px;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  -webkit-tap-highlight-color: transparent;
+}
+.p-day-num {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .78rem;
+  font-weight: 500;
+  border-radius: 50%;
+  transition: background .15s, color .15s;
+}
+.p-day.other-month .p-day-num { opacity: .25; }
+.p-day.today .p-day-num {
+  background: var(--amber);
+  color: #fff;
+  font-weight: 700;
+}
+.p-day.selected .p-day-num {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* dot indicators */
+.p-dots {
+  display: flex; gap: 2px; justify-content: center;
+  min-height: 5px;
+}
+.p-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+}
+.p-dot.pending  { background: var(--amber); }
+.p-dot.approved { background: var(--green); }
+.p-dot.waiting  { background: var(--blue); }
+.p-dot.rejected { background: var(--red); }
+
+/* collapse handle */
+.p-cal-handle {
+  text-align: center;
+  padding: 4px 0 2px;
+  cursor: pointer;
+  border-top: 1px solid var(--border);
+}
+.p-cal-handle i { font-size: .85rem; color: var(--text-3); }
+
+/* ── List header ── */
+.p-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.p-list-date { font-weight: 700; font-size: .92rem; color: var(--text); }
+.p-list-sub  { font-size: .75rem; color: var(--text-2); margin-top: 1px; }
+.p-book-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 14px;
+  font-size: .82rem;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ════════════════════════════════════════
+   CARD STYLES
+════════════════════════════════════════ */
+
+/* ── Shared card base ── */
+.p-card {
+  background: var(--white);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  cursor: pointer;
+  transition: box-shadow .15s;
+}
+.p-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+.p-card.pending  { border-left-color: var(--amber); }
+.p-card.approved { border-left-color: var(--green); }
+.p-card.waiting  { border-left-color: var(--blue); }
+.p-card.rejected { border-left-color: var(--red); }
+.p-card.group    { border-left-color: var(--purple); }
+
+/* badge */
+.p-badge {
+  display: inline-flex; align-items: center;
+  font-size: .68rem; font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  line-height: 1.4;
+}
+.p-badge.pending  { background: var(--amber-lt);  color: var(--amber-dk); }
+.p-badge.approved { background: var(--green-lt);  color: var(--green-dk); }
+.p-badge.waiting  { background: var(--blue-lt);   color: var(--blue-dk);  }
+.p-badge.rejected { background: var(--red-lt);    color: var(--red-dk);   }
+.p-badge.group    { background: var(--purple-lt); color: var(--purple-dk);}
+
+/* ──────────────────────────────────────
+   CARD A — Full card (vertical)
+────────────────────────────────────── */
+.card-a {
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.card-a .ca-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+.card-a .ca-time {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.card-a .ca-dest {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.card-a .ca-meta {
+  font-size: .75rem;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.card-a .ca-meta i { font-size: .72rem; }
+.card-a .ca-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+.card-a .ca-car {
+  font-size: .72rem;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ──────────────────────────────────────
+   CARD B — Compact horizontal
+────────────────────────────────────── */
+.card-b {
+  padding: 9px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.card-b .cb-time {
+  min-width: 46px;
+  text-align: center;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+.card-b .cb-time .t-start {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+}
+.card-b .cb-time .t-end {
+  font-size: .7rem;
+  color: var(--text-3);
+  display: block;
+}
+.card-b .cb-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.card-b .cb-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.card-b .cb-dest {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-b .cb-meta {
+  font-size: .73rem;
+  color: var(--text-2);
+  display: flex; align-items: center; gap: 4px;
+}
+.card-b .cb-meta i { font-size: .7rem; }
+.card-b .cb-bottom {
+  display: flex; align-items: center;
+  gap: 6px;
+  margin-top: 1px;
+}
+
+/* ──────────────────────────────────────
+   CARD C — Timeline style
+────────────────────────────────────── */
+.card-c-wrap {
+  display: flex;
+  gap: 0;
+  background: var(--white);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow .15s;
+}
+.card-c-wrap:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+.card-c-stripe {
+  width: 4px;
+  flex-shrink: 0;
+}
+.card-c-stripe.pending  { background: var(--amber); }
+.card-c-stripe.approved { background: var(--green); }
+.card-c-stripe.waiting  { background: var(--blue); }
+.card-c-stripe.rejected { background: var(--red); }
+.card-c-stripe.group    { background: var(--purple); }
+
+.card-c {
+  flex: 1;
+  padding: 8px 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-c .cc-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem;
+  flex-shrink: 0;
+}
+.cc-icon.pending  { background: var(--amber-lt);  color: var(--amber); }
+.cc-icon.approved { background: var(--green-lt);  color: var(--green); }
+.cc-icon.waiting  { background: var(--blue-lt);   color: var(--blue); }
+.cc-icon.rejected { background: var(--red-lt);    color: var(--red); }
+.cc-icon.group    { background: var(--purple-lt); color: var(--purple);}
+
+.card-c .cc-info {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.card-c .cc-dest {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-c .cc-sub {
+  font-size: .72rem;
+  color: var(--text-2);
+  display: flex; align-items: center; gap: 4px;
+}
+.card-c .cc-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0;
+}
+.card-c .cc-time {
+  font-size: .78rem; font-weight: 700; color: var(--text);
+}
+.card-c .cc-time-end { font-size: .68rem; color: var(--text-3); }
+
+/* ════════════════════════════════════════
+   SELECTION UI (outside phone)
+════════════════════════════════════════ */
+.pick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.pick-btn {
+  padding: 10px 12px;
+  border: 2px solid #333;
+  border-radius: 10px;
+  background: #1a1a2e;
+  color: #aaa;
+  font-family: var(--font);
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all .18s;
+}
+.pick-btn:hover { border-color: #666; color: #fff; }
+.pick-btn.active {
+  border-color: var(--primary);
+  background: #2d2b5e;
+  color: #a5b4fc;
+}
+
+.pick-2 { grid-template-columns: 1fr 1fr; }
+.pick-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* choose button */
+.choose-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font);
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.choose-btn:hover { background: #3730a3; }
+.choose-btn:disabled {
+  background: #333; color: #666; cursor: not-allowed;
+}
+
+/* ════════════════════════════════════════
+   SECTION BOX
+════════════════════════════════════════ */
+.section-box {
+  background: #13131f;
+  border: 1px solid #2a2a3e;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.section-box-inner {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+/* controls column */
+.ctrl-col {
+  flex: 1;
+  min-width: 260px;
+}
+.ctrl-col h3 { color: #fff; font-size: 1rem; margin-bottom: 6px; }
+.ctrl-col p  { color: #888; font-size: .85rem; margin-bottom: 14px; line-height: 1.5; }
+
+.description-box {
+  background: #1e1e30;
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 10px;
+}
+.description-box .db-title { color: #a5b4fc; font-weight: 700; font-size: .88rem; margin-bottom: 6px; }
+.description-box ul { padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
+.description-box ul li { color: #aaa; font-size: .82rem; line-height: 1.5; }
+.description-box ul li b { color: #e2e8f0; }
+
+/* ════════════════════════════════════════
+   SUMMARY / CONFIRM SECTION
+════════════════════════════════════════ */
+.summary-box {
+  background: #13131f;
+  border: 1px solid #2a2a3e;
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+}
+.summary-box h2 { color: #fff; font-size: 1.4rem; margin-bottom: 8px; }
+.summary-box p  { color: #888; font-size: .9rem; margin-bottom: 24px; }
+
+.choice-display {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.choice-item {
+  background: #1e1e30;
+  border: 1px solid #2a2a3e;
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: left;
+}
+.choice-item label { color: #888; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 4px; }
+.choice-item .cv   { color: #a5b4fc; font-size: 1.05rem; font-weight: 700; }
+
+.confirm-btn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.confirm-btn:hover { opacity: .9; }
+.confirm-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+/* empty state */
+.empty-state {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--text-3);
+  font-size: .82rem;
+}
+.empty-state i { font-size: 1.8rem; display: block; margin-bottom: 8px; opacity: .4; }
+
+/* scroll hint */
+.scroll-hint {
+  text-align: center;
+  padding: 8px;
+  background: #1e1e30;
+  border: 1px dashed #333;
+  border-radius: 8px;
+  color: #666;
+  font-size: .8rem;
+  margin-bottom: 12px;
+}
+.scroll-hint i { margin-right: 4px; }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- ── Page title ── -->
+  <div class="page-title">
+    <h1>Interactive Prototype — Mobile /vehicle</h1>
+    <p>เลือก card design + animation style แล้วกด Confirm เพื่อ implement จริง</p>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════
+       SECTION 1: MOBILE CARD DESIGN
+  ════════════════════════════════════════════ -->
+  <div class="section-box">
+    <div class="section-head" style="margin-bottom:20px;">
+      <div class="section-num">1</div>
+      <div>
+        <div class="section-title">Mobile Card Design</div>
+        <div class="section-sub">เลือก style ของ card แสดงรายการจองใต้ปฏิทิน</div>
+      </div>
+    </div>
+
+    <div class="section-box-inner">
+
+      <!-- Phone -->
+      <div class="phone-shell" id="phone1">
+        <div class="phone-screen">
+          <div class="p-statusbar"><span>9:41</span><span>⚡ 88%</span></div>
+          <div class="p-header">
+            <i class="bi bi-list p-header-icon"></i>
+            <span class="p-header-title">ปฏิทินจองรถ</span>
+            <div class="p-avatar">JS</div>
+          </div>
+          <div class="p-body" id="body1">
+            <div class="p-inner">
+
+              <!-- toolbar -->
+              <div class="p-toolbar">
+                <div class="p-nav-group">
+                  <div class="p-nav-btn"><i class="bi bi-chevron-left" style="font-size:.6rem;"></i></div>
+                  <span class="p-month-label">เมษายน 2569</span>
+                  <div class="p-nav-btn"><i class="bi bi-chevron-right" style="font-size:.6rem;"></i></div>
+                </div>
+              </div>
+
+              <!-- calendar compact -->
+              <div class="p-calendar" id="cal1">
+                <div class="p-cal-head">
+                  <span>อา</span><span>จ</span><span>อ</span>
+                  <span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span>
+                </div>
+                <div class="p-cal-body" id="calBody1"></div>
+                <div class="p-cal-handle" id="handle1">
+                  <i class="bi bi-chevron-compact-down"></i>
+                </div>
+              </div>
+
+              <!-- list header -->
+              <div class="p-list-head">
+                <div>
+                  <div class="p-list-date" id="listDate1">9 เมษายน 2569</div>
+                  <div class="p-list-sub" id="listSub1">2 รายการ</div>
+                </div>
+                <button class="p-book-btn"><i class="bi bi-plus-circle-fill"></i> จองรถ</button>
+              </div>
+
+              <!-- cards rendered here -->
+              <div id="cardList1"></div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="ctrl-col">
+        <h3>เลือก Card Style</h3>
+        <p>ดูตัวอย่างใน phone → กดเลือก style ที่ชอบ</p>
+
+        <div class="pick-grid pick-3">
+          <button class="pick-btn active" data-card="A" onclick="selectCard('A',this)">
+            A — Full card
+          </button>
+          <button class="pick-btn" data-card="B" onclick="selectCard('B',this)">
+            B — Compact
+          </button>
+          <button class="pick-btn" data-card="C" onclick="selectCard('C',this)">
+            C — Timeline
+          </button>
+        </div>
+
+        <div class="description-box" id="cardDesc">
+          <div class="db-title">A — Full card</div>
+          <ul>
+            <li><b>เห็นข้อมูลครบ</b> — เวลา, ปลายทาง, ชื่อผู้จอง, รถ, badge status</li>
+            <li><b>ดีสำหรับ</b> admin ที่ต้องการดูรายละเอียดทุกอย่างในทันที</li>
+            <li><b>ข้อเสีย</b> — กินพื้นที่มาก ถ้ามีหลาย event ต้อง scroll เยอะ</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════
+       SECTION 2: COLLAPSE ANIMATION
+  ════════════════════════════════════════════ -->
+  <div class="section-box">
+    <div class="section-head" style="margin-bottom:20px;">
+      <div class="section-num">2</div>
+      <div>
+        <div class="section-title">Calendar Collapse Animation</div>
+        <div class="section-sub">เลือก animation เมื่อปฏิทินพับ/ขยาย (scroll list หรือกด ▲▼)</div>
+      </div>
+    </div>
+
+    <div class="section-box-inner">
+
+      <!-- Phone -->
+      <div class="phone-shell" id="phone2">
+        <div class="phone-screen">
+          <div class="p-statusbar"><span>9:41</span><span>⚡ 88%</span></div>
+          <div class="p-header">
+            <i class="bi bi-list p-header-icon"></i>
+            <span class="p-header-title">ปฏิทินจองรถ</span>
+            <div class="p-avatar">JS</div>
+          </div>
+          <div class="p-body" id="body2">
+            <div class="p-inner">
+
+              <div class="p-toolbar">
+                <div class="p-nav-group">
+                  <div class="p-nav-btn"><i class="bi bi-chevron-left" style="font-size:.6rem;"></i></div>
+                  <span class="p-month-label">เมษายน 2569</span>
+                  <div class="p-nav-btn"><i class="bi bi-chevron-right" style="font-size:.6rem;"></i></div>
+                </div>
+              </div>
+
+              <div class="p-calendar anim-maxheight" id="cal2">
+                <div class="p-cal-head">
+                  <span>อา</span><span>จ</span><span>อ</span>
+                  <span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span>
+                </div>
+                <div class="p-cal-body" id="calBody2"></div>
+                <div class="p-cal-handle" id="handle2">
+                  <i class="bi bi-chevron-compact-down" id="handleIcon2"></i>
+                </div>
+              </div>
+
+              <div class="p-list-head">
+                <div>
+                  <div class="p-list-date">9 เมษายน 2569</div>
+                  <div class="p-list-sub">2 รายการ</div>
+                </div>
+                <button class="p-book-btn"><i class="bi bi-plus-circle-fill"></i> จองรถ</button>
+              </div>
+
+              <!-- Long list to enable scroll -->
+              <div id="cardList2"></div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="ctrl-col">
+        <h3>เลือก Animation</h3>
+        <p>กดปุ่มด้านล่างเพื่อเปลี่ยน style — จากนั้นกด ▼ บน phone เพื่อดู animation</p>
+
+        <div class="pick-grid pick-3">
+          <button class="pick-btn active" data-anim="maxheight" onclick="selectAnim('maxheight',this)">
+            1 — max-height
+          </button>
+          <button class="pick-btn" data-anim="transform" onclick="selectAnim('transform',this)">
+            2 — slide+fade
+          </button>
+          <button class="pick-btn" data-anim="instant" onclick="selectAnim('instant',this)">
+            3 — instant
+          </button>
+        </div>
+
+        <div class="description-box" id="animDesc">
+          <div class="db-title">1 — max-height transition</div>
+          <ul>
+            <li><b>smooth</b> — ปฏิทินค่อยๆ ย่อ/ขยายตาม content height</li>
+            <li><b>ข้อเสีย</b> — ต้องกำหนด max-height fixed (ไม่ใช่ auto) อาจ clip เล็กน้อย</li>
+            <li><b>เหมาะกับ</b> UI ที่ต้องการ feel นุ่มนวล ไม่รีบ</li>
+          </ul>
+        </div>
+
+        <!-- Manual trigger buttons -->
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <button class="choose-btn" style="margin:0; flex:1; padding:9px;" onclick="toggleCollapse2()">
+            <i class="bi bi-arrows-collapse" id="collapseToggleIcon"></i>
+            <span id="collapseToggleLabel">พับปฏิทิน</span>
+          </button>
+        </div>
+        <p style="color:#666; font-size:.75rem; margin-top:8px; text-align:center;">
+          หรือ scroll ลงในหน้า phone เพื่อพับ / scroll ขึ้นเพื่อขยาย
+        </p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════
+       SECTION 3: CONFIRM
+  ════════════════════════════════════════════ -->
+  <div class="summary-box">
+    <h2>สรุปการเลือก</h2>
+    <p>ยืนยันเพื่อดำเนินการ implement จริงใน vehicle.html + vehicle.css + vehicle.js</p>
+
+    <div class="choice-display">
+      <div class="choice-item">
+        <label>Mobile Card Style</label>
+        <div class="cv" id="summaryCard">A — Full card</div>
+      </div>
+      <div class="choice-item">
+        <label>Collapse Animation</label>
+        <div class="cv" id="summaryAnim">1 — max-height</div>
+      </div>
+    </div>
+
+    <button class="confirm-btn" id="confirmBtn" onclick="handleConfirm()">
+      ยืนยัน — เริ่ม Implement
+    </button>
+  </div>
+
+</div><!-- /page-wrap -->
+
+
+<script>
+// ════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════
+const EVENTS = [
+  { date:'2026-04-01', time:'08:00', timeEnd:'12:00', dest:'กรุงเทพมหานคร', purpose:'ส่งเอกสารกระทรวง', booker:'นายสมชาย ดำรงค์', dept:'กองบริหาร', status:'approved', car:'Toyota Fortuner (กข-1234)', driver:'นายประสิทธิ์', pax:2, isOwner:false },
+  { date:'2026-04-03', time:'09:00', timeEnd:'11:00', dest:'นครสวรรค์', purpose:'ประชุมประจำเดือน', booker:'นางสาวมาลี วิเชียร', dept:'กองวิชาการ', status:'pending', car:'', driver:'', pax:3, isOwner:false },
+  { date:'2026-04-03', time:'13:00', timeEnd:'16:00', dest:'อยุธยา', purpose:'ตรวจโครงการ', booker:'นายวิชาญ สุขใจ', dept:'กองโครงการ', status:'waiting', car:'', driver:'', pax:4, isOwner:false },
+  { date:'2026-04-06', time:'07:30', timeEnd:'17:00', dest:'เชียงใหม่', purpose:'อบรมประจำปี', booker:'นายสมศักดิ์ ทวีชัย', dept:'กองพัสดุ', status:'approved', car:'Honda CRV (งง-5678)', driver:'นายสุรชัย', pax:5, isOwner:false, tripGroup:'TRP-001' },
+  { date:'2026-04-08', time:'10:00', timeEnd:'14:00', dest:'พระนครศรีอยุธยา', purpose:'สำรวจพื้นที่', booker:'นางปิยะนุช เจริญ', dept:'กองแผน', status:'rejected', car:'', driver:'', pax:2, isOwner:false },
+  { date:'2026-04-09', time:'08:30', timeEnd:'10:00', dest:'กรุงเทพมหานคร', purpose:'ส่งเอกสารกระทรวงมหาดไทย', booker:'นายสมชาย ดำรงค์', dept:'กองบริหาร', status:'approved', car:'Toyota Fortuner (กข-1234)', driver:'นายประสิทธิ์ 081-234-5678', pax:2, isOwner:false },
+  { date:'2026-04-09', time:'11:00', timeEnd:'13:30', dest:'นนทบุรี', purpose:'ประชุมร่วมกับหน่วยงานภายนอก', booker:'นายเจมส์ จิ', dept:'กองบริหาร', status:'pending', car:'', driver:'', pax:3, isOwner:true },
+  { date:'2026-04-12', time:'07:00', timeEnd:'09:00', dest:'สุพรรณบุรี', purpose:'ส่งพัสดุด่วน', booker:'นางวรรณา สดใส', dept:'กองพัสดุ', status:'approved', car:'Toyota Hilux (งง-9999)', driver:'นายมานะ', pax:1, isOwner:false },
+  { date:'2026-04-14', time:'08:00', timeEnd:'12:00', dest:'กรุงเทพฯ', purpose:'อบรมพัฒนาบุคลากร', booker:'นายธีรพงษ์ สว่าง', dept:'กองบุคคล', status:'pending', car:'', driver:'', pax:6, isOwner:false },
+  { date:'2026-04-14', time:'13:00', timeEnd:'16:00', dest:'ปทุมธานี', purpose:'ส่งงานเร่งด่วน', booker:'นางสาวรัตนา ชัยดี', dept:'กองบริหาร', status:'approved', car:'Toyota Fortuner (กข-1234)', driver:'นายประสิทธิ์', pax:2, isOwner:false },
+  { date:'2026-04-23', time:'09:30', timeEnd:'14:00', dest:'ระยอง', purpose:'ดูงานโรงงาน', booker:'นายวีรชาติ แก้วใส', dept:'กองวิชาการ', status:'approved', car:'Honda CRV (งง-5678)', driver:'นายสุรชัย', pax:4, isOwner:false, tripGroup:'TRP-002' },
+];
+
+const TODAY = '2026-04-09';
+const SELECTED_DATE = '2026-04-09';
+let selectedCard = 'A';
+let selectedAnim = 'maxheight';
+let isCollapsed2 = false;
+
+// ════════════════════════════════════════
+// CARD RENDERERS
+// ════════════════════════════════════════
+const STATUS_ICON = {
+  pending:'bi-clock', waiting:'bi-person-fill', approved:'bi-check-circle-fill',
+  rejected:'bi-x-circle-fill', group:'bi-people-fill'
+};
+const STATUS_LABEL = {
+  pending:'รออนุมัติ', waiting:'รอผู้ประสาน', approved:'อนุมัติแล้ว', rejected:'ไม่อนุมัติ', group:'ทริปกลุ่ม'
+};
+
+function renderCardA(e) {
+  const st = e.tripGroup ? 'group' : e.status;
+  return `
+    <div class="p-card ${st} card-a">
+      <div class="ca-top">
+        <div>
+          <div class="ca-time">${e.time} – ${e.timeEnd}</div>
+          <div class="ca-dest">${e.dest}</div>
+        </div>
+        <span class="p-badge ${st}">${STATUS_LABEL[st]||STATUS_LABEL[e.status]}</span>
+      </div>
+      <div class="ca-meta">
+        <i class="bi bi-person"></i>${e.booker}
+        <span style="color:#d1d5db;">·</span>
+        <i class="bi bi-people"></i>${e.pax} คน
+      </div>
+      <div class="ca-footer">
+        <div class="ca-car">
+          <i class="bi bi-car-front"></i>
+          ${e.car ? e.car : '<span style="color:#d1d5db;">ยังไม่ assign รถ</span>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCardB(e) {
+  const st = e.tripGroup ? 'group' : e.status;
+  return `
+    <div class="p-card ${st} card-b">
+      <div class="cb-time">
+        <span class="t-start">${e.time}</span>
+        <span class="t-end">${e.timeEnd}</span>
+      </div>
+      <div class="cb-divider"></div>
+      <div class="cb-info">
+        <div class="cb-dest">${e.dest}</div>
+        <div class="cb-meta">
+          <i class="bi bi-person"></i>${e.booker.split(' ')[0]} ${e.booker.split(' ')[1]||''}
+        </div>
+        <div class="cb-bottom">
+          <span class="p-badge ${st}">${STATUS_LABEL[st]||STATUS_LABEL[e.status]}</span>
+          ${e.car ? `<span style="font-size:.68rem;color:#9ca3af;"><i class="bi bi-car-front"></i> ${e.car.split('(')[0].trim()}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCardC(e) {
+  const st = e.tripGroup ? 'group' : e.status;
+  const icons = { pending:'bi-clock',waiting:'bi-person-fill',approved:'bi-check-circle-fill',rejected:'bi-x-circle-fill',group:'bi-people-fill' };
+  return `
+    <div class="card-c-wrap">
+      <div class="card-c-stripe ${st}"></div>
+      <div class="card-c">
+        <div class="cc-icon ${st}"><i class="bi ${icons[st]||icons[e.status]}"></i></div>
+        <div class="cc-info">
+          <div class="cc-dest">${e.dest}</div>
+          <div class="cc-sub"><i class="bi bi-person" style="font-size:.68rem;"></i>${e.booker.split(' ')[0]} · <span class="p-badge ${st}" style="font-size:.65rem; padding:1px 5px;">${STATUS_LABEL[st]||STATUS_LABEL[e.status]}</span></div>
+        </div>
+        <div class="cc-right">
+          <div class="cc-time">${e.time}</div>
+          <div class="cc-time-end">${e.timeEnd}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCards(events, containerId, style) {
+  const el = document.getElementById(containerId);
+  if (!events.length) {
+    el.innerHTML = `<div class="empty-state"><i class="bi bi-calendar-x"></i>ไม่มีรายการจองวันนี้</div>`;
+    return;
+  }
+  const fn = style==='A' ? renderCardA : style==='B' ? renderCardB : renderCardC;
+  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' +
+    events.map(fn).join('') + '</div>';
+}
+
+// ════════════════════════════════════════
+// CALENDAR RENDERER
+// ════════════════════════════════════════
+function buildCalendar(bodyId, selectedDs, interactive=false) {
+  const [y,m] = [2026, 3]; // April 2026 (month index 3)
+  const firstDay = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const daysInPrev  = new Date(y,m,0).getDate();
+  const body = document.getElementById(bodyId);
+
+  let days = [];
+  // prev month
+  for(let i=firstDay-1;i>=0;i--) days.push({d:daysInPrev-i, ds:`2026-03-${String(daysInPrev-i).padStart(2,'0')}`, other:true});
+  // this month
+  for(let i=1;i<=daysInMonth;i++){
+    const ds=`2026-04-${String(i).padStart(2,'0')}`;
+    days.push({d:i, ds, other:false, isToday:ds===TODAY, isSelected:ds===selectedDs});
+  }
+  // next
+  while(days.length%7!==0) { const n=days.length-firstDay-daysInMonth+1; days.push({d:n,ds:`2026-05-${String(n).padStart(2,'0')}`,other:true}); }
+
+  // render weeks
+  body.innerHTML='';
+  for(let r=0;r<days.length;r+=7){
+    const week = document.createElement('div');
+    week.className = 'p-cal-week visible';
+    week.dataset.row = r/7;
+    const slice = days.slice(r,r+7);
+    week.innerHTML = slice.map(day=>{
+      if(day.other) return `<div class="p-day other-month"><div class="p-day-num">${day.d}</div></div>`;
+      const dayEvs = EVENTS.filter(e=>e.date===day.ds);
+      const cls = `p-day${day.isToday?' today':''}${day.isSelected?' selected':''}`;
+      const dots = dayEvs.slice(0,3).map(e=>{
+        const st = e.tripGroup?'group':e.status;
+        return `<div class="p-dot ${st==='group'?'approved':st}"></div>`;
+      }).join('');
+      return `<div class="${cls}" data-ds="${day.ds}">
+        <div class="p-day-num">${day.d}</div>
+        <div class="p-dots">${dots}</div>
+      </div>`;
+    }).join('');
+    body.appendChild(week);
+  }
+}
+
+// ════════════════════════════════════════
+// CARD SELECTION
+// ════════════════════════════════════════
+const CARD_DESC = {
+  A: {
+    title:'A — Full card',
+    items:[
+      '<b>ข้อมูลครบ</b> — เวลา, ปลายทาง, ชื่อผู้จอง, รถ, badge status ในบัตรเดียว',
+      '<b>ดีสำหรับ</b> — ผู้ใช้ที่ต้องการ scan ข้อมูลทีเดียว ไม่ต้องกดเปิด',
+      '<b>ข้อเสีย</b> — กินพื้นที่ ~80px ต่อ card ถ้ามีหลาย event ต้อง scroll'
+    ]
+  },
+  B: {
+    title:'B — Compact horizontal (time | info)',
+    items:[
+      '<b>ประหยัดพื้นที่</b> — แสดง ~55px ต่อ card เห็นได้มากกว่า 30%',
+      '<b>เวลาโดดเด่น</b> — column ซ้ายเน้นเวลา เหมาะ scan เร็ว',
+      '<b>ข้อเสีย</b> — ชื่อปลายทางอาจถูก truncate ถ้ายาว'
+    ]
+  },
+  C: {
+    title:'C — Timeline (stripe + icon + info)',
+    items:[
+      '<b>Visual ชัดเจน</b> — icon บอก status แวบเดียว, stripe ให้สีเส้นซ้าย',
+      '<b>ประหยัดพื้นที่</b> — ~52px ต่อ card compact ที่สุด',
+      '<b>ข้อเสีย</b> — ชื่อผู้จองและรถถูกซ่อน ต้องกดเปิด detail'
+    ]
+  }
+};
+
+function selectCard(style, btn) {
+  document.querySelectorAll('[data-card]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedCard = style;
+  // re-render cards
+  const todayEvs = EVENTS.filter(e=>e.date===SELECTED_DATE).sort((a,b)=>a.time.localeCompare(b.time));
+  renderCards(todayEvs, 'cardList1', selectedCard);
+  // update desc
+  const desc = CARD_DESC[style];
+  document.getElementById('cardDesc').innerHTML = `
+    <div class="db-title">${desc.title}</div>
+    <ul>${desc.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+  document.getElementById('summaryCard').textContent =
+    style==='A'?'A — Full card':style==='B'?'B — Compact':'C — Timeline';
+}
+
+// ════════════════════════════════════════
+// ANIMATION SELECTION
+// ════════════════════════════════════════
+const ANIM_DESC = {
+  maxheight: {
+    title:'1 — max-height transition (0.35s ease)',
+    items:[
+      '<b>Smooth & simple</b> — ปฏิทินค่อยๆ ย่อ/ขยาย ไม่มี glitch',
+      '<b>CSS เดียว</b> — transition: max-height .35s cubic-bezier(.4,0,.2,1)',
+      '<b>ข้อจำกัด</b> — ต้องกำหนด max-height เป็น px ไม่ใช่ auto'
+    ]
+  },
+  transform: {
+    title:'2 — slide+fade (transform + opacity)',
+    items:[
+      '<b>Elegant</b> — row ที่ซ่อนจะ slide ขึ้น + fade out พร้อมกัน',
+      '<b>ดูเป็น native app</b> — feel คล้าย iOS Calendar',
+      '<b>ซับซ้อนกว่า</b> — ต้อง combine transform + opacity + max-height'
+    ]
+  },
+  instant: {
+    title:'3 — Instant (ไม่มี animation)',
+    items:[
+      '<b>เร็วที่สุด</b> — ไม่มี delay เลย เปลี่ยนทันที',
+      '<b>ไม่มี CSS ซับซ้อน</b> — แค่ display:none / display:grid',
+      '<b>ข้อเสีย</b> — อาจรู้สึก abrupt ไม่ smooth'
+    ]
+  }
+};
+
+function selectAnim(anim, btn) {
+  document.querySelectorAll('[data-anim]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedAnim = anim;
+  // update calendar class
+  const cal = document.getElementById('cal2');
+  cal.className = `p-calendar anim-${anim}`;
+  // re-apply collapsed state
+  const weeks = cal.querySelectorAll('.p-cal-week');
+  if(isCollapsed2){
+    applyCollapse2(weeks, true);
+  }
+  // update desc
+  const desc = ANIM_DESC[anim];
+  document.getElementById('animDesc').innerHTML = `
+    <div class="db-title">${desc.title}</div>
+    <ul>${desc.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+  document.getElementById('summaryAnim').textContent =
+    anim==='maxheight'?'1 — max-height':anim==='transform'?'2 — slide+fade':'3 — instant';
+}
+
+// ════════════════════════════════════════
+// COLLAPSE LOGIC (phone 2)
+// ════════════════════════════════════════
+function applyCollapse2(weeks, collapse) {
+  // find row with selected date
+  const selRow = (() => {
+    for(let i=0;i<weeks.length;i++){
+      if(weeks[i].querySelector('.selected')) return i;
+    }
+    return 1; // default to row index 1 (week of 9 Apr)
+  })();
+
+  weeks.forEach((w,i)=>{
+    if(collapse){
+      // show only selRow and selRow+1 (2 weeks)
+      const show = (i===selRow || i===selRow+1);
+      w.classList.toggle('collapsed', !show);
+      w.classList.toggle('visible', show);
+    } else {
+      w.classList.remove('collapsed');
+      w.classList.add('visible');
+    }
+  });
+
+  const icon = document.getElementById('handleIcon2');
+  if(icon) icon.className = collapse ? 'bi bi-chevron-compact-up' : 'bi bi-chevron-compact-down';
+}
+
+function toggleCollapse2() {
+  isCollapsed2 = !isCollapsed2;
+  const cal = document.getElementById('cal2');
+  const weeks = cal.querySelectorAll('.p-cal-week');
+  applyCollapse2(weeks, isCollapsed2);
+  const btn = document.getElementById('collapseToggleLabel');
+  const icon = document.getElementById('collapseToggleIcon');
+  if(isCollapsed2){
+    btn.textContent = 'ขยายปฏิทิน';
+    icon.className = 'bi bi-arrows-expand';
+  } else {
+    btn.textContent = 'พับปฏิทิน';
+    icon.className = 'bi bi-arrows-collapse';
+  }
+}
+
+// scroll-based collapse for phone 2
+function initScrollCollapse2() {
+  const body = document.getElementById('body2');
+  body.addEventListener('scroll', ()=>{
+    const y = body.scrollTop;
+    const cal = document.getElementById('cal2');
+    const weeks = cal.querySelectorAll('.p-cal-week');
+    if(y > 10 && !isCollapsed2){
+      isCollapsed2 = true;
+      applyCollapse2(weeks, true);
+      document.getElementById('collapseToggleLabel').textContent='ขยายปฏิทิน';
+      document.getElementById('collapseToggleIcon').className='bi bi-arrows-expand';
+    } else if(y <= 10 && isCollapsed2){
+      isCollapsed2 = false;
+      applyCollapse2(weeks, false);
+      document.getElementById('collapseToggleLabel').textContent='พับปฏิทิน';
+      document.getElementById('collapseToggleIcon').className='bi bi-arrows-collapse';
+    }
+  });
+
+  // handle button
+  document.getElementById('handle2').addEventListener('click', ()=>{
+    toggleCollapse2();
+  });
+}
+
+// ════════════════════════════════════════
+// CONFIRM
+// ════════════════════════════════════════
+function handleConfirm() {
+  const btn = document.getElementById('confirmBtn');
+  btn.textContent = `✓ บันทึกแล้ว: Card ${selectedCard} + Anim ${selectedAnim==='maxheight'?'max-height':selectedAnim==='transform'?'slide+fade':'instant'}`;
+  btn.style.background = '#059669';
+  btn.disabled = true;
+
+  // store to sessionStorage so parent can read
+  sessionStorage.setItem('vehicle_card_style', selectedCard);
+  sessionStorage.setItem('vehicle_anim_style', selectedAnim);
+
+  // Show summary
+  setTimeout(()=>{
+    document.querySelector('.summary-box').insertAdjacentHTML('beforeend',`
+      <div style="margin-top:20px; padding:14px 18px; background:#0d1f14; border:1px solid #059669; border-radius:12px; text-align:left;">
+        <div style="color:#34d399; font-weight:700; margin-bottom:10px;">พร้อม implement แล้ว!</div>
+        <div style="color:#aaa; font-size:.85rem; display:flex; flex-direction:column; gap:4px;">
+          <div>✓ Card style: <b style="color:#e2e8f0;">${selectedCard==='A'?'Full card':selectedCard==='B'?'Compact horizontal':'Timeline'}</b></div>
+          <div>✓ Animation: <b style="color:#e2e8f0;">${selectedAnim==='maxheight'?'max-height transition':selectedAnim==='transform'?'slide+fade':'instant'}</b></div>
+          <div style="margin-top:6px; color:#6b7280;">→ แจ้ง Claude ว่าเลือกแบบนี้เพื่อ implement ต่อ</div>
+        </div>
+      </div>`);
+  }, 300);
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Build calendars
+  buildCalendar('calBody1', SELECTED_DATE);
+  buildCalendar('calBody2', SELECTED_DATE);
+
+  // Phone 1 — card list
+  const todayEvs = EVENTS.filter(e=>e.date===SELECTED_DATE).sort((a,b)=>a.time.localeCompare(b.time));
+  renderCards(todayEvs, 'cardList1', 'A');
+
+  // Phone 2 — long list for scroll testing
+  const allEvs = EVENTS.sort((a,b)=>a.time.localeCompare(b.time));
+  // Show today events + padding events
+  renderCards(todayEvs.concat(todayEvs).concat(todayEvs), 'cardList2', 'B');
+
+  // Scroll collapse
+  initScrollCollapse2();
+});
+</script>
+</body>
+</html>

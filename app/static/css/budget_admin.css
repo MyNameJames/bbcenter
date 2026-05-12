@@ -1,0 +1,394 @@
+/* ============================================================
+   Budget Admin Page — Vercel-flavored UI
+   ─────────────────────────────────────────────────────────────
+   ใช้ design language เดียวกับ /admin/fuel:
+   - load fuel_admin.css ก่อน → ได้ .vc-card, .vc-kpi-group/cell,
+     .vc-btn(*), .vc-card-head, .vc-table, .vc-empty, .vc-modal,
+     .vc-filter-bar, .vc-input/select/textarea/label, .vc-badge
+   - ไฟล์นี้ = budget-specific เท่านั้น
+   ============================================================ */
+
+
+/* ─────────────────────────────────────────────
+   1. PAGE SHELL  (mirror .fuel-page)
+───────────────────────────────────────────── */
+.budget-page {
+    padding: var(--vc-space-6);
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.budget-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+    flex-wrap: wrap;
+    padding-bottom: var(--vc-space-5);
+    margin-bottom: var(--vc-space-6);
+    border-bottom: 1px solid var(--vc-border);
+}
+
+.budget-title {
+    font-size: var(--vc-text-xl);
+    font-weight: 600;
+    letter-spacing: var(--vc-tracking-tight);
+    color: var(--vc-fg);
+    line-height: 1.2;
+    margin: 0;
+}
+
+.budget-subtitle {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    margin: 6px 0 0 0;
+    line-height: 1.4;
+}
+
+.budget-header-actions {
+    display: flex;
+    gap: var(--vc-space-2);
+    align-items: center;
+}
+
+
+/* ─────────────────────────────────────────────
+   2. KPI 6-CELL VARIANT
+   ─────────────────────────────────────────────
+   ใช้ร่วมกับ .vc-kpi-group:
+   <div class="vc-kpi-group vc-kpi-group--6"> ... </div>
+───────────────────────────────────────────── */
+.vc-kpi-group--6 {
+    grid-template-columns: repeat(6, 1fr);
+}
+
+@media (max-width: 1199.98px) {
+    .vc-kpi-group--6 { grid-template-columns: repeat(3, 1fr); }
+    .vc-kpi-group--6 .vc-kpi-cell:nth-child(3) { border-right: none; }
+    .vc-kpi-group--6 .vc-kpi-cell:nth-child(n+4) { border-top: 1px solid var(--vc-border); }
+}
+
+@media (max-width: 767.98px) {
+    .vc-kpi-group--6 { grid-template-columns: repeat(2, 1fr); }
+    .vc-kpi-group--6 .vc-kpi-cell { border-right: 1px solid var(--vc-border); }
+    .vc-kpi-group--6 .vc-kpi-cell:nth-child(2n) { border-right: none; }
+    .vc-kpi-group--6 .vc-kpi-cell:nth-child(n+3) { border-top: 1px solid var(--vc-border); }
+}
+
+.vc-kpi-value--purple { color: var(--vc-purple); }
+.vc-kpi-value--warn   { color: var(--vc-amber); }
+
+
+/* ─────────────────────────────────────────────
+   3. SECTION HEADER
+   ─────────────────────────────────────────────
+   วาง "นอก" card — ทำหน้าที่แบ่งกลุ่ม budget cards
+   มี slot ขวาสำหรับปุ่ม action (เช่น "ตั้งงบส่วนกลาง")
+───────────────────────────────────────────── */
+.vc-section-hdr {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    padding-bottom: var(--vc-space-3);
+    margin: var(--vc-space-6) 0 var(--vc-space-3);
+    border-bottom: 1px solid var(--vc-border);
+    flex-wrap: wrap;
+}
+
+.vc-section-hdr-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--vc-fg-muted);
+    flex-shrink: 0;
+}
+.vc-section-hdr-icon.is-purple { color: var(--vc-purple); }
+
+.vc-section-hdr-title {
+    font-size: var(--vc-text-md);
+    font-weight: 600;
+    color: var(--vc-fg);
+    line-height: 1;
+}
+
+.vc-section-hdr-count {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+.vc-section-hdr-actions {
+    margin-left: auto;
+    display: flex;
+    gap: var(--vc-space-2);
+    align-items: center;
+}
+
+
+/* ─────────────────────────────────────────────
+   4. BUDGET CARD (vc-bcard)
+───────────────────────────────────────────── */
+.vc-bcard {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    padding: var(--vc-space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+    transition: border-color var(--vc-transition);
+    height: 100%;
+}
+.vc-bcard:hover { border-color: var(--vc-border-hover); }
+
+.vc-bcard-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vc-space-2);
+}
+
+.vc-bcard-name {
+    font-size: var(--vc-text-base);
+    font-weight: 600;
+    color: var(--vc-fg);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.3;
+    min-width: 0;
+}
+.vc-bcard-name > .vc-icon-sm { color: var(--vc-fg-muted); flex-shrink: 0; }
+.vc-bcard-name.is-purple > .vc-icon-sm { color: var(--vc-purple); }
+
+.vc-bcard-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.vc-bcard-date {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.4;
+}
+
+.vc-bcard-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+}
+
+.vc-bcard-row .vc-bcard-pct {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+    font-weight: 500;
+    color: var(--vc-fg);
+}
+.vc-bcard-pct.is-warn   { color: var(--vc-amber); }
+.vc-bcard-pct.is-danger { color: var(--vc-red); }
+
+.vc-bcard-amounts {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+}
+.vc-bcard-amounts .used {
+    font-size: var(--vc-text-md);
+    font-weight: 600;
+    color: var(--vc-fg);
+}
+.vc-bcard-amounts .used.is-purple { color: var(--vc-purple); }
+.vc-bcard-amounts .total {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+}
+
+.vc-bcard-rem {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.4;
+}
+.vc-bcard-rem.is-success { color: var(--vc-green); }
+.vc-bcard-rem.is-warn    { color: var(--vc-amber); }
+.vc-bcard-rem.is-danger  { color: var(--vc-red); }
+
+
+/* ─────────────────────────────────────────────
+   5. PROGRESS BAR
+───────────────────────────────────────────── */
+.vc-progress {
+    display: block;
+    width: 100%;
+    height: 6px;
+    background: var(--vc-bg-subtle);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.vc-progress > span {
+    display: block;
+    height: 100%;
+    background: var(--vc-green);
+    transition: width var(--vc-transition);
+}
+.vc-progress.is-warn   > span { background: var(--vc-amber); }
+.vc-progress.is-danger > span { background: var(--vc-red); }
+.vc-progress.is-purple > span { background: var(--vc-purple); }
+
+
+/* ─────────────────────────────────────────────
+   6. PURPLE VARIANTS (button + badge)
+───────────────────────────────────────────── */
+.vc-btn-purple {
+    background: var(--vc-purple);
+    color: #fff;
+    border-color: var(--vc-purple);
+}
+.vc-btn-purple:hover {
+    background: #6420A8;
+    border-color: #6420A8;
+    color: #fff;
+}
+
+.vc-badge-purple {
+    background: rgba(121,40,202,.10);
+    color: var(--vc-purple);
+    border-color: rgba(121,40,202,.25);
+}
+
+
+/* ─────────────────────────────────────────────
+   7. DROPDOWN (per-card actions ⋯)
+───────────────────────────────────────────── */
+.vc-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.vc-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 200px;
+    padding: 4px;
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    box-shadow: 0 4px 12px rgba(0,0,0,.06);
+    z-index: 5;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity var(--vc-transition),
+                transform var(--vc-transition),
+                visibility var(--vc-transition);
+}
+
+.vc-dropdown.is-open .vc-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.vc-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg);
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--vc-transition);
+}
+.vc-dropdown-item:hover {
+    background: var(--vc-bg-subtle);
+}
+.vc-dropdown-item .vc-icon-sm {
+    color: var(--vc-fg-muted);
+    flex-shrink: 0;
+}
+
+
+/* ─────────────────────────────────────────────
+   8. REFUND PICKER (table row select)
+───────────────────────────────────────────── */
+[data-pick-booking] {
+    cursor: pointer;
+    transition: background var(--vc-transition);
+}
+[data-pick-booking]:hover {
+    background: var(--vc-bg-subtle);
+}
+[data-pick-booking].is-picked,
+[data-pick-booking].is-picked:hover {
+    background: var(--vc-blue-bg);
+}
+[data-pick-booking].is-picked td:first-child {
+    color: var(--vc-blue);
+}
+
+
+/* ─────────────────────────────────────────────
+   9. PERSONAL BUDGET ROW (optional strip)
+───────────────────────────────────────────── */
+.budget-personal-row {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    margin-bottom: var(--vc-space-4);
+}
+.budget-personal-row .icon {
+    color: var(--vc-green);
+    flex-shrink: 0;
+}
+.budget-personal-row .meta {
+    flex: 1;
+    min-width: 0;
+}
+.budget-personal-row .label {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+.budget-personal-row .value {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+    font-size: var(--vc-text-md);
+    font-weight: 600;
+    color: var(--vc-green);
+    line-height: 1.2;
+}
+.budget-personal-row .meta-end {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+}

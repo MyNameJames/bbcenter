@@ -1,0 +1,111 @@
+{#
+  Reusable Bootstrap 5 modal macro.
+
+  Required:
+    id      modal HTML id
+    title   modal title text
+
+  Common kwargs:
+    icon              FA class (e.g. 'fa-hammer'); default ''
+    size              '' | 'sm' | 'lg' | 'xl'
+    centered          bool, default True
+    header_variant    '' | 'primary' | 'warning-soft' | 'success-soft' | 'danger-soft' | 'info-soft'
+    rounded           bool — apply 16px radius (legacy maintenance/repair style); default False
+    shadow            bool — add shadow class; default False
+
+  Form (optional — if form_action set, body+footer wrapped in <form>):
+    form_action       URL string
+    form_method       'POST' (default) | 'GET'
+    form_id           form id
+    form_enctype      e.g. 'multipart/form-data'
+
+  Footer:
+    show_footer       default True if form_action else False
+    submit_text       default 'บันทึก'
+    submit_icon       FA class, default ''
+    submit_class      default 'btn-primary'
+    submit_btn_style  inline style for submit button (e.g. 'background:var(--accent);color:#fff;')
+    cancel_text       default 'ยกเลิก'
+
+  Body content goes between {% call modal(...) %} ... {% endcall %}.
+  Hidden inputs: place at start of body — they sit inside <form> automatically.
+
+  Usage:
+    {% from '_components/_modal.html' import modal %}
+    {% call modal(id='acceptModal', title='รับงานแจ้งซ่อม', icon='fa-hammer',
+                  centered=True, rounded=True, shadow=True,
+                  header_variant='warning-soft',
+                  form_action=url_for('repair.repair'),
+                  submit_text='ยืนยันรับงาน', submit_icon='fa-hammer',
+                  submit_btn_style='background:var(--accent);color:#fff;') %}
+      <input type="hidden" name="action" value="accept">
+      <p>...</p>
+    {% endcall %}
+#}
+
+{% macro modal(id, title,
+               icon='',
+               size='',
+               centered=True,
+               header_variant='',
+               rounded=False,
+               shadow=False,
+               form_action=none,
+               form_method='POST',
+               form_id='',
+               form_enctype='',
+               show_footer=none,
+               submit_text='บันทึก',
+               submit_icon='',
+               submit_class='btn-primary',
+               submit_btn_style='',
+               cancel_text='ยกเลิก') %}
+{%- set _show_footer = show_footer if show_footer is not none else (form_action is not none) -%}
+{%- set _has_form = form_action is not none -%}
+{%- set _presets = {
+    'primary':       {'class': 'bg-primary text-white', 'btn_close': 'btn-close-white', 'style': ''},
+    'warning-soft':  {'class': '', 'btn_close': '', 'style': 'background:#FEF3C7;color:#92400E;'},
+    'success-soft':  {'class': '', 'btn_close': '', 'style': 'background:#D1FAE5;color:#065F46;'},
+    'danger-soft':   {'class': '', 'btn_close': '', 'style': 'background:#FEE2E2;color:#991B1B;'},
+    'info-soft':     {'class': '', 'btn_close': '', 'style': 'background:#DBEAFE;color:#1E40AF;'},
+} -%}
+{%- set _hp = _presets.get(header_variant, {'class': '', 'btn_close': '', 'style': ''}) -%}
+{%- set _dialog = ['modal-dialog'] -%}
+{%- if centered %}{% set _ = _dialog.append('modal-dialog-centered') %}{% endif -%}
+{%- if size %}{% set _ = _dialog.append('modal-' ~ size) %}{% endif -%}
+{%- set _content = ['modal-content'] -%}
+{%- if rounded or shadow %}{% set _ = _content.append('border-0') %}{% endif -%}
+{%- if shadow %}{% set _ = _content.append('shadow') %}{% endif -%}
+{%- set _header_classes = ['modal-header'] -%}
+{%- if _hp.class %}{% set _ = _header_classes.append(_hp.class) %}{% endif -%}
+{%- if header_variant or rounded %}{% set _ = _header_classes.append('border-0') %}{% endif -%}
+{%- set _header_style = _hp.style -%}
+{%- if rounded %}{% set _header_style = _header_style ~ 'border-radius:16px 16px 0 0;' %}{% endif -%}
+<div class="modal fade" id="{{ id }}" tabindex="-1" aria-hidden="true">
+  <div class="{{ _dialog|join(' ') }}">
+    <div class="{{ _content|join(' ') }}"{% if rounded %} style="border-radius:16px;"{% endif %}>
+      {% if _has_form %}<form{% if form_id %} id="{{ form_id }}"{% endif %} method="{{ form_method }}" action="{{ form_action }}"{% if form_enctype %} enctype="{{ form_enctype }}"{% endif %}>{% endif %}
+        <div class="{{ _header_classes|join(' ') }}"{% if _header_style %} style="{{ _header_style }}"{% endif %}>
+          <h5 class="modal-title fw-bold">
+            {% if icon %}<i class="fa-solid {{ icon }} me-2"></i>{% endif %}{{ title }}
+          </h5>
+          <button type="button" class="btn-close {{ _hp.btn_close }}" data-bs-dismiss="modal" aria-label="ปิด"></button>
+        </div>
+        <div class="modal-body">
+          {{ caller() }}
+        </div>
+        {% if _show_footer %}
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fa-solid fa-xmark me-1"></i> {{ cancel_text }}
+          </button>
+          <button type="{{ 'submit' if _has_form else 'button' }}" class="btn fw-bold {{ submit_class }}"{% if submit_btn_style %} style="{{ submit_btn_style }}"{% endif %}>
+            {% if submit_icon %}<i class="fa-solid {{ submit_icon }} me-1"></i> {% endif %}{{ submit_text }}
+          </button>
+        </div>
+        {% endif %}
+      {% if _has_form %}</form>{% endif %}
+    </div>
+  </div>
+</div>
+{% endmacro %}

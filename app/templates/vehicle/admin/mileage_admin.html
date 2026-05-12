@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>บันทึกเลขไมล์ (Admin) - BBCenter</title>
+    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
+    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mileage_admin.css') }}">
+</head>
+<body>
+{% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
+{% set TH_MONTH_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'] %}
+
+<div class="container-fluid container-p-y">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    {% set active_menu = 'mileage' %}
+    {% include '_sidebar.html' %}
+
+    <main class="main-content">
+        {% set page_title = 'บันทึกเลขไมล์' %}
+        {% include '_header.html' %}
+
+        <div class="container-xxl">
+
+            {# Flash messages #}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="px-3 pt-2">
+                {% for category, message in messages %}
+                <div class="ds-alert ds-alert-{{ category }} alert-dismissible fade show mb-2">
+                    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {# ── Page Header ────────────────────────────── #}
+            <div class="mlg-page-header d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    {% if missing_count > 0 %}
+                    <span class="mlg-missing-pill" title="รายการที่ยังบันทึกไม่ครบ">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        รอกรอก {{ missing_count }} รายการ
+                    </span>
+                    {% endif %}
+                    <button type="button" class="mlg-btn-ghost" onclick="toggleBreakdown()" aria-label="ซ่อน/แสดง รายเดือน">
+                        <i class="fa-solid fa-table-cells-large me-1"></i>
+                        <span id="breakdownToggleLabel">ซ่อนรายเดือน</span>
+                    </button>
+                    <a href="{{ url_for('vehicle.mileage_export') }}" id="exportLink" class="mlg-btn-export d-none d-md-block">
+                        <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+                    </a>
+                </div>
+            </div>
+
+            {# ── KPI Cards ───────────────────────────────── #}
+            <div class="mlg-kpi-row">
+                <div class="mlg-kpi-card">
+                    <div class="mlg-kpi-label">ค่าน้ำมันเดือนนี้</div>
+                    <div class="mlg-kpi-value mlg-kpi-accent">
+                        ฿ {{ '{:,.0f}'.format(month_total_cost) }}
+                    </div>
+                    <div class="mlg-kpi-sub">{{ TH_MONTH_FULL[curr_month-1] }} {{ curr_year + 543 }}</div>
+                </div>
+                <div class="mlg-kpi-card">
+                    <div class="mlg-kpi-label">งบประมาณทั้งปี</div>
+                    <div class="mlg-kpi-value">฿ {{ '{:,.0f}'.format(total_budget) }}</div>
+                    <div class="mlg-kpi-sub">รวมส่วนกลาง + กอง</div>
+                </div>
+                <div class="mlg-kpi-card">
+                    <div class="mlg-kpi-label">ใช้ไปแล้ว</div>
+                    <div class="mlg-kpi-value mlg-kpi-warning">฿ {{ '{:,.0f}'.format(total_used) }}</div>
+                    <div class="mlg-kpi-sub">
+                        {% if total_budget > 0 %}
+                            {{ '{:.1f}'.format(total_used/total_budget*100) }}% ของงบ
+                        {% else %}—{% endif %}
+                    </div>
+                </div>
+                <div class="mlg-kpi-card">
+                    <div class="mlg-kpi-label">คงเหลือ</div>
+                    <div class="mlg-kpi-value mlg-kpi-success">฿ {{ '{:,.0f}'.format(total_remaining) }}</div>
+                    <div class="mlg-kpi-sub">
+                        {% if pending_personal_count > 0 %}
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                            personal รอเบิก {{ pending_personal_count }}
+                        {% else %}
+                            ไม่มีรอเบิก personal
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# ── Per-vehicle Monthly Breakdown ───────────── #}
+            {# Desktop: 12-month wide table · Mobile (≤768): one month at a time + pager #}
+            <div class="mlg-panel mt-3" id="breakdownPanel">
+
+                {# Desktop view ── 12-month table #}
+                <div class="mlg-breakdown-desktop">
+                    <div class="mlg-panel-header">
+                        <div>
+                            <strong>รายละเอียดค่าน้ำมัน · ปี {{ curr_year + 543 }}</strong>
+                            <span class="text-secondary ms-2" style="font-size:.8rem;">คลิกตัวเลขเพื่อกรองตาราง</span>
+                        </div>
+                        <span class="mlg-panel-pill">{{ vehicles_all|length }} คัน · 12 เดือน</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table mlg-breakdown-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-start">รถ</th>
+                                    {% for i in range(12) %}
+                                    <th class="{% if (i+1) == curr_month %}is-current{% endif %}">{{ TH_MONTHS[i] }}</th>
+                                    {% endfor %}
+                                    <th class="mlg-col-total">รวม</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for v in vehicles_all %}
+                                {% set vrow = breakdown[v.id] %}
+                                {% set vtotal = vrow|sum %}
+                                <tr>
+                                    <td class="text-start">
+                                        <div class="fw-semibold" style="font-size:.82rem;">{{ v.brand }} {{ v.model }}</div>
+                                        <div class="text-secondary" style="font-size:.72rem;">{{ v.license_plate }}</div>
+                                    </td>
+                                    {% for i in range(12) %}
+                                    {% set cell = vrow[i] %}
+                                    <td class="mlg-bd-cell {% if cell > 5000 %}is-hot{% elif cell > 0 %}is-used{% endif %}"
+                                        {% if cell > 0 %}
+                                        data-vehicle="{{ v.id }}" data-month="{{ i+1 }}" data-year="{{ curr_year }}"
+                                        onclick="drillDown(this)"
+                                        title="คลิกเพื่อกรองตาราง"
+                                        {% endif %}>
+                                        {% if cell > 0 %}{{ '{:,.0f}'.format(cell) }}{% else %}<span class="text-secondary">0</span>{% endif %}
+                                    </td>
+                                    {% endfor %}
+                                    <td class="mlg-col-total">
+                                        {% if vtotal > 0 %}{{ '{:,.0f}'.format(vtotal) }}{% else %}<span class="text-secondary">0</span>{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="mlg-bd-total-row">
+                                    <td class="text-start">รวม</td>
+                                    {% for i in range(12) %}
+                                    <td>
+                                        {% if breakdown_totals[i] > 0 %}{{ '{:,.0f}'.format(breakdown_totals[i]) }}{% else %}<span class="text-secondary">0</span>{% endif %}
+                                    </td>
+                                    {% endfor %}
+                                    <td class="mlg-col-total">{{ '{:,.0f}'.format(breakdown_totals|sum) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {# Mobile view ── pager #}
+                <div class="mlg-breakdown-mobile">
+                    <div class="mlg-panel-header mlg-panel-header-pager">
+                        <div class="mlg-panel-head-info">
+                            <strong>รายละเอียดค่าน้ำมันรายเดือน</strong>
+                        </div>
+                        <div class="mlg-month-pager">
+                            <button type="button" class="mlg-pager-btn" id="mlgPagerOlder" title="เดือนก่อนหน้า">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <span class="mlg-pager-label" id="mlgPagerLabel">เดือนนี้</span>
+                            <button type="button" class="mlg-pager-btn" id="mlgPagerNewer" title="เดือนถัดไป">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mlg-month-pages">
+                    {% for offset in range(curr_month) %}
+                        {% set midx = curr_month - 1 - offset %}
+                        {% set page_no = offset + 1 %}
+                        <div class="mlg-month-page" data-page="{{ page_no }}" {% if offset != 0 %}hidden{% endif %}>
+                            <div class="mlg-month-page-head">
+                                <div class="mlg-month-page-title">
+                                    <i class="fa-solid fa-calendar-days text-secondary"></i>
+                                    {{ TH_MONTH_FULL[midx] }} {{ curr_year + 543 }}
+                                    {% if offset == 0 %}<span class="mlg-month-current-pill">เดือนนี้</span>{% endif %}
+                                </div>
+                                <div class="mlg-month-page-total">
+                                    รวม <strong>฿ {{ '{:,.0f}'.format(breakdown_totals[midx]) }}</strong>
+                                </div>
+                            </div>
+                            <div class="mlg-month-list">
+                            {% for v in vehicles_all %}
+                                {% set cell = breakdown[v.id][midx] %}
+                                <div class="mlg-month-row {% if cell == 0 %}is-zero{% elif cell > 5000 %}is-hot{% endif %}"
+                                     {% if cell > 0 %}
+                                     data-vehicle="{{ v.id }}" data-month="{{ midx + 1 }}" data-year="{{ curr_year }}"
+                                     onclick="drillDown(this)"
+                                     {% endif %}>
+                                    <div class="mlg-month-row-vehicle">
+                                        <div class="mlg-mr-name">{{ v.brand }} {{ v.model }}</div>
+                                        <div class="mlg-mr-plate">{{ v.license_plate }}</div>
+                                    </div>
+                                    <div class="mlg-month-row-cost">
+                                        {% if cell > 0 %}฿ {{ '{:,.0f}'.format(cell) }}{% else %}<span class="text-secondary">—</span>{% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+            {# ── Filter Bar ─────────────────────────────── #}
+            <form method="get" action="{{ url_for('vehicle.mileage_log') }}" class="mlg-filter mt-3" id="filterForm">
+                {# Mode indicator #}
+                <div class="d-flex align-items-center gap-2 mb-2" style="font-size:.8rem;">
+                    {% if f.show_all %}
+                    <span class="badge rounded-pill" style="background:var(--ds-accent);color:#fff;">ดูทั้งหมด</span>
+                    {% else %}
+                    <span class="badge rounded-pill" style="background:#F4F4F5;color:#52525B;">
+                        <i class="fa-solid fa-calendar-day me-1"></i>กรองตามช่วงวันที่
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="row g-2 align-items-end">
+                    <div class="mlg-filter-item col-6 col-md-3 col-lg-auto">
+                        <label>จากวันที่</label>
+                        <input type="date" name="date_start" value="{{ f.date_start }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="mlg-filter-item col-6 col-md-3 col-lg-auto">
+                        <label>ถึงวันที่</label>
+                        <input type="date" name="date_end" value="{{ f.date_end }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="mlg-filter-item col-12 col-md-6 col-lg">
+                        <label>รถ</label>
+                        <select name="vehicle_id" class="form-select form-select-sm">
+                            <option value="">ทั้งหมด</option>
+                            {% for v in vehicles_all %}
+                            <option value="{{ v.id }}" {% if f.vehicle_id == v.id %}selected{% endif %}>
+                                {{ v.license_plate }} · {{ v.brand }} {{ v.model }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mlg-filter-item col-12 col-md-6 col-lg">
+                        <label>คนขับ</label>
+                        <select name="driver_id" class="form-select form-select-sm">
+                            <option value="">ทั้งหมด</option>
+                            {% for d in drivers_all %}
+                            <option value="{{ d.id }}" {% if f.driver_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mlg-filter-item col-12 col-md-4 col-lg-auto">
+                        <label>สถานะ</label>
+                        <select name="status_filter" class="form-select form-select-sm">
+                            <option value="">ทั้งหมด</option>
+                            <option value="complete" {% if f.status_filter=='complete' %}selected{% endif %}>ครบ</option>
+                            <option value="partial"  {% if f.status_filter=='partial'  %}selected{% endif %}>รอกลับ</option>
+                            <option value="none"     {% if f.status_filter=='none'     %}selected{% endif %}>รอกรอก</option>
+                        </select>
+                    </div>
+                    <div class="mlg-filter-item col-6 col-md-4 col-lg-auto">
+                        <label>ค่าน้ำมันต่ำสุด (฿)</label>
+                        <input type="number" name="cost_min" value="{{ f.cost_min }}" min="0" step="10" class="form-control form-control-sm" placeholder="0">
+                    </div>
+                    <div class="mlg-filter-item col-6 col-md-4 col-lg-auto">
+                        <label>ค่าน้ำมันสูงสุด (฿)</label>
+                        <input type="number" name="cost_max" value="{{ f.cost_max }}" min="0" step="10" class="form-control form-control-sm" placeholder="∞">
+                    </div>
+                <div class="mlg-filter-actions col-12 col-lg-auto d-flex gap-2 mt-3 mt-lg-3">
+                        <button type="submit" class="mlg-btn-primary flex-fill flex-lg-grow-0">
+                            <i class="fa-solid fa-filter me-1"></i>กรอง
+                        </button>
+                        <a href="{{ url_for('vehicle.mileage_log') }}" class="mlg-btn-ghost" title="รีเซต (เดือนนี้)">
+                            <i class="fa-solid fa-rotate"></i>
+                        </a>
+                        <a href="{{ url_for('vehicle.mileage_log') }}?show_all=1" class="mlg-btn-ghost {% if f.show_all %}active{% endif %}" title="ดูทุกรายการ">
+                            <i class="fa-solid fa-list me-1"></i>ทั้งหมด
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            {# ── Summary Strip ──────────────────────────── #}
+            <div class="mlg-summary" id="summaryStrip">
+                <div class="mlg-summary-mode" id="modeAll">
+                    <i class="fa-solid fa-list"></i>
+                    <span>ทั้งหมด <strong>{{ rows|length }}</strong> รายการ</span>
+                    <span class="mlg-dot">·</span>
+                    <span>ระยะรวม <strong id="sumAllDistance">—</strong> กม.</span>
+                    <span class="mlg-dot">·</span>
+                    <span>ค่าน้ำมันรวม <strong id="sumAllCost">—</strong> ฿</span>
+                </div>
+                <div class="mlg-summary-mode mlg-summary-selected" id="modeSelected" style="display:none;">
+                    <i class="fa-solid fa-square-check"></i>
+                    <span>เลือก <strong id="selCount">0</strong> รายการ</span>
+                    <span class="mlg-dot">·</span>
+                    <span>ระยะรวม <strong id="selDistance">0</strong> กม.</span>
+                    <span class="mlg-dot">·</span>
+                    <span>ค่าน้ำมันรวม <strong id="selCost">0</strong> ฿</span>
+                    <button type="button" class="mlg-summary-clear" onclick="clearSelection()">
+                        <i class="fa-solid fa-xmark"></i> ล้างการเลือก
+                    </button>
+                </div>
+            </div>
+
+            {# ── Bookings Table ─────────────────────────── #}
+            <div class="mlg-panel mt-2 mb-3">
+                {% if rows %}
+                <div class="table-responsive">
+                    <table class="table mlg-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="mlg-col-check">
+                                    <input type="checkbox" id="checkAll" class="form-check-input">
+                                </th>
+                                <th>Booking</th>
+                                <th>ผู้จอง</th>
+                                <th>รถ</th>
+                                <th>คนขับ</th>
+                                <th>ปลายทาง</th>
+                                <th class="text-end">ไมล์ออก</th>
+                                <th class="text-end">ไมล์กลับ</th>
+                                <th class="text-end">ระยะทาง</th>
+                                <th class="text-end">ค่าน้ำมัน</th>
+                                <th>สถานะ</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% set ns = namespace(prev_date=None) %}
+                        {% for r in rows %}
+                        {% set b = r.b %}
+                        {% set m = r.m %}
+                        {% set row_date = b.start_datetime.strftime('%Y-%m-%d') %}
+                        {% if row_date != ns.prev_date %}
+                        <tr class="mlg-date-group">
+                            <td colspan="12">
+                                <i class="fa-solid fa-calendar-day me-1"></i>
+                                {{ b.start_datetime.day }} {{ TH_MONTH_FULL[b.start_datetime.month-1] }} {{ b.start_datetime.year + 543 }}
+                            </td>
+                        </tr>
+                        {% set ns.prev_date = row_date %}
+                        {% endif %}
+                        <tr class="mlg-row"
+                            data-booking="{{ b.id }}"
+                            data-distance="{{ r.distance or 0 }}"
+                            data-cost="{{ r.fuel_cost or 0 }}"
+                            data-status="{{ r.status_key }}"
+                            data-odo-start="{{ m.odometer_start if m and m.odometer_start else '' }}"
+                            data-odo-end="{{ m.odometer_end if m and m.odometer_end else '' }}"
+                            data-destination="{{ b.destination or '' }}"
+                            data-user="{{ b.user.full_name or b.user.username }}"
+                            data-time="{{ b.start_datetime.strftime('%H:%M') }} – {{ b.end_datetime.strftime('%H:%M') }}"
+                            data-vehicle="{{ (b.assigned_vehicle.brand ~ ' ' ~ b.assigned_vehicle.model ~ ' (' ~ b.assigned_vehicle.license_plate ~ ')') if b.assigned_vehicle else '-' }}"
+                            data-fuel-rate="{{ b.assigned_vehicle.fuel_rate if b.assigned_vehicle and b.assigned_vehicle.fuel_rate else 10 }}"
+                            data-manual-fuel="{{ m.fuel_cost if m and m.fuel_cost else '' }}">
+                            <td class="mlg-col-check">
+                                <input type="checkbox" class="form-check-input mlg-row-check"
+                                       {% if r.status_key != 'complete' %}disabled title="เลือกได้เฉพาะที่ครบแล้ว"{% endif %}>
+                            </td>
+                            <td class="mlg-col-id">BK-{{ b.id }}</td>
+                            <td>{{ b.user.full_name or b.user.username }}</td>
+                            <td>
+                                {% if b.assigned_vehicle %}
+                                <div style="font-size:.82rem;">{{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}</div>
+                                <div class="text-secondary" style="font-size:.72rem;">{{ b.assigned_vehicle.license_plate }}</div>
+                                {% else %}<span class="text-secondary">—</span>{% endif %}
+                            </td>
+                            <td>{{ b.driver.name if b.driver else '—' }}</td>
+                            <td class="mlg-col-dest" title="{{ b.destination or '' }}">{{ b.destination or '—' }}</td>
+                            <td class="text-end mlg-num">
+                                {% if m and m.odometer_start %}{{ '{:,}'.format(m.odometer_start) }}{% else %}—{% endif %}
+                            </td>
+                            <td class="text-end mlg-num">
+                                {% if m and m.odometer_end %}{{ '{:,}'.format(m.odometer_end) }}{% else %}—{% endif %}
+                                {% if m and m.odometer_end and refuel_keys and (b.assigned_vehicle_id, m.odometer_end) in refuel_keys %}
+                                <a href="{{ url_for('fuel.admin_fuel', vehicle_id=b.assigned_vehicle_id) }}"
+                                   class="ms-1" style="text-decoration:none;"
+                                   title="มีบิลค่าน้ำมันที่ไมล์นี้ — คลิกเพื่อดู">
+                                    <span class="mlg-badge" style="background:#DBEAFE; color:#1E40AF; font-size:.65rem;">
+                                        <i class="fa-solid fa-gas-pump"></i> เติมน้ำมัน
+                                    </span>
+                                </a>
+                                {% endif %}
+                            </td>
+                            <td class="text-end mlg-num">
+                                {% if r.distance %}{{ '{:,}'.format(r.distance) }} กม.{% else %}—{% endif %}
+                            </td>
+                            <td class="text-end mlg-num">
+                                {% if r.fuel_cost %}฿ {{ '{:,.0f}'.format(r.fuel_cost) }}{% else %}—{% endif %}
+                            </td>
+                            <td>
+                                {% if r.status_key == 'complete' %}
+                                <span class="mlg-badge mlg-badge-complete"><i class="fa-solid fa-circle-check"></i> ครบ</span>
+                                {% elif r.status_key == 'partial' %}
+                                <span class="mlg-badge mlg-badge-partial"><i class="fa-solid fa-gauge-high"></i> รอกลับ</span>
+                                {% else %}
+                                <span class="mlg-badge mlg-badge-none"><i class="fa-solid fa-circle-exclamation"></i> รอกรอก</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="mlg-edit-btn" onclick="openMileage(this)" title="กรอกเลขไมล์">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="mlg-empty">
+                    <i class="fa-solid fa-car"></i>
+                    <div class="mlg-empty-title">ไม่พบรายการ</div>
+                    <div class="mlg-empty-sub">ไม่มี booking ที่อนุมัติแล้วตามเงื่อนไขที่กรอง</div>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </main>
+</div>
+
+{# ── Modal: Mileage Entry ───────────────────── #}
+<div class="modal fade" id="mileageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content mlg-modal">
+            <div class="modal-header">
+                <div>
+                    <div class="mlg-modal-eyebrow"><i class="fa-solid fa-gauge-high"></i> <span id="mmBookingId"></span></div>
+                    <h5 class="modal-title mb-0">บันทึกเลขไมล์</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                {# Booking Info Grid #}
+                <div class="mlg-info-grid">
+                    <div class="mlg-info-item">
+                        <i class="fa-solid fa-user text-secondary"></i>
+                        <div><label>ผู้จอง</label><div id="mmUser">—</div></div>
+                    </div>
+                    <div class="mlg-info-item">
+                        <i class="fa-solid fa-clock text-secondary"></i>
+                        <div><label>เวลา</label><div id="mmTime">—</div></div>
+                    </div>
+                    <div class="mlg-info-item">
+                        <i class="fa-solid fa-car text-secondary"></i>
+                        <div><label>รถ</label><div id="mmVehicle">—</div></div>
+                    </div>
+                    <div class="mlg-info-item">
+                        <i class="fa-solid fa-location-dot text-secondary"></i>
+                        <div><label>ปลายทาง</label><div id="mmDest">—</div></div>
+                    </div>
+                </div>
+
+                {# State 1: No record → start form #}
+                <form id="formStart" method="POST" action="{{ url_for('vehicle.mileage_log') }}" enctype="multipart/form-data" class="mlg-state" style="display:none;">
+                    <input type="hidden" name="booking_id" id="fsBookingId">
+                    <input type="hidden" name="entry_type" value="start">
+                    <input type="hidden" name="actual_start" id="fsActualStart">
+                    <div class="mlg-state-title">
+                        <i class="fa-solid fa-play-circle text-success"></i>
+                        บันทึกเลขไมล์ออก
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">เลขไมล์ปัจจุบัน (กม.) <span class="text-danger">*</span></label>
+                        <input type="number" name="odometer_start" id="fsOdo" class="form-control" min="0" placeholder="เช่น 125400" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold"><i class="fa-solid fa-camera me-1"></i> ถ่ายรูปหน้าปัด <span class="text-secondary fw-normal">(ไม่บังคับ)</span></label>
+                        <input type="file" name="odometer_start_img" class="form-control form-control-sm" accept="image/*" capture="environment">
+                    </div>
+                    <div class="mlg-timestamp-box">
+                        <i class="fa-solid fa-clock"></i> เวลาบันทึก: <strong id="fsTimeLabel">—</strong>
+                    </div>
+                    <div class="mlg-modal-footer">
+                        <button type="button" class="mlg-btn-ghost" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="mlg-btn-primary">
+                            <i class="fa-solid fa-save me-1"></i> บันทึกไมล์ออก
+                        </button>
+                    </div>
+                </form>
+
+                {# State 2: has start → end form with realtime #}
+                <form id="formEnd" method="POST" action="{{ url_for('vehicle.mileage_log') }}" enctype="multipart/form-data" class="mlg-state" style="display:none;">
+                    <input type="hidden" name="booking_id" id="feBookingId">
+                    <input type="hidden" name="entry_type" value="end">
+                    <input type="hidden" name="actual_end" id="feActualEnd">
+                    <div class="mlg-state-title">
+                        <i class="fa-solid fa-flag-checkered text-primary"></i>
+                        บันทึกเลขไมล์กลับ
+                    </div>
+                    <div class="mlg-summary-box mlg-summary-green">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span><i class="fa-solid fa-arrow-right-from-bracket me-1"></i> ไมล์ออก</span>
+                            <strong id="feOdoStartRef">—</strong>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">เลขไมล์กลับ (กม.) <span class="text-danger">*</span></label>
+                        <input type="number" name="odometer_end" id="feOdoEnd" class="form-control" min="0" placeholder="เช่น 125527" required>
+                        <div class="text-danger small mt-1" id="feOdoErr" style="display:none;">
+                            เลขไมล์กลับต้องมากกว่าเลขไมล์ออก
+                        </div>
+                    </div>
+
+                    {# Realtime preview #}
+                    <div class="mlg-preview" id="fePreview" style="display:none;">
+                        <div class="mlg-preview-title"><i class="fa-solid fa-calculator"></i> คำนวณอัตโนมัติ</div>
+                        <div class="mlg-preview-grid">
+                            <div>
+                                <label>ระยะทาง</label>
+                                <div><strong id="feCalcDistance">0</strong> <small>กม.</small></div>
+                            </div>
+                            <div>
+                                <label>ค่าน้ำมัน (สูตร)</label>
+                                <div><strong id="feCalcCost">0</strong> <small>฿</small></div>
+                            </div>
+                            <div>
+                                <label>อัตราสิ้นเปลือง</label>
+                                <div><strong id="feFuelRate">10</strong> <small>กม./ลิตร · ฿{{ fuel_price|int }}/ลิตร</small></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">
+                            ค่าน้ำมันจริง (manual override) <span class="text-secondary fw-normal">(ไม่บังคับ)</span>
+                        </label>
+                        <input type="number" step="0.01" name="fuel_cost" id="feFuelManual" class="form-control form-control-sm" min="0" placeholder="หากกรอก จะใช้แทนสูตร">
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold"><i class="fa-solid fa-camera me-1"></i> รูปหน้าปัดกลับ <span class="text-secondary fw-normal">(ไม่บังคับ)</span></label>
+                        <input type="file" name="odometer_end_img" class="form-control form-control-sm" accept="image/*" capture="environment">
+                    </div>
+
+                    {# Refuel #}
+                    <div class="mlg-refuel-box">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="refuel" id="feRefuel" value="1">
+                            <label class="form-check-label small fw-semibold" for="feRefuel">
+                                <i class="fa-solid fa-gas-pump text-warning"></i> มีการแวะเติมน้ำมันระหว่างทาง
+                            </label>
+                        </div>
+                        <div id="feRefuelWrap" style="display:none; margin-top:8px;">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label small">ยอดเงิน (฿)</label>
+                                    <input type="number" step="0.01" name="refuel_amount" class="form-control form-control-sm" min="0" placeholder="500.00">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small"><i class="fa-solid fa-receipt"></i> บิล</label>
+                                    <input type="file" name="refuel_img" class="form-control form-control-sm" accept="image/*" capture="environment">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mlg-modal-footer">
+                        <button type="button" class="mlg-btn-ghost" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="mlg-btn-primary" id="feSubmit">
+                            <i class="fa-solid fa-save me-1"></i> บันทึกไมล์กลับ
+                        </button>
+                    </div>
+                </form>
+
+                {# State 3: Complete → summary #}
+                <div id="stateComplete" class="mlg-state" style="display:none;">
+                    <div class="mlg-state-title">
+                        <i class="fa-solid fa-circle-check text-success"></i>
+                        สรุปการเดินทาง
+                    </div>
+                    <div class="mlg-summary-box mlg-summary-green-bold">
+                        <div class="mlg-complete-row">
+                            <span>เลขไมล์ออก → กลับ</span>
+                            <strong><span id="cOdoStart">—</span> → <span id="cOdoEnd">—</span></strong>
+                        </div>
+                        <div class="mlg-complete-row">
+                            <span>ระยะทาง</span>
+                            <strong><span id="cDistance">—</span> กม.</strong>
+                        </div>
+                        <div class="mlg-complete-row">
+                            <span>ค่าน้ำมัน (สูตร)</span>
+                            <strong><span id="cCostFormula">—</span> ฿</strong>
+                        </div>
+                        <div class="mlg-complete-row" id="cManualRow" style="display:none;">
+                            <span>ค่าน้ำมัน (manual)</span>
+                            <strong class="text-primary"><span id="cCostManual">—</span> ฿</strong>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="button" class="mlg-btn-ghost" onclick="goEditEnd()">
+                            <i class="fa-solid fa-pen me-1"></i> แก้ไขไมล์กลับ
+                        </button>
+                        <button type="button" class="mlg-btn-primary float-end" data-bs-dismiss="modal">ปิด</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.MLG_FUEL_PRICE = {{ fuel_price }};
+</script>
+<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/mileage_admin.js') }}"></script>
+</body>
+</html>

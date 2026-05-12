@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bbcenter-flask",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["app.py"],
+      "port": 5001,
+      "cwd": "${workspaceRoot}/app",
+      "env": {
+        "DEV_BYPASS": "1"
+      }
+    },
+    {
+      "name": "admin-approval-mockup",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "7788", "--directory", "docs/design"],
+      "port": 7788
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+{# templates/_sidebar.html
+   วิธีใช้: {% include '_sidebar.html' %}
+   ตัวแปรที่ต้องมี: current_user (Flask-Login)
+   Optional: active_menu = 'vehicle' | 'calendar' | 'history' | 'repair' | 'room' | 'dashboard' | 'admin' | 'mileage' | 'fleet' | 'cost' | 'budget' | 'fuel' | 'approver'
+   Icons: Lucide (data-lucide) — โหลดผ่าน _header.html
+#}
+<aside class="sidebar" id="sidebar">
+
+    {# ── Brand ───────────────────────────────── #}
+    <div class="sb-brand">
+        <a class="sb-logo" href="{{ url_for('auth.dashboard') }}">
+            <span class="sb-logo-icon"><i class="fa-solid fa-b fs-3 ps-1"></i><i class="fa-solid fa-b pt-2 fs-5 pe-1"></i></span>
+            <span class="sb-logo-text">center</span>
+        </a>
+        <button type="button" class="sb-close d-xl-none" id="closeSidebar" onclick="bbCloseSidebar()">
+            <i data-lucide="x"></i>
+        </button>
+    </div>
+
+    {# ── Scroll Container ────────────────────── #}
+    <nav class="sb-nav">
+
+        {# ─ เมนู ─────────────────────────────── #}
+        <div class="sb-section-label">เมนู</div>
+
+        <a class="sb-item {% if active_menu == 'dashboard' %}active{% endif %}"
+            href="{{ url_for('auth.dashboard') }}">
+            <span class="sb-icon"><i data-lucide="house"></i></span>
+            <span class="sb-label">Dashboard</span>
+        </a>
+
+        <a class="sb-item {% if active_menu == 'history' %}active{% endif %}"
+            href="{{ url_for('vehicle.booking_history') }}">
+            <span class="sb-icon"><i data-lucide="history"></i></span>
+            <span class="sb-label">ประวัติการจอง</span>
+        </a>
+
+        {# ─ บริการ ─────────────────────────── #}
+        <div class="sb-section-label">บริการ</div>
+
+        <a class="sb-item {% if active_menu == 'vehicle' or active_menu == 'calendar' %}active{% endif %}"
+            href="{{ url_for('vehicle.index') }}">
+            <span class="sb-icon"><i data-lucide="car"></i></span>
+            <span class="sb-label">ปฏิทินการจองรถ</span>
+        </a>
+
+        <a class="sb-item {% if active_menu == 'repair' %}active{% endif %}"
+            href="{{ url_for('repair.index') }}">
+            <span class="sb-icon"><i data-lucide="wrench"></i></span>
+            <span class="sb-label">แจ้งซ่อม IT</span>
+        </a>
+
+        <a class="sb-item {% if active_menu == 'maintenance' %}active{% endif %}"
+            href="{{ url_for('maintenance.index') }}">
+            <span class="sb-icon"><i data-lucide="wrench"></i></span>
+            <span class="sb-label">แจ้งซ่อมทั่วไป</span>
+        </a>
+
+        <a class="sb-item {% if active_menu == 'room' %}active{% endif %}"
+            href="{{ url_for('room.index') }}">
+            <span class="sb-icon"><i data-lucide="message-square"></i></span>
+            <span class="sb-label">จองห้องประชุม</span>
+        </a>
+
+        {# ─ ผู้ดูแลระบบ ─────────────────────────────── #}
+        {% if current_user.role_vehicle == 'admin' or current_user.is_superadmin %}
+        <div class="sb-section-label">ผู้ดูแลระบบ</div>
+
+        <a class="sb-item {% if active_menu == 'admin' %}active{% endif %}"
+            href="{{ url_for('vehicle.admin_trips') }}">
+            <span class="sb-icon"><i data-lucide="inbox"></i></span>
+            <span class="sb-label">อนุมัติการจอง</span>
+            {% if pending_count is defined and pending_count > 0 %}
+            <span class="sb-badge">{{ pending_count }}</span>
+            {% endif %}
+        </a>
+
+        <a class="sb-item {% if active_menu == 'mileage' %}active{% endif %}"
+            href="{{ url_for('vehicle.mileage_log') }}">
+            <span class="sb-icon"><i data-lucide="gauge"></i></span>
+            <span class="sb-label">บันทึกเลขไมล์</span>
+        </a>
+
+        <a class="sb-item {% if active_menu == 'fleet' %}active{% endif %}"
+            href="{{ url_for('adminfleet.manage_fleet') }}">
+            <span class="sb-icon"><i data-lucide="sliders-horizontal"></i></span>
+            <span class="sb-label">จัดการรถและทีม</span>
+        </a>
+
+        <a class="sb-item {% if active_menu == 'cost' %}active{% endif %}"
+            href="{{ url_for('admincost.cost_summary') }}">
+            <span class="sb-icon"><i data-lucide="pie-chart"></i></span>
+            <span class="sb-label">สรุปค่าใช้จ่าย</span>
+        </a>
+
+        <a class="sb-item {% if active_menu == 'budget' %}active{% endif %}"
+            href="{{ url_for('adminfleet.budget_manage') }}">
+            <span class="sb-icon"><i data-lucide="wallet"></i></span>
+            <span class="sb-label">จัดการงบประมาณ</span>
+        </a>
+
+        <a class="sb-item {% if active_menu == 'fuel' %}active{% endif %}"
+            href="{{ url_for('fuel.admin_fuel') }}">
+            <span class="sb-icon"><i data-lucide="fuel"></i></span>
+            <span class="sb-label">ค่าน้ำมัน</span>
+        </a>
+
+        {% if is_budget_approver %}
+        <div class="sb-section-label">ผู้อนุมัติ</div>
+        <a class="sb-item {% if active_menu == 'approver' %}active{% endif %}"
+            href="{{ url_for('vehicle.approver_inbox') }}">
+            <span class="sb-icon"><i data-lucide="circle-check"></i></span>
+            <span class="sb-label">รายการรออนุมัติ</span>
+            {% if approver_pending_count is defined and approver_pending_count > 0 %}
+            <span class="sb-badge">{{ approver_pending_count }}</span>
+            {% endif %}
+        </a>
+        {% endif %}
+
+        {% elif is_budget_approver %}
+        <div class="sb-section-label">ผู้อนุมัติ</div>
+
+        <a class="sb-item {% if active_menu == 'approver' %}active{% endif %}"
+            href="{{ url_for('vehicle.approver_inbox') }}">
+            <span class="sb-icon"><i data-lucide="shield-check"></i></span>
+            <span class="sb-label">รายการรออนุมัติ</span>
+            {% if approver_pending_count is defined and approver_pending_count > 0 %}
+            <span class="sb-badge">{{ approver_pending_count }}</span>
+            {% endif %}
+        </a>
+
+        {% elif current_user.role_vehicle == 'driver' %}
+        <div class="sb-section-label">คนขับ</div>
+
+        <a class="sb-item" href="{{ url_for('driver.driver_home') }}">
+            <span class="sb-icon"><i data-lucide="car-front"></i></span>
+            <span class="sb-label">งานของฉันวันนี้</span>
+        </a>
+        {% endif %}
+
+    </nav>
+
+    {# ── Logout (pinned bottom) ───────────────── #}
+    <div class="sb-footer">
+        <a class="sb-item sb-logout" href="{{ url_for('auth.logout') }}">
+            <span class="sb-icon"><i data-lucide="log-out" class="text-danger"></i></span>
+            <span class="sb-label text-danger">ออกจากระบบ</span>
+        </a>
+    </div>
+
+</aside>

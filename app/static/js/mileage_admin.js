@@ -1,0 +1,333 @@
+/* ============================================================
+   Mileage Admin — interactive logic
+   - Modal 3-state (start / end / complete)
+   - Realtime cost preview
+   - Checkbox selection summary
+   - Cell drill-down (vehicle × month)
+   - Breakdown panel toggle
+   - Export link sync with current filter
+   ============================================================ */
+
+(function () {
+    'use strict';
+
+    const FUEL_PRICE = window.MLG_FUEL_PRICE || 40;
+
+    // ─── Helpers ──────────────────────────────────────────
+    function fmt(n) {
+        if (n === null || n === undefined || isNaN(n)) return '0';
+        return Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    }
+
+    function nowTimestampValue() {
+        const d = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function nowTimestampLabel() {
+        const d = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear() + 543}  ${pad(d.getHours())}:${pad(d.getMinutes())} น.`;
+    }
+
+    // ─── State refs ───────────────────────────────────────
+    const $modal       = document.getElementById('mileageModal');
+    const formStart    = document.getElementById('formStart');
+    const formEnd      = document.getElementById('formEnd');
+    const stateComplete = document.getElementById('stateComplete');
+    let bsModal        = null;
+    let currentRow     = null;
+
+    function showState(which) {
+        formStart.style.display     = which === 'start'    ? 'block' : 'none';
+        formEnd.style.display       = which === 'end'      ? 'block' : 'none';
+        stateComplete.style.display = which === 'complete' ? 'block' : 'none';
+    }
+
+    // ─── Modal open ───────────────────────────────────────
+    window.openMileage = function (btn) {
+        const row = btn.closest('tr.mlg-row');
+        if (!row) return;
+        currentRow = row;
+
+        const ds = row.dataset;
+        document.getElementById('mmBookingId').textContent = 'BK-' + ds.booking;
+        document.getElementById('mmUser').textContent      = ds.user || '—';
+        document.getElementById('mmTime').textContent      = ds.time || '—';
+        document.getElementById('mmVehicle').textContent   = ds.vehicle || '—';
+        document.getElementById('mmDest').textContent      = ds.destination || '—';
+
+        const odoStart = ds.odoStart ? Number(ds.odoStart) : null;
+        const odoEnd   = ds.odoEnd   ? Number(ds.odoEnd)   : null;
+        const fuelRate = Number(ds.fuelRate) || 10;
+        const manualFuel = ds.manualFuel ? Number(ds.manualFuel) : null;
+
+        if (!odoStart) {
+            // State 1
+            document.getElementById('fsBookingId').value = ds.booking;
+            document.getElementById('fsActualStart').value = nowTimestampValue();
+            document.getElementById('fsTimeLabel').textContent = nowTimestampLabel();
+            document.getElementById('fsOdo').value = '';
+            showState('start');
+        } else if (!odoEnd) {
+            // State 2
+            document.getElementById('feBookingId').value = ds.booking;
+            document.getElementById('feActualEnd').value = nowTimestampValue();
+            document.getElementById('feOdoStartRef').textContent = fmt(odoStart) + ' กม.';
+            document.getElementById('feFuelRate').textContent = fuelRate;
+            document.getElementById('feOdoEnd').value = '';
+            document.getElementById('feFuelManual').value = '';
+            document.getElementById('feRefuel').checked = false;
+            document.getElementById('feRefuelWrap').style.display = 'none';
+            document.getElementById('fePreview').style.display = 'none';
+            document.getElementById('feOdoErr').style.display = 'none';
+            document.getElementById('feSubmit').disabled = true;
+            // Stash for realtime calc
+            formEnd.dataset.odoStart = odoStart;
+            formEnd.dataset.fuelRate = fuelRate;
+            showState('end');
+        } else {
+            // State 3
+            const distance = odoEnd - odoStart;
+            const formulaCost = (distance / fuelRate) * FUEL_PRICE;
+            document.getElementById('cOdoStart').textContent     = fmt(odoStart);
+            document.getElementById('cOdoEnd').textContent       = fmt(odoEnd);
+            document.getElementById('cDistance').textContent     = fmt(distance);
+            document.getElementById('cCostFormula').textContent  = fmt(formulaCost);
+            const manualRow = document.getElementById('cManualRow');
+            if (manualFuel && manualFuel > 0) {
+                manualRow.style.display = 'flex';
+                document.getElementById('cCostManual').textContent = fmt(manualFuel);
+            } else {
+                manualRow.style.display = 'none';
+            }
+            showState('complete');
+        }
+
+        if (!bsModal) bsModal = new bootstrap.Modal($modal);
+        bsModal.show();
+    };
+
+    // Re-edit complete state → switch to end form
+    window.goEditEnd = function () {
+        if (!currentRow) return;
+        const ds = currentRow.dataset;
+        const odoStart = Number(ds.odoStart);
+        const fuelRate = Number(ds.fuelRate) || 10;
+        document.getElementById('feBookingId').value = ds.booking;
+        document.getElementById('feActualEnd').value = nowTimestampValue();
+        document.getElementById('feOdoStartRef').textContent = fmt(odoStart) + ' กม.';
+        document.getElementById('feFuelRate').textContent = fuelRate;
+        document.getElementById('feOdoEnd').value = ds.odoEnd || '';
+        document.getElementById('feFuelManual').value = ds.manualFuel || '';
+        formEnd.dataset.odoStart = odoStart;
+        formEnd.dataset.fuelRate = fuelRate;
+        recalcEndPreview();
+        showState('end');
+    };
+
+    // ─── Realtime preview (state 2) ───────────────────────
+    function recalcEndPreview() {
+        const odoStart = Number(formEnd.dataset.odoStart || 0);
+        const fuelRate = Number(formEnd.dataset.fuelRate || 10);
+        const odoEnd   = Number(document.getElementById('feOdoEnd').value || 0);
+        const preview  = document.getElementById('fePreview');
+        const errBox   = document.getElementById('feOdoErr');
+        const submit   = document.getElementById('feSubmit');
+
+        if (!odoEnd) {
+            preview.style.display = 'none';
+            errBox.style.display = 'none';
+            submit.disabled = true;
+            return;
+        }
+        if (odoEnd <= odoStart) {
+            preview.style.display = 'none';
+            errBox.style.display = 'block';
+            submit.disabled = true;
+            return;
+        }
+        errBox.style.display = 'none';
+        const distance = odoEnd - odoStart;
+        const cost     = (distance / fuelRate) * FUEL_PRICE;
+        document.getElementById('feCalcDistance').textContent = fmt(distance);
+        document.getElementById('feCalcCost').textContent     = fmt(cost);
+        preview.style.display = 'block';
+        submit.disabled = false;
+    }
+
+    document.getElementById('feOdoEnd').addEventListener('input', recalcEndPreview);
+
+    // Refuel toggle
+    document.getElementById('feRefuel').addEventListener('change', function () {
+        document.getElementById('feRefuelWrap').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // ─── Selection / Summary ──────────────────────────────
+    const $checkAll  = document.getElementById('checkAll');
+    const $modeAll   = document.getElementById('modeAll');
+    const $modeSel   = document.getElementById('modeSelected');
+    const $strip     = document.getElementById('summaryStrip');
+
+    function getRows() {
+        return Array.from(document.querySelectorAll('tr.mlg-row'));
+    }
+
+    function recalcSummary() {
+        const rows = getRows();
+        const selected = rows.filter(r => {
+            const cb = r.querySelector('.mlg-row-check');
+            return cb && cb.checked;
+        });
+
+        if (selected.length > 0) {
+            let d = 0, c = 0;
+            selected.forEach(r => {
+                d += Number(r.dataset.distance || 0);
+                c += Number(r.dataset.cost || 0);
+            });
+            document.getElementById('selCount').textContent    = selected.length;
+            document.getElementById('selDistance').textContent = fmt(d);
+            document.getElementById('selCost').textContent     = fmt(c);
+            $modeAll.style.display = 'none';
+            $modeSel.style.display = 'flex';
+            $strip.classList.add('is-selected');
+        } else {
+            $modeAll.style.display = 'flex';
+            $modeSel.style.display = 'none';
+            $strip.classList.remove('is-selected');
+        }
+
+        // Sync header check state
+        const enabled = rows.filter(r => {
+            const cb = r.querySelector('.mlg-row-check');
+            return cb && !cb.disabled;
+        });
+        if (enabled.length === 0) {
+            $checkAll.indeterminate = false;
+            $checkAll.checked = false;
+        } else if (enabled.every(r => r.querySelector('.mlg-row-check').checked)) {
+            $checkAll.indeterminate = false;
+            $checkAll.checked = true;
+        } else if (enabled.some(r => r.querySelector('.mlg-row-check').checked)) {
+            $checkAll.indeterminate = true;
+        } else {
+            $checkAll.indeterminate = false;
+            $checkAll.checked = false;
+        }
+    }
+
+    function calcAllSummary() {
+        const rows = getRows();
+        let d = 0, c = 0;
+        rows.forEach(r => {
+            d += Number(r.dataset.distance || 0);
+            c += Number(r.dataset.cost || 0);
+        });
+        const elD = document.getElementById('sumAllDistance');
+        const elC = document.getElementById('sumAllCost');
+        if (elD) elD.textContent = fmt(d);
+        if (elC) elC.textContent = fmt(c);
+    }
+
+    if ($checkAll) {
+        $checkAll.addEventListener('change', function () {
+            const checked = this.checked;
+            getRows().forEach(r => {
+                const cb = r.querySelector('.mlg-row-check');
+                if (cb && !cb.disabled) cb.checked = checked;
+            });
+            recalcSummary();
+        });
+    }
+
+    document.querySelectorAll('.mlg-row-check').forEach(cb => {
+        cb.addEventListener('change', recalcSummary);
+    });
+
+    window.clearSelection = function () {
+        document.querySelectorAll('.mlg-row-check').forEach(cb => { cb.checked = false; });
+        if ($checkAll) { $checkAll.checked = false; $checkAll.indeterminate = false; }
+        recalcSummary();
+    };
+
+    // Click row to toggle (excluding when clicking checkbox/edit btn)
+    document.querySelectorAll('tr.mlg-row').forEach(row => {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('button, input, a')) return;
+            const cb = row.querySelector('.mlg-row-check');
+            if (cb && !cb.disabled) {
+                cb.checked = !cb.checked;
+                recalcSummary();
+            }
+        });
+    });
+
+    // ─── Drill-down: cell click in breakdown ──────────────
+    window.drillDown = function (cell) {
+        const vid   = cell.dataset.vehicle;
+        const month = cell.dataset.month;
+        const year  = cell.dataset.year;
+        if (!vid || !month) return;
+        const start = `${year}-${String(month).padStart(2,'0')}-01`;
+        // last day of month
+        const lastDay = new Date(year, Number(month), 0).getDate();
+        const end   = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+        const url = new URL(window.location.href);
+        url.searchParams.set('vehicle_id', vid);
+        url.searchParams.set('date_start', start);
+        url.searchParams.set('date_end',   end);
+        window.location.href = url.pathname + '?' + url.searchParams.toString();
+    };
+
+    // ─── Month pager (breakdown by month) ────────────────
+    (function monthPager() {
+        const pages = Array.from(document.querySelectorAll('.mlg-month-page'));
+        if (!pages.length) return;
+        const lbl     = document.getElementById('mlgPagerLabel');
+        const btnOld  = document.getElementById('mlgPagerOlder'); // ◀ go to older month → page+1
+        const btnNew  = document.getElementById('mlgPagerNewer'); // ▶ go to newer month → page-1
+        const total   = pages.length;
+        let cur = 1;
+
+        function show(p) {
+            if (p < 1 || p > total) return;
+            cur = p;
+            pages.forEach(el => {
+                if (Number(el.dataset.page) === cur) el.removeAttribute('hidden');
+                else el.setAttribute('hidden', '');
+            });
+            lbl.textContent = (cur === 1) ? 'เดือนนี้' : `ย้อน ${cur - 1} เดือน`;
+            btnNew.disabled = (cur === 1);       // newest already
+            btnOld.disabled = (cur === total);   // oldest already
+        }
+
+        btnOld.addEventListener('click', () => show(cur + 1));
+        btnNew.addEventListener('click', () => show(cur - 1));
+        show(1);
+    })();
+
+    // ─── Breakdown toggle ────────────────────────────────
+    let breakdownVisible = true;
+    window.toggleBreakdown = function () {
+        const panel = document.getElementById('breakdownPanel');
+        const lbl   = document.getElementById('breakdownToggleLabel');
+        breakdownVisible = !breakdownVisible;
+        panel.style.display = breakdownVisible ? '' : 'none';
+        lbl.textContent = breakdownVisible ? 'ซ่อนรายเดือน' : 'แสดงรายเดือน';
+    };
+
+    // ─── Export link: sync with current filter ───────────
+    (function syncExport() {
+        const link = document.getElementById('exportLink');
+        if (!link) return;
+        const params = new URLSearchParams(window.location.search);
+        const qs = params.toString();
+        if (qs) link.href = link.href + (link.href.includes('?') ? '&' : '?') + qs;
+    })();
+
+    // ─── Init ────────────────────────────────────────────
+    calcAllSummary();
+    recalcSummary();
+})();

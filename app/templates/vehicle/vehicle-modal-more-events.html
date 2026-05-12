@@ -1,0 +1,15 @@
+{# vehicle-modal-more-events.html — Modal รายการทั้งหมดในวัน (เกิน 2 รายการบน desktop)
+   วิธีใช้: {% include 'vehicle/vehicle-modal-more-events.html' %}
+   JS: openMoreEvents() อยู่ใน vehicle.js
+#}
+<div class="modal fade" id="moreEventsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:380px;">
+        <div class="modal-content border-0 shadow" style="border-radius:14px;">
+            <div class="modal-header border-0 pb-1">
+                <h6 class="modal-title fw-bold" id="moreEventsTitle">รายการทั้งหมด</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-1" id="moreEventsList"></div>
+        </div>
+    </div>
+</div>

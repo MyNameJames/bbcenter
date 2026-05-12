@@ -1,0 +1,29 @@
+# Future Features
+
+> รายการ feature ที่ยังไม่ได้ทำ — เพิ่มที่นี่เมื่อมีการสั่งว่า "ไว้เป็น future feature"
+
+---
+
+## รายการ
+
+| # | Feature | Module | บริบท / หมายเหตุ | วันที่บันทึก |
+|---|---------|--------|------------------|-------------|
+| 1 | Telegram notify สำหรับ dept approver | Vehicle | แจ้งเตือน approver ระดับแผนกเมื่อมี booking ใหม่ที่ต้องอนุมัติ | 2026-04-18 |
+| 2 | Badge notification system | Vehicle Admin | แสดงจำนวน pending bookings บน sidebar / header icon | 2026-04-18 |
+| 3 | OT cost feature | Vehicle | คำนวณค่าล่วงเวลาสำหรับคนขับ | 2026-04-18 |
+| 4 | Emil micro-interaction polish | Vehicle Admin | animation 6 จุด: card hover lift, status dot pulse, approve ripple, week chip slide, group collapse ease, action button press | 2026-04-18 |
+| 5 | notifyDept — แจ้ง Telegram แผนก (A-1) | Vehicle Admin | ปุ่ม "แจ้ง Telegram" ในส่วน AFTER / renderTripRow สำหรับ expense_type='department' ยังเป็น placeholder ต้องสร้าง endpoint + fetch + toast | 2026-04-19 |
+| 6 | แสดงชื่อผู้ประสานงานกองใน assign modal | Vehicle Admin | กองที่ไม่มี approver_id ใน VehicleBudget จะไม่แสดงชื่อ — ควรเพิ่ม UI บอกว่า "ยังไม่ได้ตั้ง" หรือ fallback ค้นจาก User.role_vehicle='approver' | 2026-04-19 |
+| 7 | ลบ function รถ 2 คัน | Vehicle | กฎหลัก: ไม่อนุมัติรถ 2 คันต่อ booking — ให้ลบ assigned_vehicle2_id, driver2_id, vehicle2Label และ route/template ที่เกี่ยวข้องทั้งหมด | 2026-04-19 |
+| 8 | In-App Notification — Repair / Maintenance / Room | Repair, Maintenance, Room | ขยาย notification system ไปโมดูลอื่น (ตอนนี้ทำเฉพาะ Vehicle) — ใช้ notification_service.py เป็น base, เพิ่ม `notify_*` functions ตามแต่ละโมดูล | 2026-04-23 |
+| 9 | Notification preferences per-user | Auth | ให้ user เลือกว่าจะรับ notification แบบไหน (toast/email/telegram) per-category — เพิ่ม table `user_notification_pref` | 2026-04-23 |
+| 10 | รายชื่อผู้อนุมัติแต่ละงบส่วนกอง (Manage Fleet) | Vehicle Admin | ใน `/admin/manage-fleet` เพิ่มส่วนแสดง/จัดการรายชื่อผู้อนุมัติ (approver) ของแต่ละ VehicleBudget ส่วนกอง — ตอนนี้เก็บแค่ `approver_id` ต่อ 1 กอง อาจต้องรองรับหลายคน | 2026-04-24 |
+| 11 | AJAX / Response Pattern documentation | CLAUDE.md | document Flask response pattern ที่ใช้จริง (jsonify format, flash+redirect, error response) เพื่อให้ AI ไม่ต้องเดา format | 2026-04-25 |
+| 12 | Naming Convention section ใน CLAUDE.md | CLAUDE.md | explicit rule สำหรับ blueprint naming, view function naming, template file naming convention | 2026-04-25 |
+
+---
+
+## วิธีใช้
+
+- เมื่อมีคำสั่ง **"ไว้เป็น future feature"** → เพิ่มแถวในตารางด้านบน
+- ระบุ Module, บริบท, และวันที่บันทึกทุกครั้ง

@@ -1,0 +1,791 @@
+// ============================================================
+//  vehicle.js — BB Center
+//  ข้อ 1: scroll ขึ้น+10px → expand ปฏิทินเต็ม
+//  ข้อ 2: tripGroup เหลือ 1 → แสดงเป็นงานเดี่ยว
+//  ข้อ 3: desktop event-card รวม group card
+//  ข้อ 4: วันผ่านมา mobile ดูได้ แต่จองไม่ได้
+//  ข้อ 5: admin page มี sidebar+header layout ผ่าน _header.html
+// ============================================================
+
+// ── Constants ────────────────────────────────────────────────
+const TH_MONTHS = [
+    'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'
+];
+const STATUS_LABEL = {
+    pending:          'รออนุมัติ',
+    waiting_approver: 'รอผู้ประสานงานกอง',
+    approved:         'อนุมัติแล้ว',
+    rejected:         'ไม่อนุมัติ',
+    completed:        'เสร็จแล้ว'
+};
+const STATUS_BADGE = {
+    pending:          'badge-pending',
+    waiting_approver: 'badge-approver',
+    approved:         'badge-approved',
+    rejected:         'bg-danger text-white',
+    completed:        'bg-secondary text-white'
+};
+const STATUS_DOT = {
+    pending:          'pending',
+    waiting_approver: 'approver',
+    approved:         'approved',
+    rejected:         'rejected',
+    completed:        'approved',
+};
+const STATUS_ICON = {
+    pending:          'fa-regular fa-clock',
+    waiting_approver: 'fa-regular fa-paper-plane',
+    approved:         'fa-regular fa-circle-check',
+    rejected:         'fa-regular fa-circle-xmark',
+    completed:        'fa-regular fa-circle-check'
+};
+const EVENT_CARD_STYLE = {
+    pending:          'background:#FEF3C7;border-color:#F59E0B;color:#92400E;',
+    waiting_approver: 'background:#DBEAFE;border-color:#60A5FA;color:#1E40AF;',
+    approved:         'background:#D1FAE5;border-color:#34D399;color:#065F46;',
+    rejected:         'background:#FEE2E2;border-color:#F87171;color:#991B1B;',
+    completed:        'background:#F3F4F6;border-color:#9CA3AF;color:#374151;'
+};
+
+// ── State ─────────────────────────────────────────────────────
+let currentDate      = new Date();
+currentDate.setDate(1);
+let selectedDate     = new Date();
+let calendarCollapsed = false;
+let bookingModal, editBookingModal, eventDetailModal, moreEventsModal;
+
+const mockEvents = window.BOOKINGS || [];
+const VEHICLES   = window.VEHICLES || [];
+const DRIVERS    = window.DRIVERS  || [];
+
+// ── Helpers ───────────────────────────────────────────────────
+function sortByTime(arr) {
+    return [...arr].sort((a, b) => {
+        const m = t => { const [h, mm] = t.split(':').map(Number); return h * 60 + mm; };
+        return m(a.time) - m(b.time);
+    });
+}
+function calcDuration(s, e) {
+    const [h1,m1] = s.split(':').map(Number), [h2,m2] = e.split(':').map(Number);
+    let d = (h2*60+m2)-(h1*60+m1); if(d<=0) d+=1440;
+    const h=Math.floor(d/60), m=d%60;
+    return h===0?`${m} นาที`:m===0?`${h} ชั่วโมง`:`${h} ชม. ${m} นาที`;
+}
+
+// ── ข้อ 2: ตรวจว่า booking นี้ "solo" หรือไม่ ─────────────────
+// solo = ไม่มี tripGroup หรือ มี tripGroup แต่ active partner = 0
+function isSoloBooking(e) {
+    if (!e.tripGroup) return true;
+    const partners = mockEvents.filter(b =>
+        b.tripGroup === e.tripGroup && b.id !== e.id &&
+        b.status !== 'rejected'
+    );
+    return partners.length === 0;
+}
+
+// ── DOM Ready ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    bookingModal     = new bootstrap.Modal(document.getElementById('bookingModal'));
+    editBookingModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
+    eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
+    moreEventsModal  = new bootstrap.Modal(document.getElementById('moreEventsModal'));
+
+    initFlatpickr();
+    renderCalendar();
+    initMobileScrollCollapse();
+
+    // ── Month navigation ───────────────────────────────────────
+    document.getElementById('prevMonthBtn')?.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+    document.getElementById('nextMonthBtn')?.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+    document.getElementById('todayBtn')?.addEventListener('click', () => {
+        currentDate = new Date(); currentDate.setDate(1);
+        selectedDate = new Date();
+        renderCalendar();
+    });
+
+    // ── Unlock month nav prev button after every render ────────
+    const calBody = document.getElementById('calendarBody');
+    function unlockMonthNav() {
+        const prev = document.getElementById('prevMonthBtn');
+        if (prev) prev.disabled = false;
+    }
+    function hideOtherMonthEvents() {
+        document.querySelectorAll('.calendar-cell.other-month .events-container')
+            .forEach(c => { c.innerHTML = ''; });
+    }
+    if (calBody) {
+        new MutationObserver(unlockMonthNav).observe(calBody, { childList: true });
+        new MutationObserver(hideOtherMonthEvents).observe(calBody, { childList: true, subtree: true });
+    }
+    unlockMonthNav();
+
+    // ── bookingForm validation (moved from vehicle.html) ───────
+    document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        this.classList.add('was-validated');
+        if (!this.checkValidity()) return;
+        const date   = document.getElementById('bk_date').value;
+        const tStart = document.getElementById('bk_start_time').value;
+        const tEnd   = document.getElementById('bk_end_time').value;
+        document.getElementById('bk_start_datetime').value = date + 'T' + tStart;
+        document.getElementById('bk_end_datetime').value   = date + 'T' + tEnd;
+        this.submit();
+    });
+    // live validation — แสดง check icon ทันทีที่กรอกถูกต้อง
+    document.querySelectorAll('#bookingForm [required]').forEach(field => {
+        ['input', 'change'].forEach(evt => field.addEventListener(evt, () => {
+            field.classList.toggle('is-valid', field.checkValidity());
+        }));
+    });
+    document.getElementById('bookingModal')?.addEventListener('shown.bs.modal', function() {
+        // trigger check icon บน field ที่มี value ตั้งต้น (เช่น passenger_count = 1)
+        document.querySelectorAll('#bookingForm [required]').forEach(field => {
+            if (field.value) field.classList.toggle('is-valid', field.checkValidity());
+        });
+    });
+    document.getElementById('bookingModal')?.addEventListener('hidden.bs.modal', function() {
+        const f = document.getElementById('bookingForm');
+        if (f) {
+            f.classList.remove('was-validated');
+            f.reset();
+            f.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
+        }
+    });
+
+    // ── editBookingForm validation ─────────────────────────────
+    document.getElementById('editBookingForm')?.addEventListener('submit', function(e) {
+        this.classList.add('was-validated');
+        if (!this.checkValidity()) e.preventDefault();
+    });
+    document.getElementById('editBookingModal')?.addEventListener('hidden.bs.modal', function() {
+        const f = document.getElementById('editBookingForm');
+        if (f) f.classList.remove('was-validated');
+    });
+});
+
+// ── ข้อ 1: Mobile scroll logic ───────────────────────────────
+// scroll ลง > 10px → collapse 2 สัปดาห์
+// scroll ขึ้น (position <= 10px) → expand เต็ม
+function initMobileScrollCollapse() {
+    const list = document.getElementById('mobileListContent');
+    if (!list) return;
+
+    list.addEventListener('scroll', () => {
+        if (window.innerWidth >= 768) return;
+        const y = list.scrollTop;
+        if (y > 10 && !calendarCollapsed) {
+            calendarCollapsed = true;
+            collapseCalendarCells();
+        } else if (y <= 10 && calendarCollapsed) {
+            calendarCollapsed = false;
+            expandCalendar();
+        }
+    });
+}
+
+function collapseCalendarCells() {
+    const all = Array.from(document.querySelectorAll('#calendarBody .calendar-cell'));
+    if (!all.length) return;
+    const rows = [];
+    for (let i = 0; i < all.length; i += 7) rows.push(all.slice(i, i + 7));
+    let selIdx = rows.findIndex(r => r.some(c => c.classList.contains('selected')));
+    if (selIdx < 0) selIdx = 0;
+    const isLast = selIdx === rows.length - 1;
+    rows.forEach((row, i) => {
+        const show = isLast ? (i===selIdx-1||i===selIdx) : (i===selIdx||i===selIdx+1);
+        row.forEach(c => c.style.display = show ? '' : 'none');
+    });
+}
+
+function expandCalendar() {
+    document.querySelectorAll('#calendarBody .calendar-cell').forEach(c => {
+        c.style.display = '';
+    });
+}
+
+// ── Flatpickr ─────────────────────────────────────────────────
+// bookingModal ใช้ native date/time inputs แล้ว — flatpickr เฉพาะ editBookingModal
+function initFlatpickr() {
+    // ── ตั้ง min date ให้ native input วันที่จอง ──
+    const bkDate = document.getElementById('bk_date');
+    if (bkDate) {
+        const today = new Date();
+        const pad   = n => String(n).padStart(2, '0');
+        bkDate.min  = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+    }
+    // ── end_time ต้อง > start_time ──
+    const bkStart = document.getElementById('bk_start_time');
+    const bkEnd   = document.getElementById('bk_end_time');
+    if (bkStart && bkEnd) {
+        bkStart.addEventListener('change', () => {
+            bkEnd.min = bkStart.value;
+            if (bkEnd.value && bkEnd.value <= bkStart.value) bkEnd.value = '';
+        });
+    }
+}
+
+function initFlatpickrInModal() {
+    const sEl = document.querySelector('#editBookingModal #editStartDatetime');
+    const eEl = document.querySelector('#editBookingModal #editEndDatetime');
+    if (!sEl || !eEl || sEl._flatpickr) return;
+    const eFp = flatpickr(eEl, {
+        enableTime:true, time_24hr:true, minuteIncrement:1,
+        locale:'th', dateFormat:'Y-m-d\\TH:i', altInput:true, altFormat:'d/m/Y H:i'
+    });
+    flatpickr(sEl, {
+        enableTime:true, time_24hr:true, minuteIncrement:15,
+        locale:'th', dateFormat:'Y-m-d\\TH:i', altInput:true, altFormat:'d/m/Y H:i',
+        onChange(sel) {
+            if (!sel.length) return;
+            const d=sel[0], ds=flatpickr.formatDate(d,'Y-m-d');
+            eFp.set('minDate',ds+'T00:00'); eFp.set('maxDate',ds+'T23:59');
+            const sm=d.getHours()*60+d.getMinutes()+1;
+            eFp.set('minTime',`${String(Math.floor(sm/60)%24).padStart(2,'0')}:${String(sm%60).padStart(2,'0')}`);
+        }
+    });
+}
+
+// ── Calendar ──────────────────────────────────────────────────
+function renderCalendar() {
+    const year=currentDate.getFullYear(), month=currentDate.getMonth();
+    document.getElementById('currentMonthLabel').textContent = `${TH_MONTHS[month]} ${year+543}`;
+    const firstDay=new Date(year,month,1).getDay();
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const daysInPrev=new Date(year,month,0).getDate();
+    const calBody=document.getElementById('calendarBody');
+    calBody.innerHTML='';
+    const today=new Date();
+    for(let i=firstDay-1;i>=0;i--) createCell(daysInPrev-i,year,month-1,true);
+    for(let i=1;i<=daysInMonth;i++){
+        const isToday=i===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();
+        createCell(i,year,month,false,isToday);
+    }
+    const total=firstDay+daysInMonth;
+    const fill=total%7===0?0:7-(total%7);
+    for(let i=1;i<=fill;i++) createCell(i,year,month+1,true);
+    if(calendarCollapsed) collapseCalendarCells();
+    updateMobileList(selectedDate||today);
+}
+
+function createCell(day, year, month, isOtherMonth, isToday=false) {
+    let tYear=year, tMonth=month;
+    if(tMonth<0){tMonth=11;tYear--;} if(tMonth>11){tMonth=0;tYear++;}
+    const pad=n=>String(n).padStart(2,'0');
+    const ds=`${tYear}-${pad(tMonth+1)}-${pad(day)}`;
+    const todayMidnight=new Date(); todayMidnight.setHours(0,0,0,0);
+    const cellDate=new Date(tYear,tMonth,day);
+    const isPast=cellDate<todayMidnight;
+
+    const cell=document.createElement('div');
+    cell.className=`calendar-cell${isOtherMonth?' other-month':''}${isToday?' today':''}${isPast?' past-day':''}`;
+    if(selectedDate&&!isOtherMonth
+        &&selectedDate.getDate()===day
+        &&selectedDate.getMonth()===tMonth
+        &&selectedDate.getFullYear()===tYear) cell.classList.add('selected');
+
+    const dayEvents=sortByTime(mockEvents.filter(e=>e.date===ds));
+    const activeOnDay=dayEvents.filter(e=>e.status!=='rejected'&&e.status!=='completed').length;
+    const totalV=window.TOTAL_VEHICLES||0;
+    const vehiclesLeft=totalV-activeOnDay;
+    let html=`<span class="date-number">${day}</span>`;
+    if(!isOtherMonth&&totalV>0){
+        if(vehiclesLeft<=0) html+=`<span class="vehicle-full-badge">รถเต็ม</span>`;
+    }
+
+    // ── ข้อ 2: other-month cell — ไม่แสดง events เลย ──────────
+    if(!isOtherMonth){
+        if(dayEvents.length===1) html+=`<span class="mobile-indicator"></span>`;
+        else if(dayEvents.length>=4) html+=`<span class="mobile-indicator" style="width:25px;border-radius:4px;"></span>`;
+        else if(dayEvents.length>=2) html+=`<span class="mobile-indicator" style="width:15px;border-radius:4px;"></span>`;
+    }
+
+    // ── ข้อ 3: desktop event cards รวม group ─────────────────
+    html+=`<div class="events-container mt-auto">`;
+    html+=isOtherMonth ? '' : buildDesktopEventCards(dayEvents, ds);
+    html+=`</div>`;
+
+    cell.innerHTML=html;
+    cell.querySelectorAll('[data-bs-toggle="popover"]').forEach(el=>{
+        new bootstrap.Popover(el,{trigger:'click',container:'body',sanitize:false});
+    });
+
+    cell.addEventListener('click',()=>{
+        document.querySelectorAll('.calendar-cell').forEach(c=>c.classList.remove('selected'));
+        if(!isOtherMonth) cell.classList.add('selected');
+        selectedDate=new Date(tYear,tMonth,day);
+        updateMobileList(selectedDate);
+        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el=>{
+            bootstrap.Popover.getInstance(el)?.hide();
+        });
+        // ── ข้อ 4: desktop คลิก cell → เปิด modal จอง (ยกเว้นวันผ่านมา / other-month)
+        if (window.innerWidth >= 768 && !isOtherMonth && !isPast) {
+            openBookingModal(ds);
+        }
+    });
+
+    document.getElementById('calendarBody').appendChild(cell);
+}
+
+// ── ข้อ 3: สร้าง event cards บน desktop (รวม group) ─────────
+function buildDesktopEventCards(dayEvents, ds) {
+    if(!dayEvents.length) return '';
+
+    // จัด group
+    const grouped={}, singles=[];
+    dayEvents.forEach(e=>{
+        const solo=isSoloBooking(e);
+        if(!solo && e.tripGroup){
+            if(!grouped[e.tripGroup]) grouped[e.tripGroup]=[];
+            grouped[e.tripGroup].push(e);
+        } else {
+            singles.push(e);
+        }
+    });
+
+    // รวม group + single เข้า display list
+    const displayItems=[]; // { type:'group'|'single', data }
+
+    // group card ใหญ่ (1 card ต่อ group)
+    Object.entries(grouped).forEach(([grp,members])=>{
+        displayItems.push({type:'group', grp, members:sortByTime(members)});
+    });
+    singles.forEach(e=>displayItems.push({type:'single', e}));
+
+    // เรียงตาม time (ใช้ time ตัวแรกของ item)
+    displayItems.sort((a,b)=>{
+        const ta=a.type==='group'?a.members[0].time:a.e.time;
+        const tb=b.type==='group'?b.members[0].time:b.e.time;
+        const m=t=>{const[h,mm]=t.split(':').map(Number);return h*60+mm;};
+        return m(ta)-m(tb);
+    });
+
+    const maxShow=2;
+    let html='';
+
+    if(displayItems.length>maxShow){
+        const extra=displayItems.slice(maxShow);
+        const popContent=extra.map(item=>{
+            if(item.type==='group'){
+                const f=item.members[0];
+                return `<div class="d-flex align-items-center gap-2 mb-1 pb-1"
+                    style="border-bottom:1px solid #f3f4f6;cursor:pointer;"
+                    onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${f.id}),200)">
+                    <i class="bi bi-people-fill" style="color:#2563EB;font-size:.65rem;"></i>
+                    <span style="font-size:.75rem;font-weight:600;">${f.time}</span>
+                    <span class="text-truncate" style="font-size:.72rem;max-width:100px;">ทริปร่วม (${item.members.length})</span>
+                </div>`;
+            }
+            const e=item.e;
+            return `<div class="d-flex align-items-center gap-2 mb-1 pb-1"
+                style="border-bottom:1px solid #f3f4f6;cursor:pointer;"
+                onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${e.id}),200)">
+                <span class="badge rounded-pill ${STATUS_BADGE[e.status]||'bg-secondary'} " style="font-size:.65rem;">${STATUS_LABEL[e.status]||e.status}</span>
+                <span style="font-size:.75rem;font-weight:600;">${e.time}</span>
+                <span class="text-truncate" style="font-size:.72rem;max-width:110px;">${e.dest}</span>
+            </div>`;
+        }).join('');
+
+        html+=`<div class="event-more popover-trigger" data-ds="${ds}"
+            data-bs-toggle="popover" data-bs-placement="auto" data-bs-html="true"
+            data-bs-title="<span style='font-size:.8rem;font-weight:600;'>+${extra.length} รายการ</span>"
+            data-bs-content="${popContent.replace(/"/g,'&quot;')}"
+            onclick="event.stopPropagation()">+${extra.length} รายการ</div>`;
+    }
+
+    displayItems.slice(0,maxShow).forEach(item=>{
+        if(item.type==='group'){
+            const members=item.members; // sorted by time
+            const f=members[0];
+            const second=members[1]||null; // บรรทัดที่ 2 (ถ้ามี)
+            const style=EVENT_CARD_STYLE.approved; // ทริปร่วม = อนุมัติแล้วทั้งหมด
+
+            html+=`<div class="event-card p-1"
+                style="${style}border-radius:4px;flex-direction:column;align-items:flex-start;white-space:normal;"
+                onclick="event.stopPropagation(); openEventDetail(${f.id})">
+                <div style="display:flex;align-items:center;gap:3px;width:100%;overflow:hidden;">
+                    <span style="font-size:.72rem;font-weight:700;flex-shrink:0;">${f.time}</span>
+                    <span style="font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.dest}</span>
+                </div>
+                ${second?`<div style="padding-left:2rem;width:100%;overflow:hidden;">
+                    <span style="font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;opacity:.85;">${second.dest}</span>
+                </div>`:''}
+            </div>`;
+        } else {
+            const e=item.e;
+            const style=EVENT_CARD_STYLE[e.status]||EVENT_CARD_STYLE.pending;
+            html+=`<div class="event-card p-1" style="${style}border-radius:4px;"
+                onclick="event.stopPropagation(); openEventDetail(${e.id})">
+                <div class="row g-1 d-flex align-items-center text-truncate">
+                    <span class="col-auto" style="font-size:.72rem;font-weight:600;">${e.time}</span>
+                    <span class="col text-truncate" style="font-size:.72rem;">${e.dest}</span>
+                </div>
+            </div>`;
+        }
+    });
+
+    return html;
+}
+
+// ── ข้อ 4: Mobile List — วันผ่านมาดูได้ แต่จองไม่ได้ ─────────
+function updateMobileList(dateObj) {
+    if(!dateObj) return;
+    const pad=n=>String(n).padStart(2,'0');
+    const ds=`${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())}`;
+    const todayMidnight=new Date(); todayMidnight.setHours(0,0,0,0);
+    const isPastDate=new Date(dateObj.getFullYear(),dateObj.getMonth(),dateObj.getDate())<todayMidnight;
+
+    document.getElementById('mobileListDateLabel').textContent =
+        `${dateObj.getDate()} ${TH_MONTHS[dateObj.getMonth()]} ${dateObj.getFullYear()+543}`;
+
+    // ── ข้อ 4: ปุ่มจองรถ ซ่อนถ้าเป็นวันผ่านมา ──────────────
+    const bookBtn=document.getElementById('mobileDateCountBtn');
+    if(bookBtn){
+        if(isPastDate){
+            bookBtn.disabled=true;
+            bookBtn.style.opacity='.5';
+            bookBtn.style.cursor='not-allowed';
+        } else {
+            bookBtn.disabled=false;
+            bookBtn.style.opacity='';
+            bookBtn.style.cursor='';
+        }
+    }
+
+    const dayEvents=sortByTime(mockEvents.filter(e=>e.date===ds));
+    const content=document.getElementById('mobileListContent');
+
+    if(!dayEvents.length){
+        content.innerHTML=`<div class="text-center text-muted py-5 small">
+            <i class="bi bi-calendar-x d-block mb-2 fs-2 opacity-50"></i>
+            ไม่มีการจองในวันนี้
+        </div>`;
+        return;
+    }
+
+    // แยก grouped vs singles (ใช้ isSoloBooking)
+    const grouped={}, singles=[];
+    dayEvents.forEach(e=>{
+        if(!isSoloBooking(e) && e.tripGroup){
+            if(!grouped[e.tripGroup]) grouped[e.tripGroup]=[];
+            grouped[e.tripGroup].push(e);
+        } else {
+            singles.push(e);
+        }
+    });
+
+    let html='';
+    // group cards
+    Object.entries(grouped)
+        .sort((a,b)=>{
+            const m=t=>{const[h,mm]=t.split(':').map(Number);return h*60+mm;};
+            return m(a[1][0].time)-m(b[1][0].time);
+        })
+ 
+        .forEach(([grpName,members])=>{
+            const sorted=sortByTime(members);
+            // ── คำนวณ time range รวม ──
+            const toMins=t=>{const[h,m]=t.split(':').map(Number);return h*60+m;};
+            const minTime=sorted[0].time;
+            const maxTimeEnd=sorted.reduce((best,e)=>toMins(e.timeEnd)>toMins(best)?e.timeEnd:best, sorted[0].timeEnd);
+            // ── รวม pax ──
+            const totalPax=members.reduce((sum,e)=>sum+(parseInt(e.pax)||0),0);
+            // ── vehicle label (ตัด license plate ออก) ──
+            const carLabel=(members[0].car||'').split('(')[0].trim() || grpName;
+            // ── collapse ID ──
+            const collapseId=`grp-${grpName.replace(/[^a-z0-9]/gi,'')}`;
+
+            html+=`
+            <div class="card mb-2">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div class="ds-status-dot ds-status-dot--approved flex-shrink-0">
+                            <i class="fa-solid fa-person-walking"></i>
+                        </div>
+
+                        <div class="flex-grow-1 overflow-hidden" onclick="document.getElementById('${collapseId}').classList.toggle('show'); document.querySelector('[data-bs-target=\'#${collapseId}\']').classList.toggle('collapsed');" style="cursor:pointer;">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--ds-text-heading);">
+                                    <i class="fa-solid fa-van-shuttle me-1" style="font-size:.8rem;"></i>${carLabel}
+                                </span>
+                                <span class="flex-shrink-0 rounded-pill px-2 py-0" style="font-size:.65rem;font-weight:600;background:#EFF6FF;color:#3B82F6;border:0.5px solid #3B82F6;">
+                                    ${members.length} งานรวม
+                                </span>
+                            </div>
+                            <div class="text-muted" style="font-size:.75rem;">
+                                <i class="bi bi-person me-1"></i>${totalPax}
+                                <span class="mx-1">·</span>
+                                <i class="bi bi-clock me-1"></i>${minTime} – ${maxTimeEnd}
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                            <button class="btn btn-sm rounded-2"
+                                    style="border:1px solid var(--ds-border);padding:4px 8px;"
+                                    onclick="event.stopPropagation(); openEventDetail(${members[0].id})">
+                                <i class="fa-solid fa-pen" style="font-size:.7rem;color:var(--ds-text-muted);"></i>
+                            </button>
+                            <button class="btn btn-sm rounded-2 grp-toggle collapsed"
+                                    style="border:1px solid var(--ds-border);padding:4px 8px;"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#${collapseId}"
+                                    onclick="event.stopPropagation();">
+                                <i class="fa-solid fa-chevron-down grp-chevron" style="font-size:.7rem;color:var(--ds-text-muted);"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="collapse" id="${collapseId}">
+                    <div class="px-3 pb-2 d-flex flex-column gap-2" style="border-top:1px solid var(--ds-border);">
+                        <div class="pt-2"></div>
+                        ${sorted.map(e=>{
+                            const driverDisplay=e.driverName||(e.needDriver?'รอคนขับ':'');
+                            return `
+                            <div class="card mb-0" onclick="openEventDetail(${e.id})" style="cursor:pointer;">
+                                <div class="card-body py-2 px-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <div class="fw-semibold text-truncate" style="font-size:.82rem;color:var(--ds-text-heading);">${e.booker}</div>
+                                            <div class="text-muted text-truncate" style="font-size:.72rem;">
+                                                <i class="bi bi-person me-1"></i>${e.pax}
+                                                <span class="mx-1">·</span>
+                                                <i class="bi bi-clock me-1"></i>${e.time}
+                                                ${e.dest?`<span class="mx-1">·</span><i class="bi bi-geo-alt me-1"></i>${e.dest}`:''}
+                                            </div>
+                                        </div>
+                                        <div class="flex-shrink-0">
+                                            <button class="btn btn-sm rounded-2"
+                                                    style="border:1px solid var(--ds-border);padding:3px 6px;"
+                                                    onclick="event.stopPropagation(); openEventDetail(${e.id})">
+                                                <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:.65rem;color:var(--ds-text-muted);"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+            </div>`;
+        });
+
+    singles.forEach(e=>{
+        const driverDisplay = e.driverName || (e.needDriver ? 'รอคนขับ' : '');
+        const iconClass = (STATUS_ICON[e.status] || 'fa-regular fa-circle-check');
+        html+=`
+        <div class="card mb-2" onclick="openEventDetail(${e.id})" style="cursor:pointer;">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-3">
+
+                    <div class="ds-status-dot ds-status-dot--${STATUS_DOT[e.status]||'approved'} flex-shrink-0">
+                        <i class="${iconClass}"></i>
+                    </div>
+
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--ds-text-heading);">${e.booker}</div>
+                        <div class="text-black-50 text-truncate" style="font-size:.75rem;">
+                            <i class="bi bi-person me-1"></i>${e.pax}
+                            <span class="mx-1">·</span>
+                            <i class="bi bi-clock me-1"></i>${e.time}
+                            ${e.dest ? `<span class="mx-1">·</span><i class="bi bi-geo-alt me-1"></i>${e.dest}` : ''}
+                        </div>
+                    </div>
+
+                    ${(e.isOwner || e.isPending) ? `
+                    <div class="flex-shrink-0">
+                        <button class="btn btn-sm rounded-2"
+                                style="border:1px solid var(--ds-border);padding:4px 8px;"
+                                onclick="event.stopPropagation(); openEditBookingModal(${e.id})">
+                            <i class="fa-solid fa-pen" style="font-size:.7rem;color:var(--ds-text-muted);"></i>
+                        </button>
+                    </div>` : ''}
+
+                </div>
+            </div>
+        </div>`;
+    });
+
+    content.innerHTML=html;
+}
+
+// ── More Events Modal ─────────────────────────────────────────
+function openMoreEvents(dateStr) {
+    const events=sortByTime(mockEvents.filter(e=>e.date===dateStr));
+    const [y,m,d]=dateStr.split('-').map(Number);
+    document.getElementById('moreEventsTitle').textContent=`${d} ${TH_MONTHS[m-1]} — รายการทั้งหมด`;
+    document.getElementById('moreEventsList').innerHTML=
+        `<div class="d-flex flex-column gap-2">`+
+        events.map(e=>`
+            <div class="event-card p-2"
+                style="${EVENT_CARD_STYLE[e.status]||''}border-radius:8px;cursor:pointer;"
+                onclick="moreEventsModal.hide();setTimeout(()=>openEventDetail(${e.id}),280)">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span style="font-weight:700;font-size:.85rem;">${e.time} – ${e.dest}</span>
+                    <span class="badge rounded-pill ${STATUS_BADGE[e.status]||'bg-secondary'}" style="font-size:.7rem;">${STATUS_LABEL[e.status]||e.status}</span>
+                </div>
+                <div style="font-size:.78rem;margin-top:3px;opacity:.75;">
+                    <i class="bi bi-person-fill me-1"></i>${e.booker}
+                </div>
+            </div>`).join('')+`</div>`;
+    moreEventsModal.show();
+}
+
+// ── helpers ───────────────────────────────────────────────────
+const TH_DAYS_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+
+function _thaiDateFull(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dow = new Date(y, m - 1, d).getDay();
+    return `วัน${TH_DAYS_FULL[dow]} ที่ ${d} ${TH_MONTHS[m - 1]}`;
+}
+function _plateLabel(e) {
+    if (!e.car) return 'รอ Admin กำหนด';
+    const match = e.car.match(/\(([^)]+)\)/);
+    const plate = match ? match[1] : '';
+    const brand = e.car.replace(/\s*\([^)]*\)/, '').trim();
+    return plate ? `${plate}  ${brand}` : brand;
+}
+
+// ── Event Detail (single + group) ────────────────────────────
+function openEventDetail(eventId) {
+    const e = mockEvents.find(b => b.id === eventId);
+    if (!e) return;
+
+    const groupMembers = e.tripGroup
+        ? sortByTime(mockEvents.filter(b =>
+            b.tripGroup === e.tripGroup && b.status !== 'rejected'))
+        : [];
+    const isGroup = groupMembers.length > 1;
+    const members = isGroup ? groupMembers : [e];
+    const rep     = isGroup ? (members.find(b => b.car) || e) : e;
+
+    // Header dot (status-based)
+    const dotKey = isGroup ? 'group' : (STATUS_DOT[e.status] || 'approved');
+    const headerDot = document.getElementById('detailHeaderDot');
+    headerDot.className = `ds-status-dot ds-status-dot--${dotKey} flex-shrink-0`;
+    headerDot.style.cssText = 'width:44px;height:44px;font-size:1rem;';
+    document.getElementById('detailHeaderIcon').className = isGroup
+        ? 'fa-solid fa-person-walking fs-5'
+        : (STATUS_ICON[e.status] || 'fa-regular fa-circle-check');
+
+    // Date, time, car
+    document.getElementById('detailDateLine').textContent = _thaiDateFull(e.date);
+    document.getElementById('detailTime').textContent     = `${e.time} – ${e.timeEnd}`;
+    document.getElementById('detailPlate').textContent    = _plateLabel(rep);
+
+    // Driver
+    const driverLine = document.getElementById('detailDriverLine');
+    if (rep.needDriver) {
+        document.getElementById('detailDriver').textContent = rep.driver || 'รอ Admin มอบหมาย';
+        driverLine.style.display = '';
+    } else {
+        driverLine.style.display = 'none';
+    }
+
+    // Members list
+    document.getElementById('detailMembersList').innerHTML = members.map((m, idx) => `
+        <div class="d-flex align-items-center gap-3 py-3${idx < members.length - 1 ? ' border-bottom' : ''} ">
+            <div class="ds-status-dot ds-status-dot--${isGroup ? 'group' : (STATUS_DOT[m.status]||'approved')} flex-shrink-0 ">
+                <i class="fa-regular fa-user" style="font-size:.8rem;"></i>
+            </div>
+            <div class="flex-grow-1 overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                    <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--ds-text-heading);">${m.booker || '–'}</span>
+                    <span class="d-inline-flex align-items-center bg-body-secondary text-muted rounded-2 px-2 py-1 flex-shrink-0">
+                        <i class="bi bi-people-fill me-1" style="font-size:.82rem;"></i>
+                        <span style="font-size:.78rem;">${m.pax || '–'}</span>
+                    </span>
+                </div>
+                <div class="d-flex align-items-center gap-1 overflow-hidden mb-1">
+                    <span class="text-muted text-truncate" style="font-size:.8rem;">${m.purpose || '–'}</span>
+                    <i class="bi bi-arrow-right text-muted flex-shrink-0" style="font-size:.75rem;"></i>
+                    <span class="text-muted text-truncate" style="font-size:.8rem;">${m.dest || '–'}</span>
+                </div>
+                ${m.pickup && m.pickup.trim() ? `
+                <div class="d-flex align-items-center gap-1 mt-1">
+                    <i class="bi bi-geo-alt text-muted flex-shrink-0" style="font-size:.75rem;"></i>
+                    <span class="text-muted text-truncate" style="font-size:.78rem;">${m.pickup}</span>
+                </div>` : ''}
+            </div>
+        </div>`
+    ).join('');
+
+    // Action buttons (single เจ้าของ + pending เท่านั้น)
+    const actDiv = document.getElementById('detailActions');
+    actDiv.innerHTML = '';
+    if (!isGroup && e.isOwner && e.isPending) {
+        actDiv.innerHTML = `
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-sm fw-bold px-3 py-2"
+                    style="background:#F4F4F5;color:#111827;border-radius:8px;"
+                    onclick="eventDetailModal.hide();setTimeout(()=>openEditBookingModal(${e.id}),300)">
+                    <i class="bi bi-pencil me-1"></i>แก้ไข
+                </button>
+                <form action="${e.deleteUrl}" method="POST"
+                    onsubmit="return confirm('ยืนยันยกเลิกการจองนี้?')">
+                    <button type="submit" class="btn btn-sm fw-bold px-3 py-2"
+                        style="background:#FEE2E2;color:#991B1B;border-radius:10px;">
+                        <i class="bi bi-trash3 me-1"></i>ยกเลิกการจอง
+                    </button>
+                </form>
+            </div>`;
+    }
+
+    eventDetailModal.show();
+}
+
+// ── Edit Booking ──────────────────────────────────────────────
+function openEditBookingModal(eventId) {
+    const e = mockEvents.find(b => b.id === eventId);
+    if (!e) return;
+    eventDetailModal?.hide();
+
+    const editForm = document.getElementById('editBookingForm');
+    editForm.action = e.editUrl;
+    editForm.classList.remove('was-validated');
+    document.getElementById('editDest').value         = e.dest    || '';
+    document.getElementById('editPurpose').value      = e.purpose || '';
+    document.getElementById('editPax').value          = e.pax     || 1;
+    document.getElementById('editNeedDriver').checked = e.needDriver;
+    document.getElementById('editPickup').value       = e.pickup  || '';
+
+    // init flatpickr ก่อน (ถ้ายังไม่ได้ init) แล้วค่อย set date
+    initFlatpickrInModal();
+    setTimeout(() => {
+        const sd = document.getElementById('editStartDatetime')?._flatpickr;
+        const ed = document.getElementById('editEndDatetime')?._flatpickr;
+        if (sd) sd.setDate(`${e.date}T${e.time}`);
+        if (ed) ed.setDate(`${e.date}T${e.timeEnd}`);
+        editBookingModal.show();
+    }, 50);
+}
+
+// ── Booking Modal ─────────────────────────────────────────────
+function openBookingModal(dateStr=null) {
+    if(eventDetailModal) eventDetailModal.hide();
+    if(moreEventsModal)  moreEventsModal.hide();
+    const pad = n => String(n).padStart(2,'0');
+    const ds  = dateStr || (selectedDate
+        ? `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth()+1)}-${pad(selectedDate.getDate())}`
+        : null);
+
+    // ── pre-fill native date/time inputs ──
+    const bkDate  = document.getElementById('bk_date');
+    const bkStart = document.getElementById('bk_start_time');
+    const bkEnd   = document.getElementById('bk_end_time');
+    if (ds && bkDate)  bkDate.value  = ds;
+    if (bkStart && !bkStart.value) bkStart.value = '08:00';
+    if (bkEnd   && !bkEnd.value)   bkEnd.value   = '17:00';
+
+    bookingModal.show();
+}

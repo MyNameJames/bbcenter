@@ -55,18 +55,16 @@ def _save_message_id(booking, message_id):
 
 
 def _car_lines(booking):
-    v1, v2 = booking.assigned_vehicle, booking.assigned_vehicle2
+    v1 = booking.assigned_vehicle
     lines = []
     if v1: lines.append(f"🚐  <b>{v1.brand} {v1.model}</b>  ·  <code>{v1.license_plate}</code>")
-    if v2: lines.append(f"🚐  <b>{v2.brand} {v2.model}</b>  ·  <code>{v2.license_plate}</code>")
     return "\n".join(lines) if lines else "🚐  ยังไม่กำหนดรถ"
 
 def _driver_lines(booking):
     if not booking.need_driver:
         return "\n🚗  ขับรถด้วยตัวเอง"
     lines = []
-    if booking.driver:  lines.append(f"👨‍✈️  <b>{booking.driver.name}</b>  📞 {booking.driver.phone}")
-    if booking.driver2: lines.append(f"👨‍✈️  <b>{booking.driver2.name}</b>  📞 {booking.driver2.phone}")
+    if booking.driver: lines.append(f"👨‍✈️  <b>{booking.driver.name}</b>  📞 {booking.driver.phone}")
     return "\n" + "\n".join(lines) if lines else ""
 
 def _time_line(booking):
@@ -151,11 +149,13 @@ def notify_approver_approved(booking, approver):
 # ─────────────────────────────────────────
 def notify_rejected(booking, rejected_by):
     delete_old_message(booking)
+    reason_line = f"\n💬  เหตุผล: {booking.reject_reason}" if booking.reject_reason else ""
     text = (
         f"❌  <b>ไม่อนุมัติ</b>  —  <code>#{booking.id}</code>\n\n"
         f"👤  <b>{booking.user.full_name or booking.user.username}</b>  |  {booking.user.department or '-'}\n"
         f"📍  {booking.destination}\n"
         f"🗓  {_fmt_date(booking.start_datetime)}  {_fmt_time(booking.start_datetime)} น.\n\n"
         f"✍️  ปฏิเสธโดย <b>{rejected_by.full_name or rejected_by.username}</b>"
+        f"{reason_line}"
     )
     _save_message_id(booking, _send(text))

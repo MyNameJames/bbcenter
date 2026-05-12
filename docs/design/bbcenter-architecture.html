@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBCenter V2 — System Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 32px 24px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #f8fafc;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 36px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ===== SECTION LABELS ===== */
+  .layer-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #475569;
+    margin-bottom: 10px;
+    padding-left: 4px;
+  }
+
+  /* ===== GRID LAYOUTS ===== */
+  .row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    align-items: stretch;
+  }
+  .row.center { justify-content: center; }
+  .col { flex: 1; }
+  .col-auto { flex: 0 0 auto; }
+
+  /* ===== BASE CARD ===== */
+  .card {
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid transparent;
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-body {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #94a3b8;
+  }
+  .card-body strong { color: #cbd5e1; }
+
+  /* ===== CARD THEMES ===== */
+  .card-client {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  .card-auth {
+    background: #1a1f2e;
+    border-color: #3730a3;
+  }
+  .card-ldap {
+    background: #1a2e1a;
+    border-color: #166534;
+  }
+  .card-flask {
+    background: #1e1a2e;
+    border-color: #6d28d9;
+  }
+  .card-module {
+    background: #1e1e2e;
+    border-color: #374151;
+  }
+  .card-repair    { border-color: #f97316; background: #1c1610; }
+  .card-maint     { border-color: #eab308; background: #1c1a10; }
+  .card-vehicle   { border-color: #3b82f6; background: #101828; }
+  .card-room      { border-color: #10b981; background: #0f1e16; }
+  .card-db {
+    background: #1a1a2e;
+    border-color: #1d4ed8;
+  }
+  .card-notify {
+    background: #1a2a1a;
+    border-color: #15803d;
+  }
+  .card-static {
+    background: #1a1a1a;
+    border-color: #44403c;
+  }
+  .card-config {
+    background: #1e1a10;
+    border-color: #78350f;
+  }
+  .card-budget {
+    background: #10181e;
+    border-color: #0e7490;
+  }
+
+  /* ===== TAG PILLS ===== */
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .tag-orange  { background: #431407; color: #fb923c; border: 1px solid #7c2d12; }
+  .tag-yellow  { background: #422006; color: #fbbf24; border: 1px solid #78350f; }
+  .tag-blue    { background: #0c1a3d; color: #60a5fa; border: 1px solid #1e40af; }
+  .tag-green   { background: #052e16; color: #34d399; border: 1px solid #065f46; }
+  .tag-purple  { background: #2e1065; color: #c084fc; border: 1px solid #6b21a8; }
+  .tag-gray    { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+  .tag-teal    { background: #042f2e; color: #5eead4; border: 1px solid #0f766e; }
+  .tag-red     { background: #2d0a0a; color: #f87171; border: 1px solid #7f1d1d; }
+
+  /* ===== ARROW DIVIDERS ===== */
+  .arrow-down {
+    text-align: center;
+    font-size: 18px;
+    color: #334155;
+    line-height: 1;
+    margin: 2px 0;
+  }
+  .arrow-label {
+    display: inline-block;
+    font-size: 10px;
+    color: #475569;
+    letter-spacing: 1px;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+
+  /* ===== DB TABLE LIST ===== */
+  .db-tables {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .db-table-item {
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    border: 1px solid #1e3a5f;
+    background: #0c1929;
+    color: #7dd3fc;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* ===== FLOW STEPS ===== */
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+  .step-num {
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #1e293b;
+    border: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+
+  /* ===== STATUS BADGES ===== */
+  .status-flow {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .status-badge {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+  .status-pending  { background: #1c1407; color: #fb923c; border: 1px solid #9a3412; }
+  .status-waiting  { background: #1c1407; color: #fbbf24; border: 1px solid #92400e; }
+  .status-approved { background: #052e16; color: #34d399; border: 1px solid #065f46; }
+  .status-rejected { background: #2d0a0a; color: #f87171; border: 1px solid #7f1d1d; }
+  .status-done     { background: #0c1a3d; color: #60a5fa; border: 1px solid #1e40af; }
+  .status-arrow    { color: #334155; font-size: 14px; }
+
+  /* ===== SEPARATOR ===== */
+  .sep {
+    border: none;
+    border-top: 1px solid #1e293b;
+    margin: 20px 0;
+  }
+
+  /* ===== ROLE TABLE ===== */
+  .role-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .role-table th, .role-table td {
+    font-size: 10px;
+    padding: 5px 8px;
+    text-align: left;
+    border: 1px solid #1e293b;
+  }
+  .role-table th { background: #1e293b; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; }
+  .role-table td { color: #64748b; }
+  .role-table td:first-child { color: #e2e8f0; font-weight: 600; }
+
+  /* ===== NOTIFICATION PATTERN ===== */
+  .notif-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+  }
+  .notif-step {
+    background: #052e16;
+    border: 1px solid #065f46;
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: #34d399;
+    font-size: 10px;
+  }
+  .notif-arrow { color: #334155; font-size: 12px; }
+
+  /* ===== SECTION WRAPPER ===== */
+  .section { margin-bottom: 10px; }
+  .section-title {
+    font-size: 11px;
+    color: #475569;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  /* icon dots */
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .dot-orange { background: #f97316; }
+  .dot-yellow { background: #eab308; }
+  .dot-blue   { background: #3b82f6; }
+  .dot-green  { background: #10b981; }
+  .dot-purple { background: #a855f7; }
+  .dot-teal   { background: #14b8a6; }
+  .dot-red    { background: #ef4444; }
+</style>
+</head>
+<body>
+
+<h1>BBCenter V2 — System Architecture</h1>
+<p class="subtitle">Flask · SQLite · SQLAlchemy · Bootstrap 5 · LDAP</p>
+
+<!-- ============================================================ -->
+<!-- LAYER 1: CLIENT -->
+<!-- ============================================================ -->
+<p class="layer-label">▸ Layer 1 — Client</p>
+<div class="row">
+  <div class="col">
+    <div class="card card-client">
+      <div class="card-title">🌐 Web Browser (ผู้ใช้งาน)</div>
+      <div class="card-body">
+        ส่ง HTTP Request ผ่าน Bootstrap 5 UI · Form Submit · API Call (JSON)
+        <div class="tags">
+          <span class="tag tag-gray">HTML/Jinja2</span>
+          <span class="tag tag-gray">Bootstrap 5</span>
+          <span class="tag tag-gray">FullCalendar</span>
+          <span class="tag tag-gray">CSS Design System</span>
+          <span class="tag tag-gray">fetch() API</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">↓ HTTP Request</div>
+
+<!-- ============================================================ -->
+<!-- LAYER 2: AUTH + LDAP -->
+<!-- ============================================================ -->
+<p class="layer-label" style="margin-top:10px;">▸ Layer 2 — Authentication</p>
+<div class="row">
+  <div class="col">
+    <div class="card card-auth">
+      <div class="card-title">🔐 Flask-Login · Session Manager</div>
+      <div class="card-body">
+        <strong>login_view = 'auth.login'</strong> — ทุก route ที่มี <strong>@login_required</strong> จะถูก redirect มาที่นี่ก่อน
+        <div class="flow-steps" style="margin-top:8px;">
+          <div class="step"><span class="step-num">1</span>รับ username + password จาก form</div>
+          <div class="step"><span class="step-num">2</span>ส่งไปยืนยันที่ <strong>LDAP / Active Directory</strong></div>
+          <div class="step"><span class="step-num">3</span>ถ้า valid → หา User ใน DB, ถ้าไม่มี → สร้างใหม่อัตโนมัติ</div>
+          <div class="step"><span class="step-num">4</span>login_user() → session ลง Browser (TTL 8 ชั่วโมง)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card card-ldap">
+      <div class="card-title">🏢 LDAP · Active Directory (ad_utils.py)</div>
+      <div class="card-body">
+        ตรวจสอบ credentials กับ domain server องค์กร<br>
+        คืนค่า: <strong>full_name</strong>, <strong>email</strong>, <strong>department</strong><br><br>
+        <div class="tags">
+          <span class="tag tag-green">check_ad_login()</span>
+          <span class="tag tag-gray">python-ldap</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">↓ Authenticated Request</div>
+
+<!-- ============================================================ -->
+<!-- LAYER 3: FLASK APP + BLUEPRINTS -->
+<!-- ============================================================ -->
+<p class="layer-label" style="margin-top:10px;">▸ Layer 3 — Application (Flask Blueprints)</p>
+<div class="row">
+  <div class="col-auto" style="width:180px;">
+    <div class="card card-flask" style="height:100%;">
+      <div class="card-title">⚙️ app.py · Core</div>
+      <div class="card-body" style="font-size:11px;">
+        <strong>Flask App</strong> สร้างที่นี่<br><br>
+        ลงทะเบียน Blueprints:<br>
+        <div class="flow-steps" style="margin-top:6px;">
+          <div class="step"><span class="step-num">→</span>auth_bp</div>
+          <div class="step"><span class="step-num">→</span>repair_bp</div>
+          <div class="step"><span class="step-num">→</span>maintenance_bp</div>
+          <div class="step"><span class="step-num">→</span>vehicle_bp</div>
+          <div class="step"><span class="step-num">→</span>adminfleet_bp</div>
+          <div class="step"><span class="step-num">→</span>admincost_bp</div>
+          <div class="step"><span class="step-num">→</span>driver_bp</div>
+          <div class="step"><span class="step-num">→</span>room_bp</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="row">
+      <!-- Repair -->
+      <div class="col">
+        <div class="card card-repair">
+          <div class="card-title"><span class="dot dot-orange"></span> repair_view.py</div>
+          <div class="card-body">
+            <strong>Blueprint: repair</strong><br>
+            แจ้งซ่อม IT Equipment
+            <div class="tags">
+              <span class="tag tag-orange">GET /repair</span>
+              <span class="tag tag-orange">POST /repair</span>
+              <span class="tag tag-orange">edit, delete</span>
+              <span class="tag tag-orange">update_status</span>
+            </div>
+            <div class="status-flow" style="margin-top:8px;">
+              <span class="status-badge status-pending">pending</span>
+              <span class="status-arrow">→</span>
+              <span class="status-badge status-done">in_progress</span>
+              <span class="status-arrow">→</span>
+              <span class="status-badge status-approved">done</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Maintenance -->
+      <div class="col">
+        <div class="card card-maint">
+          <div class="card-title"><span class="dot dot-yellow"></span> maintenance_view.py</div>
+          <div class="card-body">
+            <strong>Blueprint: maintenance</strong><br>
+            แจ้งซ่อมอาคาร / งานช่าง
+            <div class="tags">
+              <span class="tag tag-yellow">GET/POST /maintenance</span>
+              <span class="tag tag-yellow">update_status</span>
+              <span class="tag tag-yellow">export_excel</span>
+            </div>
+            <div class="status-flow" style="margin-top:8px;">
+              <span class="status-badge status-pending">pending</span>
+              <span class="status-arrow">→</span>
+              <span class="status-badge status-done">in_progress</span>
+              <span class="status-arrow">→</span>
+              <span class="status-badge status-approved">done</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:14px;">
+      <!-- Room -->
+      <div class="col">
+        <div class="card card-room">
+          <div class="card-title"><span class="dot dot-green"></span> room_view.py</div>
+          <div class="card-body">
+            <strong>Blueprint: room</strong><br>
+            จองห้องประชุม
+            <div class="tags">
+              <span class="tag tag-green">GET /room</span>
+              <span class="tag tag-green">book_room</span>
+              <span class="tag tag-green">edit, delete</span>
+              <span class="tag tag-teal">GET /api/room/bookings</span>
+            </div>
+            <div style="margin-top:8px; font-size:11px; color:#94a3b8;">
+              ตรวจ <strong>overlap</strong> ก่อนบันทึก<br>
+              คืน JSON → FullCalendar
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Auth mgmt -->
+      <div class="col">
+        <div class="card card-auth">
+          <div class="card-title"><span class="dot dot-purple"></span> auth_view.py</div>
+          <div class="card-body">
+            <strong>Blueprint: auth</strong><br>
+            login · logout · dashboard · manage_users
+            <div class="tags">
+              <span class="tag tag-purple">dashboard</span>
+              <span class="tag tag-purple">manage_users</span>
+              <span class="tag tag-purple">update_user</span>
+            </div>
+            <div style="margin-top:8px; font-size:11px; color:#94a3b8;">
+              Dashboard รวม stats ทุกระบบ<br>
+              manage_users: <strong>superadmin</strong> only
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VEHICLE - FULL WIDTH ===== -->
+<div class="row" style="margin-top:14px;">
+  <div class="col">
+    <div class="card card-vehicle">
+      <div class="card-title"><span class="dot dot-blue"></span> vehicle_view.py — 4 Blueprints ในไฟล์เดียว (1,374 lines)</div>
+      <div class="card-body">
+        <div class="row" style="gap:12px; margin-top:6px;">
+
+          <div class="col">
+            <div class="section-title">vehicle_bp · User Flow</div>
+            <div class="flow-steps">
+              <div class="step"><span class="step-num">1</span>User จอง → <strong>/vehicle/book</strong> → DB (pending)</div>
+              <div class="step"><span class="step-num">2</span>Admin อนุมัติ → <strong>/vehicle/approve</strong></div>
+              <div class="step"><span class="step-num">3</span>Admin Assign รถ + คนขับ</div>
+              <div class="step"><span class="step-num">4</span>บันทึกไมล์ → หักงบประมาณ</div>
+            </div>
+            <div class="status-flow" style="margin-top:10px;">
+              <span class="status-badge status-pending">pending</span>
+              <span class="status-arrow">→</span>
+              <span class="status-badge status-waiting">waiting_approver</span>
+              <span class="status-arrow">→</span>
+              <span class="status-badge status-approved">approved</span>
+            </div>
+            <div style="font-size:10px; color:#475569; margin-top:4px;">
+              * personal expense → approved ทันที (ข้าม waiting_approver)
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="section-title">adminfleet_bp · Fleet Admin</div>
+            <div class="tags">
+              <span class="tag tag-blue">manage-fleet</span>
+              <span class="tag tag-blue">budget_manage</span>
+              <span class="tag tag-blue">vehicle_history</span>
+              <span class="tag tag-blue">update_vehicle_service</span>
+            </div>
+            <div style="margin-top:8px; font-size:11px; color:#94a3b8;">
+              จัดการข้อมูลรถ · กำหนดงบประมาณรายแผนก
+            </div>
+
+            <div class="section-title" style="margin-top:10px;">admincost_bp · Cost</div>
+            <div class="tags">
+              <span class="tag tag-teal">cost_summary</span>
+              <span class="tag tag-teal">cost_export</span>
+              <span class="tag tag-teal">override_fuel</span>
+            </div>
+
+            <div class="section-title" style="margin-top:10px;">driver_bp · คนขับ</div>
+            <div class="tags">
+              <span class="tag tag-gray">driver_home</span>
+              <span class="tag tag-gray">driver_mileage</span>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="section-title">Mileage Cost Formula</div>
+            <div style="background:#0a1929; border:1px solid #1e3a5f; border-radius:6px; padding:10px; font-size:11px; font-family:monospace; color:#7dd3fc; line-height:1.8;">
+              fuel_cost = (distance / fuel_rate) * fuel_price<br>
+              <span style="color:#475569;"># ถ้า mileage.fuel_cost มีค่า</span><br>
+              <span style="color:#475569;"># → override ใช้ค่านั้นแทน</span>
+            </div>
+            <div style="margin-top:10px; font-size:11px; color:#94a3b8;">
+              Budget deduction เกิดที่ <strong>2 จุด:</strong><br>
+              <span style="color:#60a5fa;">①</span> Admin บันทึกไมล์ (mileage_log)<br>
+              <span style="color:#60a5fa;">②</span> คนขับบันทึกไมล์ (driver_mileage)<br>
+              trigger เมื่อ entry_type = <strong>'end'</strong>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down" style="margin: 10px 0;">↓ SQLAlchemy ORM</div>
+
+<!-- ============================================================ -->
+<!-- LAYER 4: DATA -->
+<!-- ============================================================ -->
+<p class="layer-label">▸ Layer 4 — Data</p>
+<div class="row">
+  <div class="col" style="flex: 2;">
+    <div class="card card-db">
+      <div class="card-title">🗄️ SQLite Database · portal.db (models.py)</div>
+      <div class="db-tables">
+        <div class="db-table-item"><span class="dot dot-purple"></span> user</div>
+        <div class="db-table-item"><span class="dot dot-orange"></span> repair_ticket</div>
+        <div class="db-table-item"><span class="dot dot-yellow"></span> maintenance_ticket</div>
+        <div class="db-table-item"><span class="dot dot-blue"></span> vehicle_booking</div>
+        <div class="db-table-item"><span class="dot dot-blue"></span> vehicle</div>
+        <div class="db-table-item"><span class="dot dot-blue"></span> vehicle_mileage</div>
+        <div class="db-table-item"><span class="dot dot-green"></span> room_booking</div>
+        <div class="db-table-item"><span class="dot dot-teal"></span> department_budget</div>
+        <div class="db-table-item"><span class="dot dot-gray"></span> driver</div>
+        <div class="db-table-item"><span class="dot dot-gray"></span> notification</div>
+        <div class="db-table-item"><span class="dot dot-gray"></span> system_config</div>
+      </div>
+      <div style="margin-top:10px; font-size:10px; color:#475569;">
+        ⚠️ ไม่มี migration tool — เพิ่ม column ต้องจัดการเอง · <code style="color:#7dd3fc;">db.create_all()</code> เพิ่มตารางใหม่ได้
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card card-static" style="margin-bottom:14px;">
+      <div class="card-title">📁 Static Files</div>
+      <div class="card-body" style="font-size:11px;">
+        <code style="color:#a8a29e;">static/uploads/repair/</code><br>
+        <code style="color:#a8a29e;">static/uploads/maintenance/</code><br>
+        <code style="color:#a8a29e;">static/uploads/mileage/</code><br><br>
+        <code style="color:#a8a29e;">static/css/design-system.css</code><br>
+        <span style="color:#64748b;">CSS Variables (--ds-*)</span>
+      </div>
+    </div>
+    <div class="card card-config">
+      <div class="card-title">⚙️ SystemConfig Table</div>
+      <div class="card-body" style="font-size:11px;">
+        key-value store สำหรับ config กลาง เช่น ราคาน้ำมัน (fuel_price)<br>
+        <div class="tags" style="margin-top:6px;">
+          <span class="tag tag-yellow">SystemConfig.get(key)</span>
+          <span class="tag tag-yellow">SystemConfig.set(key, val)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- LAYER 5: EXTERNAL -->
+<!-- ============================================================ -->
+<p class="layer-label" style="margin-top:10px;">▸ Layer 5 — External Services</p>
+<div class="row">
+  <div class="col">
+    <div class="card card-notify">
+      <div class="card-title">📣 Telegram Bot (telegram_service.py)</div>
+      <div class="card-body">
+        แจ้งเตือนทุก event สำคัญในระบบยานพาหนะ
+        <div class="notif-flow">
+          <span class="notif-step">เกิด Event</span>
+          <span class="notif-arrow">→</span>
+          <span class="notif-step">delete_old_message()</span>
+          <span class="notif-arrow">→</span>
+          <span class="notif-step">ส่ง Message ใหม่</span>
+          <span class="notif-arrow">→</span>
+          <span class="notif-step">บันทึก telegram_message_id</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card card-budget">
+      <div class="card-title">💰 DepartmentBudget · งบประมาณ</div>
+      <div class="card-body" style="font-size:11px;">
+        ตั้งงบรายแผนก / รายเดือน แยกตาม <strong>budget_type</strong>
+        <div class="tags" style="margin-top:6px;">
+          <span class="tag tag-teal">central</span>
+          <span class="tag tag-teal">department</span>
+        </div>
+        <div style="margin-top:6px;">
+          <code style="color:#5eead4; font-size:10px;">remaining = budget_amount − used_amount</code><br>
+          <code style="color:#5eead4; font-size:10px;">percent_used = used / budget × 100</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="sep">
+
+<!-- ============================================================ -->
+<!-- USER ROLES TABLE -->
+<!-- ============================================================ -->
+<p class="layer-label">▸ User Permission Matrix</p>
+<div class="card card-module">
+  <div class="card-title">👥 Role-Based Access Control</div>
+  <table class="role-table">
+    <thead>
+      <tr>
+        <th>Module</th>
+        <th>role = 'user'</th>
+        <th>role = 'admin'</th>
+        <th>role = 'approver'</th>
+        <th>is_superadmin</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Repair IT</td>
+        <td>แจ้งซ่อม, แก้/ลบของตัวเอง</td>
+        <td>เปลี่ยน status, ดู summary</td>
+        <td>—</td>
+        <td>ทำได้ทุกอย่าง + manage users</td>
+      </tr>
+      <tr>
+        <td>Maintenance</td>
+        <td>แจ้งซ่อม, แก้/ลบของตัวเอง</td>
+        <td>เปลี่ยน status, export</td>
+        <td>—</td>
+        <td>ทำได้ทุกอย่าง</td>
+      </tr>
+      <tr>
+        <td>Vehicle</td>
+        <td>จอง, ดูการจองตัวเอง</td>
+        <td>approve, assign รถ/คนขับ, บันทึกไมล์</td>
+        <td>อนุมัติเฉพาะแผนกตัวเอง</td>
+        <td>ทำได้ทุกอย่าง</td>
+      </tr>
+      <tr>
+        <td>Room</td>
+        <td>จอง, แก้/ลบของตัวเอง</td>
+        <td>—</td>
+        <td>—</td>
+        <td>ทำได้ทุกอย่าง</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="sep">
+
+<!-- ============================================================ -->
+<!-- OVERALL FLOW SUMMARY -->
+<!-- ============================================================ -->
+<p class="layer-label">▸ Overall Request Lifecycle</p>
+<div class="card card-module">
+  <div class="card-body">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px;">
+      <span style="background:#1e293b; padding:5px 12px; border-radius:20px; border:1px solid #334155; color:#e2e8f0;">Browser</span>
+      <span style="color:#334155;">→</span>
+      <span style="background:#1a1f2e; padding:5px 12px; border-radius:20px; border:1px solid #3730a3; color:#a5b4fc;">Flask Route</span>
+      <span style="color:#334155;">→</span>
+      <span style="background:#2e1065; padding:5px 12px; border-radius:20px; border:1px solid #6d28d9; color:#c084fc;">@login_required</span>
+      <span style="color:#334155;">→</span>
+      <span style="background:#1a2e1a; padding:5px 12px; border-radius:20px; border:1px solid #166534; color:#34d399;">Permission Check</span>
+      <span style="color:#334155;">→</span>
+      <span style="background:#1e1a2e; padding:5px 12px; border-radius:20px; border:1px solid #6d28d9; color:#c084fc;">Business Logic</span>
+      <span style="color:#334155;">→</span>
+      <span style="background:#0c1929; padding:5px 12px; border-radius:20px; border:1px solid #1e3a5f; color:#7dd3fc;">SQLAlchemy ORM</span>
+      <span style="color:#334155;">→</span>
+      <span style="background:#1a1a2e; padding:5px 12px; border-radius:20px; border:1px solid #1d4ed8; color:#60a5fa;">SQLite DB</span>
+      <span style="color:#334155;">→</span>
+      <span style="background:#1e293b; padding:5px 12px; border-radius:20px; border:1px solid #334155; color:#e2e8f0;">Jinja2 Render / JSON</span>
+      <span style="color:#334155;">→</span>
+      <span style="background:#052e16; padding:5px 12px; border-radius:20px; border:1px solid #065f46; color:#34d399;">Telegram Notify (optional)</span>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center; margin-top:28px; font-size:10px; color:#334155; letter-spacing:1px;">
+  BBCenter V2 · Architecture Diagram · Generated 2026-04-06
+</div>
+
+</body>
+</html>

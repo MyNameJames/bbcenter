@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการค่าล่วงเวลา (OT) — Mockup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* ======================== DESIGN TOKENS ======================== */
+        :root {
+            --ds-accent:          #4F46E5;
+            --ds-accent-hover:    #4338CA;
+            --ds-accent-light:    #EEF2FF;
+            --ds-accent-border:   #C7D2FE;
+            --ds-accent-text:     #3730A3;
+            --ds-bg-page:         #FAFAFA;
+            --ds-bg-surface:      #FFFFFF;
+            --ds-bg-subtle:       #F7F7F8;
+            --ds-bg-hover:        #F5F5F6;
+            --ds-border:          #EFEFEF;
+            --ds-border-strong:   #E4E4E7;
+            --ds-text-heading:    #09090B;
+            --ds-text-body:       #3F3F46;
+            --ds-text-secondary:  #71717A;
+            --ds-text-muted:      #A1A1AA;
+            --ds-radius-sm:       4px;
+            --ds-radius-md:       6px;
+            --ds-radius-xl:       8px;
+            --ds-radius-full:     9999px;
+            /* Semantic */
+            --ds-success:         #16A34A;
+            --ds-success-light:   #F0FDF4;
+            --ds-success-border:  #BBF7D0;
+            --ds-success-text:    #14532D;
+            --ds-warning:         #D97706;
+            --ds-warning-light:   #FFFBEB;
+            --ds-warning-border:  #FDE68A;
+            --ds-warning-text:    #78350F;
+            --ds-danger:          #DC2626;
+            --ds-danger-light:    #FEF2F2;
+            --ds-danger-border:   #FECACA;
+            --ds-danger-text:     #7F1D1D;
+            --ds-info:            #2563EB;
+            --ds-info-light:      #EFF6FF;
+            --ds-info-border:     #BFDBFE;
+            --ds-info-text:       #1E3A8A;
+        }
+
+        /* ======================== BASE ======================== */
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Sarabun', -apple-system, sans-serif;
+            background: var(--ds-bg-page);
+            color: var(--ds-text-body);
+            font-size: 0.875rem;
+        }
+
+        /* ======================== BOOTSTRAP CARD OVERRIDE ======================== */
+        .card {
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-md);
+            box-shadow: none !important;
+            background: var(--ds-bg-surface);
+        }
+        .card-header {
+            background: var(--ds-bg-surface);
+            border-bottom: 1px solid var(--ds-border);
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--ds-text-heading);
+        }
+        .card-footer {
+            background: var(--ds-bg-subtle);
+            border-top: 1px solid var(--ds-border);
+            padding: 10px 16px;
+            border-radius: 0 0 var(--ds-radius-md) var(--ds-radius-md);
+        }
+
+        /* ======================== KPI CARDS ======================== */
+        .kpi-card {
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-md);
+            background: var(--ds-bg-surface);
+            padding: 16px 18px;
+        }
+        .kpi-label {
+            font-size: 0.7rem;
+            color: var(--ds-text-secondary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--ds-text-heading);
+            line-height: 1;
+        }
+        .kpi-value.text-warning-ds { color: var(--ds-warning); }
+        .kpi-value.text-success-ds { color: var(--ds-success); }
+        .kpi-value.text-accent-ds  { color: var(--ds-accent);  }
+        .kpi-sub {
+            font-size: 0.72rem;
+            color: var(--ds-text-muted);
+            margin-top: 4px;
+        }
+        .kpi-icon {
+            width: 34px; height: 34px;
+            border-radius: var(--ds-radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; flex-shrink: 0;
+        }
+        .kpi-icon-neutral  { background: var(--ds-bg-subtle);    color: var(--ds-text-secondary); }
+        .kpi-icon-warning  { background: var(--ds-warning-light); color: var(--ds-warning); }
+        .kpi-icon-success  { background: var(--ds-success-light); color: var(--ds-success); }
+        .kpi-icon-accent   { background: var(--ds-accent-light);  color: var(--ds-accent); }
+
+        /* ======================== PAGE TITLE ======================== */
+        .page-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--ds-text-heading);
+            margin: 0;
+        }
+        .page-subtitle {
+            font-size: 0.78rem;
+            color: var(--ds-text-secondary);
+            margin: 3px 0 0;
+        }
+
+        /* ======================== RATE BANNER ======================== */
+        .rate-banner {
+            background: var(--ds-accent-light);
+            border: 1px solid var(--ds-accent-border);
+            border-radius: var(--ds-radius-md);
+            padding: 9px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.78rem;
+            color: var(--ds-accent-text);
+        }
+        .rate-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 10px;
+            border-radius: var(--ds-radius-full);
+            font-size: 0.72rem; font-weight: 600;
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-accent-border);
+            color: var(--ds-accent-text);
+        }
+
+        /* ======================== FILTER BAR ======================== */
+        .filter-bar {
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-md);
+            padding: 12px 16px;
+        }
+
+        /* ======================== STATUS TABS ======================== */
+        .ot-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--ds-border);
+        }
+        .ot-tab {
+            padding: 10px 16px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--ds-text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            display: flex; align-items: center; gap: 6px;
+            background: none;
+            border-top: none; border-left: none; border-right: none;
+            transition: color 0.1s;
+            font-family: 'Sarabun', sans-serif;
+        }
+        .ot-tab:hover { color: var(--ds-text-heading); background: var(--ds-bg-hover); }
+        .ot-tab.active { color: var(--ds-accent); border-bottom-color: var(--ds-accent); font-weight: 700; }
+        .tab-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 18px; height: 17px; padding: 0 5px;
+            border-radius: var(--ds-radius-full);
+            font-size: 0.68rem; font-weight: 700;
+        }
+        .tab-badge-neutral  { background: var(--ds-bg-subtle);    color: var(--ds-text-secondary); }
+        .tab-badge-warning  { background: var(--ds-warning-light); color: var(--ds-warning); }
+        .tab-badge-success  { background: var(--ds-success-light); color: var(--ds-success); }
+        .tab-badge-accent   { background: var(--ds-accent-light);  color: var(--ds-accent); }
+
+        /* ======================== TABLE ======================== */
+        .ds-table { font-size: 0.82rem; }
+        .ds-table thead th {
+            background: var(--ds-bg-subtle);
+            color: var(--ds-text-secondary);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--ds-border-strong);
+            border-top: none;
+            white-space: nowrap;
+        }
+        .ds-table tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--ds-border);
+            vertical-align: middle;
+        }
+        .ds-table tbody tr:hover { background: var(--ds-bg-hover); }
+        .ds-table tbody tr:last-child td { border-bottom: none; }
+
+        /* ======================== STATUS BADGES ======================== */
+        .badge-pending {
+            background: var(--ds-warning-light); color: var(--ds-warning-text);
+            border: 1px solid var(--ds-warning-border);
+            padding: 3px 10px; border-radius: var(--ds-radius-full);
+            font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+        }
+        .badge-approved {
+            background: var(--ds-success-light); color: var(--ds-success-text);
+            border: 1px solid var(--ds-success-border);
+            padding: 3px 10px; border-radius: var(--ds-radius-full);
+            font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+        }
+        .badge-paid {
+            background: var(--ds-accent-light); color: var(--ds-accent-text);
+            border: 1px solid var(--ds-accent-border);
+            padding: 3px 10px; border-radius: var(--ds-radius-full);
+            font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+        }
+
+        /* ======================== OT SLOT TAGS ======================== */
+        .slot-tag {
+            display: inline-flex; align-items: center; gap: 3px;
+            padding: 2px 8px;
+            border-radius: var(--ds-radius-sm);
+            font-size: 0.7rem; font-weight: 600;
+            margin-right: 3px; margin-bottom: 2px;
+            white-space: nowrap;
+        }
+        .slot-morning { background: var(--ds-info-light);    color: var(--ds-info-text);    border: 1px solid var(--ds-info-border); }
+        .slot-evening { background: var(--ds-warning-light); color: var(--ds-warning-text); border: 1px solid var(--ds-warning-border); }
+        .slot-night   { background: var(--ds-danger-light);  color: var(--ds-danger-text);  border: 1px solid var(--ds-danger-border); }
+
+        /* ======================== ACTION BUTTONS ======================== */
+        .btn-act {
+            padding: 4px 8px;
+            border-radius: var(--ds-radius-sm);
+            font-size: 0.72rem;
+            border: 1px solid var(--ds-border-strong);
+            background: none; cursor: pointer;
+            color: var(--ds-text-secondary);
+            transition: all 0.1s;
+            font-family: 'Sarabun', sans-serif;
+            line-height: 1.4;
+        }
+        .btn-act:hover           { background: var(--ds-bg-hover); color: var(--ds-text-heading); }
+        .btn-act.approve         { border-color: var(--ds-success-border); color: var(--ds-success); }
+        .btn-act.approve:hover   { background: var(--ds-success-light); }
+        .btn-act.pay             { border-color: var(--ds-accent-border); color: var(--ds-accent); }
+        .btn-act.pay:hover       { background: var(--ds-accent-light); }
+        .btn-act.danger          { border-color: var(--ds-danger-border); color: var(--ds-danger); }
+        .btn-act.danger:hover    { background: var(--ds-danger-light); }
+
+        /* ======================== DS BUTTONS ======================== */
+        .btn-ds-primary {
+            background: var(--ds-text-heading); color: #fff;
+            border: none; padding: 7px 16px;
+            border-radius: var(--ds-radius-sm);
+            font-size: 0.85rem; font-weight: 600; cursor: pointer;
+            font-family: 'Sarabun', sans-serif; transition: background 0.1s;
+        }
+        .btn-ds-primary:hover { background: #27272A; }
+        .btn-ds-secondary {
+            background: var(--ds-bg-surface); color: var(--ds-text-body);
+            border: 1px solid var(--ds-border-strong); padding: 7px 16px;
+            border-radius: var(--ds-radius-sm);
+            font-size: 0.85rem; font-weight: 500; cursor: pointer;
+            font-family: 'Sarabun', sans-serif; transition: background 0.1s;
+        }
+        .btn-ds-secondary:hover { background: var(--ds-bg-subtle); }
+        .btn-ds-outline-accent {
+            background: transparent; color: var(--ds-accent);
+            border: 1px solid var(--ds-accent-border); padding: 5px 12px;
+            border-radius: var(--ds-radius-sm);
+            font-size: 0.78rem; font-weight: 600; cursor: pointer;
+            font-family: 'Sarabun', sans-serif; transition: background 0.1s;
+        }
+        .btn-ds-outline-accent:hover { background: var(--ds-accent-light); }
+        .btn-ds-outline-print {
+            background: transparent; color: var(--ds-text-secondary);
+            border: 1px solid var(--ds-border-strong); padding: 7px 14px;
+            border-radius: var(--ds-radius-sm);
+            font-size: 0.82rem; font-weight: 500; cursor: pointer;
+            font-family: 'Sarabun', sans-serif; transition: background 0.1s;
+        }
+        .btn-ds-outline-print:hover { background: var(--ds-bg-subtle); color: var(--ds-text-heading); }
+
+        /* ======================== FORM ======================== */
+        .ds-label {
+            font-size: 0.72rem; font-weight: 700; display: block;
+            color: var(--ds-text-secondary); margin-bottom: 4px;
+        }
+        .ds-input, .ds-select, .ds-textarea {
+            border: 1px solid var(--ds-border-strong);
+            border-radius: var(--ds-radius-sm);
+            padding: 7px 10px;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 0.85rem; color: var(--ds-text-body);
+            background: var(--ds-bg-surface); outline: none;
+        }
+        .ds-input:focus, .ds-select:focus, .ds-textarea:focus {
+            border-color: var(--ds-accent);
+            box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+        }
+        .ds-textarea { resize: vertical; }
+
+        /* ======================== MODAL ======================== */
+        .modal-content {
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-xl);
+            box-shadow: none !important;
+        }
+        .modal-header {
+            border-bottom: 1px solid var(--ds-border);
+            padding: 14px 20px;
+            border-radius: var(--ds-radius-xl) var(--ds-radius-xl) 0 0;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            border-top: 1px solid var(--ds-border);
+            padding: 12px 20px;
+            background: var(--ds-bg-subtle);
+            border-radius: 0 0 var(--ds-radius-xl) var(--ds-radius-xl);
+        }
+        .modal-title { font-size: 0.95rem; font-weight: 700; color: var(--ds-text-heading); }
+
+        /* ======================== SLOT ROW (modal) ======================== */
+        .slot-row {
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-md);
+            padding: 12px; background: var(--ds-bg-subtle);
+        }
+        .slot-row-amount { font-weight: 700; font-size: 0.9rem; color: var(--ds-text-heading); }
+        .slot-row-hrs    { font-size: 0.7rem; color: var(--ds-text-secondary); }
+
+        .ot-total-box {
+            background: var(--ds-bg-subtle);
+            border: 1px solid var(--ds-border-strong);
+            border-radius: var(--ds-radius-md);
+            padding: 12px 16px;
+        }
+
+        /* ======================== WRAPPER ======================== */
+        .page-wrapper { max-width: 1160px; margin: 0 auto; padding: 28px 24px; }
+
+        /* ======================== PRINT ======================== */
+        #printReceipt { display: none; }
+
+        @media print {
+            body > *                    { display: none !important; visibility: hidden; }
+            #printReceipt               { display: block !important; visibility: visible; position: fixed; top: 0; left: 0; width: 100%; }
+            #printReceipt *             { visibility: visible; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ========================================================
+     MAIN CONTENT
+     ======================================================== -->
+<div class="page-wrapper" id="mainContent">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="page-title">
+                <i class="fa-solid fa-clock-rotate-left me-2" style="color:var(--ds-accent)"></i>
+                จัดการค่าล่วงเวลา (OT)
+            </h1>
+            <p class="page-subtitle">คำนวณและอนุมัติ OT คนขับรถ</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <button class="btn-ds-outline-print" onclick="triggerPrint()">
+                <i class="fa-solid fa-print me-1"></i> พิมพ์รวมต่อคนขับ
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl">
+            <div class="kpi-card h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-label">รายการ (ตามตัวกรอง)</div>
+                        <div class="kpi-value">3</div>
+                        <div class="kpi-sub">รายการทั้งหมด</div>
+                    </div>
+                    <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-list-check"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="kpi-card h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-label">ชั่วโมงรวม</div>
+                        <div class="kpi-value">8.0
+                            <span style="font-size:1rem;font-weight:400;color:var(--ds-text-secondary)"> ชม.</span>
+                        </div>
+                        <div class="kpi-sub">ทั้งหมดในช่วงที่เลือก</div>
+                    </div>
+                    <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-hourglass-half"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="kpi-card h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-label">ยอดรวม</div>
+                        <div class="kpi-value">฿250</div>
+                        <div class="kpi-sub">ทุกสถานะ</div>
+                    </div>
+                    <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-receipt"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="kpi-card h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-label">รออนุมัติ</div>
+                        <div class="kpi-value text-warning-ds">฿100</div>
+                        <div class="kpi-sub">1 รายการ</div>
+                    </div>
+                    <div class="kpi-icon kpi-icon-warning"><i class="fa-solid fa-clock"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="kpi-card h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-label">อนุมัติแล้ว</div>
+                        <div class="kpi-value text-accent-ds">฿30</div>
+                        <div class="kpi-sub">1 รายการ รอจ่าย</div>
+                    </div>
+                    <div class="kpi-icon kpi-icon-accent"><i class="fa-solid fa-thumbs-up"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="kpi-card h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="kpi-label">จ่ายแล้ว</div>
+                        <div class="kpi-value text-success-ds">฿120</div>
+                        <div class="kpi-sub">1 รายการ</div>
+                    </div>
+                    <div class="kpi-icon kpi-icon-success"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OT Rate Banner -->
+    <div class="rate-banner mb-3">
+        <i class="fa-solid fa-circle-info"></i>
+        <strong>อัตราค่าตอบแทน OT</strong>
+        <span class="rate-pill"><i class="fa-solid fa-sun"></i> ช่วงเช้ามืด (06:00–08:00) → ฿20/ชม.</span>
+        <span class="rate-pill"><i class="fa-solid fa-cloud-sun"></i> ช่วงหัวค่ำ (17:00–19:00) → ฿20/ชม.</span>
+        <span class="rate-pill"><i class="fa-solid fa-moon"></i> ช่วงวิกาล (ก่อน 06:00 / หลัง 19:00) → ฿40/ชม.</span>
+        <button class="btn-act ms-auto" style="padding:3px 10px;font-size:0.7rem;border:1px solid var(--ds-accent-border);color:var(--ds-accent)">
+            <i class="fa-solid fa-gear me-1"></i>แก้ไขอัตรา
+        </button>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="ds-label"><i class="fa-solid fa-id-card me-1" style="color:var(--ds-text-muted)"></i>คนขับ</label>
+                <select class="ds-select" style="min-width:150px">
+                    <option>ทุกคน</option>
+                    <option>สมศักดิ์ ขยัน</option>
+                    <option>ประสิทธิ์ ท่าดี</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="ds-label"><i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>เดือน (จาก)</label>
+                <select class="ds-select">
+                    <option>มีนาคม 2569</option>
+                    <option>เมษายน 2569</option>
+                    <option selected>พฤษภาคม 2569</option>
+                </select>
+            </div>
+            <div class="col-auto" style="padding-top:16px">
+                <span style="color:var(--ds-text-muted);font-size:0.78rem">ถึง</span>
+            </div>
+            <div class="col-auto">
+                <label class="ds-label"><i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>เดือน (ถึง)</label>
+                <select class="ds-select">
+                    <option>เมษายน 2569</option>
+                    <option selected>พฤษภาคม 2569</option>
+                    <option>มิถุนายน 2569</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="ds-label" style="opacity:0">x</label>
+                <div>
+                    <button class="btn-ds-primary">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i>ค้นหา
+                    </button>
+                </div>
+            </div>
+            <div class="col-auto ms-auto d-flex align-items-end">
+                <span style="font-size:0.75rem;color:var(--ds-text-secondary)">
+                    <i class="fa-solid fa-filter-circle-dollar me-1" style="color:var(--ds-text-muted)"></i>
+                    แสดง <strong>3</strong> จาก 3 รายการ
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table Card -->
+    <div class="card">
+
+        <!-- Tabs Row -->
+        <div class="px-3 pt-2">
+            <div class="ot-tabs">
+                <button class="ot-tab active" onclick="switchTab(this,'all')">
+                    ทั้งหมด <span class="tab-badge tab-badge-neutral">3</span>
+                </button>
+                <button class="ot-tab" onclick="switchTab(this,'pending')">
+                    รออนุมัติ <span class="tab-badge tab-badge-warning">1</span>
+                </button>
+                <button class="ot-tab" onclick="switchTab(this,'approved')">
+                    อนุมัติแล้ว <span class="tab-badge tab-badge-accent">1</span>
+                </button>
+                <button class="ot-tab" onclick="switchTab(this,'paid')">
+                    จ่ายแล้ว <span class="tab-badge tab-badge-success">1</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+            <table class="table ds-table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:100px">วันที่</th>
+                        <th style="width:155px">คนขับ</th>
+                        <th style="width:185px">Booking</th>
+                        <th>ช่วงเวลา OT</th>
+                        <th style="width:65px;text-align:right">ชม.</th>
+                        <th style="width:90px;text-align:right">ยอด</th>
+                        <th style="width:115px;text-align:center">สถานะ</th>
+                        <th style="width:135px;text-align:right;padding-right:16px">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <!-- ── Row 1: pending ── -->
+                    <tr data-status="pending">
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-text-heading)">2026-05-03</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-muted)">พฤหัส</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-text-heading)">สมศักดิ์ ขยัน</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-secondary)">081-111-2222</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-accent);font-size:0.8rem">BK-2404</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-secondary)">
+                                <i class="fa-solid fa-location-dot" style="color:var(--ds-text-muted)"></i>
+                                ธนาคารกรุงไทย สาขาลาดพร้าว
+                            </div>
+                        </td>
+                        <td>
+                            <span class="slot-tag slot-evening">
+                                <i class="fa-solid fa-cloud-sun"></i> หัวค่ำ 17:00–19:00 ฿20
+                            </span>
+                            <span class="slot-tag slot-night">
+                                <i class="fa-solid fa-moon"></i> วิกาล 19:00–20:30 ฿40
+                            </span>
+                        </td>
+                        <td style="text-align:right;font-weight:700;color:var(--ds-text-heading)">3.5</td>
+                        <td style="text-align:right">
+                            <span style="font-weight:700;font-size:0.95rem;color:var(--ds-text-heading)">฿100</span>
+                        </td>
+                        <td style="text-align:center"><span class="badge-pending">รออนุมัติ</span></td>
+                        <td style="text-align:right;padding-right:12px">
+                            <div class="d-flex gap-1 justify-content-end">
+                                <button class="btn-act approve" title="อนุมัติ"><i class="fa-solid fa-check"></i></button>
+                                <button class="btn-act" title="แก้ไข"
+                                    data-bs-toggle="modal" data-bs-target="#editOtModal">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn-act danger" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                                <button class="btn-act" title="พิมพ์" onclick="triggerPrint()"><i class="fa-solid fa-print"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- ── Row 2: approved ── -->
+                    <tr data-status="approved">
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-text-heading)">2026-05-01</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-muted)">พฤหัส</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-text-heading)">ประสิทธิ์ ท่าดี</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-secondary)">082-333-4444</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-accent);font-size:0.8rem">BK-2406</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-secondary)">
+                                <i class="fa-solid fa-location-dot" style="color:var(--ds-text-muted)"></i>
+                                ศูนย์ราชการ แจ้งวัฒนะ
+                            </div>
+                        </td>
+                        <td>
+                            <span class="slot-tag slot-morning">
+                                <i class="fa-solid fa-sun"></i> เช้ามืด 06:30–08:00 ฿20
+                            </span>
+                        </td>
+                        <td style="text-align:right;font-weight:700;color:var(--ds-text-heading)">1.5</td>
+                        <td style="text-align:right">
+                            <span style="font-weight:700;font-size:0.95rem;color:var(--ds-text-heading)">฿30</span>
+                        </td>
+                        <td style="text-align:center"><span class="badge-approved">อนุมัติแล้ว</span></td>
+                        <td style="text-align:right;padding-right:12px">
+                            <div class="d-flex gap-1 justify-content-end">
+                                <button class="btn-act pay" title="ทำเครื่องหมายจ่ายแล้ว">
+                                    <i class="fa-solid fa-money-bill-transfer"></i>
+                                </button>
+                                <button class="btn-act" title="แก้ไข"
+                                    data-bs-toggle="modal" data-bs-target="#editOtModal">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn-act danger" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                                <button class="btn-act" title="พิมพ์" onclick="triggerPrint()"><i class="fa-solid fa-print"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- ── Row 3: paid ── -->
+                    <tr data-status="paid">
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-text-heading)">2026-04-28</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-muted)">จันทร์</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-text-heading)">สมศักดิ์ ขยัน</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-secondary)">081-111-2222</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;color:var(--ds-accent);font-size:0.8rem">BK-2399</div>
+                            <div style="font-size:0.7rem;color:var(--ds-text-secondary)">
+                                <i class="fa-solid fa-location-dot" style="color:var(--ds-text-muted)"></i>
+                                กรมการขนส่งทางบก
+                            </div>
+                        </td>
+                        <td>
+                            <span class="slot-tag slot-night">
+                                <i class="fa-solid fa-moon"></i> วิกาล 20:00–23:00 ฿40
+                            </span>
+                        </td>
+                        <td style="text-align:right;font-weight:700;color:var(--ds-text-heading)">3.0</td>
+                        <td style="text-align:right">
+                            <span style="font-weight:700;font-size:0.95rem;color:var(--ds-text-heading)">฿120</span>
+                        </td>
+                        <td style="text-align:center"><span class="badge-paid">จ่ายแล้ว</span></td>
+                        <td style="text-align:right;padding-right:12px">
+                            <div class="d-flex gap-1 justify-content-end">
+                                <button class="btn-act" title="แก้ไข"
+                                    data-bs-toggle="modal" data-bs-target="#editOtModal">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn-act danger" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                                <button class="btn-act" title="พิมพ์" onclick="triggerPrint()"><i class="fa-solid fa-print"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Table Footer -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <span style="font-size:0.78rem;color:var(--ds-text-secondary)">
+                <i class="fa-solid fa-hourglass-half me-1" style="color:var(--ds-text-muted)"></i>
+                ชั่วโมงรวม: <strong style="color:var(--ds-text-heading)">8.0 ชม.</strong>
+            </span>
+            <span style="font-size:0.88rem;font-weight:700;color:var(--ds-text-heading)">
+                รวมทั้งหมด: ฿250
+            </span>
+        </div>
+    </div>
+
+</div><!-- /page-wrapper -->
+
+
+<!-- ========================================================
+     MODAL: แก้ไข OT
+     ======================================================== -->
+<div class="modal fade" id="editOtModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:560px">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-pen-to-square me-2" style="color:var(--ds-accent)"></i>
+                    แก้ไข OT-001
+                </h5>
+                <button type="button" class="btn-act" data-bs-dismiss="modal" style="border:none;font-size:1rem">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Driver + Date -->
+                <div class="row g-3 mb-3">
+                    <div class="col-7">
+                        <label class="ds-label">
+                            <i class="fa-solid fa-id-card me-1" style="color:var(--ds-text-muted)"></i>คนขับ
+                        </label>
+                        <select class="ds-select w-100">
+                            <option selected>สมศักดิ์ ขยัน</option>
+                            <option>ประสิทธิ์ ท่าดี</option>
+                        </select>
+                    </div>
+                    <div class="col-5">
+                        <label class="ds-label">
+                            <i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>วันที่
+                        </label>
+                        <input type="date" class="ds-input w-100" value="2026-05-03">
+                    </div>
+                </div>
+
+                <!-- Booking -->
+                <div class="mb-3">
+                    <label class="ds-label">
+                        <i class="fa-solid fa-car me-1" style="color:var(--ds-text-muted)"></i>Booking (ถ้ามี)
+                    </label>
+                    <select class="ds-select w-100">
+                        <option selected>BK-2404 • ธนาคารกรุงไทย สาขาลาดพร้าว</option>
+                        <option>BK-2406 • ศูนย์ราชการ แจ้งวัฒนะ</option>
+                        <option>BK-2399 • กรมการขนส่งทางบก</option>
+                    </select>
+                </div>
+
+                <!-- OT Slots Header -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="ds-label mb-0">
+                        <i class="fa-solid fa-clock me-1" style="color:var(--ds-text-muted)"></i>ช่วงเวลา OT
+                    </label>
+                    <button class="btn-ds-outline-accent" onclick="addSlotRow()">
+                        <i class="fa-solid fa-plus me-1"></i>เพิ่มช่วง
+                    </button>
+                </div>
+
+                <!-- Slots Container -->
+                <div id="slotsContainer" class="d-flex flex-column gap-2 mb-3">
+
+                    <!-- Slot 1 -->
+                    <div class="slot-row">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-4">
+                                <label class="ds-label">ประเภท</label>
+                                <select class="ds-select w-100">
+                                    <option value="morning">เช้ามืด ฿20</option>
+                                    <option value="evening" selected>หัวค่ำ ฿20</option>
+                                    <option value="night">วิกาล ฿40</option>
+                                </select>
+                            </div>
+                            <div class="col-3">
+                                <label class="ds-label">เริ่ม</label>
+                                <input type="time" class="ds-input w-100" value="17:00">
+                            </div>
+                            <div class="col-3">
+                                <label class="ds-label">สิ้นสุด</label>
+                                <input type="time" class="ds-input w-100" value="19:00">
+                            </div>
+                            <div class="col-2 text-end">
+                                <div class="slot-row-hrs">2.0 ชม.</div>
+                                <div class="slot-row-amount">฿40</div>
+                                <button class="btn-act danger mt-1 w-100" onclick="this.closest('.slot-row').remove()">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slot 2 -->
+                    <div class="slot-row">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-4">
+                                <label class="ds-label">ประเภท</label>
+                                <select class="ds-select w-100">
+                                    <option value="morning">เช้ามืด ฿20</option>
+                                    <option value="evening">หัวค่ำ ฿20</option>
+                                    <option value="night" selected>วิกาล ฿40</option>
+                                </select>
+                            </div>
+                            <div class="col-3">
+                                <label class="ds-label">เริ่ม</label>
+                                <input type="time" class="ds-input w-100" value="19:00">
+                            </div>
+                            <div class="col-3">
+                                <label class="ds-label">สิ้นสุด</label>
+                                <input type="time" class="ds-input w-100" value="20:30">
+                            </div>
+                            <div class="col-2 text-end">
+                                <div class="slot-row-hrs">1.5 ชม.</div>
+                                <div class="slot-row-amount">฿60</div>
+                                <button class="btn-act danger mt-1 w-100" onclick="this.closest('.slot-row').remove()">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /slotsContainer -->
+
+                <!-- Total Box -->
+                <div class="ot-total-box d-flex justify-content-between align-items-center mb-3">
+                    <span style="font-size:0.82rem;font-weight:600;color:var(--ds-text-secondary)">รวมทั้งหมด</span>
+                    <div class="text-end">
+                        <div style="font-size:0.72rem;color:var(--ds-text-secondary)">3.5 ชม.</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:var(--ds-text-heading)">฿100</div>
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div>
+                    <label class="ds-label">
+                        <i class="fa-solid fa-note-sticky me-1" style="color:var(--ds-text-muted)"></i>หมายเหตุ
+                    </label>
+                    <textarea class="ds-input ds-textarea w-100" rows="2" placeholder="เช่น ส่งของด่วน"></textarea>
+                </div>
+
+            </div><!-- /modal-body -->
+
+            <div class="modal-footer">
+                <button class="btn-ds-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button class="btn-ds-primary">
+                    <i class="fa-solid fa-floppy-disk me-1"></i>บันทึก
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ========================================================
+     PRINT RECEIPT (hidden — appears only on print)
+     ======================================================== -->
+<div id="printReceipt">
+    <div style="font-family:'Sarabun',sans-serif;max-width:210mm;margin:0 auto;padding:15mm 20mm;font-size:13px;color:#09090B">
+
+        <!-- Title -->
+        <div style="text-align:center;font-size:1.4rem;font-weight:700;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #09090B">
+            ใบเสร็จรับเงิน
+        </div>
+
+        <!-- Header Info -->
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:8px">
+            <tr>
+                <td style="width:160px;color:#71717A;padding:3px 0;vertical-align:top">วันที่</td>
+                <td style="padding:3px 0">3 / พฤษภาคม / 2569</td>
+            </tr>
+            <tr>
+                <td style="color:#71717A;padding:3px 0">ข้าเจ้าของ</td>
+                <td style="padding:3px 0"><strong>นายสมศักดิ์ ขยัน</strong></td>
+            </tr>
+            <tr>
+                <td style="color:#71717A;padding:3px 0">บัตรประจำตัวเลขที่</td>
+                <td style="padding:3px 0"></td>
+                <td style="color:#71717A;padding:3px 0;width:80px">ที่อยู่</td>
+                <td style="padding:3px 0"></td>
+            </tr>
+            <tr>
+                <td style="color:#71717A;padding:3px 0">ถนน</td>
+                <td style="padding:3px 0">-</td>
+                <td style="color:#71717A;padding:3px 0">ตำบล</td>
+                <td style="padding:3px 0"></td>
+                <td style="color:#71717A;padding:3px 0;width:50px">อำเภอ</td>
+                <td style="padding:3px 0"></td>
+            </tr>
+            <tr>
+                <td style="color:#71717A;padding:3px 0">จังหวัด</td>
+                <td style="padding:3px 0"></td>
+                <td style="color:#71717A;padding:3px 0">รหัสไปรษณีย์</td>
+                <td style="padding:3px 0"></td>
+                <td style="color:#71717A;padding:3px 0">โทร</td>
+                <td style="padding:3px 0">081-111-2222</td>
+            </tr>
+        </table>
+
+        <p style="margin:12px 0 8px;font-size:0.82rem;color:#3F3F46">
+            ได้รับเงินเพื่อชำระค่าสินค้า หรือค่าบริการดังรายละเอียดข้างท้ายดังนี้ ถูกต้องเรียบร้อยแล้ว
+        </p>
+
+        <!-- Receipt Table -->
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:8px">
+            <thead>
+                <tr>
+                    <th style="border-top:1px solid #09090B;border-bottom:1px solid #09090B;padding:6px 8px;text-align:center;font-weight:700;width:50%">รายการ</th>
+                    <th style="border-top:1px solid #09090B;border-bottom:1px solid #09090B;padding:6px 8px;text-align:right;font-weight:700;width:120px">จำนวนเงิน</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding:8px 8px;border-bottom:1px solid #EFEFEF">
+                        ค่าล่วงเวลาสถานที่วันที่ 2026-05-03 ธนาคารกรุงไทย สาขาลาดพร้าว (17:00 - 20:30)
+                    </td>
+                    <td style="padding:8px 8px;text-align:right;border-bottom:1px solid #EFEFEF">100.00</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px 8px;border-bottom:1px solid #EFEFEF">
+                        ค่าล่วงเวลาสถานที่วันที่ 2026-04-28 กรมการขนส่งทางบก (20:00 - 23:00)
+                    </td>
+                    <td style="padding:8px 8px;text-align:right;border-bottom:1px solid #EFEFEF">120.00</td>
+                </tr>
+                <!-- empty rows (กันช่องว่างเหมือนกระดาษจริง) -->
+                <tr><td style="padding:8px 8px;border-bottom:1px solid #EFEFEF;">&nbsp;</td><td style="border-bottom:1px solid #EFEFEF;"></td></tr>
+                <tr><td style="padding:8px 8px;border-bottom:1px solid #EFEFEF;">&nbsp;</td><td style="border-bottom:1px solid #EFEFEF;"></td></tr>
+                <tr><td style="padding:8px 8px;border-bottom:1px solid #EFEFEF;">&nbsp;</td><td style="border-bottom:1px solid #EFEFEF;"></td></tr>
+                <tr><td style="padding:8px 8px;border-bottom:1px solid #EFEFEF;">&nbsp;</td><td style="border-bottom:1px solid #EFEFEF;"></td></tr>
+                <tr><td style="padding:8px 8px;border-bottom:1px solid #EFEFEF;">&nbsp;</td><td style="border-bottom:1px solid #EFEFEF;"></td></tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td style="border-top:2px solid #09090B;padding:10px 8px;font-weight:700;text-align:right">รวมเงิน</td>
+                    <td style="border-top:2px solid #09090B;padding:10px 8px;font-weight:700;text-align:right">220.00</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Signature -->
+        <div style="margin-top:50px;text-align:right">
+            <div style="display:inline-block;text-align:center;min-width:260px">
+                <div style="border-top:1px solid #09090B;padding-top:6px;font-size:0.85rem">
+                    ลงชื่อ..............................................................ผู้รับเงิน
+                </div>
+                <div style="font-size:0.82rem;margin-top:6px;color:#3F3F46">( นายสมศักดิ์ ขยัน )</div>
+            </div>
+        </div>
+
+    </div>
+</div><!-- /printReceipt -->
+
+
+<!-- ========================================================
+     SCRIPTS
+     ======================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    /* ── Tab switching ── */
+    function switchTab(btn, status) {
+        document.querySelectorAll('.ot-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('tbody tr[data-status]').forEach(row => {
+            row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+        });
+    }
+
+    /* ── Add OT slot row ── */
+    function addSlotRow() {
+        const container = document.getElementById('slotsContainer');
+        const html = `
+        <div class="slot-row">
+            <div class="row g-2 align-items-end">
+                <div class="col-4">
+                    <label class="ds-label">ประเภท</label>
+                    <select class="ds-select w-100">
+                        <option value="morning">เช้ามืด ฿20</option>
+                        <option value="evening">หัวค่ำ ฿20</option>
+                        <option value="night">วิกาล ฿40</option>
+                    </select>
+                </div>
+                <div class="col-3">
+                    <label class="ds-label">เริ่ม</label>
+                    <input type="time" class="ds-input w-100">
+                </div>
+                <div class="col-3">
+                    <label class="ds-label">สิ้นสุด</label>
+                    <input type="time" class="ds-input w-100">
+                </div>
+                <div class="col-2 text-end">
+                    <div class="slot-row-hrs">— ชม.</div>
+                    <div class="slot-row-amount">฿—</div>
+                    <button class="btn-act danger mt-1 w-100" onclick="this.closest('.slot-row').remove()">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>`;
+        container.insertAdjacentHTML('beforeend', html);
+    }
+
+    /* ── Print ── */
+    function triggerPrint() { window.print(); }
+</script>
+
+<style>
+    @media print {
+        body > *       { display: none !important; }
+        #printReceipt  { display: block !important; }
+    }
+</style>
+
+</body>
+</html>

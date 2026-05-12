@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBCenter V2 — Design System Reference</title>
+<link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+<style>
+/* ── Reference page overrides ── */
+body { background: var(--ds-bg-page); padding: 40px 0 80px; }
+.ref-container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+/* Section wrapper */
+.ref-section {
+    background: var(--ds-bg-surface);
+    border-radius: var(--ds-radius-lg);
+    border: 1.5px solid var(--ds-border);
+    box-shadow: var(--ds-shadow-sm);
+    margin-bottom: 32px;
+    overflow: hidden;
+}
+.ref-section-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--ds-border);
+    background: var(--ds-bg-subtle);
+    display: flex; align-items: baseline; gap: 10px;
+}
+.ref-section-name {
+    font-family: var(--ds-font-display);
+    font-size: var(--ds-text-base);
+    font-weight: 700;
+    color: var(--ds-text-heading);
+}
+.ref-section-code {
+    font-size: var(--ds-text-xs);
+    color: var(--ds-text-muted);
+    font-family: monospace;
+}
+.ref-section-body { padding: 20px; }
+
+/* Token swatch */
+.token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.token-item { border-radius: var(--ds-radius-md); overflow: hidden; border: 1px solid var(--ds-border); }
+.token-swatch { height: 48px; }
+.token-meta { padding: 8px 10px; }
+.token-name  { font-size: .65rem; font-family: monospace; color: var(--ds-text-muted); }
+.token-value { font-size: .72rem; font-weight: 600; color: var(--ds-text-body); margin-top: 1px; }
+
+/* Spacing ruler */
+.space-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.space-bar  { height: 24px; background: var(--ds-primary-light); border-radius: 4px; border: 1px solid var(--ds-primary-border); }
+.space-label{ font-size: .72rem; color: var(--ds-text-muted); font-family: monospace; white-space: nowrap; min-width: 80px; }
+
+/* Shadow demo */
+.shadow-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+.shadow-demo { height: 60px; background: #fff; border-radius: var(--ds-radius-md); display: flex; align-items: center; justify-content: center; font-size: .72rem; color: var(--ds-text-muted); font-family: monospace; }
+
+/* Sticky TOC */
+.ref-toc {
+    position: fixed; top: 24px; right: 24px;
+    background: var(--ds-bg-surface);
+    border: 1.5px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-md);
+    padding: 16px;
+    min-width: 190px;
+    z-index: 100;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+}
+.ref-toc-title { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ds-text-muted); margin-bottom: 8px; }
+.ref-toc a { display: block; font-size: .75rem; color: var(--ds-text-secondary); text-decoration: none; padding: 3px 0; }
+.ref-toc a:hover { color: var(--ds-purple); }
+
+@media (max-width: 1300px) { .ref-toc { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- TOC -->
+<nav class="ref-toc">
+    <div class="ref-toc-title">Contents</div>
+    <a href="#tokens-color">1. Colors</a>
+    <a href="#tokens-typography">2. Typography</a>
+    <a href="#tokens-spacing">3. Spacing</a>
+    <a href="#tokens-radius">4. Radius</a>
+    <a href="#tokens-shadow">5. Shadows</a>
+    <a href="#comp-sidebar">6. Sidebar</a>
+    <a href="#comp-badges">7. Badges & Pills</a>
+    <a href="#comp-buttons">8. Buttons</a>
+    <a href="#comp-inputs">9. Form Inputs</a>
+    <a href="#comp-cards">10. Cards</a>
+    <a href="#comp-table">11. Table / List</a>
+    <a href="#comp-status">12. Status</a>
+    <a href="#comp-toggle">13. Toggles</a>
+    <a href="#comp-tabs">14. Tabs</a>
+    <a href="#comp-weekly">15. Weekly Strip</a>
+    <a href="#comp-empty">16. Empty State</a>
+</nav>
+
+<div class="ref-container">
+
+    <!-- Header -->
+    <div style="margin-bottom:32px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <div class="ds-sidebar-brand-icon">B</div>
+            <h1 class="ds-h1">BBCenter V2 — Design System</h1>
+        </div>
+        <p class="ds-caption">Inspired by Noviq Agency UI &amp; FinPay Dashboard · Token-based · Bootstrap 5 compatible</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+            <span class="ds-pill ds-pill-success">✅ Production Ready</span>
+            <span class="ds-pill ds-pill-purple">Sarabun + IBM Plex Sans Thai</span>
+            <span class="ds-pill ds-pill-info">4px Grid</span>
+            <span class="ds-pill ds-pill-neutral">CSS Custom Properties</span>
+        </div>
+    </div>
+
+    <!-- ══ 1. COLOR TOKENS ══ -->
+    <div class="ref-section" id="tokens-color">
+        <div class="ref-section-header">
+            <span class="ref-section-name">1. Color Tokens</span>
+            <span class="ref-section-code">var(--ds-*)</span>
+        </div>
+        <div class="ref-section-body">
+
+            <p class="ds-overline mb-3">Brand</p>
+            <div class="token-grid mb-4">
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-primary);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-primary</div><div class="token-value">#4F46E5</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-primary-hover);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-primary-hover</div><div class="token-value">#4338CA</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-primary-light);border:1px solid var(--ds-primary-border);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-primary-light</div><div class="token-value">#EEF2FF</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-purple);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-purple</div><div class="token-value">#8B5CF6</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-purple-light);border:1px solid var(--ds-purple-border);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-purple-light</div><div class="token-value">#F5F3FF</div></div>
+                </div>
+            </div>
+
+            <p class="ds-overline mb-3">Semantic Status</p>
+            <div class="token-grid mb-4">
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-success);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-success</div><div class="token-value">#10B981</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-warning);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-warning</div><div class="token-value">#F59E0B</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-danger);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-danger</div><div class="token-value">#EF4444</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-info);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-info</div><div class="token-value">#3B82F6</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-live);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-live</div><div class="token-value">#22C55E</div></div>
+                </div>
+            </div>
+
+            <p class="ds-overline mb-3">Surface &amp; Neutral</p>
+            <div class="token-grid">
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-bg-page);border-bottom:1px solid var(--ds-border);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-bg-page</div><div class="token-value">#F0F2F8 (Lavender)</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-bg-surface);border-bottom:1px solid var(--ds-border);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-bg-surface</div><div class="token-value">#FFFFFF</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-bg-subtle);border-bottom:1px solid var(--ds-border);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-bg-subtle</div><div class="token-value">#F9FAFB</div></div>
+                </div>
+                <div class="token-item">
+                    <div class="token-swatch" style="background:var(--ds-bg-hover);border-bottom:1px solid var(--ds-border);"></div>
+                    <div class="token-meta"><div class="token-name">--ds-bg-hover</div><div class="token-value">#F5F3FF</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 2. TYPOGRAPHY ══ -->
+    <div class="ref-section" id="tokens-typography">
+        <div class="ref-section-header">
+            <span class="ref-section-name">2. Typography Scale</span>
+            <span class="ref-section-code">Sarabun / IBM Plex Sans Thai</span>
+        </div>
+        <div class="ref-section-body">
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <div><span class="ds-overline d-block mb-1">Display · 2rem · 700</span><span class="ds-display">ระบบจัดการองค์กร</span></div>
+                <div><span class="ds-overline d-block mb-1">H1 · 1.5rem · 700</span><span class="ds-h1">จองรถยนต์</span></div>
+                <div><span class="ds-overline d-block mb-1">H2 · 1.2rem · 700</span><span class="ds-h2">แจ้งซ่อมอาคาร</span></div>
+                <div><span class="ds-overline d-block mb-1">H3 · 1.05rem · 600</span><span class="ds-h3">สรุปค่าใช้จ่ายรายเดือน</span></div>
+                <div><span class="ds-overline d-block mb-1">Body · .875rem · 400</span><span class="ds-body">ผู้ใช้งานระบบสามารถส่งคำขอจองรถได้ผ่านปฏิทิน Admin จะพิจารณาและกำหนดรถให้ภายหลัง</span></div>
+                <div><span class="ds-overline d-block mb-1">Caption · .8rem · 400</span><span class="ds-caption">อัปเดตล่าสุด 25/06/2568 เวลา 14:30 น.</span></div>
+                <div><span class="ds-overline d-block mb-1">Overline · .72rem · 700 UPPERCASE</span><span class="ds-overline">section label</span></div>
+                <div><span class="ds-overline d-block mb-1">Number LG · 2rem · 700</span><span class="ds-number-lg">1,284</span></div>
+                <div><span class="ds-overline d-block mb-1">Number MD · 1.5rem · 700</span><span class="ds-number-md">฿42,500</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 3. SPACING ══ -->
+    <div class="ref-section" id="tokens-spacing">
+        <div class="ref-section-header">
+            <span class="ref-section-name">3. Spacing (4px Grid)</span>
+            <span class="ref-section-code">var(--ds-space-*)</span>
+        </div>
+        <div class="ref-section-body">
+            {% for n, px in [('1','4px'),('2','8px'),('3','12px'),('4','16px'),('5','20px'),('6','24px'),('8','32px'),('10','40px'),('12','48px')] %}
+            <div class="space-row">
+                <span class="space-label">--ds-space-{{ n }}</span>
+                <div class="space-bar" style="width:{{ px }};"></div>
+                <span class="ds-caption">{{ px }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ══ 4. BORDER RADIUS ══ -->
+    <div class="ref-section" id="tokens-radius">
+        <div class="ref-section-header">
+            <span class="ref-section-name">4. Border Radius</span>
+            <span class="ref-section-code">var(--ds-radius-*)</span>
+        </div>
+        <div class="ref-section-body">
+            <div style="display:flex;flex-wrap:wrap;gap:16px;">
+                {% for name, r in [('xs','4px'),('sm','6px'),('md','10px'),('lg','14px'),('xl','20px'),('full','9999px')] %}
+                <div style="text-align:center;">
+                    <div style="width:60px;height:60px;background:var(--ds-primary-light);border:1.5px solid var(--ds-primary-border);border-radius:{{ r }};margin:0 auto 6px;"></div>
+                    <div class="token-name">--ds-radius-{{ name }}</div>
+                    <div class="token-value">{{ r }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 5. SHADOWS ══ -->
+    <div class="ref-section" id="tokens-shadow">
+        <div class="ref-section-header">
+            <span class="ref-section-name">5. Shadow Scale</span>
+            <span class="ref-section-code">var(--ds-shadow-*)</span>
+        </div>
+        <div class="ref-section-body">
+            <div class="shadow-grid">
+                {% for name in ['xs','sm','md','lg','xl'] %}
+                <div class="shadow-demo" style="box-shadow:var(--ds-shadow-{{ name }});">--ds-shadow-{{ name }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 6. SIDEBAR ══ -->
+    <div class="ref-section" id="comp-sidebar">
+        <div class="ref-section-header">
+            <span class="ref-section-name">6. Sidebar Navigation</span>
+        </div>
+        <div class="ref-section-body">
+            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                <div class="ds-sidebar" style="position:relative;transform:none;height:360px;flex-shrink:0;">
+                    <div class="ds-sidebar-brand">
+                        <div class="ds-sidebar-brand-icon"><i class="fa-solid fa-building"></i></div>
+                        <span class="ds-sidebar-brand-name">BBCenter</span>
+                    </div>
+                    <nav class="ds-sidebar-nav">
+                        <div class="ds-nav-section">MENU</div>
+                        <a class="ds-nav-item active"><i class="bi bi-calendar3"></i> ปฏิทินจองรถ</a>
+                        <a class="ds-nav-item"><i class="bi bi-clock-history"></i> ประวัติการจอง</a>
+                        <div class="ds-nav-section">ADMIN</div>
+                        <a class="ds-nav-item">
+                            <i class="bi bi-check2-square"></i> อนุมัติการจอง
+                            <span class="ds-nav-badge">3</span>
+                        </a>
+                        <a class="ds-nav-item"><i class="bi bi-speedometer2"></i> บันทึกไมล์</a>
+                        <a class="ds-nav-item"><i class="bi bi-gear"></i> จัดการรถ</a>
+                    </nav>
+                    <div class="ds-sidebar-user">
+                        <div class="ds-sidebar-avatar">ส</div>
+                        <div>
+                            <div class="ds-sidebar-user-name">สมชาย ใจดี</div>
+                            <div class="ds-sidebar-user-sub">Admin · กองบริหาร</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ds-caption" style="margin-top:8px;">
+                    <code style="font-size:.75rem;color:var(--ds-purple);">.ds-sidebar</code> → White bg, border-right<br>
+                    <code style="font-size:.75rem;color:var(--ds-purple);">.ds-nav-item.active</code> → Purple bg + text<br>
+                    <code style="font-size:.75rem;color:var(--ds-purple);">.ds-nav-badge</code> → Red count pill<br>
+                    <code style="font-size:.75rem;color:var(--ds-purple);">.ds-sidebar-user</code> → Bottom user area
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 7. BADGES & PILLS ══ -->
+    <div class="ref-section" id="comp-badges">
+        <div class="ref-section-header">
+            <span class="ref-section-name">7. Badges &amp; Pills</span>
+        </div>
+        <div class="ref-section-body">
+            <p class="ds-overline mb-2">Status Pills</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+                <span class="ds-pill ds-pill-pending">⏳ รออนุมัติ</span>
+                <span class="ds-pill ds-pill-success">✅ อนุมัติแล้ว</span>
+                <span class="ds-pill ds-pill-danger">❌ ไม่อนุมัติ</span>
+                <span class="ds-pill ds-pill-info">🔄 รอ Approver</span>
+                <span class="ds-pill ds-pill-purple">🚗 กลุ่มทริป</span>
+                <span class="ds-pill ds-pill-primary">📋 ใช้งาน</span>
+                <span class="ds-pill ds-pill-neutral">ไม่ระบุ</span>
+            </div>
+            <p class="ds-overline mb-2">Tab Pill Navigation (Noviq-style)</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+                <button class="ds-tab-pill active"><i class="bi bi-house"></i> Home</button>
+                <button class="ds-tab-pill"><i class="bi bi-calendar-event"></i> Events</button>
+                <button class="ds-tab-pill"><i class="bi bi-layers"></i> Pages</button>
+                <button class="ds-tab-pill"><i class="bi bi-rocket"></i> Boosts</button>
+                <button class="ds-tab-pill"><i class="bi bi-megaphone"></i> Banners</button>
+            </div>
+            <p class="ds-overline mb-2">Content Type Badges (Noviq: Tab Types)</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <span class="ds-pill ds-type-live"><i class="bi bi-broadcast" style="font-size:.6rem;"></i> Live Event</span>
+                <span class="ds-pill ds-type-upcoming"><i class="bi bi-calendar3" style="font-size:.6rem;"></i> Upcoming Events</span>
+                <span class="ds-pill ds-type-tournament"><i class="bi bi-trophy" style="font-size:.6rem;"></i> Tournament</span>
+                <span class="ds-pill ds-type-link"><i class="bi bi-link-45deg" style="font-size:.6rem;"></i> Link</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 8. BUTTONS ══ -->
+    <div class="ref-section" id="comp-buttons">
+        <div class="ref-section-header">
+            <span class="ref-section-name">8. Buttons</span>
+        </div>
+        <div class="ref-section-body">
+            <p class="ds-overline mb-2">Variants</p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px;">
+                <button class="ds-btn ds-btn-primary"><i class="bi bi-check-lg"></i> Primary</button>
+                <button class="ds-btn ds-btn-purple"><i class="bi bi-arrow-right"></i> Purple</button>
+                <button class="ds-btn ds-btn-secondary">Secondary</button>
+                <button class="ds-btn ds-btn-ghost">Ghost</button>
+                <button class="ds-btn ds-btn-success"><i class="bi bi-check-circle"></i> Success</button>
+                <button class="ds-btn ds-btn-danger"><i class="bi bi-trash"></i> Danger</button>
+                <button class="ds-btn ds-btn-primary" disabled><i class="bi bi-ban"></i> Disabled</button>
+            </div>
+            <p class="ds-overline mb-2">Sizes</p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px;">
+                <button class="ds-btn ds-btn-primary ds-btn-sm"><i class="bi bi-plus"></i> Small</button>
+                <button class="ds-btn ds-btn-primary">Default</button>
+                <button class="ds-btn ds-btn-primary ds-btn-lg">Large</button>
+            </div>
+            <p class="ds-overline mb-2">Icon Buttons</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <button class="ds-btn ds-btn-secondary ds-btn-icon" title="แก้ไข"><i class="bi bi-pencil"></i></button>
+                <button class="ds-btn ds-btn-danger ds-btn-icon" title="ลบ"><i class="bi bi-trash"></i></button>
+                <button class="ds-icon-btn" title="Notification"><i class="bi bi-bell"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 9. FORM INPUTS ══ -->
+    <div class="ref-section" id="comp-inputs">
+        <div class="ref-section-header">
+            <span class="ref-section-name">9. Form Inputs</span>
+        </div>
+        <div class="ref-section-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <p class="ds-form-section">ข้อมูลการเดินทาง</p>
+                    <div class="mb-3">
+                        <label class="ds-label ds-label-required">สถานที่ปลายทาง</label>
+                        <input class="ds-input" type="text" placeholder="เช่น จังหวัดชลบุรี">
+                    </div>
+                    <div class="mb-3">
+                        <label class="ds-label">วัตถุประสงค์</label>
+                        <input class="ds-input" type="text" placeholder="เช่น ประชุมสาขา">
+                    </div>
+                    <div class="mb-3">
+                        <label class="ds-label">ประเภทค่าใช้จ่าย</label>
+                        <select class="ds-select">
+                            <option>ส่วนกลาง</option>
+                            <option>งานกอง</option>
+                            <option>ส่วนตัว</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <p class="ds-form-section">ค้นหาและกรอง</p>
+                    <div class="mb-3">
+                        <label class="ds-label">ค้นหา</label>
+                        <div class="ds-search-wrap">
+                            <i class="bi bi-search ds-search-icon"></i>
+                            <input class="ds-input" type="text" placeholder="ค้นหาชื่อ, ปลายทาง...">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="ds-label">Disabled</label>
+                        <input class="ds-input" type="text" value="ไม่สามารถแก้ไขได้" disabled>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 10. CARDS ══ -->
+    <div class="ref-section" id="comp-cards">
+        <div class="ref-section-header">
+            <span class="ref-section-name">10. Cards</span>
+        </div>
+        <div class="ref-section-body">
+            <p class="ds-overline mb-3">Stat Cards (FinPay-style)</p>
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-md-3">
+                    <div class="ds-stat-card">
+                        <div class="ds-stat-icon primary"><i class="bi bi-car-front-fill"></i></div>
+                        <div class="ds-stat-label">คำขอทั้งหมด</div>
+                        <div class="ds-stat-value">128</div>
+                        <div><span class="ds-stat-trend up">↑ 12.4%</span> <span class="ds-caption">จากเดือนที่แล้ว</span></div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <div class="ds-stat-card">
+                        <div class="ds-stat-icon success"><i class="bi bi-check-circle-fill"></i></div>
+                        <div class="ds-stat-label">อนุมัติแล้ว</div>
+                        <div class="ds-stat-value">96</div>
+                        <div><span class="ds-stat-trend up">↑ 8.1%</span></div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <div class="ds-stat-card">
+                        <div class="ds-stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
+                        <div class="ds-stat-label">รออนุมัติ</div>
+                        <div class="ds-stat-value">18</div>
+                        <div><span class="ds-stat-trend down">↓ 2.3%</span></div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <div class="ds-stat-card">
+                        <div class="ds-stat-icon purple"><i class="bi bi-currency-dollar"></i></div>
+                        <div class="ds-stat-label">ค่าใช้จ่ายรวม</div>
+                        <div class="ds-stat-value">฿48,200</div>
+                        <div><span class="ds-stat-trend up">↑ 5.7%</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="ds-overline mb-3">Content Cards</p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="ds-content-card">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="ds-stat-icon purple flex-shrink-0"><i class="fa-solid fa-van-shuttle"></i></div>
+                            <div>
+                                <div class="fw-bold" style="font-size:var(--ds-text-base);color:var(--ds-text-heading);">Toyota Commuter</div>
+                                <div class="ds-caption">กบ-1234 · 12 ที่นั่ง</div>
+                                <div style="margin-top:8px;"><span class="ds-pill ds-pill-success">พร้อมใช้งาน</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="ds-group-card">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                            <i class="fa-solid fa-people-group" style="color:var(--ds-purple);"></i>
+                            <span style="font-weight:700;color:var(--ds-purple-hover);">TRP-001</span>
+                            <span class="ds-pill ds-pill-purple">3 ราย</span>
+                        </div>
+                        <div class="ds-caption">กลุ่มทริปร่วม — ใช้รถร่วมกัน</div>
+                        <div class="ds-caption">Toyota Commuter (กบ-1234)</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="ds-card">
+                        <div class="ds-card-header">
+                            <i class="bi bi-calendar3" style="color:var(--ds-primary);"></i>
+                            <span class="ds-card-title">รายการวันนี้</span>
+                        </div>
+                        <div class="ds-card-body ds-caption">
+                            ไม่มีทริปสำหรับวันนี้
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 11. TABLE / LIST ══ -->
+    <div class="ref-section" id="comp-table">
+        <div class="ref-section-header">
+            <span class="ref-section-name">11. Table &amp; List Row</span>
+        </div>
+        <div class="ref-section-body">
+            <p class="ds-overline mb-2">Data Table</p>
+            <div class="ds-table-wrap mb-4">
+                <table class="ds-table">
+                    <thead>
+                        <tr>
+                            <th>#</th><th>ผู้จอง</th><th>ปลายทาง</th>
+                            <th>วัน-เวลา</th><th>รถ</th><th>สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="ds-text-muted">001</td>
+                            <td><span style="font-weight:600;">สมชาย ใจดี</span><br><span class="ds-caption">กองบริหาร</span></td>
+                            <td>จ.ชลบุรี</td>
+                            <td class="ds-caption">25/06/68 · 09:00–17:00</td>
+                            <td class="ds-caption">Toyota Commuter</td>
+                            <td><span class="ds-pill ds-pill-success">✅ อนุมัติแล้ว</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ds-text-muted">002</td>
+                            <td><span style="font-weight:600;">มานี จริงใจ</span><br><span class="ds-caption">กองวิชาการ</span></td>
+                            <td>กทม.</td>
+                            <td class="ds-caption">26/06/68 · 08:00–18:00</td>
+                            <td class="ds-caption">รอกำหนดรถ</td>
+                            <td><span class="ds-pill ds-pill-pending">⏳ รออนุมัติ</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ds-text-muted">003</td>
+                            <td><span style="font-weight:600;">สุดา มั่นคง</span><br><span class="ds-caption">กองDOU</span></td>
+                            <td>จ.ระยอง</td>
+                            <td class="ds-caption">27/06/68 · 07:00–20:00</td>
+                            <td class="ds-caption">Honda CRV</td>
+                            <td><span class="ds-pill ds-pill-info">🔄 รอ Approver</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="ds-overline mb-2">Transaction List (FinPay-style)</p>
+            <div class="ds-table-wrap">
+                <div class="ds-list-row">
+                    <div class="ds-stat-icon success flex-shrink-0" style="width:36px;height:36px;border-radius:var(--ds-radius-sm);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:var(--ds-text-base);">ทริปไปชลบุรี</div>
+                        <div class="ds-caption">25 มิ.ย. 2568 · กองบริหาร</div>
+                    </div>
+                    <div class="text-end">
+                        <div style="font-weight:700;font-size:var(--ds-text-md);">฿1,200</div>
+                        <span class="ds-tx-status completed"><i class="bi bi-check-circle-fill" style="font-size:.75rem;"></i> Completed</span>
+                    </div>
+                </div>
+                <div class="ds-list-row">
+                    <div class="ds-stat-icon danger flex-shrink-0" style="width:36px;height:36px;border-radius:var(--ds-radius-sm);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:var(--ds-text-base);">คำขอไปกรุงเทพฯ</div>
+                        <div class="ds-caption">26 มิ.ย. 2568 · กองวิชาการ</div>
+                    </div>
+                    <div class="text-end">
+                        <div style="font-weight:700;font-size:var(--ds-text-md);">—</div>
+                        <span class="ds-tx-status cancelled"><i class="bi bi-x-circle-fill" style="font-size:.75rem;"></i> Cancelled</span>
+                    </div>
+                </div>
+                <div class="ds-list-row">
+                    <div class="ds-stat-icon warning flex-shrink-0" style="width:36px;height:36px;border-radius:var(--ds-radius-sm);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:var(--ds-text-base);">ทริปไประยอง</div>
+                        <div class="ds-caption">27 มิ.ย. 2568 · กองDOU</div>
+                    </div>
+                    <div class="text-end">
+                        <div style="font-weight:700;font-size:var(--ds-text-md);">รอ</div>
+                        <span class="ds-tx-status pending"><i class="bi bi-hourglass-split" style="font-size:.75rem;"></i> Pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 12. STATUS INDICATORS ══ -->
+    <div class="ref-section" id="comp-status">
+        <div class="ref-section-header">
+            <span class="ref-section-name">12. Status Indicators</span>
+        </div>
+        <div class="ref-section-body">
+            <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:center;">
+                <div>
+                    <p class="ds-overline mb-2">Live (Noviq pulsing dot)</p>
+                    <span class="ds-live-indicator">
+                        <span class="ds-live-dot"></span> Live
+                    </span>
+                </div>
+                <div>
+                    <p class="ds-overline mb-2">Transaction Status (FinPay)</p>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                        <span class="ds-tx-status completed"><i class="bi bi-check-circle-fill"></i> Completed</span>
+                        <span class="ds-tx-status cancelled"><i class="bi bi-x-circle-fill"></i> Cancelled</span>
+                        <span class="ds-tx-status pending"><i class="bi bi-hourglass-split"></i> Pending</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="ds-overline mb-2">Skeleton Loader</p>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                        <div class="ds-skeleton" style="height:16px;width:180px;"></div>
+                        <div class="ds-skeleton" style="height:16px;width:120px;"></div>
+                        <div class="ds-skeleton" style="height:16px;width:150px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 13. TOGGLE ══ -->
+    <div class="ref-section" id="comp-toggle">
+        <div class="ref-section-header">
+            <span class="ref-section-name">13. Toggle Switch (Noviq-style)</span>
+        </div>
+        <div class="ref-section-body">
+            <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <label class="ds-toggle">
+                        <input type="checkbox">
+                        <div class="ds-toggle-track"></div>
+                        <div class="ds-toggle-thumb"></div>
+                    </label>
+                    <span class="ds-body">Off</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <label class="ds-toggle">
+                        <input type="checkbox" checked>
+                        <div class="ds-toggle-track"></div>
+                        <div class="ds-toggle-thumb"></div>
+                    </label>
+                    <span class="ds-body">On (Active)</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <label class="ds-toggle" style="opacity:.5;pointer-events:none;">
+                        <input type="checkbox">
+                        <div class="ds-toggle-track"></div>
+                        <div class="ds-toggle-thumb"></div>
+                    </label>
+                    <span class="ds-caption">Disabled</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 14. TABS ══ -->
+    <div class="ref-section" id="comp-tabs">
+        <div class="ref-section-header">
+            <span class="ref-section-name">14. Tabs</span>
+        </div>
+        <div class="ref-section-body">
+            <p class="ds-overline mb-2">Underline Tabs (Noviq: Featured Tabs / Featured Pages)</p>
+            <div class="ds-tabs mb-4">
+                <button class="ds-tab active">Featured Tabs</button>
+                <button class="ds-tab">Featured Pages</button>
+                <button class="ds-tab">Layout Config</button>
+            </div>
+            <p class="ds-overline mb-2">Pill Tabs</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="ds-tab-pill active">ทั้งหมด</button>
+                <button class="ds-tab-pill">รออนุมัติ</button>
+                <button class="ds-tab-pill">อนุมัติแล้ว</button>
+                <button class="ds-tab-pill">ไม่อนุมัติ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 15. WEEKLY STRIP ══ -->
+    <div class="ref-section" id="comp-weekly">
+        <div class="ref-section-header">
+            <span class="ref-section-name">15. Weekly Calendar Strip (Admin)</span>
+        </div>
+        <div class="ref-section-body">
+            <div class="ds-week-strip" style="border-radius:var(--ds-radius-md);border:1.5px solid var(--ds-border);">
+                <div class="ds-week-strip-header">
+                    <button class="ds-btn ds-btn-secondary ds-btn-icon" style="width:28px;height:28px;font-size:.75rem;"><i class="bi bi-chevron-left"></i></button>
+                    <span class="ds-week-strip-month">มิ.ย. 2568</span>
+                    <button class="ds-btn ds-btn-secondary ds-btn-icon" style="width:28px;height:28px;font-size:.75rem;"><i class="bi bi-chevron-right"></i></button>
+                    <button class="ds-btn ds-btn-ghost ds-btn-sm" style="font-size:.73rem;">วันนี้</button>
+                </div>
+                <div class="ds-week-cells">
+                    {% for d, name, cnt, is_active, is_today in [
+                        ('23','จ',0,False,False),
+                        ('24','อ',2,False,False),
+                        ('25','พ',0,False,True),
+                        ('26','พฤ',5,True,False),
+                        ('27','ศ',1,False,False),
+                        ('28','ส',0,False,False),
+                        ('29','อา',0,False,False)
+                    ] %}
+                    <button class="ds-day-cell {% if is_active %}active{% elif is_today %}today-ring{% endif %}"
+                        style="color:{% if d in ('28','29') and not is_active %}var(--ds-danger){% elif is_active %}#fff{% else %}var(--ds-text-body){% endif %};">
+                        <span class="ds-day-name">{{ name }}</span>
+                        <span class="ds-day-num">{{ d }}</span>
+                        <span class="ds-day-count" style="{% if cnt == 0 %}visibility:hidden;{% endif %}">{{ cnt }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 16. EMPTY STATE ══ -->
+    <div class="ref-section" id="comp-empty">
+        <div class="ref-section-header">
+            <span class="ref-section-name">16. Empty State</span>
+        </div>
+        <div class="ref-section-body">
+            <div class="ds-empty" style="border:1.5px dashed var(--ds-border);border-radius:var(--ds-radius-lg);">
+                <div class="ds-empty-icon"><i class="bi bi-journal-x"></i></div>
+                <p class="ds-empty-title">ไม่มีรายการจองในวันนี้</p>
+                <p class="ds-empty-desc">ยังไม่มีคำขอจองรถในวันที่เลือก ลองเลือกวันอื่น หรือส่งคำขอใหม่</p>
+                <button class="ds-btn ds-btn-purple"><i class="bi bi-plus-lg"></i> ส่งคำขอจองรถ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 17. DRAG HANDLE ══ -->
+    <div class="ref-section">
+        <div class="ref-section-header">
+            <span class="ref-section-name">17. Drag Handle (Noviq: reorder rows)</span>
+        </div>
+        <div class="ref-section-body">
+            {% for label in ['live Sport','Summer Concert','Top Europe Leagues','Mas'] %}
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--ds-bg-surface);border:1.5px solid var(--ds-border);border-radius:var(--ds-radius-md);margin-bottom:6px;">
+                <div class="ds-drag-handle"><i class="bi bi-grip-vertical" style="font-size:1rem;"></i></div>
+                <span style="flex:1;font-weight:500;font-size:var(--ds-text-base);">{{ label }}</span>
+                <label class="ds-toggle">
+                    <input type="checkbox" {% if loop.first or loop.index == 2 %}checked{% endif %}>
+                    <div class="ds-toggle-track"></div>
+                    <div class="ds-toggle-thumb"></div>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div><!-- end ref-container -->
+
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

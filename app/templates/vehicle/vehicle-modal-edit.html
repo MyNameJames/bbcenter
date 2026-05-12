@@ -1,0 +1,87 @@
+{# vehicle-modal-edit.html — Modal แก้ไขการจอง
+   วิธีใช้: {% include 'vehicle/vehicle-modal-edit.html' %}
+   JS: openEditBookingModal() + flatpickr อยู่ใน vehicle.js
+#}
+<div class="modal fade" id="editBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered bk-modal-dialog">
+        <div class="card modal-content border-0 bk-modal-content">
+            <form id="editBookingForm" method="POST" novalidate>
+
+                <div class="card-header bg-white d-flex align-items-start">
+                    <div class="d-flex align-items-start gap-3 flex-grow-1">
+                        <span class="ps-1 pt-1"><i class="bi bi-pencil-square fs-4 text-muted"></i></span>
+                        <div>
+                            <div class="bk-row-main">แก้ไขการจองรถ</div>
+                            <div class="bk-row-sub">แก้ไขได้เฉพาะรายการที่ยังรออนุมัติ</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="card-body">
+                    <hr class="bk-divider">
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>วันและเวลาไป :</small></label>
+                        <input type="text" name="start_datetime" id="editStartDatetime"
+                            class="form-control" placeholder="เลือกวันและเวลา" required>
+                        <div class="invalid-feedback">กรุณาเลือกวัน-เวลาออก</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>วันและเวลากลับ :</small></label>
+                        <input type="text" name="end_datetime" id="editEndDatetime"
+                            class="form-control" placeholder="เลือกวันและเวลา" required>
+                        <div class="invalid-feedback">กรุณาเลือกวัน-เวลากลับ</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="row justify-content-between align-items-center gx-2">
+                            <div class="col-8">
+                                <label class="form-label mb-1"><small>วัตถุประสงค์การเดินทาง :</small></label>
+                                <input type="text" name="purpose" id="editPurpose" class="form-control" required>
+                                <div class="invalid-feedback">กรุณาระบุวัตถุประสงค์</div>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label mb-1"><small>จำนวนผู้เดินทาง :</small></label>
+                                <input type="number" name="passenger_count" id="editPax"
+                                    class="form-control" min="1" value="1" required>
+                                <div class="invalid-feedback">กรุณาระบุจำนวน</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>สถานที่ปลายทาง :</small></label>
+                        <input type="text" name="destination" id="editDest" class="form-control" required>
+                        <div class="invalid-feedback">กรุณาระบุสถานที่ปลายทาง</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>จุดขึ้นรถ :</small></label>
+                        <input type="text" name="pickup_location" id="editPickup"
+                            class="form-control" placeholder="เช่น หน้าอาคารเรียน 1">
+                    </div>
+
+                    <div class="row pt-2">
+                        <div class="d-flex align-items-center gap-3 flex-grow-1">
+                            <span class="bk-row-main flex-grow-1">ต้องการพนักงานขับรถ</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input bk-switch" type="checkbox" name="need_driver" id="editNeedDriver" checked>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="card-footer bg-white d-flex justify-content-end gap-2 pt-2 pb-3">
+                    <button type="button" class="btn btn-secondary rounded-2 px-3 py-2" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-dark rounded-2 px-3 py-2">
+                        บันทึก <i class="bi bi-check-circle-fill ms-2"></i>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,102 @@
+{# Reimbursement Modal — create + edit
+   Mode = 'create' | 'edit'
+   - create: action = /admin/fuel/reimbursement, bills จาก checkbox ที่ติ๊ก (JS แทรก hidden inputs + render summary)
+   - edit:   action = /admin/fuel/reimbursement/<id>/edit, bill list = read-only ของบิลที่ผูกอยู่
+#}
+<div class="modal fade vc-modal" id="fuelReimbModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+        <div class="modal-content">
+            <form id="fuelReimbForm" method="POST" action="{{ url_for('fuel.create_reimbursement') }}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i data-lucide="file-stack" class="vc-icon-sm"></i>
+                        <span id="fuelReimbModalTitle">รวมบิลเป็นใบเบิก</span>
+                    </h5>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    {# Selected bills — JS populates from checked rows (create) หรือ from rb.bills (edit) #}
+                    <div class="vc-form-group">
+                        <label class="vc-label">
+                            บิลในใบเบิกนี้
+                            <span class="vc-label-meta">
+                                <span id="fuelReimbBillCount">0</span> บิล ·
+                                รวม <span id="fuelReimbBillTotal" class="vc-mono">0</span> ฿
+                            </span>
+                        </label>
+                        <div id="fuelReimbBillList" class="vc-history" style="max-height: 200px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>วันที่</th>
+                                        <th>รถ</th>
+                                        <th>ผู้เติม</th>
+                                        <th class="text-end">จำนวน</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fuelReimbBillTbody">
+                                    {# JS populates rows here #}
+                                </tbody>
+                            </table>
+                        </div>
+                        {# Hidden bill_ids[] — JS injects #}
+                        <div id="fuelReimbBillHidden"></div>
+                    </div>
+
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="reimbursement_no">
+                                เลขใบเบิก<span class="vc-required">*</span>
+                            </label>
+                            <input type="text" class="vc-input" id="reimbursement_no" name="reimbursement_no"
+                                   required placeholder="เช่น จ69-00164">
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="reimb_submitted_at">
+                                วันที่ส่ง
+                            </label>
+                            <input type="date" class="vc-input" id="reimb_submitted_at" name="submitted_at">
+                        </div>
+                    </div>
+
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="reimb_source">
+                                แหล่งเบิก
+                                <span class="vc-label-meta">เช่น "บางบาล" / "สำนักงานใหญ่"</span>
+                            </label>
+                            <input type="text" class="vc-input" id="reimb_source" name="source" placeholder="—">
+                        </div>
+                        {# Edit-mode only: received_at #}
+                        <div class="vc-form-group" id="fuelReimbReceivedWrap" style="display:none;">
+                            <label class="vc-label" for="reimb_received_at">
+                                วันที่ได้เงิน
+                                <span class="vc-label-meta">เว้นว่าง = ยังไม่ได้รับ</span>
+                            </label>
+                            <input type="date" class="vc-input" id="reimb_received_at" name="received_at">
+                        </div>
+                    </div>
+
+                    <div class="vc-form-group">
+                        <label class="vc-label" for="reimb_note">หมายเหตุ</label>
+                        <textarea class="vc-textarea" id="reimb_note" name="note" rows="2" placeholder="—"></textarea>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
+                        <i data-lucide="check" class="vc-icon-sm"></i>
+                        <span id="fuelReimbSubmitLabel">สร้างใบเบิก</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

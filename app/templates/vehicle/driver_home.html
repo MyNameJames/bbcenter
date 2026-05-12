@@ -6,343 +6,391 @@
     <title>งานของฉัน</title>
     <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <style>
-        body { background:#F0F2F5; font-family:'Sarabun', sans-serif; }
-        .page-hero {
-            background: linear-gradient(135deg, #0F766E 0%, #0D9488 60%, #14B8A6 100%);
-            border-radius: 0 0 24px 24px;
-            padding: 24px 20px 28px;
-            color: #fff;
-        }
-        .trip-card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 2px 12px rgba(0,0,0,.07);
-            margin-bottom: 16px;
-            overflow: hidden;
-            border: none;
-        }
-        .trip-card .card-top {
-            padding: 16px 18px 12px;
-        }
-        .trip-card .card-footer-bar {
-            background: #F8FAFC;
-            padding: 12px 18px;
-            border-top: 1px solid #F1F5F9;
-        }
-        .status-waiting  { border-left: 5px solid #F59E0B; }
-        .status-on-trip  { border-left: 5px solid #3B82F6; }
-        .status-done     { border-left: 5px solid #10B981; }
-        .badge-waiting   { background:#FEF3C7; color:#92400E; }
-        .badge-on-trip   { background:#DBEAFE; color:#1E40AF; }
-        .badge-done      { background:#D1FAE5; color:#065F46; }
-        .big-btn {
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: .95rem;
-            padding: 10px 0;
-            width: 100%;
-        }
-        .section-title {
-            font-size: .72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            color: #9CA3AF;
-            margin-bottom: 10px;
-            padding-left: 4px;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/driver.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
 </head>
-<body>
-{% include 'navbar.html' %}
+<body class="vc-scope">
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-<!-- Hero -->
-<div class="page-hero mb-3">
-    <div class="d-flex align-items-center gap-3">
-        <div style="background:rgba(255,255,255,.2);border-radius:50%;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">
-            🚗
-        </div>
-        <div>
-            <div style="font-size:.82rem;opacity:.8;">สวัสดี</div>
-            <div class="fw-bold" style="font-size:1.15rem;">{{ driver.name }}</div>
-            <div style="font-size:.78rem;opacity:.75;"><i class="fa-solid fa-phone me-1"></i>{{ driver.phone }}</div>
-        </div>
-    </div>
-</div>
+{% set active_menu = 'approver' %}
+{% include '_sidebar.html' %}
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}{% for cat, msg in messages %}
-    <div class="alert alert-{{ cat }} alert-dismissible fade show mx-3" role="alert" style="border-radius:10px;">
-        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    {% endfor %}{% endif %}
-{% endwith %}
+<main class="main-content">
+    {% set page_title = 'รายการรออนุมัติ' %}
+    {% include '_header.html' %}
 
-<div class="px-3 pb-5">
+    <div class="container-xxl px-3 py-4">
 
-    {% set today_trips    = bookings | selectattr('start_datetime', 'ge', today_start) | selectattr('start_datetime', 'le', today_end) | list %}
-    {% set upcoming_trips = bookings | selectattr('start_datetime', 'gt', today_end) | list %}
-    {% set past_trips     = bookings | selectattr('start_datetime', 'lt', today_start) | list %}
-
-    <!-- วันนี้ -->
-    {% if today_trips %}
-    <div class="section-title">📅 วันนี้ ({{ today_trips|length }} งาน)</div>
-    {% for b in today_trips %}
-        {% set m = b.mileage[0] if b.mileage else none %}
-        {% if m and m.odometer_start and m.odometer_end %}
-            {% set trip_status = 'done' %}
-        {% elif m and m.odometer_start %}
-            {% set trip_status = 'on-trip' %}
-        {% else %}
-            {% set trip_status = 'waiting' %}
-        {% endif %}
-        <div class="trip-card status-{{ trip_status }}">
-            <div class="card-top">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="badge badge-{{ trip_status }} px-2 py-1" style="border-radius:8px;font-size:.78rem;">
-                        {% if trip_status == 'done' %}✅ เสร็จแล้ว
-                        {% elif trip_status == 'on-trip' %}🔄 กำลังเดินทาง
-                        {% else %}⏳ รอออกเดินทาง{% endif %}
-                    </span>
-                    <span class="text-muted" style="font-size:.78rem;">#{{ b.id }}</span>
-                </div>
-                <div class="fw-bold mb-1" style="font-size:1rem;">📍 {{ b.destination }}</div>
-                <div class="text-muted" style="font-size:.82rem;">{{ b.purpose }}</div>
-                <div class="mt-2 d-flex gap-3" style="font-size:.8rem;">
-                    <span><i class="fa-solid fa-clock text-muted me-1"></i>{{ b.start_datetime.strftime('%H:%M') }} – {{ b.end_datetime.strftime('%H:%M') }}</span>
-                    <span><i class="fa-solid fa-users text-muted me-1"></i>{{ b.passenger_count }} คน</span>
-                </div>
-                {% if b.assigned_vehicle %}
-                <div class="mt-2 p-2 rounded-3" style="background:#F0F9FF;font-size:.8rem;">
-                    <i class="fa-solid fa-car text-primary me-1"></i>
-                    <strong>{{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}</strong>
-                    <span class="text-muted ms-1">{{ b.assigned_vehicle.license_plate }}</span>
-                </div>
-                {% endif %}
+        {# ── Flash ── #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert"
+                 style="border-radius: var(--vc-radius-sm); border: 1px solid var(--vc-border);">
+                {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-            <div class="card-footer-bar">
-                {% if trip_status == 'waiting' %}
-                <button class="big-btn btn btn-success"
-                        data-bs-toggle="modal" data-bs-target="#mileModal"
-                        data-id="{{ b.id }}" data-type="start"
-                        data-dest="{{ b.destination }}">
-                    <i class="fa-solid fa-play me-2"></i> เริ่มเดินทาง
-                </button>
-                {% elif trip_status == 'on-trip' %}
-                <button class="big-btn btn btn-primary"
-                        data-bs-toggle="modal" data-bs-target="#mileModal"
-                        data-id="{{ b.id }}" data-type="end"
-                        data-dest="{{ b.destination }}"
-                        data-odo-start="{{ m.odometer_start }}">
-                    <i class="fa-solid fa-flag-checkered me-2"></i> ปิดงาน
-                </button>
-                {% else %}
-                <div class="text-center text-success fw-bold" style="font-size:.85rem;">
-                    <i class="fa-solid fa-circle-check me-1"></i>
-                    ไมล์ {{ '{:,}'.format(m.odometer_start) }} → {{ '{:,}'.format(m.odometer_end) }}
-                    (+{{ '{:,}'.format(m.odometer_end - m.odometer_start) }} กม.)
-                </div>
-                {% endif %}
+            {% endfor %}{% endif %}
+        {% endwith %}
+
+        {# ── Page header ── #}
+        <div class="driver-header">
+            <div>
+                <h1 class="driver-title">งานของฉัน</h1>
+                <p class="driver-subtitle">{{ today_start.strftime('%d/%m/%Y') }} · บันทึกเลขไมล์ออก/กลับ</p>
+            </div>
+            <div class="driver-header-meta">
+                <i data-lucide="user" class="vc-icon-sm"></i>
+                <span>{{ driver.name }}</span>
             </div>
         </div>
-    {% endfor %}
-    {% endif %}
 
-    <!-- งานที่กำลังจะมา -->
-    {% if upcoming_trips %}
-    <div class="section-title mt-3">🔜 งานที่กำลังจะมา</div>
-    {% for b in upcoming_trips[:5] %}
-    <div class="trip-card" style="border-left:5px solid #E5E7EB;">
-        <div class="card-top">
-            <div class="d-flex justify-content-between">
-                <div class="fw-bold" style="font-size:.95rem;">📍 {{ b.destination }}</div>
-                <span class="text-muted" style="font-size:.78rem;">#{{ b.id }}</span>
-            </div>
-            <div class="text-muted mt-1" style="font-size:.82rem;">
-                <i class="fa-solid fa-calendar me-1"></i>
-                {{ b.start_datetime.strftime('%d/%m/%Y %H:%M') }}
-            </div>
+        {# ── Filter trips ── #}
+        {% set today_trips    = bookings | selectattr('start_datetime', 'ge', today_start)    | selectattr('start_datetime', 'le', today_end)    | list %}
+        {% set tomorrow_trips = bookings | selectattr('start_datetime', 'ge', tomorrow_start) | selectattr('start_datetime', 'le', tomorrow_end) | list %}
+
+        {# ── Tabs ── #}
+        <div class="driver-tabs" role="tablist">
+            <button type="button" class="driver-tabs__btn is-active" data-tab="today" role="tab">
+                วันนี้
+                <span class="driver-tabs__count">{{ today_trips|length }}</span>
+            </button>
+            <button type="button" class="driver-tabs__btn" data-tab="tomorrow" role="tab">
+                พรุ่งนี้
+                <span class="driver-tabs__count">{{ tomorrow_trips|length }}</span>
+            </button>
         </div>
-    </div>
-    {% endfor %}
-    {% endif %}
 
-    <!-- ไม่มีงาน -->
-    {% if not today_trips and not upcoming_trips %}
-    <div class="text-center py-5">
-        <div style="font-size:3rem;">🏖️</div>
-        <div class="fw-bold mt-2 text-muted">ไม่มีงานวันนี้</div>
-        <div class="text-muted small">พักผ่อนได้เลยครับ</div>
-    </div>
-    {% endif %}
-
-    <!-- งานย้อนหลัง (collapse) -->
-    {% if past_trips %}
-    <div class="mt-3">
-        <button class="btn btn-light w-100 fw-bold" style="border-radius:12px;font-size:.85rem;"
-                data-bs-toggle="collapse" data-bs-target="#pastTrips">
-            <i class="fa-solid fa-history me-1"></i> งานย้อนหลัง ({{ past_trips|length }})
-        </button>
-        <div class="collapse mt-2" id="pastTrips">
-            {% for b in past_trips[:10] %}
-            {% set m = b.mileage[0] if b.mileage else none %}
-            <div class="trip-card" style="border-left:5px solid #D1D5DB;">
-                <div class="card-top">
-                    <div class="d-flex justify-content-between">
-                        <div class="fw-bold" style="font-size:.88rem;">📍 {{ b.destination }}</div>
-                        <span class="text-muted small">#{{ b.id }}</span>
-                    </div>
-                    <div class="text-muted" style="font-size:.78rem;">{{ b.start_datetime.strftime('%d/%m/%Y') }}</div>
+        {# ====================================================
+           Tab: วันนี้
+           ==================================================== #}
+        <div class="driver-panel is-active" data-panel="today">
+            {% if today_trips %}
+                {% for b in today_trips %}
+                    {% set m = b.mileage[0] if b.mileage else none %}
                     {% if m and m.odometer_start and m.odometer_end %}
-                    <div class="text-success small mt-1">
-                        <i class="fa-solid fa-gauge me-1"></i>+{{ '{:,}'.format(m.odometer_end - m.odometer_start) }} กม.
-                        {% if m.refuel %}<span class="ms-2 text-warning"><i class="fa-solid fa-gas-pump me-1"></i>{{ '{:,.0f}'.format(m.refuel_amount) }} ฿</span>{% endif %}
-                    </div>
+                        {% set trip_status = 'done' %}
+                    {% elif m and m.odometer_start %}
+                        {% set trip_status = 'ontrip' %}
                     {% else %}
-                    <div class="text-muted small mt-1">ยังไม่กรอกไมล์</div>
+                        {% set trip_status = 'waiting' %}
                     {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
 
-</div>
+                    <div class="driver-card" data-card>
+                        <button type="button" class="driver-card__head" data-card-toggle>
+                            <span class="driver-card__id">BK-{{ '%04d' % b.id }}</span>
+                            <span class="driver-card__summary">
+                                {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                                <span class="dot">·</span>
+                                {{ b.destination }}
+                            </span>
+                            {% if trip_status == 'done' %}
+                                <span class="driver-pill driver-pill--done">
+                                    <i data-lucide="check" class="vc-icon-sm"></i> เสร็จแล้ว
+                                </span>
+                            {% elif trip_status == 'ontrip' %}
+                                <span class="driver-pill driver-pill--ontrip">
+                                    <i data-lucide="clock" class="vc-icon-sm"></i> รอบันทึกกลับ
+                                </span>
+                            {% else %}
+                                <span class="driver-pill driver-pill--waiting">
+                                    <i data-lucide="circle" class="vc-icon-sm"></i> รอบันทึกออก
+                                </span>
+                            {% endif %}
+                            <i data-lucide="chevron-down" class="vc-icon-sm driver-card__chevron"></i>
+                        </button>
 
-<!-- Modal: กรอกไมล์ -->
-<div class="modal fade" id="mileModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
-        <div class="modal-content border-0" style="border-radius:20px;">
-            <form method="POST" action="/driver/mileage" enctype="multipart/form-data">
-                <input type="hidden" name="booking_id" id="mBookingId">
-                <input type="hidden" name="entry_type" id="mType">
-                <div class="modal-header border-0 pb-0 px-4 pt-4">
-                    <h5 class="modal-title fw-bold" id="mTitle">บันทึกเลขไมล์</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body px-4 py-3">
-                    <p class="text-muted small mb-3" id="mDest"></p>
-
-                    <!-- Start -->
-                    <div id="startWrap">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">เลขไมล์ก่อนออก (กม.) *</label>
-                            <input type="number" name="odometer_start" id="mOdoStart"
-                                   class="form-control form-control-lg" inputmode="numeric"
-                                   min="0" placeholder="เช่น 125400">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold"><i class="fa-solid fa-camera me-1 text-muted"></i> ถ่ายรูปหน้าปัด</label>
-                            <input type="file" name="odometer_start_img" class="form-control"
-                                   accept="image/*" capture="environment">
-                        </div>
-                        <input type="hidden" name="actual_start" id="mActualStart">
-                        <div class="p-2 rounded-3" style="background:#F0FDF4;border:1px solid #BBF7D0;">
-                            <small class="text-success"><i class="fa-solid fa-clock me-1"></i> เวลาบันทึก: <span id="tsStart" class="fw-bold">-</span></small>
-                        </div>
-                    </div>
-
-                    <!-- End -->
-                    <div id="endWrap" style="display:none;">
-                        <div class="mb-2 p-2 rounded-3" style="background:#F0FDF4;border:1px solid #BBF7D0;">
-                            <small class="text-success fw-bold">ไมล์ก่อนออก: <span id="mOdoStartRef">-</span> กม.</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">เลขไมล์หลังกลับ (กม.) *</label>
-                            <input type="number" name="odometer_end" id="mOdoEnd"
-                                   class="form-control form-control-lg" inputmode="numeric"
-                                   min="0" placeholder="เช่น 125650">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold"><i class="fa-solid fa-camera me-1 text-muted"></i> ถ่ายรูปหน้าปัด</label>
-                            <input type="file" name="odometer_end_img" class="form-control"
-                                   accept="image/*" capture="environment">
-                        </div>
-                        <!-- refuel -->
-                        <div class="p-3 rounded-3 mb-3" style="background:#FEF9C3;border:1px solid #FDE68A;">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="refuel" id="mRefuelCheck" value="1">
-                                <label class="form-check-label fw-bold" for="mRefuelCheck">
-                                    <i class="fa-solid fa-gas-pump me-1 text-warning"></i> แวะเติมน้ำมันระหว่างทาง
-                                </label>
-                            </div>
-                            <div id="refuelWrap" style="display:none;">
-                                <div class="mb-2">
-                                    <label class="form-label small fw-bold">ยอดเงิน (บาท)</label>
-                                    <input type="number" step="0.01" name="refuel_amount" id="mRefuelAmt"
-                                           class="form-control" min="0" placeholder="เช่น 500">
+                        <div class="driver-card__body">
+                            {# Meta grid #}
+                            <div class="driver-meta">
+                                <div class="driver-meta__item">
+                                    <i data-lucide="clock" class="vc-icon-sm driver-meta__icon"></i>
+                                    <div>
+                                        <div class="driver-meta__label">เวลา</div>
+                                        <div class="driver-meta__value">
+                                            {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
+                                        </div>
+                                    </div>
                                 </div>
-                                <label class="form-label small fw-bold"><i class="fa-solid fa-receipt me-1"></i> ถ่ายรูปบิล</label>
-                                <input type="file" name="refuel_img" class="form-control"
-                                       accept="image/*" capture="environment">
+                                <div class="driver-meta__item">
+                                    <i data-lucide="map-pin" class="vc-icon-sm driver-meta__icon"></i>
+                                    <div>
+                                        <div class="driver-meta__label">ปลายทาง</div>
+                                        <div class="driver-meta__value">{{ b.destination }}</div>
+                                    </div>
+                                </div>
+                                <div class="driver-meta__item">
+                                    <i data-lucide="car" class="vc-icon-sm driver-meta__icon"></i>
+                                    <div>
+                                        <div class="driver-meta__label">รถ</div>
+                                        <div class="driver-meta__value">
+                                            {% if b.assigned_vehicle %}
+                                                {{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}
+                                                <span style="color: var(--vc-fg-muted); font-weight: 400;">
+                                                    ({{ b.assigned_vehicle.license_plate }})
+                                                </span>
+                                            {% else %}
+                                                <span style="color: var(--vc-fg-disabled); font-weight: 400;">ยังไม่ระบุ</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="driver-meta__item">
+                                    <i data-lucide="user" class="vc-icon-sm driver-meta__icon"></i>
+                                    <div>
+                                        <div class="driver-meta__label">ผู้จอง</div>
+                                        <div class="driver-meta__value">{{ b.user.name if b.user else '-' }}</div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <input type="hidden" name="actual_end" id="mActualEnd">
-                        <div class="p-2 rounded-3" style="background:#EFF6FF;border:1px solid #BFDBFE;">
-                            <small class="text-primary"><i class="fa-solid fa-clock me-1"></i> เวลาบันทึก: <span id="tsEnd" class="fw-bold">-</span></small>
+
+                            {# ── State: done ── #}
+                            {% if trip_status == 'done' %}
+                                <div class="driver-summary">
+                                    <div class="driver-summary__row">
+                                        <span class="driver-summary__label">เลขไมล์ออก</span>
+                                        <span class="driver-summary__value">{{ '{:,}'.format(m.odometer_start) }} km</span>
+                                    </div>
+                                    <div class="driver-summary__row">
+                                        <span class="driver-summary__label">เลขไมล์กลับ</span>
+                                        <span class="driver-summary__value">{{ '{:,}'.format(m.odometer_end) }} km</span>
+                                    </div>
+                                    <div class="driver-summary__row">
+                                        <span class="driver-summary__label">ระยะทาง</span>
+                                        <span class="driver-summary__value">+{{ '{:,}'.format(m.odometer_end - m.odometer_start) }} km</span>
+                                    </div>
+                                </div>
+                                <div class="driver-done-summary">
+                                    <i data-lucide="check-circle-2" class="vc-icon-sm"></i> ปิดงานเรียบร้อย
+                                </div>
+
+                            {# ── State: ontrip → กรอกไมล์กลับ ── #}
+                            {% elif trip_status == 'ontrip' %}
+                                <div class="driver-summary">
+                                    <div class="driver-summary__row">
+                                        <span class="driver-summary__label">เลขไมล์ออก</span>
+                                        <span class="driver-summary__value">{{ '{:,}'.format(m.odometer_start) }} km</span>
+                                    </div>
+                                    <div class="driver-summary__row">
+                                        <span class="driver-summary__label">เวลาออกจริง</span>
+                                        <span class="driver-summary__value">
+                                            {{ m.actual_start.strftime('%H:%M') if m.actual_start else '-' }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <form method="POST" action="/driver/mileage" enctype="multipart/form-data" class="driver-form" data-driver-form>
+                                    <input type="hidden" name="booking_id" value="{{ b.id }}">
+                                    <input type="hidden" name="entry_type" value="end">
+                                    <input type="hidden" name="actual_end" data-actual-now>
+
+                                    <div class="driver-form__title">บันทึกเลขไมล์กลับ</div>
+                                    <input type="number" name="odometer_end" class="form-control"
+                                           inputmode="numeric" min="{{ m.odometer_start + 1 }}"
+                                           placeholder="เลขไมล์กลับ" required>
+
+                                    <label class="driver-upload">
+                                        <input type="file" name="odometer_end_img" accept="image/*" capture="environment" data-upload-input>
+                                        <div class="driver-upload__icon"><i data-lucide="upload" class="vc-icon-md"></i></div>
+                                        <div class="driver-upload__label">รูปหน้าปัด (ไมล์กลับ)</div>
+                                        <div class="driver-upload__hint">แตะเพื่ออัปโหลด</div>
+                                    </label>
+
+                                    <button type="submit" class="driver-cta">
+                                        <i data-lucide="check" class="vc-icon-sm"></i> บันทึกเลขไมล์กลับ
+                                    </button>
+                                </form>
+
+                            {# ── State: waiting → กรอกไมล์ออก ── #}
+                            {% else %}
+                                <form method="POST" action="/driver/mileage" enctype="multipart/form-data" class="driver-form" data-driver-form>
+                                    <input type="hidden" name="booking_id" value="{{ b.id }}">
+                                    <input type="hidden" name="entry_type" value="start">
+                                    <input type="hidden" name="actual_start" data-actual-now>
+
+                                    <div class="driver-form__title">บันทึกเลขไมล์ออก</div>
+                                    <input type="number" name="odometer_start" class="form-control"
+                                           inputmode="numeric" min="0"
+                                           placeholder="เลขไมล์ปัจจุบัน" required>
+
+                                    <label class="driver-upload">
+                                        <input type="file" name="odometer_start_img" accept="image/*" capture="environment" data-upload-input>
+                                        <div class="driver-upload__icon"><i data-lucide="upload" class="vc-icon-md"></i></div>
+                                        <div class="driver-upload__label">รูปหน้าปัด (ไมล์ออก)</div>
+                                        <div class="driver-upload__hint">แตะเพื่ออัปโหลด</div>
+                                    </label>
+
+                                    <button type="submit" class="driver-cta">
+                                        <i data-lucide="play" class="vc-icon-sm"></i> บันทึกเลขไมล์ออก
+                                    </button>
+                                </form>
+                            {% endif %}
                         </div>
                     </div>
+                {% endfor %}
+            {% else %}
+                <div class="driver-empty">
+                    <div class="driver-empty__icon"><i data-lucide="calendar-check" class="vc-icon-lg"></i></div>
+                    <div class="driver-empty__title">ไม่มีงานวันนี้</div>
+                    <div class="driver-empty__desc">พักผ่อนได้เลยครับ</div>
                 </div>
-                <div class="modal-footer border-0 px-4 pb-4 pt-2">
-                    <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn fw-bold px-4 flex-grow-1" id="mSubmitBtn"
-                            style="background:#0F766E;color:#fff;border-radius:12px;">
-                        <i class="fa-solid fa-save me-1"></i> บันทึก
-                    </button>
-                </div>
-            </form>
+            {% endif %}
         </div>
+
+        {# ====================================================
+           Tab: พรุ่งนี้ (read-only)
+           ==================================================== #}
+        <div class="driver-panel" data-panel="tomorrow">
+            {% if tomorrow_trips %}
+                {% for b in tomorrow_trips %}
+                    <div class="driver-card driver-card--readonly" data-card>
+                        <button type="button" class="driver-card__head" data-card-toggle>
+                            <span class="driver-card__id">BK-{{ '%04d' % b.id }}</span>
+                            <span class="driver-card__summary">
+                                {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                                <span class="dot">·</span>
+                                {{ b.destination }}
+                            </span>
+                            <span class="driver-pill driver-pill--upcoming">
+                                <i data-lucide="calendar" class="vc-icon-sm"></i> พรุ่งนี้
+                            </span>
+                            <i data-lucide="chevron-down" class="vc-icon-sm driver-card__chevron"></i>
+                        </button>
+
+                        <div class="driver-card__body">
+                            <div class="driver-meta">
+                                <div class="driver-meta__item">
+                                    <i data-lucide="clock" class="vc-icon-sm driver-meta__icon"></i>
+                                    <div>
+                                        <div class="driver-meta__label">เวลา</div>
+                                        <div class="driver-meta__value">
+                                            {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="driver-meta__item">
+                                    <i data-lucide="map-pin" class="vc-icon-sm driver-meta__icon"></i>
+                                    <div>
+                                        <div class="driver-meta__label">ปลายทาง</div>
+                                        <div class="driver-meta__value">{{ b.destination }}</div>
+                                    </div>
+                                </div>
+                                <div class="driver-meta__item">
+                                    <i data-lucide="car" class="vc-icon-sm driver-meta__icon"></i>
+                                    <div>
+                                        <div class="driver-meta__label">รถ</div>
+                                        <div class="driver-meta__value">
+                                            {% if b.assigned_vehicle %}
+                                                {{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}
+                                                <span style="color: var(--vc-fg-muted); font-weight: 400;">
+                                                    ({{ b.assigned_vehicle.license_plate }})
+                                                </span>
+                                            {% else %}
+                                                <span style="color: var(--vc-fg-disabled); font-weight: 400;">ยังไม่ระบุ</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="driver-meta__item">
+                                    <i data-lucide="user" class="vc-icon-sm driver-meta__icon"></i>
+                                    <div>
+                                        <div class="driver-meta__label">ผู้จอง</div>
+                                        <div class="driver-meta__value">{{ b.user.name if b.user else '-' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="driver-readonly-note">
+                                <i data-lucide="lock" class="vc-icon-sm"></i>
+                                เริ่มงานได้ในวันที่ {{ b.start_datetime.strftime('%d/%m/%Y') }}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="driver-empty">
+                    <div class="driver-empty__icon"><i data-lucide="calendar" class="vc-icon-lg"></i></div>
+                    <div class="driver-empty__title">ไม่มีงานพรุ่งนี้</div>
+                    <div class="driver-empty__desc">ตอนนี้ยังไม่มีคิวที่ถูกจัดให้คุณ</div>
+                </div>
+            {% endif %}
+        </div>
+
     </div>
-</div>
+</main>
 
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script>
-document.getElementById('mileModal').addEventListener('show.bs.modal', function(e) {
-    const btn  = e.relatedTarget;
-    const type = btn.dataset.type;
-    const pad  = n => String(n).padStart(2, '0');
-    const now  = new Date();
-    const tsVal  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const tsText = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()+543}  ${pad(now.getHours())}:${pad(now.getMinutes())} น.`;
-
-    document.getElementById('mBookingId').value = btn.dataset.id;
-    document.getElementById('mType').value      = type;
-    document.getElementById('mDest').textContent = '📍 ' + btn.dataset.dest;
-
-    // reset refuel
-    document.getElementById('mRefuelCheck').checked = false;
-    document.getElementById('refuelWrap').style.display = 'none';
-    document.getElementById('mRefuelAmt').value = '';
-
-    if (type === 'start') {
-        document.getElementById('mTitle').textContent      = '🚦 เริ่มเดินทาง';
-        document.getElementById('startWrap').style.display = 'block';
-        document.getElementById('endWrap').style.display   = 'none';
-        document.getElementById('mOdoStart').required      = true;
-        document.getElementById('mOdoEnd').required        = false;
-        document.getElementById('mActualStart').value      = tsVal;
-        document.getElementById('tsStart').textContent     = tsText;
-        document.getElementById('mSubmitBtn').textContent  = '🚗 เริ่มเดินทาง';
+(function () {
+    // ── Lucide ───────────────────────────────────────────────
+    const renderIcons = () => {
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderIcons);
     } else {
-        document.getElementById('mTitle').textContent      = '🏁 ปิดงาน';
-        document.getElementById('startWrap').style.display = 'none';
-        document.getElementById('endWrap').style.display   = 'block';
-        document.getElementById('mOdoStartRef').textContent = Number(btn.dataset.odoStart || 0).toLocaleString();
-        document.getElementById('mOdoEnd').required        = true;
-        document.getElementById('mOdoStart').required      = false;
-        document.getElementById('mActualEnd').value        = tsVal;
-        document.getElementById('tsEnd').textContent       = tsText;
-        document.getElementById('mSubmitBtn').textContent  = '✅ ปิดงาน';
+        renderIcons();
     }
-});
 
-document.getElementById('mRefuelCheck').addEventListener('change', function() {
-    document.getElementById('refuelWrap').style.display = this.checked ? 'block' : 'none';
-});
+    // ── Tab switching ────────────────────────────────────────
+    const tabBtns = document.querySelectorAll('.driver-tabs__btn');
+    const panels  = document.querySelectorAll('.driver-panel');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.tab;
+            tabBtns.forEach(b => b.classList.toggle('is-active', b === btn));
+            panels.forEach(p => p.classList.toggle('is-active', p.dataset.panel === target));
+        });
+    });
+
+    // ── Accordion: open one card → close others within active panel ─
+    document.querySelectorAll('[data-card-toggle]').forEach(head => {
+        head.addEventListener('click', () => {
+            const card  = head.closest('[data-card]');
+            const panel = card.closest('.driver-panel');
+            const wasOpen = card.classList.contains('is-open');
+
+            panel.querySelectorAll('[data-card]').forEach(c => c.classList.remove('is-open'));
+
+            if (!wasOpen) card.classList.add('is-open');
+        });
+    });
+
+    // ── Stamp actual_start / actual_end on submit ────────────
+    const pad = n => String(n).padStart(2, '0');
+    const nowStamp = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    document.querySelectorAll('[data-driver-form]').forEach(form => {
+        form.addEventListener('submit', () => {
+            const stamp = form.querySelector('[data-actual-now]');
+            if (stamp) stamp.value = nowStamp();
+        });
+    });
+
+    // ── Upload zone: visual feedback when file picked ────────
+    document.querySelectorAll('[data-upload-input]').forEach(input => {
+        input.addEventListener('change', () => {
+            const zone  = input.closest('.driver-upload');
+            const label = zone.querySelector('.driver-upload__label');
+            const hint  = zone.querySelector('.driver-upload__hint');
+            if (input.files && input.files.length) {
+                zone.classList.add('has-file');
+                label.textContent = input.files[0].name;
+                hint.textContent  = 'แตะเพื่อเปลี่ยนรูป';
+            } else {
+                zone.classList.remove('has-file');
+            }
+        });
+    });
+})();
 </script>
 </body>
 </html>

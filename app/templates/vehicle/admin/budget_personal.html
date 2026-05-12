@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>งบส่วนตัว - BBCenter</title>
+    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
+    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
+    <style>
+        /* ── KPI row ────────────────────────────── */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 575px) { .kpi-row { grid-template-columns: 1fr 1fr; } }
+        .kpi-card {
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-md);
+            padding: 14px 16px;
+        }
+        .kpi-label {
+            font-size: var(--ds-text-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--ds-text-muted);
+            margin-bottom: 6px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .kpi-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--ds-text-heading);
+            line-height: 1.1;
+        }
+
+        /* ── Filter tabs ────────────────────────── */
+        .filter-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--ds-bg-subtle);
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-md);
+            padding: 3px;
+            width: fit-content;
+        }
+        .filter-tab {
+            padding: 5px 14px;
+            border-radius: calc(var(--ds-radius-md) - 2px);
+            font-size: var(--ds-text-sm);
+            font-weight: 500;
+            color: var(--ds-text-secondary);
+            text-decoration: none;
+            transition: background .12s, color .12s;
+            white-space: nowrap;
+        }
+        .filter-tab.active {
+            background: var(--ds-bg-surface);
+            color: var(--ds-text-heading);
+            border: 1px solid var(--ds-border);
+            font-weight: 600;
+        }
+        .filter-tab:hover:not(.active) { color: var(--ds-text-body); }
+
+        /* ── Mark paid button ───────────────────── */
+        .btn-mark-paid {
+            display: inline-flex; align-items: center; gap: 5px;
+            height: 28px; padding: 0 10px;
+            background: #F0FDF4;
+            color: #14532D;
+            border: 1px solid #BBF7D0;
+            border-radius: var(--ds-radius-sm);
+            font-size: var(--ds-text-xs);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .12s, border-color .12s, transform 160ms cubic-bezier(0.23,1,0.32,1);
+            white-space: nowrap;
+        }
+        .btn-mark-paid:hover  { background: #DCFCE7; border-color: #86EFAC; }
+        .btn-mark-paid:active { transform: scale(0.96); }
+
+        .btn-mark-unpaid {
+            display: inline-flex; align-items: center; gap: 5px;
+            height: 28px; padding: 0 10px;
+            background: var(--ds-bg-subtle);
+            color: var(--ds-text-secondary);
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-sm);
+            font-size: var(--ds-text-xs);
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .12s, transform 160ms cubic-bezier(0.23,1,0.32,1);
+        }
+        .btn-mark-unpaid:hover  { background: var(--ds-bg-hover); color: var(--ds-text-body); }
+        .btn-mark-unpaid:active { transform: scale(0.96); }
+
+        /* ── Status badge ───────────────────────── */
+        .status-pending {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: var(--ds-text-xs); font-weight: 600;
+            color: #78350F; background: #FFFBEB;
+            border: 1px solid #FDE68A;
+            border-radius: var(--ds-radius-full);
+            padding: 2px 8px;
+        }
+        .status-paid {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: var(--ds-text-xs); font-weight: 600;
+            color: #14532D; background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            border-radius: var(--ds-radius-full);
+            padding: 2px 8px;
+        }
+
+        /* ── Table ──────────────────────────────── */
+        .ds-table td, .ds-table th { vertical-align: middle; }
+        .row-paid { opacity: .65; }
+        .paid-info { font-size: var(--ds-text-xs); color: var(--ds-text-muted); }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    {% set active_menu = 'admin' %}
+    {% include '_sidebar.html' %}
+
+    <main class="main-content">
+        {% set page_title = 'งบส่วนตัว — เรียกเก็บเงิน' %}
+        {% include '_header.html' %}
+
+        <div style="overflow-y:auto; height:calc(100vh - 60px); background:var(--ds-bg-page);">
+            <div class="container-fluid" style="max-width:1100px; padding:20px 20px 40px;">
+
+                {# Flash #}
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}{% for cat, msg in messages %}
+                <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3"
+                     style="border-radius:var(--ds-radius-md); font-size:var(--ds-text-sm);">
+                    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}{% endif %}
+                {% endwith %}
+
+                {# ── Back + Filter bar ── #}
+                <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+                    <a href="{{ url_for('adminfleet.budget_manage', year=sel_year, month=sel_month) }}"
+                       class="ds-btn ds-btn-secondary ds-btn-sm">
+                        <i class="fa-solid fa-arrow-left me-1"></i> งบประมาณ
+                    </a>
+
+                    <form method="GET" class="d-flex gap-2 align-items-center">
+                        <select name="year" class="ds-input" style="width:100px;" onchange="this.form.submit()">
+                            {% for y in range(now.year - 1, now.year + 2) %}
+                            <option value="{{ y }}" {% if y == sel_year %}selected{% endif %}>{{ y + 543 }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="month" class="ds-input" style="width:100px;" onchange="this.form.submit()">
+                            {% set th_months = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
+                            {% for m in range(1, 13) %}
+                            <option value="{{ m }}" {% if m == sel_month %}selected{% endif %}>{{ th_months[m] }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="status" value="{{ status_filter }}">
+                    </form>
+
+                    <div class="filter-tabs ms-auto">
+                        <a href="?year={{ sel_year }}&month={{ sel_month }}&status=all"
+                           class="filter-tab {% if status_filter == 'all' %}active{% endif %}">ทั้งหมด</a>
+                        <a href="?year={{ sel_year }}&month={{ sel_month }}&status=pending"
+                           class="filter-tab {% if status_filter == 'pending' %}active{% endif %}">
+                            รอรับเงิน
+                        </a>
+                        <a href="?year={{ sel_year }}&month={{ sel_month }}&status=paid"
+                           class="filter-tab {% if status_filter == 'paid' %}active{% endif %}">รับเงินแล้ว</a>
+                    </div>
+                </div>
+
+                {# ── KPI row ── #}
+                <div class="kpi-row mb-4">
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <i class="fa-solid fa-list" style="color:var(--ds-text-muted);"></i>
+                            รายการทั้งหมด
+                        </div>
+                        <div class="kpi-value">{{ rows | length }}</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <i class="fa-solid fa-clock" style="color:#D97706;"></i>
+                            ยอดรอรับ
+                        </div>
+                        <div class="kpi-value" style="color:#D97706;">฿{{ '{:,.0f}'.format(total_pending) }}</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <i class="fa-solid fa-hand-holding-dollar" style="color:#16A34A;"></i>
+                            ได้รับแล้ว
+                        </div>
+                        <div class="kpi-value" style="color:#16A34A;">฿{{ '{:,.0f}'.format(total_paid) }}</div>
+                    </div>
+                </div>
+
+                {# ── Table ── #}
+                {% if rows %}
+                <div class="card">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span class="fw-bold" style="font-size:var(--ds-text-base);">
+                            <i class="fa-solid fa-user-tag me-2" style="color:var(--ds-text-muted);"></i>
+                            รายการงบส่วนตัว — {{ month_label }}
+                        </span>
+                        <span class="ds-caption" style="color:var(--ds-text-muted);">{{ rows | length }} รายการ</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table ds-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:180px;">ผู้จอง</th>
+                                    <th>ปลายทาง</th>
+                                    <th style="width:100px;">ระยะทาง</th>
+                                    <th style="width:110px;">ค่าใช้จ่าย</th>
+                                    <th style="width:110px;">สถานะ</th>
+                                    <th style="width:130px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="reimbTable">
+                            {% for r in rows %}
+                            <tr id="row-{{ r.mileage_id }}" class="{% if r.status == 1 %}row-paid{% endif %}">
+                                <td>
+                                    <div class="fw-600" style="font-size:var(--ds-text-sm);">{{ r.user_name }}</div>
+                                    <div style="font-size:var(--ds-text-xs); color:var(--ds-text-muted);">
+                                        <i class="fa-solid fa-building fa-xs me-1"></i>{{ r.department }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-size:var(--ds-text-sm);">
+                                        <i class="fa-solid fa-location-dot fa-xs me-1" style="color:var(--ds-text-muted);"></i>
+                                        {{ r.destination }}
+                                    </div>
+                                    {% if r.actual_end %}
+                                    <div style="font-size:var(--ds-text-xs); color:var(--ds-text-muted);">
+                                        <i class="fa-solid fa-clock fa-xs me-1"></i>
+                                        {{ r.actual_end.strftime('%d/%m/%y %H:%M') }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size:var(--ds-text-sm);">
+                                    <i class="fa-solid fa-gauge-high fa-xs me-1" style="color:var(--ds-text-muted);"></i>
+                                    {{ '{:,.0f}'.format(r.distance) }} กม.
+                                </td>
+                                <td>
+                                    <span class="fw-bold" style="font-size:var(--ds-text-sm);">
+                                        ฿{{ '{:,.2f}'.format(r.cost) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if r.status == 0 %}
+                                    <span class="status-pending" id="badge-{{ r.mileage_id }}">
+                                        <i class="fa-solid fa-clock fa-xs"></i> รอรับเงิน
+                                    </span>
+                                    {% else %}
+                                    <span class="status-paid" id="badge-{{ r.mileage_id }}">
+                                        <i class="fa-solid fa-check fa-xs"></i> รับเงินแล้ว
+                                    </span>
+                                    {% endif %}
+                                    {% if r.status == 1 and r.paid_at %}
+                                    <div class="paid-info mt-1">
+                                        รับเงิน {{ r.paid_at.strftime('%d/%m/%y') }}
+                                        {% if r.paid_by %} · {{ r.paid_by }}{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if r.status == 0 %}
+                                    <button class="btn-mark-paid"
+                                        onclick="markPaid({{ r.mileage_id }}, this)">
+                                        <i class="fa-solid fa-check"></i> บันทึกรับเงิน
+                                    </button>
+                                    {% else %}
+                                    <button class="btn-mark-unpaid"
+                                        onclick="markUnpaid({{ r.mileage_id }}, this)">
+                                        ย้อนกลับ
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5" style="color:var(--ds-text-muted);">
+                    <i class="fa-solid fa-user-tag fa-2x mb-3 d-block" style="opacity:.3;"></i>
+                    <div class="fw-bold mb-1">ไม่มีรายการงบส่วนตัว</div>
+                    <div style="font-size:var(--ds-text-sm);">{{ month_label }} ยังไม่มีทริปที่ใช้งบส่วนตัว</div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script>
+const MARK_PAID_URL   = "{{ url_for('adminfleet.budget_personal_mark_paid') }}";
+const MARK_UNPAID_URL = "{{ url_for('adminfleet.budget_personal_mark_unpaid') }}";
+
+function markPaid(mileageId, btn) {
+    btn.disabled = true;
+    fetch(MARK_PAID_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `mileage_id=${mileageId}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.ok) { alert(data.msg); btn.disabled = false; return; }
+        const row   = document.getElementById(`row-${mileageId}`);
+        const badge = document.getElementById(`badge-${mileageId}`);
+        row.classList.add('row-paid');
+        badge.className = 'status-paid';
+        badge.innerHTML = '<i class="fa-solid fa-check fa-xs"></i> รับเงินแล้ว';
+        btn.outerHTML = `<button class="btn-mark-unpaid" onclick="markUnpaid(${mileageId}, this)">ย้อนกลับ</button>`;
+    })
+    .catch(() => { btn.disabled = false; });
+}
+
+function markUnpaid(mileageId, btn) {
+    btn.disabled = true;
+    fetch(MARK_UNPAID_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `mileage_id=${mileageId}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.ok) { alert(data.msg); btn.disabled = false; return; }
+        const row   = document.getElementById(`row-${mileageId}`);
+        const badge = document.getElementById(`badge-${mileageId}`);
+        row.classList.remove('row-paid');
+        badge.className = 'status-pending';
+        badge.innerHTML = '<i class="fa-solid fa-clock fa-xs"></i> รอรับเงิน';
+        btn.outerHTML = `<button class="btn-mark-paid" onclick="markPaid(${mileageId}, this)"><i class="fa-solid fa-check"></i> บันทึกรับเงิน</button>`;
+    })
+    .catch(() => { btn.disabled = false; });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+# .claudeignore
+# ไฟล์นี้บอก AI ว่าไม่ต้องอ่านไฟล์เหล่านี้เว้นแต่จะถูกขอโดยตรง
+# (คล้าย .gitignore แต่สำหรับ context window)
+
+# ─── Static Assets ───────────────────────────────────────
+# ไม่มีประโยชน์ในการอ่าน vendor หรือ font files
+app/static/vendor/
+app/static/fonts/
+app/static/images/
+
+# ─── Uploaded Files ──────────────────────────────────────
+app/static/uploads/
+
+# ─── Database ────────────────────────────────────────────
+app/instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Python Cache ────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ─── Virtual Environment ─────────────────────────────────
+venv/
+env/
+.venv/
+.env/
+
+# ─── IDE & OS ────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── Logs ────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Environment Secrets ─────────────────────────────────
+# อ่านได้แค่ .env.example ไม่อ่าน .env จริง
+.env
+app/.env
+
+# ─── Templates ที่ไม่ค่อยแก้ ─────────────────────────────
+# อ่านเฉพาะเมื่อถูกขอ
+app/templates/auth/login.html
+app/templates/usermng/manage_users.html
+
+# ─── HTML Templates ที่มีขนาดใหญ่ ────────────────────────
+# อ่านเฉพาะเมื่อถูกขอแก้ template นั้นโดยตรง
+app/templates/vehicle/admin/vehicle_cost.html
+app/templates/vehicle/admin/budget_manage.html
+app/templates/vehicle/admin/admin_manage_fleet.html
+app/templates/vehicle/vehicle_mileage.html
+app/templates/dashboard/dashboard.html
+
+# ─── Migrations ──────────────────────────────────────────
+# ดู migrations-index.md แทน อ่านไฟล์ .sql เฉพาะเมื่อถูกขอ
+app/migrations/
+
+# ─── DB History ──────────────────────────────────────────
+# ยาวมาก อ่านเฉพาะเมื่อถูกขอ
+docs/notes/database/evolution.md
+
+# ─── Claude Internal ─────────────────────────────────────
+.claude/
+
+# ─── Design Artifacts (อ่านเฉพาะเมื่อถูกขอ) ─────────────
+docs/design/

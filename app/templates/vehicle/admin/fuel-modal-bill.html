@@ -1,0 +1,129 @@
+{# Bill Modal — create + edit + delete
+   Used in admin_fuel.html. JS in fuel_admin.js controls open/populate.
+   Mode = 'create' | 'edit'
+   - create: action = /admin/fuel/bill, no bill_id
+   - edit:   action = /admin/fuel/bill/<id>/edit, also shows delete button
+#}
+<div class="modal fade vc-modal" id="fuelBillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+        <div class="modal-content">
+            <form id="fuelBillForm" method="POST" action="{{ url_for('fuel.create_bill') }}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i data-lucide="receipt-text" class="vc-icon-sm"></i>
+                        <span id="fuelBillModalTitle">บิลใหม่</span>
+                    </h5>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="bill_date">
+                                วันที่<span class="vc-required">*</span>
+                            </label>
+                            <input type="date" class="vc-input" id="bill_date" name="bill_date" required>
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="bill_amount">
+                                จำนวนเงิน<span class="vc-required">*</span>
+                                <span class="vc-label-meta">บาท</span>
+                            </label>
+                            <input type="number" step="0.01" min="0.01" class="vc-input" id="bill_amount" name="amount" required placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="bill_vehicle_id">
+                                รถ<span class="vc-required">*</span>
+                            </label>
+                            <select class="vc-select" id="bill_vehicle_id" name="vehicle_id" required>
+                                <option value="">— เลือกรถ —</option>
+                                {% for v in vehicles %}
+                                <option value="{{ v.id }}">{{ v.license_plate }}{% if v.brand or v.model %} · {{ v.brand or '' }} {{ v.model or '' }}{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="bill_driver_id">
+                                ผู้เติม<span class="vc-required">*</span>
+                            </label>
+                            <select class="vc-select" id="bill_driver_id" name="driver_id" required>
+                                <option value="">— เลือกคนขับ —</option>
+                                {% for d in drivers %}
+                                <option value="{{ d.id }}">{{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="vc-form-group">
+                        <label class="vc-label">
+                            ช่องทางชำระ<span class="vc-required">*</span>
+                            <span class="vc-label-meta">เงินโอน · จ่ายเอง = หักเงินสำรอง</span>
+                        </label>
+                        <div class="vc-radio-group">
+                            <label class="vc-radio">
+                                <input type="radio" name="payment_method" value="transfer" id="bill_pm_transfer" checked>
+                                <span class="vc-radio-label">
+                                    <i data-lucide="building-2" class="vc-icon-sm"></i> เงินโอน
+                                </span>
+                            </label>
+                            <label class="vc-radio">
+                                <input type="radio" name="payment_method" value="card" id="bill_pm_card">
+                                <span class="vc-radio-label">
+                                    <i data-lucide="credit-card" class="vc-icon-sm"></i> ตัดบัตร
+                                </span>
+                            </label>
+                            <label class="vc-radio">
+                                <input type="radio" name="payment_method" value="self" id="bill_pm_self">
+                                <span class="vc-radio-label">
+                                    <i data-lucide="hand-coins" class="vc-icon-sm"></i> จ่ายเอง
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="bill_mileage">
+                                เลขไมล์
+                                <span class="vc-label-meta">optional · ใช้ match บิล ↔ การเดินทาง</span>
+                            </label>
+                            <input type="number" min="0" class="vc-input" id="bill_mileage" name="mileage" placeholder="—">
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label" for="bill_note">
+                                หมายเหตุ
+                            </label>
+                            <input type="text" class="vc-input" id="bill_note" name="note" placeholder="—">
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    {# Delete button — only shown in edit mode (JS toggles) #}
+                    <button type="button" class="vc-btn vc-btn-danger vc-btn-sm me-auto"
+                            id="fuelBillDeleteBtn" style="display:none;">
+                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                        ลบบิลนี้
+                    </button>
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
+                        <i data-lucide="check" class="vc-icon-sm"></i>
+                        <span id="fuelBillSubmitLabel">บันทึก</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Hidden delete form submitted by JS when delete button confirmed #}
+<form id="fuelBillDeleteForm" method="POST" style="display:none;"></form>

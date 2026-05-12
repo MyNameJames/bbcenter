@@ -1,0 +1,143 @@
+{# vehicle-modal-book.html — Modal จองรถ (ใหม่)
+   วิธีใช้: {% include 'vehicle/vehicle-modal-book.html' %}
+   JS validation อยู่ใน vehicle.js (DOMContentLoaded > bookingForm)
+#}
+<div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered bk-modal-dialog">
+        <div class="card modal-content border-0 bk-modal-content">
+            <form action="{{ url_for('vehicle.book_vehicle_simple') }}" method="POST" id="bookingForm" novalidate>
+
+                <input type="hidden" name="start_datetime" id="bk_start_datetime">
+                <input type="hidden" name="end_datetime"   id="bk_end_datetime">
+
+                <div class="card-header bg-white d-flex align-items-start">
+                    <div class="row w-100">
+                        <div class="col-12">
+                            <div class="row gx-0 d-flex justify-content-between pt-2">
+                                <div class="col d-flex align-items-start gap-2">
+                                    <div class="row">
+                                        <div class="col-auto">
+                                            <span class="ps-2"><i class="bi bi-folder-plus fs-4"></i></span>
+                                        </div>
+                                        <div class="col">
+                                            <div class="row">
+                                                <small class="text-muted">ผู้จอง :</small>
+                                                <span class="bk-row-main">{{ current_user.full_name or current_user.username }}</span>
+                                                <span class="bk-row-sub">{{ current_user.department or '' }}{% if current_user.email %} · {{ current_user.email }}{% endif %}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-auto d-flex align-items-start">
+                                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <hr class="bk-divider">
+
+                    <div class="mb-2">
+                        <label for="bk_date" class="form-label mb-1"><small>วันที่เดินทาง :</small></label>
+                        <div class="bk-field-wrap">
+                            <input type="date" class="form-control" id="bk_date" required>
+                            <i class="bi bi-check-circle bk-valid-icon"></i>
+                            <div class="invalid-feedback">กรุณาเลือกวันที่เดินทาง</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>ช่วงเวลาเดินทาง :</small></label>
+                        <div class="row justify-content-between align-items-center gx-2">
+                            <div class="col-5">
+                                <div class="bk-field-wrap">
+                                    <input type="time" id="bk_start_time" class="form-control" required>
+                                    <i class="bi bi-check-circle bk-valid-icon"></i>
+                                    <div class="invalid-feedback">กรุณาระบุเวลาออก</div>
+                                </div>
+                            </div>
+                            <i class="col-auto bi bi-arrow-right"></i>
+                            <div class="col-5">
+                                <div class="bk-field-wrap">
+                                    <input type="time" id="bk_end_time" class="form-control" required>
+                                    <i class="bi bi-check-circle bk-valid-icon"></i>
+                                    <div class="invalid-feedback">กรุณาระบุเวลากลับ</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="row justify-content-between align-items-center gx-2">
+                            <div class="col-8">
+                                <label for="bk_purpose" class="form-label mb-1"><small>วัตถุประสงค์การเดินทาง :</small></label>
+                                <div class="bk-field-wrap">
+                                    <input type="text" name="purpose" id="bk_purpose" class="form-control pe-5" required>
+                                    <i class="bi bi-check-circle bk-valid-icon"></i>
+                                    <div class="invalid-feedback">กรุณาระบุวัตถุประสงค์</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <label for="bk_passenger_count" class="form-label mb-1"><small>จำนวนผู้เดินทาง :</small></label>
+                                <div class="bk-field-wrap">
+                                    <input type="number" name="passenger_count" id="bk_passenger_count" class="form-control pe-5" min="1" value="1" max="10" required>
+                                    <i class="bi bi-check-circle bk-valid-icon"></i>
+                                    <div class="invalid-feedback">กรุณาระบุจำนวน</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="bk_destination" class="form-label mb-1"><small>สถานที่ปลายทาง :</small></label>
+                        <div class="bk-field-wrap">
+                            <input type="text" name="destination" id="bk_destination" class="form-control pe-5" required>
+                            <i class="bi bi-check-circle bk-valid-icon"></i>
+                            <div class="invalid-feedback">กรุณาระบุสถานที่ปลายทาง</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="bk_pickup_location" class="form-label mb-1"><small>จุดขึ้นรถ :</small></label>
+                        <div class="bk-field-wrap">
+                            <input type="text" name="pickup_location" id="bk_pickup_location" class="form-control pe-5" placeholder="เช่น หน้าอาคารเรียน 1" required>
+                            <i class="bi bi-check-circle bk-valid-icon"></i>
+                            <div class="invalid-feedback">กรุณาระบุจุดขึ้นรถ</div>
+                        </div>
+                    </div>
+
+                    <div class="row pt-2">
+                        <div class="d-flex align-items-center gap-3 flex-grow-1">
+                            <span class="bk-row-main flex-grow-1">ต้องการพนักงานขับรถ</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input bk-switch" type="checkbox" name="need_driver" id="needDriver" checked>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card badge-pending col-12 rounded-2 py-3 px-3 mt-3">
+                        <div class="row">
+                            <span class="col-1 pe-1"><i class="bi bi-info-circle"></i></span>
+                            <div class="col">
+                                <div class="row">
+                                    <small class="fw-bold">Admin :</small>
+                                    <small>จะพิจารณาจัดสรรรถและคนขับให้ตามความเหมาะสม</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white d-flex justify-content-end gap-2 pt-2 pb-3">
+                    <button type="button" class="btn btn-secondary rounded-2 px-3 py-2" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-dark rounded-2 px-3 py-2">
+                        ส่งคำขอ <i class="bi bi-arrow-right-circle-fill ms-2"></i>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

@@ -2,300 +2,605 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>สรุปค่าใช้จ่ายรถ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>จัดการค่าล่วงเวลา (OT) - BBCenter</title>
     <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link href="{{ url_for('static', filename='vendor/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='vendor/datatables/css/responsive.bootstrap5.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
     <style>
-        body { background:#F0F2F5; font-family:'Sarabun', sans-serif; }
-        .page-hero {
-            background: linear-gradient(135deg, #1E3A5F 0%, #1D4ED8 60%, #3B82F6 100%);
-            border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; color: #fff;
+        /* ── KPI Cards ─────────────────────────────── */
+        .kpi-card {
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-md);
+            padding: 14px 16px;
         }
-        .surface-card { background:#fff; border-radius:14px; border:none; box-shadow:0 2px 8px rgba(0,0,0,.06); }
-        .stat-card { border-radius:12px; padding:16px 20px; }
-        .exp-central    { background:#EFF6FF; border-left:4px solid #3B82F6; }
-        .exp-department { background:#F0FDF4; border-left:4px solid #22C55E; }
-        .exp-personal   { background:#FFF7ED; border-left:4px solid #F97316; }
-        .exp-unknown    { background:#F9FAFB; border-left:4px solid #9CA3AF; }
-        .badge-central    { background:#DBEAFE; color:#1E40AF; }
-        .badge-department { background:#DCFCE7; color:#166534; }
-        .badge-personal   { background:#FFEDD5; color:#9A3412; }
-        .badge-unknown    { background:#F3F4F6; color:#374151; }
+        .kpi-label {
+            font-size: var(--ds-text-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--ds-text-secondary);
+            margin-bottom: 6px;
+        }
+        .kpi-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ds-text-heading);
+            line-height: 1;
+        }
+        .kpi-value.warning { color: var(--ds-warning, #D97706); }
+        .kpi-value.accent  { color: var(--ds-accent, #4F46E5); }
+        .kpi-value.success { color: var(--ds-success, #16A34A); }
+        .kpi-sub { font-size: var(--ds-text-xs); color: var(--ds-text-muted); margin-top: 4px; }
+        .kpi-icon {
+            width: 32px; height: 32px; border-radius: var(--ds-radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-size: .8rem; flex-shrink: 0;
+        }
+        .kpi-icon-neutral { background: var(--ds-bg-subtle);         color: var(--ds-text-secondary); }
+        .kpi-icon-warning { background: var(--ds-warning-light);    color: var(--ds-warning); }
+        .kpi-icon-accent  { background: var(--ds-accent-light);     color: var(--ds-accent); }
+        .kpi-icon-success { background: var(--ds-success-light);    color: var(--ds-success); }
+
+        /* ── Rate Banner ────────────────────────────── */
+        .rate-banner {
+            background: var(--ds-accent-light, #EEF2FF);
+            border: 1px solid var(--ds-accent-border, #C7D2FE);
+            border-radius: var(--ds-radius-md);
+            padding: 9px 14px;
+            font-size: var(--ds-text-sm);
+            color: var(--ds-accent-text, #3730A3);
+        }
+        .rate-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 10px;
+            border-radius: var(--ds-radius-full);
+            font-size: var(--ds-text-xs); font-weight: 600;
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-accent-border, #C7D2FE);
+            color: var(--ds-accent-text, #3730A3);
+        }
+
+        /* ── Tabs ───────────────────────────────────── */
+        .ot-tabs { border-bottom: 1px solid var(--ds-border); margin-bottom: 0; }
+        .ot-tab {
+            padding: 10px 16px; font-size: var(--ds-text-sm); font-weight: 500;
+            color: var(--ds-text-secondary); cursor: pointer;
+            border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+            background: none; font-family: 'Sarabun', sans-serif;
+            display: inline-flex; align-items: center; gap: 6px;
+            transition: color .1s;
+        }
+        .ot-tab:hover  { color: var(--ds-text-heading); background: var(--ds-bg-hover); }
+        .ot-tab.active { color: var(--ds-accent, #4F46E5); border-bottom-color: var(--ds-accent, #4F46E5); font-weight: 700; }
+        .tab-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 18px; height: 16px; padding: 0 4px;
+            border-radius: var(--ds-radius-full); font-size: .65rem; font-weight: 700;
+        }
+        .tab-badge-neutral { background: var(--ds-bg-subtle);    color: var(--ds-text-secondary); }
+        .tab-badge-warning { background: #FFFBEB;                color: #D97706; }
+        .tab-badge-accent  { background: var(--ds-accent-light, #EEF2FF); color: var(--ds-accent, #4F46E5); }
+        .tab-badge-success { background: #F0FDF4;                color: #16A34A; }
+
+        /* ── Table ──────────────────────────────────── */
+        .ds-table { font-size: var(--ds-text-sm); }
+        .ds-table thead th {
+            background: var(--ds-bg-subtle);
+            color: var(--ds-text-secondary);
+            font-size: var(--ds-text-xs); font-weight: 700;
+            text-transform: uppercase; letter-spacing: .05em;
+            padding: 8px 12px; border-bottom: 1px solid var(--ds-border-strong);
+            border-top: none; white-space: nowrap;
+        }
+        .ds-table tbody td {
+            padding: 10px 12px; border-bottom: 1px solid var(--ds-border);
+            vertical-align: middle;
+        }
+        .ds-table tbody tr:hover    { background: var(--ds-bg-hover); }
+        .ds-table tbody tr:last-child td { border-bottom: none; }
+
+        /* ── Slot Tags ──────────────────────────────── */
+        .slot-tag { display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:var(--ds-radius-sm); font-size:.68rem; font-weight:600; margin:1px 2px 1px 0; white-space:nowrap; }
+        .slot-morning { background:var(--ds-info-light);    color:var(--ds-info-text);    border:1px solid var(--ds-info-border); }
+        .slot-evening { background:var(--ds-warning-light); color:var(--ds-warning-text); border:1px solid var(--ds-warning-border); }
+        .slot-night   { background:var(--ds-danger-light);  color:var(--ds-danger-text);  border:1px solid var(--ds-danger-border); }
+
+        /* ── Action Buttons ─────────────────────────── */
+        .btn-act {
+            padding: 4px 7px; border-radius: var(--ds-radius-sm); font-size: .7rem;
+            border: 1px solid var(--ds-border-strong); background: none; cursor: pointer;
+            color: var(--ds-text-secondary); transition: background .1s, color .1s;
+            line-height: 1.4; font-family: 'Sarabun', sans-serif;
+        }
+        .btn-act:hover            { background: var(--ds-bg-hover); color: var(--ds-text-heading); }
+        .btn-act.approve          { border-color:var(--ds-success-border); color:var(--ds-success); }
+        .btn-act.approve:hover    { background:var(--ds-success-light); }
+        .btn-act.pay              { border-color:var(--ds-accent-border); color:var(--ds-accent); }
+        .btn-act.pay:hover        { background:var(--ds-accent-light); }
+        .btn-act.danger           { border-color:var(--ds-danger-border); color:var(--ds-danger); }
+        .btn-act.danger:hover     { background:var(--ds-danger-light); }
+
+        /* ── DS Form helpers ────────────────────────── */
+        .ds-label { font-size:.72rem; font-weight:700; color:var(--ds-text-secondary); margin-bottom:4px; display:block; }
+        .ds-input, .ds-select, .ds-textarea {
+            border: 1px solid var(--ds-border-strong);
+            border-radius: var(--ds-radius-sm); padding: 7px 10px;
+            font-family: 'Sarabun', sans-serif; font-size: var(--ds-text-sm);
+            color: var(--ds-text-body); background: var(--ds-bg-surface); outline: none; width: 100%;
+        }
+        .ds-input:focus, .ds-select:focus, .ds-textarea:focus {
+            border-color: var(--ds-accent, #4F46E5);
+            box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+        }
+        .ds-textarea { resize: vertical; }
+
+        /* ── Slot Row (modal) ───────────────────────── */
+        .slot-row { border:1px solid var(--ds-border); border-radius:var(--ds-radius-md); padding:12px; background:var(--ds-bg-subtle); }
+        .slot-amount { font-weight:700; font-size:.88rem; color:var(--ds-text-heading); }
+        .slot-hrs    { font-size:.7rem; color:var(--ds-text-secondary); }
+
+        /* ── Modal ──────────────────────────────────── */
+        .modal-content { border:1px solid var(--ds-border); border-radius:var(--ds-radius-xl,8px); box-shadow:none !important; }
+        .modal-header  { border-bottom:1px solid var(--ds-border); padding:14px 20px; }
+        .modal-body    { padding:20px; }
+        .modal-footer  { border-top:1px solid var(--ds-border); padding:12px 20px; background:var(--ds-bg-subtle); border-radius:0 0 var(--ds-radius-xl,8px) var(--ds-radius-xl,8px); }
+        .modal-title   { font-size:var(--ds-text-md); font-weight:700; color:var(--ds-text-heading); }
+
+        /* ── Print Receipt ──────────────────────────── */
+        #printReceipt { display: none; }
+        @media print {
+            body > *      { display: none !important; }
+            #printReceipt { display: block !important; }
+        }
     </style>
 </head>
 <body>
-{% include 'navbar.html' %}
+<div class="app-container">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    {% set active_menu = 'cost' %}
+    {% include '_sidebar.html' %}
 
-<div class="container py-4">
+    <main class="main-content">
+        {% set page_title = 'จัดการค่าล่วงเวลา (OT)' %}
+        {% include '_header.html' %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}
-        <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert" style="border-radius:10px;">
-            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}{% endif %}
-    {% endwith %}
+        <div style="overflow-y:auto; height:calc(100vh - 60px); background:var(--ds-bg-page);">
+        <div class="container-xxl px-3 py-4">
 
-    <!-- Hero -->
-    <div class="page-hero">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div>
-                <h4 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie me-2"></i> สรุปค่าใช้จ่ายรถ</h4>
-                <div style="opacity:.85;font-size:.9rem;">ค่าน้ำมัน + ค่า OT คนขับ แยกตามประเภทงาน</div>
+            {# ── Flash ── #}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3"
+                 style="border-radius:var(--ds-radius-md); font-size:var(--ds-text-sm);">
+                {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-            <div class="d-flex gap-2 align-items-center flex-wrap">
-                <span class="badge bg-white text-dark px-3 py-2 fw-bold">{{ month_label }}</span>
-                <a href="/admin/cost/export?year={{ sel_year }}&month={{ sel_month }}&expense_type={{ sel_expense }}"
-                   class="btn btn-success btn-sm fw-bold">
-                    <i class="fa-solid fa-file-excel me-1"></i> Export Excel
-                </a>
-            </div>
-        </div>
-    </div>
+            {% endfor %}{% endif %}
+            {% endwith %}
 
-    <!-- Filter + ราคาน้ำมัน -->
-    <div class="surface-card p-3 mb-4">
-        <div class="row g-3">
-            <!-- filter -->
-            <div class="col-12 col-md-8">
-                <form method="GET" action="/admin/cost" class="row g-2 align-items-end">
-                    <div class="col-auto">
-                        <label class="form-label small fw-bold mb-1">ปี (พ.ศ.)</label>
-                        <select name="year" class="form-select form-select-sm">
-                            {% for y in range(now.year - 1, now.year + 2) %}
-                            <option value="{{ y }}" {% if y == sel_year %}selected{% endif %}>{{ y + 543 }}</option>
-                            {% endfor %}
-                        </select>
+            {# ── KPI Row ── #}
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-xl-2">
+                    <div class="kpi-card h-100">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">รายการ</div>
+                                <div class="kpi-value">{{ kpi_records }}</div>
+                                <div class="kpi-sub">ในช่วงที่เลือก</div>
+                            </div>
+                            <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-list-check"></i></div>
+                        </div>
                     </div>
-                    <div class="col-auto">
-                        <label class="form-label small fw-bold mb-1">เดือน</label>
-                        <select name="month" class="form-select form-select-sm">
-                            {% set th_months = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
-                            {% for m in range(1, 13) %}
-                            <option value="{{ m }}" {% if m == sel_month %}selected{% endif %}>{{ th_months[m] }}</option>
-                            {% endfor %}
-                        </select>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <div class="kpi-card h-100">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">ชั่วโมงรวม</div>
+                                <div class="kpi-value">{{ kpi_hours }}<span style="font-size:.9rem;font-weight:400;color:var(--ds-text-secondary)"> ชม.</span></div>
+                                <div class="kpi-sub">ทุกสถานะ</div>
+                            </div>
+                            <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-hourglass-half"></i></div>
+                        </div>
                     </div>
-                    <div class="col-auto">
-                        <label class="form-label small fw-bold mb-1">ประเภทค่าใช้จ่าย</label>
-                        <select name="expense_type" class="form-select form-select-sm">
-                            <option value="">ทั้งหมด</option>
-                            <option value="central"    {% if sel_expense == 'central'    %}selected{% endif %}>งานส่วนกลาง</option>
-                            <option value="department" {% if sel_expense == 'department' %}selected{% endif %}>งานหน่วยงาน</option>
-                            <option value="personal"   {% if sel_expense == 'personal'   %}selected{% endif %}>งานส่วนตัว</option>
-                        </select>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <div class="kpi-card h-100">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">ยอดรวม</div>
+                                <div class="kpi-value">฿{{ '{:,.0f}'.format(kpi_total) }}</div>
+                                <div class="kpi-sub">ทุกสถานะ</div>
+                            </div>
+                            <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-receipt"></i></div>
+                        </div>
                     </div>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <div class="kpi-card h-100">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">รออนุมัติ</div>
+                                <div class="kpi-value warning">฿{{ '{:,.0f}'.format(kpi_pending) }}</div>
+                                <div class="kpi-sub">{{ count_pending }} รายการ</div>
+                            </div>
+                            <div class="kpi-icon kpi-icon-warning"><i class="fa-solid fa-clock"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <div class="kpi-card h-100">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">อนุมัติแล้ว</div>
+                                <div class="kpi-value accent">฿{{ '{:,.0f}'.format(kpi_approved) }}</div>
+                                <div class="kpi-sub">{{ count_approved }} รายการ รอจ่าย</div>
+                            </div>
+                            <div class="kpi-icon kpi-icon-accent"><i class="fa-solid fa-thumbs-up"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <div class="kpi-card h-100">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">จ่ายแล้ว</div>
+                                <div class="kpi-value success">฿{{ '{:,.0f}'.format(kpi_paid) }}</div>
+                                <div class="kpi-sub">{{ count_paid }} รายการ</div>
+                            </div>
+                            <div class="kpi-icon kpi-icon-success"><i class="fa-solid fa-circle-check"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Rate Banner ── #}
+            <div class="rate-banner mb-3">
+                <div class="row align-items-center g-2">
                     <div class="col-auto">
-                        <button type="submit" class="btn btn-primary btn-sm fw-bold">
-                            <i class="fa-solid fa-magnifying-glass me-1"></i> ค้นหา
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        <strong>อัตราค่าตอบแทน OT</strong>
+                    </div>
+                    {% for cfg in rate_configs %}
+                    <div class="col-auto">
+                        <span class="rate-pill">{{ cfg.label }} ({{ cfg.start_time }}–{{ cfg.end_time }}) → ฿{{ cfg.rate|int }}/ชม.</span>
+                    </div>
+                    {% endfor %}
+                    <div class="col-auto ms-auto">
+                        <button class="btn-act" data-bs-toggle="modal" data-bs-target="#rateConfigModal"
+                                style="border-color:var(--ds-accent-border,#C7D2FE); color:var(--ds-accent,#4F46E5); font-size:.7rem; padding:3px 10px;">
+                            <i class="fa-solid fa-gear me-1"></i>แก้ไขอัตรา
                         </button>
                     </div>
-                </form>
+                </div>
             </div>
-            <!-- ราคาน้ำมัน -->
-            <div class="col-12 col-md-4">
-                <form method="POST" action="/admin/cost" class="d-flex align-items-end gap-2">
-                    <input type="hidden" name="action" value="save_fuel_price">
-                    <div class="flex-grow-1">
-                        <label class="form-label small fw-bold mb-1">
-                            <i class="fa-solid fa-gas-pump me-1 text-warning"></i> ราคาน้ำมัน (บาท/ลิตร)
+
+            {# ── Filter Bar ── #}
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center justify-content-between py-2 px-3">
+                    <span style="font-size:var(--ds-text-sm); font-weight:600; color:var(--ds-text-heading);">
+                        <i class="fa-solid fa-filter me-1" style="color:var(--ds-text-muted)"></i>ตัวกรอง
+                        <span style="font-size:var(--ds-text-xs); color:var(--ds-text-secondary); font-weight:400; margin-left:6px;">{{ range_label }}</span>
+                    </span>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="printDriverReceipt()"
+                                style="border-color:var(--ds-border-strong); font-size:var(--ds-text-sm);">
+                            <i class="fa-solid fa-print me-1"></i>พิมพ์
+                        </button>
+                        <a href="{{ url_for('admincost.cost_export', from_month=from_month, from_year=from_year, to_month=to_month, to_year=to_year, driver_id=sel_driver or '', status=sel_status) }}"
+                           class="btn btn-sm btn-outline-secondary"
+                           style="border-color:var(--ds-border-strong); font-size:var(--ds-text-sm);">
+                            <i class="fa-solid fa-file-excel me-1" style="color:var(--ds-success)"></i>Excel
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body py-2 px-3">
+                    <form method="GET" action="{{ url_for('admincost.cost_summary') }}">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-auto">
+                                <label class="ds-label"><i class="fa-solid fa-id-card me-1" style="color:var(--ds-text-muted)"></i>คนขับ</label>
+                                <select name="driver_id" class="ds-select" style="min-width:140px">
+                                    <option value="">ทุกคน</option>
+                                    {% for d in drivers %}
+                                    <option value="{{ d.id }}" {% if sel_driver == d.id %}selected{% endif %}>{{ d.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <label class="ds-label"><i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>เดือน (จาก)</label>
+                                <div class="d-flex gap-1">
+                                    <select name="from_month" class="ds-select" style="width:90px">
+                                        {% set th_m = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
+                                        {% for m in range(1,13) %}
+                                        <option value="{{ m }}" {% if m == from_month %}selected{% endif %}>{{ th_m[m] }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select name="from_year" class="ds-select" style="width:80px">
+                                        {% for y in range(now.year - 2, now.year + 2) %}
+                                        <option value="{{ y }}" {% if y == from_year %}selected{% endif %}>{{ y + 543 }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-auto" style="padding-top:18px; color:var(--ds-text-muted); font-size:.8rem;">ถึง</div>
+                            <div class="col-auto">
+                                <label class="ds-label"><i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>เดือน (ถึง)</label>
+                                <div class="d-flex gap-1">
+                                    <select name="to_month" class="ds-select" style="width:90px">
+                                        {% for m in range(1,13) %}
+                                        <option value="{{ m }}" {% if m == to_month %}selected{% endif %}>{{ th_m[m] }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select name="to_year" class="ds-select" style="width:80px">
+                                        {% for y in range(now.year - 2, now.year + 2) %}
+                                        <option value="{{ y }}" {% if y == to_year %}selected{% endif %}>{{ y + 543 }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <label class="ds-label" style="opacity:0">x</label>
+                                <button type="submit" class="btn btn-sm btn-dark"
+                                        style="padding:7px 16px; border-radius:var(--ds-radius-sm); font-size:var(--ds-text-sm);">
+                                    <i class="fa-solid fa-magnifying-glass me-1"></i>ค้นหา
+                                </button>
+                            </div>
+                            <div class="col-auto ms-auto d-flex align-items-end pb-1">
+                                <span style="font-size:var(--ds-text-xs); color:var(--ds-text-secondary);">
+                                    <i class="fa-solid fa-filter-circle-dollar me-1" style="color:var(--ds-text-muted)"></i>
+                                    แสดง <strong>{{ ots|length }}</strong> รายการ
+                                </span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {# ── Main Table Card ── #}
+            <div class="card">
+
+                {# Tabs #}
+                <div class="px-3 pt-2">
+                    <div class="ot-tabs d-flex">
+                        <button class="ot-tab {% if not sel_status %}active{% endif %}"
+                                onclick="switchTab(this,'all')">
+                            ทั้งหมด <span class="tab-badge tab-badge-neutral">{{ kpi_records }}</span>
+                        </button>
+                        <button class="ot-tab {% if sel_status == 'pending' %}active{% endif %}"
+                                onclick="switchTab(this,'pending')">
+                            รออนุมัติ <span class="tab-badge tab-badge-warning">{{ count_pending }}</span>
+                        </button>
+                        <button class="ot-tab {% if sel_status == 'approved' %}active{% endif %}"
+                                onclick="switchTab(this,'approved')">
+                            อนุมัติแล้ว <span class="tab-badge tab-badge-accent">{{ count_approved }}</span>
+                        </button>
+                        <button class="ot-tab {% if sel_status == 'paid' %}active{% endif %}"
+                                onclick="switchTab(this,'paid')">
+                            จ่ายแล้ว <span class="tab-badge tab-badge-success">{{ count_paid }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                {# Table #}
+                <div class="table-responsive">
+                    <table class="table ds-table mb-0" id="otTable">
+                        <thead>
+                            <tr>
+                                <th style="width:95px">วันที่</th>
+                                <th style="width:150px">คนขับ</th>
+                                <th style="width:185px">Booking</th>
+                                <th>ช่วงเวลา OT</th>
+                                <th style="width:60px; text-align:right">ชม.</th>
+                                <th style="width:90px; text-align:right">ยอด</th>
+                                <th style="width:115px; text-align:center">สถานะ</th>
+                                <th style="width:130px; text-align:right; padding-right:14px">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% if ots %}
+                        {% for ot in ots %}
+                        <tr data-status="{{ ot.status }}">
+                            <td>
+                                <div style="font-weight:600; color:var(--ds-text-heading)">{{ ot.date.strftime('%Y-%m-%d') }}</div>
+                                <div style="font-size:.7rem; color:var(--ds-text-muted)">{{ ot.ot_number }}</div>
+                            </td>
+                            <td>
+                                <div style="font-weight:600; color:var(--ds-text-heading)">{{ ot.driver.name if ot.driver else '-' }}</div>
+                                {% if ot.driver and ot.driver.user and ot.driver.user.phone %}
+                                <div style="font-size:.7rem; color:var(--ds-text-secondary)">{{ ot.driver.user.phone }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="font-weight:600; color:var(--ds-accent,#4F46E5); font-size:.8rem">
+                                    BK-{{ ot.booking.id if ot.booking else '—' }}
+                                </div>
+                                {% if ot.booking %}
+                                <div style="font-size:.7rem; color:var(--ds-text-secondary)">
+                                    <i class="fa-solid fa-location-dot" style="color:var(--ds-text-muted)"></i>
+                                    {{ ot.booking.destination|truncate(28, true, '…') }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for slot in ot.slots %}
+                                {% if 'เช้า' in slot.slot_label %}
+                                    {% set sc = 'slot-morning' %}
+                                {% elif 'หัวค่ำ' in slot.slot_label or 'เย็น' in slot.slot_label %}
+                                    {% set sc = 'slot-evening' %}
+                                {% else %}
+                                    {% set sc = 'slot-night' %}
+                                {% endif %}
+                                <span class="slot-tag {{ sc }}">{{ slot.slot_label }} {{ slot.start_time }}–{{ slot.end_time }} ฿{{ slot.rate|int }}</span>
+                                {% endfor %}
+                            </td>
+                            <td style="text-align:right; font-weight:700; color:var(--ds-text-heading)">{{ ot.total_hours }}</td>
+                            <td style="text-align:right">
+                                <span style="font-weight:700; font-size:.92rem; color:var(--ds-text-heading)">
+                                    ฿{{ '{:,.0f}'.format(ot.total_amount) }}
+                                </span>
+                            </td>
+                            <td style="text-align:center">
+                                {% if ot.status == 'pending' %}
+                                    <span class="ds-badge ds-badge-warning">รออนุมัติ</span>
+                                {% elif ot.status == 'approved' %}
+                                    <span class="ds-badge ds-badge-success">อนุมัติแล้ว</span>
+                                {% else %}
+                                    <span class="ds-badge ds-badge-accent">จ่ายแล้ว</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right; padding-right:12px">
+                                <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                    {# Approve #}
+                                    {% if ot.status == 'pending' %}
+                                    <form method="POST" action="{{ url_for('admincost.ot_approve', ot_id=ot.id) }}" style="display:inline">
+                                        <button type="submit" class="btn-act approve" title="อนุมัติ">
+                                            <i class="fa-solid fa-check"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    {# Mark Paid #}
+                                    {% if ot.status == 'approved' %}
+                                    <form method="POST" action="{{ url_for('admincost.ot_mark_paid', ot_id=ot.id) }}" style="display:inline">
+                                        <button type="submit" class="btn-act pay" title="บันทึกการจ่าย">
+                                            <i class="fa-solid fa-money-bill-transfer"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    {# Edit #}
+                                    <button class="btn-act" title="แก้ไข"
+                                            onclick="openEditModal({{ ot.id }}, '{{ ot.driver_id }}', '{{ ot.date.strftime('%Y-%m-%d') }}', {{ ot.booking_id }}, {{ ot.slots | map(attribute='id') | list | tojson }}, {{ ot.slots | map(attribute='slot_label') | list | tojson }}, {{ ot.slots | map(attribute='start_time') | list | tojson }}, {{ ot.slots | map(attribute='end_time') | list | tojson }}, {{ ot.slots | map(attribute='rate') | list | map('float') | list | tojson }}, {{ ot.slots | map(attribute='rate_config_id') | list | tojson }}, '{{ ot.note or '' }}')">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    {# Delete #}
+                                    <form method="POST" action="{{ url_for('admincost.ot_delete', ot_id=ot.id) }}" style="display:inline"
+                                          onsubmit="return confirm('ลบ {{ ot.ot_number }} ใช่ไหม?')">
+                                        <button type="submit" class="btn-act danger" title="ลบ">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {# Print single #}
+                                    <button class="btn-act" title="พิมพ์" onclick="printSingle({{ ot.id }})">
+                                        <i class="fa-solid fa-print"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8">
+                                <div style="padding:40px 0; text-align:center; color:var(--ds-text-muted);">
+                                    <i class="fa-solid fa-clock-rotate-left" style="font-size:1.8rem; margin-bottom:8px; display:block;"></i>
+                                    <div style="font-size:var(--ds-text-sm)">ไม่มีข้อมูล OT ในช่วงที่เลือก</div>
+                                    <div style="font-size:var(--ds-text-xs); margin-top:4px;">OT จะถูกสร้างอัตโนมัติเมื่อคนขับปิดงาน (บันทึกเลขไมล์ end)</div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {# Table Footer #}
+                <div class="card-footer d-flex justify-content-between align-items-center"
+                     style="background:var(--ds-bg-subtle); border-top:1px solid var(--ds-border);">
+                    <span style="font-size:var(--ds-text-xs); color:var(--ds-text-secondary)">
+                        <i class="fa-solid fa-hourglass-half me-1" style="color:var(--ds-text-muted)"></i>
+                        ชั่วโมงรวม: <strong style="color:var(--ds-text-heading)">{{ ots | sum(attribute='total_hours') | round(2) }} ชม.</strong>
+                    </span>
+                    <span style="font-size:var(--ds-text-sm); font-weight:700; color:var(--ds-text-heading)">
+                        รวมทั้งหมด: ฿{{ '{:,.0f}'.format(ots | sum(attribute='total_amount')) }}
+                    </span>
+                </div>
+
+            </div>{# /card #}
+
+        </div>{# /container-fluid #}
+        </div>{# /scroll-area #}
+    </main>
+</div>{# /app-container #}
+
+
+{# ════════════════════════════════════════════════
+   MODAL: แก้ไข OT
+   ════════════════════════════════════════════════ #}
+<div class="modal fade" id="editOtModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:560px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-pen-to-square me-2" style="color:var(--ds-accent,#4F46E5)"></i>
+                    <span id="editModalTitle">แก้ไข OT</span>
+                </h5>
+                <button type="button" class="btn-act" data-bs-dismiss="modal" style="border:none; font-size:1rem">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form method="POST" id="editOtForm">
+                <div class="modal-body">
+
+                    {# Driver + Date #}
+                    <div class="row g-3 mb-3">
+                        <div class="col-7">
+                            <label class="ds-label">
+                                <i class="fa-solid fa-id-card me-1" style="color:var(--ds-text-muted)"></i>คนขับ
+                            </label>
+                            <select name="driver_id" class="ds-select" id="editDriverId">
+                                {% for d in drivers %}
+                                <option value="{{ d.id }}">{{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label class="ds-label">
+                                <i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>วันที่
+                            </label>
+                            <input type="date" name="date" class="ds-input" id="editDate">
+                        </div>
+                    </div>
+
+                    {# OT Slots #}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="ds-label mb-0">
+                            <i class="fa-solid fa-clock me-1" style="color:var(--ds-text-muted)"></i>ช่วงเวลา OT
                         </label>
-                        <input type="number" step="0.01" name="fuel_price" class="form-control form-control-sm"
-                               value="{{ fuel_price }}" min="1" max="999">
-                    </div>
-                    <button type="submit" class="btn btn-warning btn-sm fw-bold">บันทึก</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Summary Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="surface-card stat-card exp-central">
-                <div class="text-muted small mb-1">🏛 งานส่วนกลาง</div>
-                <div class="fw-bold fs-4 text-primary">{{ '{:,.0f}'.format(totals.central) }} <small class="fs-6 fw-normal">บาท</small></div>
-                <div class="text-muted" style="font-size:.75rem;">ส่วนกลางออกค่าใช้จ่าย</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="surface-card stat-card exp-department">
-                <div class="text-muted small mb-1">🏢 งานหน่วยงาน</div>
-                <div class="fw-bold fs-4 text-success">{{ '{:,.0f}'.format(totals.department) }} <small class="fs-6 fw-normal">บาท</small></div>
-                <div class="text-muted" style="font-size:.75rem;">หน่วยงานออกค่าใช้จ่าย</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="surface-card stat-card exp-personal">
-                <div class="text-muted small mb-1">👤 งานส่วนตัว</div>
-                <div class="fw-bold fs-4 text-warning">{{ '{:,.0f}'.format(totals.personal) }} <small class="fs-6 fw-normal">บาท</small></div>
-                <div class="text-muted" style="font-size:.75rem;">ผู้จองออกค่าใช้จ่ายเอง</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ตาราง -->
-    <div class="surface-card p-3">
-        <div class="card-head d-flex align-items-center justify-content-between mb-3">
-            <h6 class="fw-bold mb-0"><i class="fa-solid fa-table me-2 text-primary"></i> รายละเอียดทั้งหมด</h6>
-            <span class="badge bg-light text-dark">{{ rows|length }} รายการ</span>
-        </div>
-        <table id="costTable" class="table table-hover align-middle mb-0" style="width:100%">
-            <thead class="table-light">
-                <tr>
-                    <th>no</th>
-                    <th>ผู้จอง / ปลายทาง</th>
-                    <th>รถ / คนขับ</th>
-                    <th>เวลาเดินทาง</th>
-                    <th>ระยะทาง</th>
-                    <th>เวลาจริง</th>
-                    <th>ค่าน้ำมัน</th>
-                    <th>OT คนขับ</th>
-                    <th>รวม</th>
-                    <th>ประเภท</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in rows %}
-                {% set b = r.booking %}
-                {% set m = r.mileage %}
-                <tr>
-                    <td data-order="{{ b.id }}">
-                        <span class="fw-bold text-muted">#{{ b.id }}</span></td>
-                    <td>
-                        <div class="fw-bold" style="font-size:.88rem;">{{ b.user.full_name or b.user.username }}</div>
-                        <small class="text-muted">📍 {{ b.destination }}</small>
-                        {% if b.central_category %}
-                        <br><span class="badge bg-light text-primary" style="font-size:.72rem;">{{ b.central_category }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if b.assigned_vehicle %}
-                        <div style="font-size:.85rem;">{{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}</div>
-                        <small class="text-muted">{{ b.assigned_vehicle.license_plate }}</small>
-                        {% else %}<span class="text-muted small">-</span>{% endif %}
-                        {% if b.driver %}<br><small class="text-info">👨‍✈️ {{ b.driver.name }}</small>{% endif %}
-                    </td>
-                    <td>
-                        {% if b.start_datetime.strftime('%d/%m/%Y') != b.end_datetime.strftime('%d/%m/%Y') %}
-                        <small>{{ b.start_datetime.strftime('%d/%m/%Y') }}</small><br>
-                        <small class="text-muted">ถึง</small><br>
-                        <small>{{ b.end_datetime.strftime('%d/%m/%Y') }}</small>
-                        {% else %}
-                        <small>{{ b.start_datetime.strftime('%d/%m/%Y') }}</small><br>
-                        <small class="text-muted">{{ b.start_datetime.strftime('%H:%M') }} → {{ b.end_datetime.strftime('%H:%M') }}</small>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if r.distance %}
-                        <span class="fw-bold">{{ '{:,}'.format(r.distance) }}</span> <small class="text-muted">กม.</small>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    <td>
-                        {% if m and m.actual_start and m.actual_end %}
-                        <small>{{ m.actual_start.strftime('%H:%M') }} → {{ m.actual_end.strftime('%H:%M') }}</small>
-                        {% else %}<span class="text-muted small">ยังไม่กรอก</span>{% endif %}
-                    </td>
-                    <td>
-                        {% if r.fuel %}
-                        <span class="fw-bold text-warning">{{ '{:,.0f}'.format(r.fuel) }}</span> <small>฿</small>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                        {% if current_user.is_superadmin or current_user.role_vehicle == 'admin' %}
-                        <br><button class="btn btn-xs btn-outline-warning mt-1 override-fuel-btn"
-                                style="font-size:.7rem;padding:2px 8px;border-radius:6px;"
-                                data-bs-toggle="modal" data-bs-target="#overrideFuelModal"
-                                data-id="{{ b.id }}"
-                                data-fuel="{{ r.fuel or 0 }}"
-                                data-label="#{{ b.id }} {{ b.destination }}">
-                            <i class="fa-solid fa-pen me-1"></i>แก้ไข
+                        <button type="button"
+                                style="background:transparent; color:var(--ds-accent,#4F46E5); border:1px solid var(--ds-accent-border,#C7D2FE); padding:3px 10px; border-radius:var(--ds-radius-sm); font-size:.75rem; font-weight:600; cursor:pointer; font-family:'Sarabun',sans-serif;"
+                                onclick="addEditSlot()">
+                            <i class="fa-solid fa-plus me-1"></i>เพิ่มช่วง
                         </button>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if r.ot > 0 %}
-                        <span class="fw-bold text-danger">{{ '{:,.0f}'.format(r.ot) }}</span> <small>฿</small>
-                        {% elif not b.need_driver %}
-                        <span class="text-muted small">ขับเอง</span>
-                        {% else %}
-                        <span class="text-muted">-</span>{% endif %}
-                    </td>
-                    <td>
-                        <span class="fw-bold">{{ '{:,.0f}'.format(r.total) }}</span> <small class="text-muted">฿</small>
-                    </td>
-                    <td>
-                        {% if b.expense_type == 'central' %}
-                            <span class="badge badge-central px-2">🏛 ส่วนกลาง</span>
-                        {% elif b.expense_type == 'department' %}
-                            <span class="badge badge-department px-2">🏢 หน่วยงาน</span>
-                        {% elif b.expense_type == 'personal' %}
-                            <span class="badge badge-personal px-2">👤 ส่วนตัว</span>
-                        {% else %}
-                            <span class="badge badge-unknown px-2">ไม่ระบุ</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="table-light fw-bold">
-                    <td colspan="6" class="text-end">รวมทั้งหมด</td>
-                    <td>{{ '{:,.0f}'.format(rows | sum(attribute='fuel')) }} ฿</td>
-                    <td>{{ '{:,.0f}'.format(rows | sum(attribute='ot')) }} ฿</td>
-                    <td>{{ '{:,.0f}'.format(rows | sum(attribute='total')) }} ฿</td>
-                    <td></td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
-</div>
-
-<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/datatables/js/dataTables.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/datatables/js/dataTables.bootstrap5.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/datatables/js/dataTables.responsive.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/datatables/js/responsive.bootstrap5.min.js') }}"></script>
-<script>
-$(document).ready(function() {
-    $('#costTable').DataTable({
-        responsive: true,
-        language: { url: "{{ url_for('static', filename='vendor/datatables/json/th.json') }}" },
-        order: [[0,'desc']],
-        pageLength: 50,
-        footerCallback: function() { this.api().columns().footer(); }
-    });
-});
-</script>
-<!-- Modal: Override ค่าน้ำมัน -->
-<div class="modal fade" id="overrideFuelModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="border-radius:16px;">
-            <form method="POST" action="/vehicle/mileage/override-fuel">
-                <input type="hidden" name="booking_id" id="ofBookingId">
-                <div class="modal-header border-0" style="background:#FEF9C3;border-radius:16px 16px 0 0;">
-                    <h5 class="modal-title fw-bold" style="color:#854D0E;">
-                        <i class="fa-solid fa-gas-pump me-2"></i> Override ค่าน้ำมัน
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <p class="text-muted small mb-1" id="ofLabel"></p>
-                    <div class="p-2 mb-3 rounded-3" style="background:#FEF3C7;border:1px solid #FDE68A;font-size:.82rem;">
-                        <i class="fa-solid fa-circle-info me-1 text-warning"></i>
-                        ค่าปกติคำนวณจาก odometer × fuel_rate × fuel_price<br>
-                        กรอกที่นี่เพื่อ <strong>override</strong> ด้วยยอดจริงจากสลิป
                     </div>
-                    <label class="form-label small fw-bold">ค่าน้ำมัน (บาท) <span class="text-danger">*</span></label>
-                    <input type="number" name="fuel_cost" id="ofFuelInput" class="form-control" min="0" step="0.01" placeholder="เช่น 850.00" required>
+
+                    <div id="editSlotsContainer" class="d-flex flex-column gap-2 mb-3"></div>
+
+                    {# Total Box #}
+                    <div id="editTotalBox"
+                         style="background:var(--ds-bg-subtle); border:1px solid var(--ds-border-strong); border-radius:var(--ds-radius-md); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <span style="font-size:var(--ds-text-sm); font-weight:600; color:var(--ds-text-secondary)">รวมทั้งหมด</span>
+                        <div style="text-align:right">
+                            <div style="font-size:.7rem; color:var(--ds-text-secondary)" id="editTotalHrs">— ชม.</div>
+                            <div style="font-size:1.05rem; font-weight:700; color:var(--ds-text-heading)" id="editTotalAmt">฿—</div>
+                        </div>
+                    </div>
+
+                    {# Note #}
+                    <div>
+                        <label class="ds-label">
+                            <i class="fa-solid fa-note-sticky me-1" style="color:var(--ds-text-muted)"></i>หมายเหตุ
+                        </label>
+                        <textarea name="note" class="ds-textarea" id="editNote" rows="2" placeholder="เช่น ส่งของด่วน"></textarea>
+                    </div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn fw-bold px-4" style="background:#CA8A04;color:#fff;border-radius:10px;">
-                        <i class="fa-solid fa-save me-1"></i> บันทึก
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-sm btn-dark" style="padding:7px 16px;">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>บันทึก
                     </button>
                 </div>
             </form>
@@ -303,13 +608,159 @@ $(document).ready(function() {
     </div>
 </div>
 
+
+{# ════════════════════════════════════════════════
+   MODAL: อัตรา OT
+   ════════════════════════════════════════════════ #}
+<div class="modal fade" id="rateConfigModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:560px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-gear me-2" style="color:var(--ds-accent,#4F46E5)"></i>แก้ไขอัตรา OT
+                </h5>
+                <button type="button" class="btn-act" data-bs-dismiss="modal" style="border:none; font-size:1rem">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('admincost.ot_rate_config_update') }}">
+                <div class="modal-body">
+                    <p style="font-size:var(--ds-text-xs); color:var(--ds-text-secondary); margin-bottom:16px;">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        การเปลี่ยนอัตรา จะมีผลกับ OT ที่สร้างใหม่เท่านั้น — OT ที่มีอยู่แล้วใช้อัตราที่ถูก snapshot ไว้
+                    </p>
+                    {% for cfg in rate_configs %}
+                    <div class="row g-2 mb-3 align-items-end">
+                        <input type="hidden" name="cfg_id[]" value="{{ cfg.id }}">
+                        <div class="col-4">
+                            <label class="ds-label">ชื่อ Band</label>
+                            <input type="text" name="cfg_label[]" class="ds-input" value="{{ cfg.label }}" required>
+                        </div>
+                        <div class="col-3">
+                            <label class="ds-label">เริ่ม</label>
+                            <input type="text" name="cfg_start[]" class="ds-input" value="{{ cfg.start_time }}" placeholder="06:00" required>
+                        </div>
+                        <div class="col-3">
+                            <label class="ds-label">สิ้นสุด</label>
+                            <input type="text" name="cfg_end[]" class="ds-input" value="{{ cfg.end_time }}" placeholder="08:00" required>
+                        </div>
+                        <div class="col-2">
+                            <label class="ds-label">฿/ชม.</label>
+                            <input type="number" name="cfg_rate[]" class="ds-input" value="{{ cfg.rate|int }}" min="0" step="1" required>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-sm btn-dark" style="padding:7px 16px;">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>บันทึกอัตรา
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+{# ════════════════════════════════════════════════
+   PRINT RECEIPT (hidden — @media print เท่านั้น)
+   ════════════════════════════════════════════════ #}
+<div id="printReceipt">
+    <div style="font-family:'Sarabun',sans-serif; max-width:210mm; margin:0 auto; padding:15mm 20mm; font-size:13px; color:#09090B;">
+
+        <div style="text-align:center; font-size:1.4rem; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:2px solid #09090B;">
+            ใบเสร็จรับเงิน
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; font-size:.85rem; margin-bottom:8px;" id="receiptHeader">
+            <tr>
+                <td style="width:160px; color:#71717A; padding:3px 0;">วันที่</td>
+                <td id="receiptDate" style="padding:3px 0;"></td>
+            </tr>
+            <tr>
+                <td style="color:#71717A; padding:3px 0;">ข้าเจ้าของ</td>
+                <td id="receiptName" style="padding:3px 0; font-weight:600;"></td>
+            </tr>
+            <tr>
+                <td style="color:#71717A; padding:3px 0;">บัตรประจำตัวเลขที่</td>
+                <td style="padding:3px 0;"></td>
+            </tr>
+            <tr>
+                <td style="color:#71717A; padding:3px 0;">โทร</td>
+                <td id="receiptPhone" style="padding:3px 0;"></td>
+            </tr>
+        </table>
+
+        <p style="margin:12px 0 8px; font-size:.82rem; color:#3F3F46;">
+            ได้รับเงินเพื่อชำระค่าสินค้า หรือค่าบริการดังรายละเอียดข้างท้ายดังนี้ ถูกต้องเรียบร้อยแล้ว
+        </p>
+
+        <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
+            <thead>
+                <tr>
+                    <th style="border-top:1px solid #09090B; border-bottom:1px solid #09090B; padding:6px 8px; text-align:center; font-weight:700; width:60%">รายการ</th>
+                    <th style="border-top:1px solid #09090B; border-bottom:1px solid #09090B; padding:6px 8px; text-align:right; font-weight:700; width:120px">จำนวนเงิน</th>
+                </tr>
+            </thead>
+            <tbody id="receiptRows"></tbody>
+            <tfoot>
+                <tr>
+                    <td style="border-top:2px solid #09090B; padding:10px 8px; font-weight:700; text-align:right;">รวมเงิน</td>
+                    <td style="border-top:2px solid #09090B; padding:10px 8px; font-weight:700; text-align:right;" id="receiptTotal"></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div style="margin-top:50px; text-align:right;">
+            <div style="display:inline-block; text-align:center; min-width:260px;">
+                <div style="border-top:1px solid #09090B; padding-top:6px; font-size:.85rem;">
+                    ลงชื่อ..............................................................ผู้รับเงิน
+                </div>
+                <div id="receiptSignName" style="font-size:.82rem; margin-top:6px; color:#3F3F46;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{# ════════════════════════════════════════════════
+   DATA สำหรับ JS
+   ════════════════════════════════════════════════ #}
 <script>
-document.getElementById('overrideFuelModal').addEventListener('show.bs.modal', function(e) {
-    const btn = e.relatedTarget;
-    document.getElementById('ofBookingId').value  = btn.dataset.id;
-    document.getElementById('ofLabel').textContent = btn.dataset.label;
-    document.getElementById('ofFuelInput').value  = btn.dataset.fuel || '';
-});
+const OT_DATA = {{ ots | map(attribute='id') | list | tojson }};
+const OT_MAP  = {
+    {% for ot in ots %}
+    {{ ot.id }}: {
+        id: {{ ot.id }},
+        ot_number: "{{ ot.ot_number }}",
+        driver_id: {{ ot.driver_id }},
+        driver_name: "{{ ot.driver.name if ot.driver else '' }}",
+        driver_phone: "{{ ot.driver.user.phone if ot.driver and ot.driver.user and ot.driver.user.phone else '' }}",
+        date: "{{ ot.date.strftime('%Y-%m-%d') }}",
+        booking_id: {{ ot.booking_id }},
+        destination: "{{ ot.booking.destination if ot.booking else '' }}",
+        total_hours: {{ ot.total_hours }},
+        total_amount: {{ ot.total_amount }},
+        status: "{{ ot.status }}",
+        note: "{{ ot.note or '' }}",
+        slots: [
+            {% for s in ot.slots %}
+            {label:"{{ s.slot_label }}", start:"{{ s.start_time }}", end:"{{ s.end_time }}", rate:{{ s.rate }}, hours:{{ s.hours }}, amount:{{ s.amount }}, cfg_id:{{ s.rate_config_id or 'null' }}},
+            {% endfor %}
+        ]
+    },
+    {% endfor %}
+};
+const RATE_CONFIGS = [
+    {% for cfg in rate_configs %}
+    {id:{{ cfg.id }}, label:"{{ cfg.label }}", start:"{{ cfg.start_time }}", end:"{{ cfg.end_time }}", rate:{{ cfg.rate }}},
+    {% endfor %}
+];
+const EDIT_URL_TEMPLATE = "{{ url_for('admincost.ot_edit', ot_id=0) }}".replace('/0/', '/{id}/');
 </script>
+
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ot_admin.js') }}"></script>
 </body>
 </html>

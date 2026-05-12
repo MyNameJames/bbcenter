@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Admin Approval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+<style>
+/* ── Design Tokens ─────────────────────────────── */
+:root {
+  /* Palette */
+  --navy:    #0D1117;
+  --ink:     #1C2033;
+  --smoke:   #52596E;
+  --cloud:   #9AA3B8;
+  --mist:    #E8ECF3;
+  --frost:   #F3F5FA;
+  --snow:    #F8F9FC;
+  --surface: #FFFFFF;
+
+  /* Semantic */
+  --amber:   #C27803;   /* pending  */
+  --amber-bg:#FFFBEB;
+  --emerald: #047857;   /* approved */
+  --emerald-bg:#ECFDF5;
+  --violet:  #5B21B6;   /* forward  */
+  --violet-bg:#F5F3FF;
+  --rose:    #BE123C;   /* rejected */
+  --rose-bg: #FFF1F4;
+  --crimson: #9F1239;   /* urgent   */
+  --crimson-bg:#FFF1F2;
+
+  /* Interactive */
+  --accent:  #1B2A6B;   /* primary CTA — deep navy */
+  --accent-l:#EEF2FF;
+
+  /* Geometry */
+  --r-card: 16px;
+  --r-sm:   10px;
+  --r-pill: 20px;
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px rgba(15,17,30,.04);
+  --shadow-sm: 0 1px 3px rgba(15,17,30,.06), 0 4px 16px rgba(15,17,30,.05);
+  --shadow-md: 0 2px 8px rgba(15,17,30,.07), 0 12px 32px rgba(15,17,30,.06);
+  --shadow-sheet: 0 -4px 6px rgba(15,17,30,.03), 0 -16px 48px rgba(15,17,30,.12);
+}
+
+/* ── Reset ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Prompt', sans-serif;
+  background: var(--snow);
+  color: var(--ink);
+  min-height: 100vh;
+  max-width: 430px;
+  margin: 0 auto;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ────────────────────────────────────── */
+.app-header {
+  background: var(--surface);
+  padding: 18px 20px 14px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 0 var(--mist), var(--shadow-xs);
+}
+.header-row { display:flex; align-items:center; justify-content:space-between; }
+.header-title {
+  font-size: 1.15rem; font-weight: 700; color: var(--navy);
+  letter-spacing: -.5px;
+}
+.notif-btn {
+  position: relative; width: 38px; height: 38px;
+  border-radius: 50%; background: var(--frost);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--smoke); transition: background .15s;
+}
+.notif-btn:hover { background: var(--mist); }
+.notif-btn svg { width: 18px; height: 18px; }
+.notif-badge {
+  position: absolute; top: 8px; right: 8px;
+  width: 7px; height: 7px; background: var(--rose);
+  border-radius: 50%; border: 2px solid var(--surface);
+}
+
+/* ── Date Strip ────────────────────────────────── */
+.date-strip-wrap {
+  background: var(--surface);
+  padding: 12px 18px 16px;
+  border-bottom: 1px solid var(--mist);
+}
+.date-strip-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.month-label {
+  font-size: .72rem; font-weight: 600; color: var(--cloud);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.nav-btn {
+  width: 28px; height: 28px; border: none; background: var(--frost);
+  border-radius: 50%; cursor: pointer; color: var(--smoke);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; transition: background .12s;
+}
+.nav-btn:hover { background: var(--mist); }
+
+.date-strip { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.date-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 6px 2px 8px; border-radius: 10px; cursor: pointer;
+  transition: background .12s; user-select: none;
+}
+.date-cell:hover:not(.selected) { background: var(--frost); }
+
+.day-name {
+  font-size: .6rem; font-weight: 600; color: var(--cloud);
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.day-num {
+  font-size: 1rem; font-weight: 600; color: var(--ink);
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; transition: all .15s;
+}
+.dot-row { display: flex; gap: 3px; height: 5px; align-items: center; }
+.dot { width: 4px; height: 4px; border-radius: 50%; }
+
+/* today */
+.date-cell.today .day-name { color: var(--accent); }
+.date-cell.today .day-num  { color: var(--accent); font-weight: 700; }
+/* selected */
+.date-cell.selected .day-num {
+  background: var(--navy); color: #fff; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(13,17,23,.3);
+}
+.date-cell.selected .day-name { color: var(--navy); }
+
+/* ── Summary chips ─────────────────────────────── */
+.summary-bar {
+  padding: 14px 18px 0;
+  display: flex; gap: 7px; overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.summary-bar::-webkit-scrollbar { display: none; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--mist);
+  border-radius: var(--r-pill);
+  font-size: .73rem; font-weight: 600;
+  color: var(--cloud); cursor: pointer;
+  white-space: nowrap; transition: all .15s;
+}
+.chip:hover { border-color: var(--cloud); color: var(--smoke); }
+.chip.active {
+  border-color: var(--navy); color: var(--navy);
+  background: var(--frost);
+}
+.chip .cnt {
+  min-width: 18px; height: 18px;
+  background: var(--amber); color: #fff;
+  border-radius: 9px; padding: 0 5px;
+  font-size: .65rem; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.chip.chip-approved .cnt { background: var(--emerald); }
+.chip.chip-all      .cnt { background: var(--smoke); }
+
+/* ── Section bar ───────────────────────────────── */
+.section-label {
+  padding: 16px 20px 8px;
+  font-size: .68rem; font-weight: 600; color: var(--cloud);
+  letter-spacing: .06em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.group-mode-btn {
+  font-size: .72rem; font-weight: 700; color: var(--accent);
+  background: none; border: none; cursor: pointer;
+  letter-spacing: 0; text-transform: none;
+  padding: 4px 10px; border-radius: 6px;
+  transition: background .12s;
+}
+.group-mode-btn:hover { background: var(--accent-l); }
+
+/* ── Card list ─────────────────────────────────── */
+.card-list { padding: 0 16px 140px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Booking card ──────────────────────────────── */
+.booking-card {
+  position: relative;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow .2s, transform .1s;
+}
+.booking-card:active { transform: scale(.99); }
+.booking-card.select-mode { cursor: pointer; }
+.booking-card.selected-card {
+  box-shadow: 0 0 0 2px var(--accent), var(--shadow-sm);
+}
+
+.card-inner { padding: 14px 16px; }
+.card-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 7px;
+}
+.card-left { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+
+/* status dot */
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  margin-top: 1px;
+}
+.status-dot.pending   { background: var(--amber); }
+.status-dot.approved  { background: var(--emerald); }
+.status-dot.forwarded { background: var(--violet); }
+.status-dot.rejected  { background: var(--rose); }
+.status-dot.urgent    { background: var(--crimson); animation: pulse 1.4s ease infinite; }
+
+.card-name {
+  font-size: .9rem; font-weight: 700; color: var(--navy);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: -.2px;
+}
+.card-time-badge {
+  font-size: .68rem; font-weight: 500; color: var(--cloud);
+  white-space: nowrap; flex-shrink: 0;
+  letter-spacing: .01em;
+}
+
+.three-dot-btn {
+  width: 28px; height: 28px; border: none; background: transparent;
+  border-radius: 50%; cursor: pointer; color: var(--cloud);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: .95rem; font-weight: 700;
+  letter-spacing: .05em; transition: background .12s, color .12s;
+}
+.three-dot-btn:hover { background: var(--frost); color: var(--smoke); }
+
+/* destination */
+.card-dest {
+  font-size: .8rem; font-weight: 500; color: var(--smoke);
+  margin-bottom: 7px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-left: 15px; /* indent to align under name */
+}
+.card-info-row { display: flex; gap: 14px; flex-wrap: wrap; padding-left: 15px; }
+.card-info-item {
+  font-size: .7rem; color: var(--cloud);
+  display: flex; align-items: center; gap: 3px;
+}
+
+/* status row */
+.card-status-row {
+  margin-top: 10px; padding-top: 9px;
+  border-top: 1px solid var(--frost);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.status-pill {
+  font-size: .67rem; font-weight: 700;
+  padding: 3px 9px; border-radius: 6px;
+  letter-spacing: .02em;
+}
+.pill-pending   { background: var(--amber-bg);   color: var(--amber); }
+.pill-approved  { background: var(--emerald-bg); color: var(--emerald); }
+.pill-forwarded { background: var(--violet-bg);  color: var(--violet); }
+.pill-rejected  { background: var(--rose-bg);    color: var(--rose); }
+.pill-urgent    { background: var(--crimson-bg); color: var(--crimson); }
+
+.vehicle-tag {
+  font-size: .67rem; font-weight: 600; color: var(--emerald);
+  background: var(--emerald-bg); padding: 3px 9px; border-radius: 6px;
+}
+.group-tag {
+  font-size: .67rem; font-weight: 600; color: var(--violet);
+  background: var(--violet-bg); padding: 3px 9px; border-radius: 6px;
+}
+
+/* select checkbox */
+.select-checkbox {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--mist);
+  display: none; align-items: center; justify-content: center;
+  background: var(--surface); flex-shrink: 0;
+  font-size: .75rem; transition: all .15s;
+}
+.select-mode .select-checkbox { display: flex; }
+.selected-card .select-checkbox {
+  background: var(--navy); border-color: var(--navy);
+  color: white;
+}
+
+/* ── Group card ─────────────────────────────────── */
+.group-card {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  border: 1px solid rgba(91,33,182,.12);
+}
+.group-card-header {
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: linear-gradient(135deg, #F8F7FF 0%, #F5F3FF 100%);
+  border-bottom: 1px solid rgba(91,33,182,.08);
+}
+.group-header-left { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+.group-badge {
+  font-size: .63rem; font-weight: 700; letter-spacing: .06em;
+  color: var(--violet); background: var(--violet-bg);
+  border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+  text-transform: uppercase;
+}
+.group-title { font-size: .85rem; font-weight: 700; color: var(--navy); }
+.group-count { font-size: .72rem; color: var(--cloud); font-weight: 400; }
+
+.group-meta {
+  padding: 10px 16px 8px;
+  display: flex; gap: 16px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--frost);
+  background: var(--surface);
+}
+.group-meta-item {
+  font-size: .72rem; color: var(--cloud);
+  display: flex; align-items: center; gap: 4px;
+}
+.group-meta-item strong { color: var(--ink); font-weight: 600; }
+
+/* sub-items */
+.group-items { padding: 2px 0; }
+.group-item {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--frost);
+  cursor: pointer; transition: background .1s;
+}
+.group-item:last-child { border-bottom: none; }
+.group-item:hover { background: var(--snow); }
+.group-item-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.group-item-name { font-size: .82rem; font-weight: 600; color: var(--ink); }
+.group-item-time {
+  font-size: .68rem; font-weight: 500; color: var(--cloud);
+  white-space: nowrap;
+}
+.group-item-dest { font-size: .73rem; color: var(--cloud); margin-top: 2px; }
+.group-item-detail { overflow: hidden; max-height: 0; transition: max-height .25s ease; }
+.group-item-detail.open { max-height: 80px; }
+.group-item-detail-inner {
+  padding: 6px 0 2px; display: flex; gap: 12px; flex-wrap: wrap;
+}
+.group-item-detail-inner span { font-size: .7rem; color: var(--cloud); }
+.chevron {
+  font-size: .65rem; color: var(--cloud);
+  transition: transform .2s; display: inline-block; margin-left: 4px;
+}
+.group-item.open .chevron { transform: rotate(90deg); }
+
+.group-card-footer {
+  padding: 10px 16px 12px;
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  background: linear-gradient(135deg, #F8F7FF 0%, #F5F3FF 100%);
+  border-top: 1px solid rgba(91,33,182,.08);
+}
+
+/* ── Float group bar ───────────────────────────── */
+.group-bar {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(96px);
+  width: calc(100% - 32px); max-width: 398px;
+  background: var(--navy);
+  color: white; border-radius: 16px;
+  padding: 14px 16px 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  z-index: 150;
+  transition: transform .35s cubic-bezier(.34,1.28,.64,1);
+  box-shadow: 0 8px 32px rgba(13,17,23,.35), 0 2px 8px rgba(13,17,23,.2);
+}
+.group-bar.show { transform: translateX(-50%) translateY(0); }
+.group-bar-text { font-size: .85rem; font-weight: 600; letter-spacing: -.1px; }
+.group-bar-actions { display: flex; gap: 8px; }
+.gb-btn-cancel {
+  padding: 7px 14px; border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,.2);
+  background: transparent; color: rgba(255,255,255,.8);
+  font-family: inherit; font-size: .8rem; font-weight: 600; cursor: pointer;
+  transition: border-color .12s;
+}
+.gb-btn-cancel:hover { border-color: rgba(255,255,255,.5); }
+.gb-btn-group {
+  padding: 7px 18px; border-radius: 10px; border: none;
+  background: white; color: var(--navy);
+  font-family: inherit; font-size: .8rem; font-weight: 700; cursor: pointer;
+  transition: opacity .12s;
+}
+.gb-btn-group:disabled { opacity: .4; cursor: not-allowed; }
+.gb-btn-group:not(:disabled):hover { opacity: .9; }
+
+/* ── Empty state ───────────────────────────────── */
+.empty-state { text-align: center; padding: 56px 24px; color: var(--cloud); }
+.empty-icon { font-size: 2.2rem; margin-bottom: 12px; opacity: .6; }
+.empty-title { font-size: .88rem; font-weight: 600; color: var(--smoke); margin-bottom: 4px; }
+.empty-sub { font-size: .76rem; }
+
+/* ── Bottom Sheet ──────────────────────────────── */
+.sheet-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(13,17,23,.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 200; opacity: 0; pointer-events: none;
+  transition: opacity .25s;
+}
+.sheet-backdrop.open { opacity: 1; pointer-events: all; }
+
+.bottom-sheet {
+  position: fixed; bottom: 0; left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  width: 100%; max-width: 430px;
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  z-index: 201;
+  box-shadow: var(--shadow-sheet);
+  transition: transform .32s cubic-bezier(.4,0,.2,1);
+  max-height: 92vh;
+  display: flex; flex-direction: column;
+}
+.bottom-sheet.open { transform: translateX(-50%) translateY(0); }
+
+.sheet-handle {
+  width: 36px; height: 4px;
+  background: var(--mist); border-radius: 2px;
+  margin: 14px auto 0; flex-shrink: 0;
+}
+.sheet-header {
+  padding: 16px 22px 14px;
+  border-bottom: 1px solid var(--frost);
+  flex-shrink: 0;
+}
+.sheet-booking-name {
+  font-size: .97rem; font-weight: 700; color: var(--navy);
+  letter-spacing: -.2px;
+}
+.sheet-booking-sub { font-size: .74rem; color: var(--cloud); margin-top: 3px; }
+
+.sheet-body { padding: 18px 22px 4px; overflow-y: auto; flex: 1; }
+.sheet-footer {
+  padding: 14px 22px 22px; display: flex; gap: 10px;
+  border-top: 1px solid var(--frost); flex-shrink: 0;
+}
+
+/* sheet fields */
+.field-group { margin-bottom: 16px; }
+.field-label {
+  font-size: .65rem; font-weight: 700; color: var(--cloud);
+  letter-spacing: .07em; text-transform: uppercase; margin-bottom: 8px;
+}
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.sheet-select {
+  width: 100%; padding: 10px 36px 10px 13px;
+  border: 1.5px solid var(--mist); border-radius: var(--r-sm);
+  font-family: inherit; font-size: .84rem; color: var(--ink);
+  background: var(--frost);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239AA3B8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s;
+}
+.sheet-select:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(27,42,107,.1);
+  background-color: var(--surface);
+}
+
+/* expense type tabs */
+.expense-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.exp-tab {
+  flex: 1; padding: 8px 4px; text-align: center;
+  border: 1.5px solid var(--mist); border-radius: var(--r-sm);
+  font-size: .77rem; font-weight: 600; color: var(--cloud);
+  cursor: pointer; transition: all .15s; background: var(--frost);
+}
+.exp-tab.active {
+  border-color: var(--accent); color: var(--accent);
+  background: var(--accent-l);
+}
+
+/* budget preview */
+.budget-preview {
+  background: var(--frost); border-radius: var(--r-sm);
+  padding: 10px 14px; margin-top: 8px; display: none;
+  border: 1px solid var(--mist);
+}
+.budget-preview.show { display: block; }
+.budget-row {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-top: 4px;
+}
+.budget-label { font-size: .72rem; color: var(--smoke); }
+.budget-value { font-size: .75rem; font-weight: 700; }
+.budget-value.ok   { color: var(--emerald); }
+.budget-value.warn { color: var(--amber); }
+.budget-value.over { color: var(--rose); }
+.budget-bar-wrap { height: 3px; background: var(--mist); border-radius: 2px; margin-top: 8px; }
+.budget-bar-fill { height: 100%; border-radius: 2px; transition: width .5s ease; }
+
+/* action options */
+.action-group { display: flex; flex-direction: column; gap: 7px; margin-bottom: 10px; }
+.action-option {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--mist); border-radius: var(--r-sm);
+  cursor: pointer; transition: all .15s; background: var(--frost);
+}
+.action-option.opt-approve  { --opt-c: var(--emerald); }
+.action-option.opt-forward  { --opt-c: var(--violet);  }
+.action-option.opt-reject   { --opt-c: var(--rose);    }
+.action-option.selected {
+  border-color: var(--opt-c);
+  background: color-mix(in srgb, var(--opt-c) 6%, white);
+}
+.radio-circle {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--mist); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s;
+}
+.action-option.selected .radio-circle { border-color: var(--opt-c); }
+.radio-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--opt-c);
+  opacity: 0; transform: scale(.2); transition: all .18s;
+}
+.action-option.selected .radio-dot { opacity: 1; transform: scale(1); }
+
+.action-icon { font-size: .95rem; width: 22px; text-align: center; }
+.action-label strong { display: block; font-size: .84rem; font-weight: 700; color: var(--navy); }
+.action-label small  { font-size: .7rem; color: var(--cloud); }
+
+/* footer buttons */
+.btn-cancel {
+  flex: 1; padding: 12px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--mist); background: var(--frost);
+  font-family: inherit; font-size: .84rem; font-weight: 600;
+  color: var(--smoke); cursor: pointer; transition: all .12s;
+}
+.btn-cancel:hover { border-color: var(--cloud); }
+.btn-confirm {
+  flex: 2; padding: 12px; border-radius: var(--r-sm); border: none;
+  background: var(--navy); color: white;
+  font-family: inherit; font-size: .84rem; font-weight: 700;
+  cursor: pointer; letter-spacing: -.1px;
+  transition: opacity .12s, transform .1s;
+  box-shadow: 0 2px 8px rgba(13,17,23,.25);
+}
+.btn-confirm:hover:not(:disabled) { opacity: .88; }
+.btn-confirm:active:not(:disabled) { transform: scale(.98); }
+.btn-confirm:disabled {
+  background: var(--mist); color: var(--cloud);
+  cursor: not-allowed; box-shadow: none;
+}
+
+/* ── Toast ─────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--navy); color: white;
+  padding: 11px 20px; border-radius: 12px;
+  font-size: .8rem; font-weight: 500; letter-spacing: -.1px;
+  z-index: 300; white-space: nowrap;
+  box-shadow: 0 4px 24px rgba(13,17,23,.3);
+  transition: transform .3s cubic-bezier(.34,1.28,.64,1);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Animations ─────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .5; transform: scale(.85); }
+}
+@keyframes longpressRing {
+  0%   { transform: scale(.88); opacity: .5; }
+  100% { transform: scale(1.06); opacity: 0; }
+}
+.booking-card.pressing::after {
+  content: ''; position: absolute; inset: 0;
+  border-radius: var(--r-card);
+  border: 2px solid var(--accent);
+  animation: longpressRing .5s ease-out forwards;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+  <div class="header-row">
+    <span class="header-title">อนุมัติการจอง</span>
+    <button class="notif-btn">🔔<span class="notif-badge"></span></button>
+  </div>
+</header>
+
+<!-- Date Strip -->
+<div class="date-strip-wrap">
+  <div class="date-strip-header">
+    <button class="nav-btn" onclick="shiftWeek(-1)">&#8249;</button>
+    <span class="month-label" id="monthLabel"></span>
+    <button class="nav-btn" onclick="shiftWeek(1)">&#8250;</button>
+  </div>
+  <div class="date-strip" id="dateStrip"></div>
+</div>
+
+<!-- Summary chips -->
+<div class="summary-bar">
+  <div class="chip active" onclick="filterCards('pending',this)">รออนุมัติ <span class="cnt" id="cnt-p">0</span></div>
+  <div class="chip chip-approved" onclick="filterCards('approved',this)">อนุมัติแล้ว <span class="cnt" id="cnt-a">0</span></div>
+  <div class="chip chip-all" onclick="filterCards('all',this)">ทั้งหมด <span class="cnt" id="cnt-t">0</span></div>
+</div>
+
+<!-- Section label -->
+<div class="section-label">
+  <span id="sectionLabel"></span>
+  <button class="group-mode-btn" id="groupModeBtn" onclick="toggleGroupMode()">รวมทริป</button>
+</div>
+
+<!-- Card list -->
+<div class="card-list" id="cardList"></div>
+
+<!-- Float group action bar -->
+<div class="group-bar" id="groupBar">
+  <span class="group-bar-text" id="groupBarText">เลือก 0 รายการ</span>
+  <div class="group-bar-actions">
+    <button class="gb-btn-cancel" onclick="cancelGroupMode()">ยกเลิก</button>
+    <button class="gb-btn-group" id="gbConfirmBtn" onclick="openGroupSheet()" disabled>รวมทริป</button>
+  </div>
+</div>
+
+<!-- Bottom Sheet -->
+<div class="sheet-backdrop" id="backdrop" onclick="closeSheet()"></div>
+<div class="bottom-sheet" id="bottomSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-booking-name" id="sheetName">—</div>
+    <div class="sheet-booking-sub"  id="sheetSub">—</div>
+  </div>
+  <div class="sheet-body" id="sheetBody">
+    <!-- injected dynamically -->
+  </div>
+  <div class="sheet-footer">
+    <button class="btn-cancel" onclick="closeSheet()">ยกเลิก</button>
+    <button class="btn-confirm" id="confirmBtn" disabled onclick="confirmAction()">ยืนยัน</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Mock data ──────────────────────────────────── */
+const TH_DAYS_S  = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const TH_DAYS_F  = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const TH_MON_F   = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MON_S   = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+const vehicles = [
+  {id:1, label:'Toyota Commuter · กข 1234'},
+  {id:2, label:'Toyota Fortuner · งจ 5678'},
+  {id:3, label:'Honda CR-V · สก 9012'},
+  {id:4, label:'Isuzu D-Max · พต 3456'},
+];
+const drivers = [
+  {id:1, label:'นายสมศักดิ์ ขับดี'},
+  {id:2, label:'นายประวิทย์ ปลอดภัย'},
+  {id:3, label:'นายวิรัตน์ มั่นคง'},
+];
+const budgets = {
+  central: [
+    {key:'medical',    label:'ค่ารักษาพยาบาล',    total:20000, used:8000},
+    {key:'training',   label:'ค่าอบรม / สัมมนา',   total:50000, used:47000},
+    {key:'religious',  label:'งานกิจนิมนต์ / ศาสนา',total:10000, used:2500},
+    {key:'official',   label:'ราชการ / ติดต่อหน่วยงาน',total:30000,used:15000},
+    {key:'welfare',    label:'สวัสดิการ / เยี่ยมไข้', total:8000, used:1000},
+    {key:'procurement',label:'จัดซื้อจัดจ้าง',      total:15000, used:12000},
+  ],
+  department: [
+    {key:'กองสนับสนุนและบริการ', label:'กองสนับสนุนและบริการ', total:25000, used:5000},
+    {key:'กองวิชาการ',           label:'กองวิชาการ',           total:20000, used:18000},
+    {key:'กองDOU',               label:'กองDOU',               total:15000, used:3000},
+    {key:'กองบริหาร',            label:'กองบริหาร',            total:30000, used:29500},
+    {key:'กองเลขานุการ',         label:'กองเลขานุการ',         total:10000, used:4000},
+    {key:'กองกิจการนิสิต',       label:'กองกิจการนิสิต',       total:12000, used:2000},
+  ]
+};
+
+let bookings = [
+  {id:1,status:'pending',urgent:false,name:'นายสมชาย ใจดี',dest:'สำนักงานใหญ่ กรุงเทพฯ',purpose:'ประชุมงบประมาณ',time:'08:00–12:00',pax:4,needDriver:true,date:11,vehicle:null,driver:null,expType:null,expSub:null,tripGroup:null},
+  {id:2,status:'pending',urgent:true, name:'นางสาวมาลี สดใส',dest:'โรงพยาบาลมหาวิทยาลัย',purpose:'ส่งเอกสารด่วน',time:'13:00–15:00',pax:1,needDriver:false,date:11,vehicle:null,driver:null,expType:null,expSub:null,tripGroup:null},
+  {id:3,status:'pending',urgent:false,name:'นายวิชัย รักดี',dest:'ท่าอากาศยานสุวรรณภูมิ',purpose:'รับแขกผู้มาเยือน',time:'14:30–18:00',pax:2,needDriver:true,date:11,vehicle:null,driver:null,expType:null,expSub:null,tripGroup:null},
+  {id:4,status:'approved',urgent:false,name:'นางอรุณี แสนดี',dest:'กรมบัญชีกลาง',purpose:'ยื่นเอกสาร',time:'09:00–11:00',pax:2,needDriver:true,date:11,vehicle:1,driver:2,expType:'central',expSub:'official',tripGroup:null},
+  {id:5,status:'approved',urgent:false,name:'นายประพันธ์ มั่นใจ',dest:'มหาวิทยาลัยเกษตรศาสตร์',purpose:'อบรมสัมมนา',time:'07:30–16:00',pax:8,needDriver:true,date:12,vehicle:1,driver:1,expType:'department',expSub:'กองวิชาการ',tripGroup:null},
+];
+
+const today    = new Date(2026,3,11);
+let weekStart  = new Date(today); weekStart.setDate(today.getDate()-today.getDay());
+let selDate    = new Date(today);
+let curFilter  = 'pending';
+let activeId   = null;
+let activeGrp  = null;
+let selAction  = null;
+let groupMode  = false;
+let groupSel   = new Set();
+
+/* ── Date strip ─────────────────────────────────── */
+function renderStrip() {
+  const strip = document.getElementById('dateStrip');
+  const mid   = new Date(weekStart); mid.setDate(weekStart.getDate()+3);
+  document.getElementById('monthLabel').textContent = `${TH_MON_F[mid.getMonth()+1]} ${mid.getFullYear()+543}`;
+  strip.innerHTML = '';
+  for(let i=0;i<7;i++){
+    const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    const dayBk = bookings.filter(b=>b.date===d.getDate()&&d.getMonth()===3);
+    const hasPend = dayBk.some(b=>b.status==='pending');
+    const hasAppr = dayBk.some(b=>b.status==='approved');
+    const isToday = d.toDateString()===today.toDateString();
+    const isSel   = d.toDateString()===selDate.toDateString();
+    const cell = document.createElement('div');
+    cell.className=`date-cell${isToday?' today':''}${isSel?' selected':''}`;
+    cell.innerHTML=`
+      <span class="day-name">${TH_DAYS_S[d.getDay()]}</span>
+      <span class="day-num">${d.getDate()}</span>
+      <div class="dot-row">
+        ${hasPend?`<div class="dot" style="background:var(--c-pending)"></div>`:''}
+        ${hasAppr?`<div class="dot" style="background:var(--c-approved)"></div>`:''}
+      </div>`;
+    cell.addEventListener('click',()=>{ selDate=new Date(d); renderStrip(); renderCards(); });
+    strip.appendChild(cell);
+  }
+}
+function shiftWeek(d){ weekStart.setDate(weekStart.getDate()+d*7); renderStrip(); renderCards(); }
+
+/* ── Cards ──────────────────────────────────────── */
+function filterCards(f, el){
+  curFilter=f;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderCards();
+}
+
+function getStatusInfo(b){
+  if(b.urgent && b.status==='pending') return {dot:'urgent',pill:'pill-urgent',label:'วันนี้ · ด่วน'};
+  const map={pending:{dot:'pending',pill:'pill-pending',label:'รออนุมัติ'},
+             approved:{dot:'approved',pill:'pill-approved',label:'อนุมัติแล้ว'},
+             forwarded:{dot:'forwarded',pill:'pill-forwarded',label:'รอ Approver'},
+             rejected:{dot:'rejected',pill:'pill-rejected',label:'ไม่อนุมัติ'}};
+  return map[b.status]||map.pending;
+}
+
+function getVehicleLabel(id){ return id?(vehicles.find(v=>v.id===id)||{label:'—'}).label:null; }
+function getDriverLabel(id){ return id?(drivers.find(d=>d.id===id)||{label:'—'}).label:null; }
+
+function renderCards(){
+  const list = document.getElementById('cardList');
+  const lbl  = document.getElementById('sectionLabel');
+
+  const allDay = bookings.filter(b=>{ const bd=new Date(2026,3,b.date); return bd.toDateString()===selDate.toDateString(); });
+  document.getElementById('cnt-p').textContent=allDay.filter(b=>b.status==='pending').length;
+  document.getElementById('cnt-a').textContent=allDay.filter(b=>b.status==='approved').length;
+  document.getElementById('cnt-t').textContent=allDay.length;
+
+  let filtered = [...allDay];
+  if(curFilter!=='all') filtered=filtered.filter(b=>b.status===curFilter);
+  lbl.textContent=`วัน${TH_DAYS_F[selDate.getDay()]}ที่ ${selDate.getDate()} ${TH_MON_F[selDate.getMonth()+1]} · ${filtered.length} รายการ`;
+
+  if(!filtered.length){
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">ไม่มีรายการในวันนี้</div><div class="empty-sub">เลือกวันอื่นหรือเปลี่ยน filter</div></div>`;
+    return;
+  }
+
+  // แยก grouped vs standalone
+  const rendered = new Set();
+  const items = [];
+
+  filtered.forEach(b => {
+    if(b.tripGroup && !rendered.has(b.tripGroup)){
+      // หา bookings ทั้งหมดในกลุ่มนี้ (จาก allDay)
+      const grpBookings = allDay.filter(x=>x.tripGroup===b.tripGroup);
+      grpBookings.forEach(x=>rendered.add(x.tripGroup));
+      items.push({ type:'group', grpName:b.tripGroup, members:grpBookings });
+    } else if(!b.tripGroup){
+      items.push({ type:'single', booking:b });
+    }
+  });
+
+  list.innerHTML = items.map(item => {
+    if(item.type === 'group') return renderGroupCard(item.grpName, item.members);
+    const b   = item.booking;
+    const si  = getStatusInfo(b);
+    const vl  = getVehicleLabel(b.vehicle);
+    const dl  = getDriverLabel(b.driver);
+    const isSel = groupSel.has(b.id);
+    return `
+    <div class="booking-card ${groupMode?'select-mode':''} ${isSel?'selected-card':''}"
+         id="card-${b.id}"
+         onclick="${groupMode&&b.status==='pending'?`toggleGroupSel(${b.id})`:'void 0'}">
+      <div class="card-inner">
+        <div class="card-top">
+          <div class="card-left">
+            ${groupMode&&b.status==='pending'
+              ? `<div class="select-checkbox">${isSel?'✓':''}</div>`
+              : `<div class="status-dot ${si.dot}"></div>`}
+            <span class="card-name">${b.name}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="card-time-badge">${b.time}</span>
+            ${!groupMode?`<button class="three-dot-btn" onclick="event.stopPropagation();openSheet(${b.id})">⋮</button>`:''}
+          </div>
+        </div>
+        <div class="card-dest">📍 ${b.dest}</div>
+        <div class="card-info-row">
+          <div class="card-info-item">👥 ${b.pax} คน</div>
+          ${b.needDriver?`<div class="card-info-item">🚗 ขอคนขับ</div>`:''}
+          ${b.purpose?`<div class="card-info-item">· ${b.purpose}</div>`:''}
+        </div>
+        <div class="card-status-row">
+          <span class="status-pill ${si.pill}">${si.label}</span>
+          ${vl?`<span class="vehicle-tag">🚙 ${vl}</span>`:''}
+          ${dl?`<span class="vehicle-tag" style="background:#EFF6FF;border-color:#BFDBFE;color:#1E40AF">👤 ${dl}</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // long press บน pending standalone cards
+  filtered.filter(b=>!b.tripGroup).forEach(b => {
+    const el = document.getElementById(`card-${b.id}`);
+    if(el) attachLongPress(el, b.id);
+  });
+}
+
+function renderGroupCard(grpName, members){
+  const rep = members[0]; // ตัวแทน — ใช้ดึง vehicle/driver/status
+  const vl  = getVehicleLabel(rep.vehicle);
+  const dl  = getDriverLabel(rep.driver);
+  const si  = getStatusInfo(rep);
+  const totalPax = members.reduce((s,b)=>s+b.pax, 0);
+
+  const subItems = members.map((b,i)=>`
+    <div class="group-item" id="gi-${b.id}" onclick="toggleSubItem(${b.id})">
+      <div class="group-item-top">
+        <span class="group-item-name">${b.name} <span class="chevron">›</span></span>
+        <span class="group-item-time">${b.time}</span>
+      </div>
+      <div class="group-item-dest">📍 ${b.dest}</div>
+      <div class="group-item-detail" id="gd-${b.id}">
+        <div class="group-item-detail-inner">
+          <span>👥 ${b.pax} คน</span>
+          ${b.needDriver?'<span>🚗 ขอคนขับ</span>':''}
+          <span>· ${b.purpose}</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  return `
+  <div class="group-card" id="grp-${grpName}">
+    <div class="group-card-header">
+      <div class="group-header-left">
+        <span class="group-badge">🔗 ${grpName}</span>
+        <div>
+          <div class="group-title">ทริปร่วม <span class="group-count">${members.length} รายการ · ${totalPax} คน</span></div>
+        </div>
+      </div>
+      <button class="three-dot-btn" onclick="openGroupManageSheet('${grpName}')">⋮</button>
+    </div>
+    <div class="group-meta">
+      ${vl?`<div class="group-meta-item">🚙 <strong>${vl}</strong></div>`:'<div class="group-meta-item" style="color:var(--c-pending)">⚠️ ยังไม่กำหนดรถ</div>'}
+      ${dl?`<div class="group-meta-item">👤 <strong>${dl}</strong></div>`:''}
+      ${rep.expType?`<div class="group-meta-item">💰 <strong>${rep.expType==='central'?'ส่วนกลาง':rep.expType==='department'?'กอง':'ส่วนตัว'}</strong></div>`:''}
+    </div>
+    <div class="group-items">${subItems}</div>
+    <div class="group-card-footer">
+      <span class="status-pill ${si.pill}">${si.label}</span>
+      ${rep.expSub?`<span class="vehicle-tag" style="background:#F0F9FF;border-color:#BAE6FD;color:#075985">📋 ${rep.expSub}</span>`:''}
+    </div>
+  </div>`;
+}
+
+function toggleSubItem(id){
+  const item   = document.getElementById(`gi-${id}`);
+  const detail = document.getElementById(`gd-${id}`);
+  if(!item||!detail) return;
+  item.classList.toggle('open');
+  detail.classList.toggle('open');
+}
+
+/* ── Group mode ─────────────────────────────────── */
+function toggleGroupMode(){
+  groupMode=!groupMode; groupSel.clear();
+  document.getElementById('groupModeBtn').textContent=groupMode?'ยกเลิก':'รวมทริป';
+  updateGroupBar(); renderCards();
+}
+function cancelGroupMode(){ groupMode=false; groupSel.clear(); document.getElementById('groupModeBtn').textContent='รวมทริป'; updateGroupBar(); renderCards(); }
+function toggleGroupSel(id){
+  if(groupSel.has(id)) groupSel.delete(id); else groupSel.add(id);
+  updateGroupBar(); renderCards();
+}
+function updateGroupBar(){
+  const bar=document.getElementById('groupBar');
+  const btn=document.getElementById('gbConfirmBtn');
+  document.getElementById('groupBarText').textContent=`เลือก ${groupSel.size} รายการ`;
+  btn.disabled=groupSel.size<2;
+  if(groupMode) bar.classList.add('show'); else bar.classList.remove('show');
+}
+
+/* ── Bottom Sheet ───────────────────────────────── */
+function buildSheetHTML(b, isGroup){
+  const vOpts = vehicles.map(v=>`<option value="${v.id}" ${b&&b.vehicle===v.id?'selected':''}>${v.label}</option>`).join('');
+  const dOpts = drivers.map(d=>`<option value="${d.id}" ${b&&b.driver===d.id?'selected':''}>${d.label}</option>`).join('');
+  const curExpType = b?b.expType:'';
+
+  const centralOpts = budgets.central.map(x=>{
+    const rem=x.total-x.used; const pct=Math.round(x.used/x.total*100);
+    return `<option value="${x.key}" ${b&&b.expSub===x.key?'selected':''}>${x.label} (เหลือ ${rem.toLocaleString()} บ.)</option>`;
+  }).join('');
+  const deptOpts = budgets.department.map(x=>{
+    const rem=x.total-x.used;
+    return `<option value="${x.key}" ${b&&b.expSub===x.key?'selected':''}>${x.label} (เหลือ ${rem.toLocaleString()} บ.)</option>`;
+  }).join('');
+
+  return `
+  <!-- รถ + คนขับ -->
+  <div class="field-group">
+    <div class="field-label">กำหนดรถ / คนขับ</div>
+    <div class="field-row" style="margin-bottom:6px">
+      <select class="sheet-select" id="vehSel" onchange="checkReady()">
+        <option value="">— เลือกรถ —</option>${vOpts}
+      </select>
+      <select class="sheet-select" id="drvSel" onchange="checkReady()">
+        <option value="">— คนขับ —</option>${dOpts}
+      </select>
+    </div>
+  </div>
+
+  <!-- ประเภทค่าใช้จ่าย -->
+  <div class="field-group">
+    <div class="field-label">ประเภทค่าใช้จ่าย</div>
+    <div class="expense-tabs">
+      <div class="exp-tab ${curExpType==='central'?'active':''}"    onclick="setExpType('central')">ส่วนกลาง</div>
+      <div class="exp-tab ${curExpType==='department'?'active':''}" onclick="setExpType('department')">กอง</div>
+      <div class="exp-tab ${curExpType==='personal'?'active':''}"   onclick="setExpType('personal')">ส่วนตัว</div>
+    </div>
+    <select class="sheet-select" id="expSubSel" onchange="updateBudgetPreview();checkReady()"
+      style="${curExpType&&curExpType!=='personal'?'':'display:none'}">
+      <option value="">— เลือกหมวด —</option>
+      ${curExpType==='central'?centralOpts:''}
+      ${curExpType==='department'?deptOpts:''}
+    </select>
+    <div class="budget-preview" id="budgetPreview">
+      <div class="field-label" style="margin-bottom:4px">งบคงเหลือ</div>
+      <div class="budget-row">
+        <span class="budget-label" id="bpLabel">—</span>
+        <span class="budget-value" id="bpValue">—</span>
+      </div>
+      <div class="budget-bar-wrap"><div class="budget-bar-fill" id="bpBar" style="width:0%;background:var(--c-approved)"></div></div>
+    </div>
+  </div>
+
+  <!-- การดำเนินการ -->
+  <div class="field-group">
+    <div class="field-label">การดำเนินการ</div>
+    <div class="action-group">
+      <div class="action-option opt-approve ${!isGroup&&b&&b.status==='approved'&&b._prevAction==='approve'?'selected':''}" onclick="selectAction(this,'approve')">
+        <div class="radio-circle"><div class="radio-dot"></div></div>
+        <span class="action-icon">✅</span>
+        <div class="action-label"><strong>อนุมัติ</strong><small>ดำเนินการได้ทันที</small></div>
+      </div>
+      <div class="action-option opt-forward" onclick="selectAction(this,'forward')">
+        <div class="radio-circle"><div class="radio-dot"></div></div>
+        <span class="action-icon">📤</span>
+        <div class="action-label"><strong>ส่งให้ผู้ประสานงานกอง</strong><small>Approver ของแผนกพิจารณาต่อ</small></div>
+      </div>
+      <div class="action-option opt-reject" onclick="selectAction(this,'reject')">
+        <div class="radio-circle"><div class="radio-dot"></div></div>
+        <span class="action-icon">❌</span>
+        <div class="action-label"><strong>ไม่อนุมัติ</strong><small>แจ้งผู้จองทันที</small></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function openSheet(bookingId){
+  const b = bookings.find(x=>x.id===bookingId);
+  activeId=bookingId; activeGrp=null; selAction=null;
+  curExpType = b.expType||'';
+  document.getElementById('sheetName').textContent=b.name;
+  document.getElementById('sheetSub').textContent=`${b.dest} · ${b.time}`;
+  document.getElementById('sheetBody').innerHTML=buildSheetHTML(b,false);
+  document.getElementById('confirmBtn').disabled=true;
+  if(b.expSub){ setTimeout(()=>{ updateBudgetPreview(); },50); }
+  showSheet();
+}
+
+function openGroupSheet(){
+  activeId=null; activeGrp=null; selAction=null;
+  const ids=[...groupSel];
+  document.getElementById('sheetName').textContent=`รวมทริป ${ids.length} รายการ`;
+  document.getElementById('sheetSub').textContent=ids.map(id=>bookings.find(b=>b.id===id)?.name).join(', ');
+  document.getElementById('sheetBody').innerHTML=buildSheetHTML(null,false);
+  document.getElementById('confirmBtn').disabled=true;
+  showSheet();
+}
+
+function openGroupManageSheet(grpName){
+  activeId=null; activeGrp=grpName; selAction=null;
+  const members = bookings.filter(b=>b.tripGroup===grpName);
+  const rep = members[0];
+  curExpType = rep.expType||'';
+
+  document.getElementById('sheetName').textContent=`จัดการกลุ่ม ${grpName}`;
+  document.getElementById('sheetSub').textContent=`${members.length} รายการ · ${members.reduce((s,b)=>s+b.pax,0)} คน`;
+
+  document.getElementById('sheetBody').innerHTML=
+    buildSheetHTML(rep, false) +
+    `<div class="field-group" style="margin-top:4px;padding-top:12px;border-top:1px solid var(--c-border)">
+      <button onclick="ungroupConfirm('${grpName}')"
+        style="width:100%;padding:10px;border:1.5px solid var(--c-rejected);border-radius:var(--r-sm);
+               background:none;color:var(--c-rejected);font-family:inherit;font-size:.85rem;
+               font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+        🔓 แยกกลุ่ม — คืนทุกรายการเป็น pending อิสระ
+      </button>
+    </div>`;
+
+  // restore vehicle/driver/expense selectors
+  setTimeout(()=>{
+    const vs = document.getElementById('vehSel');
+    const ds = document.getElementById('drvSel');
+    if(vs && rep.vehicle) vs.value = rep.vehicle;
+    if(ds && rep.driver)  ds.value = rep.driver;
+    if(rep.expType && rep.expType !== 'personal'){
+      const sub = document.getElementById('expSubSel');
+      if(sub){
+        sub.style.display='block';
+        const bList = rep.expType==='central'?budgets.central:budgets.department;
+        sub.innerHTML=`<option value="">— เลือกหมวด —</option>`+bList.map(x=>{
+          const rem=x.total-x.used;
+          return `<option value="${x.key}">${x.label} (เหลือ ${rem.toLocaleString()} บ.)</option>`;
+        }).join('');
+        if(rep.expSub) sub.value=rep.expSub;
+        updateBudgetPreview();
+      }
+    }
+    document.getElementById('confirmBtn').disabled=true;
+  },30);
+
+  showSheet();
+}
+
+function ungroupConfirm(grpName){
+  if(!confirm(`แยกกลุ่ม ${grpName} และคืนทุกรายการเป็น "รออนุมัติ" ใช่ไหม?`)) return;
+  bookings.filter(b=>b.tripGroup===grpName).forEach(b=>{
+    b.tripGroup=null; b.status='pending'; b.vehicle=null; b.driver=null;
+    b.expType=null; b.expSub=null;
+  });
+  closeSheet(); renderCards(); renderStrip();
+  showToast(`🔓 แยกกลุ่ม ${grpName} เรียบร้อย — รายการคืนสู่ รออนุมัติ`);
+}
+
+function showSheet(){
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('bottomSheet').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeSheet(){
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('bottomSheet').classList.remove('open');
+  document.body.style.overflow='';
+  activeId=null; activeGrp=null; selAction=null;
+}
+
+/* ── Expense type logic ──────────────────────────── */
+let curExpType = '';
+function setExpType(type){
+  curExpType=type;
+  document.querySelectorAll('.exp-tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  const sub=document.getElementById('expSubSel');
+  const preview=document.getElementById('budgetPreview');
+  if(type==='personal'){ sub.style.display='none'; preview.classList.remove('show'); }
+  else {
+    sub.style.display='block';
+    // repopulate options
+    const bList = type==='central'?budgets.central:budgets.department;
+    sub.innerHTML=`<option value="">— เลือกหมวด —</option>`+bList.map(x=>{
+      const rem=x.total-x.used;
+      return `<option value="${x.key}">${x.label} (เหลือ ${rem.toLocaleString()} บ.)</option>`;
+    }).join('');
+    sub.value=''; preview.classList.remove('show');
+  }
+  checkReady();
+}
+
+function updateBudgetPreview(){
+  const sub=document.getElementById('expSubSel');
+  const preview=document.getElementById('budgetPreview');
+  if(!sub||!sub.value||!curExpType||curExpType==='personal'){ preview.classList.remove('show'); return; }
+  const list=curExpType==='central'?budgets.central:budgets.department;
+  const item=list.find(x=>x.key===sub.value);
+  if(!item){ preview.classList.remove('show'); return; }
+  const rem=item.total-item.used; const pct=Math.round(item.used/item.total*100);
+  document.getElementById('bpLabel').textContent=item.label;
+  const valEl=document.getElementById('bpValue');
+  valEl.textContent=`เหลือ ${rem.toLocaleString()} / ${item.total.toLocaleString()} บ.`;
+  valEl.className='budget-value '+(pct>=90?'over':pct>=70?'warn':'ok');
+  const barEl=document.getElementById('bpBar');
+  barEl.style.width=pct+'%';
+  barEl.style.background=pct>=90?'var(--c-rejected)':pct>=70?'var(--c-pending)':'var(--c-approved)';
+  preview.classList.add('show');
+  checkReady();
+}
+
+function selectAction(el,action){
+  document.querySelectorAll('.action-option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected'); selAction=action; checkReady();
+}
+
+function checkReady(){
+  const veh=document.getElementById('vehSel');
+  const hasVeh=veh&&veh.value;
+  const ready=selAction&&(selAction==='reject'||hasVeh);
+  document.getElementById('confirmBtn').disabled=!ready;
+}
+
+function confirmAction(){
+  const veh = document.getElementById('vehSel');
+  const drv = document.getElementById('drvSel');
+  const sub = document.getElementById('expSubSel');
+  const newStatus = {approve:'approved',forward:'forwarded',reject:'rejected'}[selAction];
+
+  if(activeId){
+    // ── single booking ──────────────────────────────
+    const b = bookings.find(x=>x.id===activeId);
+    b.status = newStatus;
+    if(veh&&veh.value) b.vehicle=parseInt(veh.value);
+    if(drv&&drv.value) b.driver=parseInt(drv.value);
+    if(curExpType) b.expType=curExpType;
+    if(sub&&sub.value) b.expSub=sub.value;
+    const msgs={approve:`✅ อนุมัติ #${b.id} — ${b.name} เรียบร้อย`,forward:`📤 ส่ง #${b.id} ให้ Approver แล้ว`,reject:`❌ ปฏิเสธ #${b.id} แล้ว`};
+    closeSheet(); renderCards(); renderStrip(); showToast(msgs[selAction]);
+
+  } else if(activeGrp){
+    // ── edit existing group ─────────────────────────
+    bookings.filter(b=>b.tripGroup===activeGrp).forEach(b=>{
+      b.status = newStatus;
+      if(veh&&veh.value) b.vehicle=parseInt(veh.value);
+      if(drv&&drv.value) b.driver=parseInt(drv.value);
+      if(curExpType) b.expType=curExpType;
+      if(sub&&sub.value) b.expSub=sub.value;
+    });
+    const actionLabel={approve:'อนุมัติ',forward:'ส่ง Approver',reject:'ไม่อนุมัติ'}[selAction];
+    closeSheet(); renderCards(); renderStrip();
+    showToast(`✅ อัปเดตกลุ่ม ${activeGrp} → ${actionLabel} เรียบร้อย`);
+
+  } else {
+    // ── new group (from group select mode) ──────────
+    const ids=[...groupSel];
+    const grpNums = bookings.filter(b=>b.tripGroup).map(b=>parseInt((b.tripGroup||'').replace('TRP-','')||0));
+    const nextNum = grpNums.length ? Math.max(...grpNums)+1 : 1;
+    const grpName = `TRP-${String(nextNum).padStart(3,'0')}`;
+    ids.forEach(id=>{
+      const b=bookings.find(x=>x.id===id);
+      if(!b) return;
+      b.status=newStatus; b.tripGroup=grpName;
+      if(veh&&veh.value) b.vehicle=parseInt(veh.value);
+      if(drv&&drv.value) b.driver=parseInt(drv.value);
+      if(curExpType) b.expType=curExpType;
+      if(sub&&sub.value) b.expSub=sub.value;
+    });
+    closeSheet(); cancelGroupMode(); renderCards(); renderStrip();
+    showToast(`🔗 รวม ${ids.length} รายการเป็นกลุ่ม ${grpName} แล้ว`);
+  }
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+/* ── Long press ─────────────────────────────────── */
+let lpTimer = null;
+const LP_MS = 500;
+
+function attachLongPress(el, bookingId) {
+  // only pending cards can be grouped
+  const b = bookings.find(x => x.id === bookingId);
+  if (!b || b.status !== 'pending') return;
+
+  function startPress(e) {
+    if (groupMode) return; // already in group mode, use tap
+    el.classList.add('pressing');
+    lpTimer = setTimeout(() => {
+      el.classList.remove('pressing');
+      // vibrate on mobile
+      if (navigator.vibrate) navigator.vibrate(40);
+      // enter group mode and select this card
+      groupMode = true;
+      groupSel.clear();
+      groupSel.add(bookingId);
+      document.getElementById('groupModeBtn').textContent = 'ยกเลิก';
+      updateGroupBar();
+      renderCards();
+    }, LP_MS);
+  }
+
+  function cancelPress() {
+    clearTimeout(lpTimer);
+    el.classList.remove('pressing');
+  }
+
+  el.addEventListener('touchstart',  startPress,  { passive: true });
+  el.addEventListener('touchend',    cancelPress);
+  el.addEventListener('touchcancel', cancelPress);
+  el.addEventListener('mousedown',   startPress);
+  el.addEventListener('mouseup',     cancelPress);
+  el.addEventListener('mouseleave',  cancelPress);
+}
+
+/* ── Init ────────────────────────────────────────── */
+curExpType='';
+renderStrip();
+filterCards('pending');
+</script>
+</body>
+</html>

@@ -1,0 +1,1220 @@
+/* ============================================================
+   Fuel Admin Page — Vercel-flavored UI
+   ─────────────────────────────────────────────────────────────
+   ใช้ --vc-* tokens จาก design-system.css Section 8
+   Scope ผ่าน .vc-scope บน <main> root
+   ห้ามคลาสเหล่านี้ไหลออกไปหน้าอื่น
+   ============================================================ */
+
+
+/* ─────────────────────────────────────────────
+   1. PAGE SHELL
+───────────────────────────────────────────── */
+.vc-scope {
+    /* background: var(--vc-bg); */
+    color: var(--vc-fg);
+    font-size: var(--vc-text-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+.fuel-page {
+    padding: var(--vc-space-6);
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+/* ─────────────────────────────────────────────
+   2. PAGE HEADER
+───────────────────────────────────────────── */
+.fuel-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+    flex-wrap: wrap;
+    padding-bottom: var(--vc-space-5);
+    margin-bottom: var(--vc-space-6);
+    border-bottom: 1px solid var(--vc-border);
+}
+
+.fuel-title {
+    font-size: var(--vc-text-xl);            /* 24px */
+    font-weight: 600;
+    letter-spacing: var(--vc-tracking-tight);
+    color: var(--vc-fg);
+    line-height: 1.2;
+    margin: 0;
+}
+
+.fuel-subtitle {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    margin: 6px 0 0 0;
+    line-height: 1.4;
+}
+
+.fuel-header-actions {
+    display: flex;
+    gap: var(--vc-space-2);
+    align-items: center;
+}
+
+
+/* ─────────────────────────────────────────────
+   3. CARD (Vercel surface)
+───────────────────────────────────────────── */
+.vc-card {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    overflow: hidden;
+    transition: border-color var(--vc-transition);
+}
+
+.vc-card:hover {
+    border-color: #D4D4D4;
+}
+
+.vc-card-pad   { padding: var(--vc-space-5); }
+.vc-card-pad-lg{ padding: var(--vc-space-6); }
+
+
+/* ─────────────────────────────────────────────
+   4. KPI STRIP (multi-cell stat card)
+   ─────────────────────────────────────────────
+   Pattern (Vercel dashboard signature):
+   <div class="vc-card">
+     <div class="vc-kpi-group">
+       <div class="vc-kpi-cell"> ... </div>  × N
+     </div>
+   </div>
+───────────────────────────────────────────── */
+.vc-kpi-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.vc-kpi-cell {
+    padding: var(--vc-space-5) var(--vc-space-6);
+    border-right: 1px solid var(--vc-border);
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+}
+
+.vc-kpi-cell:last-child { border-right: none; }
+
+.vc-kpi-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--vc-text-xs);            /* 12px */
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    line-height: 1;
+    margin: 0;
+}
+
+.vc-kpi-label .vc-icon-sm {
+    color: var(--vc-fg-subtle);
+}
+
+.vc-kpi-value {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--vc-text-2xl);           /* 32px */
+    font-weight: 500;
+    letter-spacing: var(--vc-tracking-tight);
+    color: var(--vc-fg);
+    line-height: 1;
+    margin: 0;
+    word-break: break-word;
+}
+
+.vc-kpi-value--muted   { color: var(--vc-fg-muted); }
+.vc-kpi-value--success { color: var(--vc-green); }
+.vc-kpi-value--danger  { color: var(--vc-red); }
+.vc-kpi-value--blue    { color: var(--vc-blue); }
+
+.vc-kpi-unit {
+    font-family: var(--vc-font-mono);
+    font-size: var(--vc-text-md);
+    font-weight: 400;
+    color: var(--vc-fg-muted);
+    margin-left: 4px;
+    letter-spacing: 0;
+}
+
+.vc-kpi-meta {
+    font-size: var(--vc-text-sm);            /* 13px */
+    color: var(--vc-fg-muted);
+    line-height: 1.4;
+    margin: 0;
+}
+
+.vc-kpi-action {
+    position: absolute;
+    top: var(--vc-space-3);
+    right: var(--vc-space-3);
+}
+
+/* responsive: stack on mobile/tablet */
+@media (max-width: 991.98px) {
+    .vc-kpi-group { grid-template-columns: 1fr; }
+    .vc-kpi-cell {
+        border-right: none;
+        border-bottom: 1px solid var(--vc-border);
+    }
+    .vc-kpi-cell:last-child { border-bottom: none; }
+}
+
+
+/* ─────────────────────────────────────────────
+   5. BUTTONS (Vercel pill)
+───────────────────────────────────────────── */
+.vc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: var(--vc-h-input);               /* 32px */
+    padding: 0 var(--vc-space-3);
+    border-radius: var(--vc-radius-sm);      /* 6px */
+    font-family: inherit;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    line-height: 1;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--vc-fg);
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        background var(--vc-transition),
+        border-color var(--vc-transition),
+        color var(--vc-transition);
+}
+
+.vc-btn:focus-visible {
+    outline: 2px solid var(--vc-fg);
+    outline-offset: 2px;
+}
+
+.vc-btn-primary {
+    background: var(--vc-primary);
+    color: var(--vc-on-primary);
+    border-color: var(--vc-primary);
+}
+.vc-btn-primary:hover {
+    background: var(--vc-primary-hover);
+    border-color: var(--vc-primary-hover);
+    color: var(--vc-on-primary);
+}
+
+.vc-btn-secondary {
+    background: var(--vc-bg);
+    color: var(--vc-fg);
+    border-color: var(--vc-border);
+}
+.vc-btn-secondary:hover {
+    border-color: var(--vc-border-hover);
+}
+
+.vc-btn-ghost {
+    background: transparent;
+    color: var(--vc-fg-muted);
+    border-color: transparent;
+}
+.vc-btn-ghost:hover {
+    background: var(--vc-bg-hover);
+    color: var(--vc-fg);
+}
+
+.vc-btn-danger {
+    background: var(--vc-bg);
+    color: var(--vc-red);
+    border-color: var(--vc-red-border);
+}
+.vc-btn-danger:hover {
+    background: var(--vc-red);
+    color: #fff;
+    border-color: var(--vc-red);
+}
+
+/* size variants */
+.vc-btn-sm {
+    height: var(--vc-h-input-sm);            /* 28px */
+    padding: 0 var(--vc-space-2);
+    font-size: var(--vc-text-xs);
+}
+.vc-btn-md {
+    height: var(--vc-h-input-md);            /* 40px */
+    padding: 0 var(--vc-space-4);
+    font-size: var(--vc-text-base);
+}
+
+.vc-btn-icon {
+    width: var(--vc-h-input);
+    padding: 0;
+}
+.vc-btn-icon.vc-btn-sm { width: var(--vc-h-input-sm); }
+.vc-btn-icon.vc-btn-md { width: var(--vc-h-input-md); }
+
+
+/* ─────────────────────────────────────────────
+   6. PHASE 2.4+ PLACEHOLDER NOTE
+   (จะลบเมื่อ tables migrate เสร็จ)
+───────────────────────────────────────────── */
+.fuel-phase-note {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    border: 1px dashed var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-sm);
+    margin-bottom: var(--vc-space-4);
+}
+
+.fuel-phase-note i { color: var(--vc-fg-subtle); flex-shrink: 0; }
+
+
+/* ─────────────────────────────────────────────
+   7. UTILITY (page-local)
+───────────────────────────────────────────── */
+.fuel-grid-2 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--vc-space-4);
+}
+
+@media (max-width: 991.98px) {
+    .fuel-grid-2 { grid-template-columns: 1fr; }
+}
+
+
+/* ─────────────────────────────────────────────
+   8. CARD HEAD (title row inside vc-card)
+───────────────────────────────────────────── */
+.vc-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-5);
+    border-bottom: 1px solid var(--vc-border);
+    flex-wrap: wrap;
+}
+
+.vc-card-head-title {
+    font-size: var(--vc-text-base);
+    font-weight: 600;
+    color: var(--vc-fg);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    line-height: 1;
+}
+
+.vc-card-head-title .vc-icon { color: var(--vc-fg-subtle); }
+
+.vc-card-head-meta {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+.vc-card-head-actions {
+    display: flex;
+    gap: var(--vc-space-2);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+
+/* ─────────────────────────────────────────────
+   9. TABLE (Vercel data style)
+───────────────────────────────────────────── */
+.vc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--vc-text-sm);          /* 13px */
+    background: var(--vc-bg);
+}
+
+.vc-table thead th {
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    text-align: left;
+    padding: 10px var(--vc-space-4);
+    border-bottom: 1px solid var(--vc-border);
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.vc-table thead th.text-end    { text-align: right; }
+.vc-table thead th.text-center { text-align: center; }
+
+.vc-table tbody td {
+    padding: 0 var(--vc-space-4);
+    height: var(--vc-h-row);               /* 48px */
+    border-bottom: 1px solid var(--vc-border);
+    color: var(--vc-fg);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.vc-table tbody tr:last-child td { border-bottom: none; }
+
+.vc-table tbody tr {
+    transition: background var(--vc-transition);
+}
+.vc-table tbody tr:hover { background: var(--vc-bg-subtle); }
+
+.vc-table tbody tr.is-selected,
+.vc-table tbody tr.is-selected:hover {
+    background: var(--vc-blue-bg);
+}
+
+/* numeric cell — mono + right align */
+.vc-td-num {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    letter-spacing: 0;
+}
+
+.vc-td-muted  { color: var(--vc-fg-muted); }
+.vc-td-strong { font-weight: 500; color: var(--vc-fg); }
+
+/* checkbox col */
+.vc-table-check {
+    width: 40px;
+    padding-left: var(--vc-space-4) !important;
+    padding-right: 0 !important;
+}
+
+.vc-checkbox {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--vc-fg);
+    cursor: pointer;
+    margin: 0;
+    vertical-align: middle;
+}
+
+.vc-checkbox:disabled { cursor: not-allowed; opacity: .4; }
+
+/* actions col */
+.vc-table-actions {
+    width: 56px;
+    text-align: right;
+    padding-right: var(--vc-space-3) !important;
+}
+
+
+/* ─────────────────────────────────────────────
+   10. BADGE (Vercel pill — subtle tint)
+   ───────────────────────────────────────────
+   ใช้ <span class="vc-badge vc-badge-{neutral|warning|blue|success|danger}">
+   เพิ่ม `vc-badge-dot` เพื่อโชว์จุดสีนำหน้า text
+───────────────────────────────────────────── */
+.vc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: var(--vc-radius-sm);
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    line-height: 1.6;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.vc-badge-neutral {
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    border-color: var(--vc-border);
+}
+.vc-badge-warning {
+    background: var(--vc-amber-bg);
+    color: var(--vc-amber);
+    border-color: var(--vc-amber-border);
+}
+.vc-badge-blue {
+    background: var(--vc-blue-bg);
+    color: var(--vc-blue);
+    border-color: var(--vc-blue-border);
+}
+.vc-badge-success {
+    background: var(--vc-green-bg);
+    color: var(--vc-green);
+    border-color: var(--vc-green-border);
+}
+.vc-badge-danger {
+    background: var(--vc-red-bg);
+    color: var(--vc-red);
+    border-color: var(--vc-red-border);
+}
+
+.vc-badge-dot::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+
+/* ─────────────────────────────────────────────
+   11. EMPTY STATE
+───────────────────────────────────────────── */
+.vc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--vc-space-12) var(--vc-space-6);
+    gap: var(--vc-space-2);
+}
+
+.vc-empty-icon {
+    width: 40px; height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    color: var(--vc-fg-subtle);
+    margin-bottom: var(--vc-space-2);
+}
+
+.vc-empty-title {
+    font-size: var(--vc-text-base);
+    font-weight: 500;
+    color: var(--vc-fg);
+    margin: 0;
+}
+
+.vc-empty-desc {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    margin: 0 0 var(--vc-space-2) 0;
+    max-width: 320px;
+    line-height: 1.5;
+}
+
+
+/* ─────────────────────────────────────────────
+   12. LIST + COLLAPSE (narrow card list)
+   ───────────────────────────────────────────
+   ใช้ใน reimbursement card (col-4) ที่ตารางปกติแคบเกินไป
+   Pattern: <details class="vc-collapse"><summary>...</summary>body</details>
+───────────────────────────────────────────── */
+.vc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.vc-list-item {
+    border-bottom: 1px solid var(--vc-border);
+}
+.vc-list-item:last-child { border-bottom: none; }
+
+.vc-collapse > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: var(--vc-space-3) var(--vc-space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    transition: background var(--vc-transition);
+}
+
+.vc-collapse > summary::-webkit-details-marker { display: none; }
+.vc-collapse > summary::marker { content: ''; }
+
+.vc-collapse > summary:hover {
+    background: var(--vc-bg-subtle);
+}
+
+.vc-collapse[open] > summary {
+    background: var(--vc-bg-subtle);
+    border-bottom: 1px solid var(--vc-border);
+}
+
+.vc-collapse-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.vc-collapse-title {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    margin-bottom: 4px;
+    font-size: var(--vc-text-sm);
+    line-height: 1.3;
+    flex-wrap: wrap;
+}
+
+.vc-collapse-meta {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    line-height: 1.3;
+}
+
+.vc-collapse-meta .vc-mono { letter-spacing: 0; }
+
+.vc-collapse-chevron {
+    color: var(--vc-fg-subtle);
+    transition: transform var(--vc-transition);
+    flex-shrink: 0;
+}
+
+.vc-collapse[open] > summary > .vc-collapse-chevron {
+    transform: rotate(180deg);
+}
+
+.vc-collapse-body {
+    padding: var(--vc-space-4);
+    background: var(--vc-bg-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+}
+
+.vc-dot-sep {
+    color: var(--vc-fg-disabled);
+    font-weight: 400;
+}
+
+
+/* ─────────────────────────────────────────────
+   13. COMPACT TABLE (inside collapse body)
+───────────────────────────────────────────── */
+.vc-table-sm {
+    font-size: var(--vc-text-xs);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    overflow: hidden;
+}
+
+.vc-table-sm thead th {
+    padding: 8px var(--vc-space-3);
+    font-size: 11px;
+}
+
+.vc-table-sm tbody td {
+    padding: 0 var(--vc-space-3);
+    height: 36px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* ─────────────────────────────────────────────
+   14. META GRID (definition list)
+───────────────────────────────────────────── */
+.vc-meta-grid {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    row-gap: 6px;
+    column-gap: var(--vc-space-3);
+    margin: 0;
+    font-size: var(--vc-text-xs);
+}
+
+.vc-meta-grid dt {
+    color: var(--vc-fg-muted);
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.vc-meta-grid dd {
+    color: var(--vc-fg);
+    margin: 0;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.vc-meta-grid dd.vc-td-muted { color: var(--vc-fg-muted); }
+
+
+/* ─────────────────────────────────────────────
+   15. INLINE ACTION ROW
+───────────────────────────────────────────── */
+.vc-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--vc-space-2);
+    align-items: center;
+}
+
+
+/* ─────────────────────────────────────────────
+   16. FORM (Vercel input)
+───────────────────────────────────────────── */
+.vc-label {
+    display: block;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg);
+    margin-bottom: 6px;
+    line-height: 1.3;
+}
+
+.vc-label .vc-required { color: var(--vc-red); margin-left: 2px; }
+
+.vc-label-meta {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    font-weight: 400;
+    margin-left: 6px;
+}
+
+.vc-input,
+.vc-select,
+.vc-textarea {
+    display: block;
+    width: 100%;
+    height: var(--vc-h-input-md);            /* 40px */
+    padding: 0 var(--vc-space-3);
+    font-family: inherit;
+    font-size: var(--vc-text-base);
+    color: var(--vc-fg);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    transition: border-color var(--vc-transition), box-shadow var(--vc-transition);
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.vc-input:hover:not(:disabled),
+.vc-select:hover:not(:disabled),
+.vc-textarea:hover:not(:disabled) {
+    border-color: var(--vc-border-hover);
+}
+
+.vc-input:focus,
+.vc-select:focus,
+.vc-textarea:focus {
+    border-color: var(--vc-fg);
+    box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+
+.vc-input::placeholder { color: var(--vc-fg-disabled); }
+
+.vc-input:disabled,
+.vc-select:disabled,
+.vc-textarea:disabled {
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    cursor: not-allowed;
+}
+
+.vc-textarea {
+    height: auto;
+    min-height: 80px;
+    padding: var(--vc-space-2) var(--vc-space-3);
+    resize: vertical;
+    line-height: 1.5;
+}
+
+/* select chevron */
+.vc-select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+/* number input — hide spinner, mono digits */
+.vc-input[type="number"] {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+}
+
+/* date input — keep system but clean spacing */
+.vc-input[type="date"] {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+}
+
+
+/* ─────────────────────────────────────────────
+   17. RADIO GROUP (segmented)
+───────────────────────────────────────────── */
+.vc-radio-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--vc-space-2);
+}
+
+.vc-radio { position: relative; }
+
+.vc-radio input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.vc-radio-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: var(--vc-h-input-md);
+    padding: 0 var(--vc-space-3);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    cursor: pointer;
+    transition: all var(--vc-transition);
+    user-select: none;
+    background: var(--vc-bg);
+}
+
+.vc-radio-label:hover {
+    border-color: var(--vc-border-hover);
+    color: var(--vc-fg);
+}
+
+.vc-radio input:checked + .vc-radio-label {
+    border-color: var(--vc-fg);
+    color: var(--vc-fg);
+    font-weight: 500;
+    background: var(--vc-bg-subtle);
+}
+
+.vc-radio input:focus-visible + .vc-radio-label {
+    box-shadow: 0 0 0 3px rgba(0,0,0,.08);
+}
+
+
+/* ─────────────────────────────────────────────
+   18. FORM LAYOUT
+───────────────────────────────────────────── */
+.vc-form-group { margin-bottom: var(--vc-space-4); }
+.vc-form-group:last-child { margin-bottom: 0; }
+
+.vc-form-row {
+    display: grid;
+    gap: var(--vc-space-3);
+    margin-bottom: var(--vc-space-4);
+}
+.vc-form-row-2 { grid-template-columns: 1fr 1fr; }
+.vc-form-row-3 { grid-template-columns: repeat(3, 1fr); }
+
+@media (max-width: 575.98px) {
+    .vc-form-row-2,
+    .vc-form-row-3 { grid-template-columns: 1fr; }
+}
+
+.vc-form-hint {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.vc-form-error {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-red);
+    margin-top: 4px;
+}
+
+
+/* ─────────────────────────────────────────────
+   19. MODAL (Bootstrap override → Vercel skin)
+───────────────────────────────────────────── */
+.vc-modal .modal-content {
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-lg);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.10);
+    background: var(--vc-bg);
+}
+
+.vc-modal .modal-header {
+    border-bottom: 1px solid var(--vc-border);
+    padding: var(--vc-space-4) var(--vc-space-5);
+    align-items: center;
+}
+
+.vc-modal .modal-title {
+    font-size: var(--vc-text-md);
+    font-weight: 600;
+    color: var(--vc-fg);
+    letter-spacing: var(--vc-tracking-tight);
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+}
+
+.vc-modal .modal-title .vc-icon-sm { color: var(--vc-fg-muted); }
+
+.vc-modal .modal-body {
+    padding: var(--vc-space-5);
+}
+
+.vc-modal .modal-footer {
+    border-top: 1px solid var(--vc-border);
+    padding: var(--vc-space-3) var(--vc-space-5);
+    gap: var(--vc-space-2);
+    background: var(--vc-bg-subtle);
+}
+
+.vc-modal .btn-close {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    margin: 0;
+    border-radius: var(--vc-radius-sm);
+    opacity: 0.6;
+    transition: opacity var(--vc-transition), background var(--vc-transition);
+}
+
+.vc-modal .btn-close:hover {
+    opacity: 1;
+    background: var(--vc-bg-hover);
+}
+
+.vc-modal-summary {
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    padding: var(--vc-space-3);
+    font-size: var(--vc-text-sm);
+}
+
+.vc-modal-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.vc-modal-summary-row.vc-strong {
+    font-weight: 500;
+    border-top: 1px solid var(--vc-border);
+    padding-top: var(--vc-space-2);
+    margin-top: var(--vc-space-1);
+}
+
+.vc-modal-summary-row .vc-mono { color: var(--vc-fg); }
+
+
+/* ─────────────────────────────────────────────
+   20. HISTORY TABLE INSIDE MODAL
+───────────────────────────────────────────── */
+.vc-history {
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    overflow: hidden;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.vc-history table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--vc-text-xs);
+}
+
+.vc-history thead th {
+    position: sticky;
+    top: 0;
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    text-align: left;
+    padding: 8px var(--vc-space-3);
+    border-bottom: 1px solid var(--vc-border);
+    z-index: 1;
+}
+.vc-history thead th.text-end { text-align: right; }
+
+.vc-history tbody td {
+    padding: 0 var(--vc-space-3);
+    height: 36px;
+    border-bottom: 1px solid var(--vc-border);
+    vertical-align: middle;
+}
+.vc-history tbody tr:last-child td { border-bottom: none; }
+
+.vc-history tbody tr:hover { background: var(--vc-bg-subtle); }
+
+
+/* ─────────────────────────────────────────────
+   21. FILTER BAR
+───────────────────────────────────────────── */
+.vc-filter-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--vc-space-3);
+    flex-wrap: wrap;
+    padding: var(--vc-space-3) var(--vc-space-5);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    background: var(--vc-bg);
+    margin-bottom: var(--vc-space-4);
+}
+
+.vc-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.vc-filter-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    color: var(--vc-fg-muted);
+    line-height: 1;
+}
+
+.vc-filter-select {
+    height: var(--vc-h-input-sm);
+    padding: 0 28px 0 10px;
+    font-family: inherit;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    cursor: pointer;
+    transition: border-color var(--vc-transition);
+    min-width: 80px;
+}
+
+.vc-filter-select:hover  { border-color: var(--vc-border-hover); }
+.vc-filter-select:focus  { outline: none; border-color: var(--vc-fg); }
+
+.vc-filter-actions {
+    display: flex;
+    gap: var(--vc-space-2);
+    align-items: flex-end;
+    margin-left: auto;
+}
+
+@media (max-width: 767.98px) {
+    .vc-filter-bar { gap: var(--vc-space-3); }
+    .vc-filter-group {
+        flex: 1 1 calc(50% - var(--vc-space-3));
+        min-width: 100px;
+    }
+    .vc-filter-select { width: 100%; }
+    .vc-filter-actions { margin-left: 0; flex: 1 1 100%; }
+}
+
+
+/* ─────────────────────────────────────────────
+   22. PIVOT TABLE (รถ × เดือน)
+───────────────────────────────────────────── */
+.vc-pivot-wrap {
+    margin-bottom: var(--vc-space-4);
+    overflow: visible !important;
+}
+
+.vc-pivot-summary {
+    list-style: none;
+    cursor: pointer;
+    padding: var(--vc-space-3) var(--vc-space-5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vc-space-3);
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    transition: background var(--vc-transition);
+}
+
+.vc-pivot-summary::-webkit-details-marker { display: none; }
+.vc-pivot-summary::marker               { content: ''; }
+.vc-pivot-summary:hover                  { background: var(--vc-bg-subtle); }
+
+.vc-pivot-wrap[open] > .vc-pivot-summary {
+    background: var(--vc-bg-subtle);
+    border-bottom: 1px solid var(--vc-border);
+    color: var(--vc-fg);
+}
+
+.vc-pivot-wrap[open] > .vc-pivot-summary .vc-collapse-chevron {
+    transform: rotate(180deg);
+}
+
+.vc-pivot-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vc-pivot-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--vc-text-xs);
+    background: var(--vc-bg);
+}
+
+.vc-pivot-table thead th {
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    text-align: left;
+    padding: 8px var(--vc-space-3);
+    border-bottom: 1px solid var(--vc-border);
+    white-space: nowrap;
+}
+
+.vc-pivot-table thead th.text-end { text-align: right; }
+
+.vc-pivot-table tbody td {
+    padding: 0 var(--vc-space-3);
+    height: 40px;
+    border-bottom: 1px solid var(--vc-border);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.vc-pivot-table tbody tr:last-child td { border-bottom: none; }
+.vc-pivot-table tbody tr:hover td      { background: var(--vc-bg-subtle); }
+
+/* sticky first column */
+.vc-pivot-th-sticky,
+.vc-pivot-td-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--vc-bg);
+    border-right: 1px solid var(--vc-border);
+    padding-left: var(--vc-space-4) !important;
+}
+
+.vc-pivot-table thead .vc-pivot-th-sticky {
+    background: var(--vc-bg-subtle);
+    z-index: 3;
+}
+
+.vc-pivot-table tbody tr:hover .vc-pivot-td-sticky { background: var(--vc-bg-subtle); }
+
+.vc-pivot-td-sticky {
+    font-weight: 500;
+    color: var(--vc-fg);
+    min-width: 120px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* heatmap data cell */
+.vc-pivot-cell {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
+    background: rgba(79, 70, 229, calc(var(--cell-heat, 0) * 0.002));
+    transition: background var(--vc-transition);
+    min-width: 72px;
+    text-align: right;
+}
+
+.vc-pivot-cell-empty {
+    color: var(--vc-fg-subtle);
+    text-align: right;
+    min-width: 72px;
+}
+
+/* total column */
+.vc-pivot-total-col {
+    background: var(--vc-bg-subtle) !important;
+    border-left: 1px solid var(--vc-border);
+    font-weight: 500;
+    color: var(--vc-fg);
+    min-width: 80px;
+}
+
+/* footer row */
+.vc-pivot-table tfoot td {
+    padding: 0 var(--vc-space-3);
+    height: 40px;
+    background: var(--vc-bg-subtle);
+    border-top: 2px solid var(--vc-border);
+    font-weight: 600;
+    font-size: var(--vc-text-xs);
+    white-space: nowrap;
+    vertical-align: middle;
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+}
+
+.vc-pivot-table tfoot .vc-pivot-td-sticky {
+    background: var(--vc-bg-subtle);
+    font-weight: 600;
+    color: var(--vc-fg);
+    font-family: inherit;
+}
+
+/* drill-down link inside pivot cell — Phase 4.3 */
+.vc-pivot-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 3px;
+    padding: 0 2px;
+    transition: background var(--vc-transition), color var(--vc-transition);
+}
+.vc-pivot-link:hover {
+    color: var(--vc-accent, #4F46E5);
+    background: rgba(79, 70, 229, 0.08);
+    text-decoration: none;
+}
+.vc-pivot-link:focus-visible {
+    outline: 2px solid var(--vc-accent, #4F46E5);
+    outline-offset: 1px;
+}
+.vc-pivot-cell:has(.vc-pivot-link:hover) {
+    background: rgba(79, 70, 229, calc(var(--cell-heat, 0) * 0.003 + 0.05));
+}

@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UX Audit — BBCenter Vehicle Module</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* === 60-30-10 Color Proposal (Navy / Slate / Gold) === */
+  /* 60% — Primary / Dominant surface */
+  --col-60-base:       #1E2B4A;   /* Navy-900 — sidebar, header bg */
+  --col-60-mid:        #2E3D63;   /* Navy-700 — sidebar item hover */
+  --col-60-light:      #F0F3F9;   /* Navy-50  — page background    */
+  --col-60-border:     #D4DCEE;   /* Navy-100 — card borders       */
+  --col-60-text:       #FFFFFF;   /* White   — text on navy        */
+
+  /* 30% — Secondary / Content surface */
+  --col-30-base:       #FFFFFF;   /* White   — cards, panels       */
+  --col-30-mid:        #F7F9FC;   /* Gray-50 — subtle bg           */
+  --col-30-border:     #E2E8F0;   /* Gray-200 — borders            */
+  --col-30-text:       #1A202C;   /* Gray-900 — body text          */
+  --col-30-muted:      #64748B;   /* Slate-500 — secondary text    */
+
+  /* 10% — Accent / Action color */
+  --col-10-base:       #F59E0B;   /* Amber-500 — primary CTA      */
+  --col-10-hover:      #D97706;   /* Amber-600 — hover state      */
+  --col-10-light:      #FFFBEB;   /* Amber-50  — tinted bg        */
+  --col-10-border:     #FCD34D;   /* Amber-300 — tinted border    */
+  --col-10-text:       #78350F;   /* Amber-900 — text on light bg */
+
+  /* Semantic Status (unchanged — system colors, not brand) */
+  --status-pending:    #F59E0B;
+  --status-waiting:    #3B82F6;
+  --status-approved:   #10B981;
+  --status-rejected:   #EF4444;
+
+  --font: 'Inter', 'Sarabun', sans-serif;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  background: #F8FAFB;
+  color: #1A202C;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ─── Page shell ─── */
+.page { max-width: 1140px; margin: 0 auto; padding: 48px 24px 96px; }
+
+/* ─── Header ─── */
+.report-header {
+  background: var(--col-60-base);
+  color: white;
+  border-radius: 16px;
+  padding: 40px 48px;
+  margin-bottom: 48px;
+  position: relative;
+  overflow: hidden;
+}
+.report-header::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: rgba(245,158,11,.15);
+}
+.report-header .tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(245,158,11,.2);
+  color: var(--col-10-base);
+  font-size: .72rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 20px;
+  margin-bottom: 14px;
+}
+.report-header h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+.report-header p { color: rgba(255,255,255,.7); font-size: .92rem; max-width: 580px; }
+.report-meta {
+  display: flex; gap: 32px; margin-top: 28px; flex-wrap: wrap;
+}
+.report-meta-item { font-size: .82rem; color: rgba(255,255,255,.6); }
+.report-meta-item strong { color: #fff; display: block; font-size: .88rem; }
+
+/* ─── Section ─── */
+.section { margin-bottom: 48px; }
+.section-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.1rem; font-weight: 700;
+  color: var(--col-60-base);
+  margin-bottom: 6px;
+}
+.section-title .num {
+  width: 28px; height: 28px;
+  background: var(--col-10-base);
+  color: var(--col-10-text);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; font-weight: 800; flex-shrink: 0;
+}
+.section-intro {
+  color: #64748B; font-size: .88rem;
+  margin-bottom: 20px; margin-left: 38px;
+}
+
+/* ─── Issue cards ─── */
+.issue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width:720px) { .issue-grid { grid-template-columns: 1fr; } }
+
+.issue-card {
+  background: #fff;
+  border: 1px solid var(--col-30-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.issue-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px;
+}
+.issue-card.sev-high::before  { background: #EF4444; }
+.issue-card.sev-med::before   { background: #F59E0B; }
+.issue-card.sev-low::before   { background: #10B981; }
+.issue-card.sev-info::before  { background: #3B82F6; }
+
+.issue-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 8px;
+  margin-bottom: 8px;
+}
+.issue-title { font-weight: 700; font-size: .92rem; color: #111; }
+.sev-badge {
+  font-size: .65rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .06em;
+  padding: 2px 8px; border-radius: 10px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.sev-high  { background: #FEE2E2; color: #991B1B; }
+.sev-med   { background: #FEF3C7; color: #92400E; }
+.sev-low   { background: #D1FAE5; color: #065F46; }
+.sev-info  { background: #DBEAFE; color: #1E40AF; }
+
+.issue-body { font-size: .84rem; color: #374151; line-height: 1.55; }
+.issue-body .problem { margin-bottom: 6px; }
+.issue-body .fix {
+  background: #F0F9FF;
+  border-left: 3px solid #3B82F6;
+  padding: 6px 10px;
+  border-radius: 0 6px 6px 0;
+  font-size: .82rem; color: #1E40AF;
+  margin-top: 8px;
+}
+.issue-body .fix strong { display: block; margin-bottom: 2px; }
+
+/* ─── Flow diagram ─── */
+.flow-box {
+  background: #fff;
+  border: 1px solid var(--col-30-border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+}
+.flow-title {
+  font-size: .82rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: #64748B; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.flow-title .dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.flow-steps {
+  display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+}
+.flow-step {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; flex: 1; min-width: 80px;
+  position: relative;
+}
+.flow-step-icon {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; margin-bottom: 6px;
+  border: 2px solid transparent;
+}
+.flow-step-label { font-size: .72rem; font-weight: 600; color: #374151; line-height: 1.3; }
+.flow-step-sub { font-size: .65rem; color: #9CA3AF; margin-top: 2px; }
+
+.flow-arrow {
+  font-size: .8rem; color: #D1D5DB;
+  padding: 0 2px; flex-shrink: 0;
+  margin-top: -16px;
+}
+.flow-step.pain .flow-step-icon {
+  border-color: #EF4444;
+  background: #FEF2F2;
+}
+.flow-step.ok .flow-step-icon {
+  border-color: #D1D5DB;
+  background: #F9FAFB;
+}
+.flow-step.good .flow-step-icon {
+  border-color: #10B981;
+  background: #ECFDF5;
+}
+
+/* ─── Color system panel ─── */
+.color-section {
+  background: #fff;
+  border: 1px solid var(--col-30-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+}
+.color-section-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex; align-items: center; gap: 12px;
+}
+.color-pct {
+  font-size: 2rem; font-weight: 900;
+  line-height: 1;
+}
+.color-section-title { font-weight: 700; font-size: .92rem; }
+.color-section-sub { font-size: .8rem; color: #64748B; margin-top: 1px; }
+
+.color-swatches {
+  display: flex; padding: 20px 24px; gap: 10px; flex-wrap: wrap;
+}
+.swatch-group { display: flex; flex-direction: column; gap: 4px; min-width: 80px; }
+.swatch {
+  height: 44px; border-radius: 8px;
+  border: 1px solid rgba(0,0,0,.06);
+}
+.swatch-label { font-size: .68rem; font-weight: 600; color: #64748B; }
+.swatch-hex { font-size: .68rem; color: #9CA3AF; font-family: monospace; }
+
+.color-usage {
+  padding: 0 24px 20px;
+  font-size: .82rem; color: #374151;
+}
+.color-usage ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.color-usage ul li {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: .78rem; color: #475569;
+}
+
+/* ─── Before / After table ─── */
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .84rem;
+  background: #fff;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--col-30-border);
+}
+.compare-table th {
+  background: var(--col-60-base);
+  color: #fff;
+  padding: 12px 18px;
+  text-align: left;
+  font-weight: 600;
+  font-size: .8rem;
+  letter-spacing: .04em;
+}
+.compare-table td {
+  padding: 11px 18px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: top;
+}
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table tr:nth-child(even) td { background: #FAFBFD; }
+.tag-before {
+  display: inline-block;
+  background: #FEE2E2; color: #991B1B;
+  font-size: .68rem; font-weight: 700;
+  padding: 1px 7px; border-radius: 4px;
+  margin-right: 4px; text-transform: uppercase;
+}
+.tag-after {
+  display: inline-block;
+  background: #D1FAE5; color: #065F46;
+  font-size: .68rem; font-weight: 700;
+  padding: 1px 7px; border-radius: 4px;
+  margin-right: 4px; text-transform: uppercase;
+}
+
+/* ─── Priority matrix ─── */
+.matrix-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media(max-width:600px) { .matrix-grid { grid-template-columns: 1fr; } }
+.matrix-card {
+  background: #fff;
+  border: 1px solid var(--col-30-border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+.matrix-card h4 {
+  font-size: .88rem; font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid;
+  display: flex; align-items: center; gap: 8px;
+}
+.matrix-card h4 .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.matrix-card.p1 h4 { color: #991B1B; border-color: #EF4444; }
+.matrix-card.p2 h4 { color: #92400E; border-color: #F59E0B; }
+.matrix-card.p3 h4 { color: #065F46; border-color: #10B981; }
+.matrix-card.p4 h4 { color: #1E40AF; border-color: #3B82F6; }
+.matrix-card ul {
+  list-style: none;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.matrix-card ul li {
+  font-size: .82rem; color: #374151;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.matrix-card ul li::before {
+  content: '→'; flex-shrink: 0;
+  color: #9CA3AF; font-size: .8rem; margin-top: 1px;
+}
+
+/* ─── Callout ─── */
+.callout {
+  background: #FFFBEB;
+  border: 1px solid #FCD34D;
+  border-left: 4px solid #F59E0B;
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: .85rem; color: #78350F;
+  margin-bottom: 14px;
+}
+.callout strong { color: #92400E; }
+
+/* ─── Color preview mockup ─── */
+.mockup-shell {
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  height: 420px;
+}
+.mock-sidebar {
+  width: 210px;
+  background: var(--col-60-base);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+.mock-brand {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  display: flex; align-items: center; gap: 10px;
+}
+.mock-brand-icon {
+  width: 32px; height: 32px;
+  background: var(--col-10-base);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--col-10-text); font-size: .85rem; font-weight: 800;
+}
+.mock-brand-text { color: #fff; font-weight: 700; font-size: .9rem; }
+.mock-nav { padding: 16px 12px; flex: 1; }
+.mock-nav-label {
+  font-size: .6rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .1em;
+  color: rgba(255,255,255,.35);
+  padding: 4px 8px; margin-bottom: 6px;
+}
+.mock-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+  font-size: .78rem; color: rgba(255,255,255,.65);
+  margin-bottom: 2px; cursor: pointer;
+}
+.mock-nav-item.active {
+  background: var(--col-10-base);
+  color: var(--col-10-text);
+  font-weight: 700;
+}
+.mock-nav-item:not(.active):hover { background: rgba(255,255,255,.07); }
+.mock-nav-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,.3);
+}
+.mock-nav-dot.active { background: var(--col-10-text); }
+.mock-badge {
+  margin-left: auto;
+  background: var(--col-10-base);
+  color: var(--col-10-text);
+  font-size: .6rem; font-weight: 800;
+  padding: 1px 6px; border-radius: 20px;
+}
+.mock-badge.contrast {
+  background: rgba(255,255,255,.2); color: #fff;
+}
+
+.mock-main { flex: 1; display: flex; flex-direction: column; background: var(--col-60-light); }
+.mock-header {
+  height: 54px;
+  background: #fff;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 12px;
+  flex-shrink: 0;
+}
+.mock-header-title { font-weight: 700; font-size: .9rem; color: var(--col-60-base); flex: 1; }
+.mock-btn-accent {
+  background: var(--col-10-base);
+  color: var(--col-10-text);
+  font-size: .72rem; font-weight: 700;
+  padding: 6px 14px; border-radius: 8px;
+  border: none; cursor: pointer;
+}
+.mock-btn-ghost {
+  background: transparent;
+  color: #64748B;
+  font-size: .72rem; font-weight: 600;
+  padding: 6px 10px; border-radius: 8px;
+  border: 1px solid #E2E8F0; cursor: pointer;
+}
+.mock-content { padding: 16px; flex: 1; overflow: hidden; }
+.mock-card {
+  background: #fff; border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  padding: 14px 16px; margin-bottom: 10px;
+}
+.mock-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.mock-card-title { font-size: .78rem; font-weight: 700; color: #1A202C; }
+.mock-status {
+  font-size: .65rem; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px;
+}
+.mock-status.pending  { background: #FEF3C7; color: #92400E; }
+.mock-status.approved { background: #D1FAE5; color: #065F46; }
+.mock-status.waiting  { background: #DBEAFE; color: #1E40AF; }
+.mock-card-body { font-size: .72rem; color: #64748B; line-height: 1.6; }
+.mock-divider { height: 1px; background: #F1F5F9; margin: 8px 0; }
+
+/* ─── Nav pill tabs ─── */
+.tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+.tab {
+  padding: 6px 18px; border-radius: 20px;
+  font-size: .82rem; font-weight: 600;
+  border: 1px solid #E2E8F0;
+  background: #fff; color: #64748B;
+  cursor: pointer;
+}
+.tab.active {
+  background: var(--col-60-base);
+  color: #fff; border-color: var(--col-60-base);
+}
+
+/* ─── Footer ─── */
+.report-footer {
+  margin-top: 64px;
+  padding: 24px 0;
+  border-top: 1px solid #E2E8F0;
+  text-align: center;
+  font-size: .78rem;
+  color: #9CA3AF;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ REPORT HEADER ══ -->
+  <div class="report-header">
+    <div class="tag">🔍 UX Design Audit</div>
+    <h1>BBCenter — Vehicle Module</h1>
+    <p>การวิเคราะห์เชิงลึกจากมุมมอง Senior UX Lead ครอบคลุมทั้ง User Flow, Layout Density และ Color System ตามมาตรฐาน Apple HIG + Google Material Design 3</p>
+    <div class="report-meta">
+      <div class="report-meta-item"><strong>Module</strong>Vehicle / AdminFleet / AdminCost / Driver</div>
+      <div class="report-meta-item"><strong>Stack</strong>Flask · Bootstrap 5 · Jinja2</div>
+      <div class="report-meta-item"><strong>วันที่</strong>3 เมษายน 2569</div>
+      <div class="report-meta-item"><strong>Reviewer</strong>Senior UX Lead (Apple & Google)</div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 1: USER FLOW AUDIT ══ -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">1</span>
+      User Flow & Navigation Complexity
+    </div>
+    <p class="section-intro">วิเคราะห์จำนวน step และ cognitive load ของแต่ละ role — ใช้ยากไปไหม?</p>
+
+    <!-- Flow: Regular User -->
+    <div class="flow-box" style="margin-bottom:14px;">
+      <div class="flow-title">
+        <span class="dot" style="background:#3B82F6;"></span>
+        Regular User — จองรถ (Current Flow)
+      </div>
+      <div class="flow-steps">
+        <div class="flow-step good">
+          <div class="flow-step-icon">📅</div>
+          <div class="flow-step-label">เปิดปฏิทิน</div>
+          <div class="flow-step-sub">1 click</div>
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step good">
+          <div class="flow-step-icon">🖱️</div>
+          <div class="flow-step-label">คลิกวัน</div>
+          <div class="flow-step-sub">modal เปิด</div>
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step pain">
+          <div class="flow-step-icon">📝</div>
+          <div class="flow-step-label">กรอกฟอร์ม</div>
+          <div class="flow-step-sub">8 fields ⚠️</div>
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step ok">
+          <div class="flow-step-icon">✅</div>
+          <div class="flow-step-label">Submit</div>
+          <div class="flow-step-sub">pending</div>
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step pain">
+          <div class="flow-step-icon">⏳</div>
+          <div class="flow-step-label">รอ Approve</div>
+          <div class="flow-step-sub">ไม่มี ETA ⚠️</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flow: Admin Approve -->
+    <div class="flow-box" style="margin-bottom:14px;">
+      <div class="flow-title">
+        <span class="dot" style="background:#8B5CF6;"></span>
+        Admin — อนุมัติการจอง (Current Flow)
+      </div>
+      <div class="flow-steps">
+        <div class="flow-step good">
+          <div class="flow-step-icon">🔔</div>
+          <div class="flow-step-label">เห็น Badge</div>
+          <div class="flow-step-sub">sidebar</div>
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step good">
+          <div class="flow-step-icon">📋</div>
+          <div class="flow-step-label">Admin Panel</div>
+          <div class="flow-step-sub">1 click</div>
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step ok">
+          <div class="flow-step-icon">🖱️</div>
+          <div class="flow-step-label">Drag to merge</div>
+          <div class="flow-step-sub">hidden pattern ⚠️</div>
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step good">
+          <div class="flow-step-icon">✅</div>
+          <div class="flow-step-label">Approve</div>
+          <div class="flow-step-sub">modal</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issues -->
+    <div class="issue-grid">
+
+      <div class="issue-card sev-high">
+        <div class="issue-header">
+          <div class="issue-title">📝 ฟอร์มจองมี 8 fields — Cognitive Overload</div>
+          <span class="sev-badge sev-high">Critical</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">ผู้ใช้เห็น field ทั้งหมดพร้อมกัน: วันที่, เวลา, ปลายทาง, วัตถุประสงค์, จำนวนผู้โดยสาร, คนขับ, join_allowed, expense_type — มากเกินไปสำหรับ primary task</div>
+          <div class="fix"><strong>💡 Fix: Progressive Disclosure</strong>แบ่งเป็น 2 step — Step 1: วันเวลา + ปลายทาง. Step 2: รายละเอียดเพิ่มเติม. ลด mental model load ลง ~40%</div>
+        </div>
+      </div>
+
+      <div class="issue-card sev-high">
+        <div class="issue-title" style="margin-bottom:8px;">⏳ ไม่มี Feedback หลัง Submit</div>
+        <span class="sev-badge sev-high" style="margin-bottom:8px; display:inline-block;">Critical</span>
+        <div class="issue-body">
+          <div class="problem">หลัง submit การจอง ผู้ใช้กลับไปเห็นปฏิทิน แต่ไม่รู้ว่าอนุมัติเมื่อไหร่ ไม่มี estimated time, ไม่มี "การจองรอ N รายการ" summary — Zero State ที่ไม่สมบูรณ์</div>
+          <div class="fix"><strong>💡 Fix: Confirmation State</strong>แสดง inline card "รอการอนุมัติ" พร้อม status tracker mini ใน calendar cell ทันที</div>
+        </div>
+      </div>
+
+      <div class="issue-card sev-med">
+        <div class="issue-header">
+          <div class="issue-title">🖱️ Drag-to-Merge มี Zero Discoverability</div>
+          <span class="sev-badge sev-med">High</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">Feature รวม trip ด้วย drag-and-drop เป็น power feature แต่ผู้ใช้ใหม่ไม่รู้ว่ามี — ไม่มี affordance, tooltip, หรือ empty state guide ใดๆ</div>
+          <div class="fix"><strong>💡 Fix: Onboarding Tooltip</strong>ครั้งแรกที่ admin เข้าหน้านี้ แสดง tooltip "ลาก card เพื่อรวม trip" พร้อม dismiss</div>
+        </div>
+      </div>
+
+      <div class="issue-card sev-med">
+        <div class="issue-header">
+          <div class="issue-title">📱 Mobile: ปฏิทินยุบเป็น List แต่ UX ไม่ต่อเนื่อง</div>
+          <span class="sev-badge sev-med">High</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">บน mobile มี <code>mobile-list-header</code> แยกต่างหาก แต่ปุ่ม "ไม่มีรายการ" ถูกใช้เป็น booking trigger — ทำให้ mental model สับสน ระหว่าง list และ action</div>
+          <div class="fix"><strong>💡 Fix: Bottom Sheet + FAB</strong>ใช้ Floating Action Button (FAB) สำหรับ "+ จองรถ" แยกออกจาก list header ให้ชัดเจน</div>
+        </div>
+      </div>
+
+      <div class="issue-card sev-low">
+        <div class="issue-header">
+          <div class="issue-title">🔁 Page Transition ไม่ฟุ่มเฟือย — ✅ ดีแล้ว</div>
+          <span class="sev-badge sev-low">Good</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">การใช้ Modal-first design ช่วยลด page reload ได้ดีมาก ผู้ใช้จองได้โดยไม่ต้องออกจากปฏิทิน — สอดคล้องกับ Apple HIG principle "Minimize navigation depth"</div>
+          <div class="fix"><strong>✅ Keep:</strong> ตรงนี้ถูกทางแล้ว ไม่ต้องเปลี่ยน ระวังอย่า refactor ให้กลายเป็น multi-page</div>
+        </div>
+      </div>
+
+      <div class="issue-card sev-low">
+        <div class="issue-header">
+          <div class="issue-title">🧭 Sidebar Structure ชัดเจนดี — ปรับเล็กน้อย</div>
+          <span class="sev-badge sev-low">Minor</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">Section labels "MENU" / "SERVICES" / "ADMIN" ชัดเจน แต่ "SERVICES" รวม Dashboard + Repair + Room ซึ่ง Mental Model ไม่ตรง — Dashboard ไม่ใช่ "service"</div>
+          <div class="fix"><strong>💡 Fix:</strong> เปลี่ยน "SERVICES" → "OTHER" หรือแยก Dashboard ขึ้นไปเป็น section แรกก่อน MENU</div>
+        </div>
+      </div>
+
+      <div class="issue-card sev-info">
+        <div class="issue-header">
+          <div class="issue-title">🚗 Driver Flow กระชับและตรงประเด็น — ✅</div>
+          <span class="sev-badge sev-info">Info</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">driver_home.html เน้น task ของวันนี้เป็นหลัก ไม่มี information overload — เหมาะกับ driver mental model ที่ต้องการ "วันนี้ทำอะไร" ทันที</div>
+          <div class="fix"><strong>✅ Keep:</strong> Flow นี้ถูกต้องตาม Google Material "Task-oriented design" — ไม่ต้องปรับ</div>
+        </div>
+      </div>
+
+      <div class="issue-card sev-med">
+        <div class="issue-header">
+          <div class="issue-title">⚡ Notification Poll 60 วินาที — Perceived Slowness</div>
+          <span class="sev-badge sev-med">High</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">Notification bell poll ทุก 60 วินาที ผู้ใช้อาจรออนุมัติ แล้วเห็น bell update ช้า ทำให้รู้สึกว่าระบบช้า — เป็นปัญหา Perceived Performance</div>
+          <div class="fix"><strong>💡 Fix:</strong> ลด poll เป็น 20–30 วินาที หรือ refresh bell ทันทีเมื่อ user กลับมา focus window (Page Visibility API)</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ SECTION 2: LAYOUT AUDIT ══ -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">2</span>
+      Layout Density — ควรลดอะไรบ้าง?
+    </div>
+    <p class="section-intro">วิเคราะห์ visual weight และ information hierarchy — ระบุส่วนที่ซ้ำซ้อนหรือหนาเกินไป</p>
+
+    <table class="compare-table" style="margin-bottom:16px;">
+      <thead>
+        <tr>
+          <th style="width:22%">Component</th>
+          <th style="width:38%">ปัญหาที่พบ (Before)</th>
+          <th style="width:38%">แนวทางปรับปรุง (After)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Calendar Header</strong><br><small style="color:#9CA3AF;">Toolbar + Month nav</small></td>
+          <td><span class="tag-before">Issue</span> Month nav อยู่ทั้งใน header bar และ toolbar ซ้ำกัน 2 จุด — เปลือง vertical space 65+50px</td>
+          <td><span class="tag-after">Fix</span> รวมเป็น 1 row เดียว: ← ชื่อเดือน → + ปุ่ม "วันนี้" + ปุ่ม "+ จอง" ทั้งหมดใน header bar เดียว</td>
+        </tr>
+        <tr>
+          <td><strong>Calendar Cell</strong><br><small style="color:#9CA3AF;">min-height: 110px</small></td>
+          <td><span class="tag-before">Issue</span> Cell สูง 110px ทำให้ calendar ต้อง scroll บน laptop 1080p — information density ต่ำเกินไป</td>
+          <td><span class="tag-after">Fix</span> ลดเป็น 80–90px แสดง event แค่ 2 รายการ + "+N more" link — compact แต่ยัง scannable</td>
+        </tr>
+        <tr>
+          <td><strong>Booking Modal</strong><br><small style="color:#9CA3AF;">8 fields พร้อมกัน</small></td>
+          <td><span class="tag-before">Issue</span> แสดง field ทั้งหมดในครั้งเดียว รวมถึง expense type ซึ่งเป็น advanced option ที่ไม่ใช่ทุกคนใช้</td>
+          <td><span class="tag-after">Fix</span> แยก 2 ส่วน: Essential (4 fields) + ▸ "ตัวเลือกเพิ่มเติม" collapsible สำหรับ advanced options</td>
+        </tr>
+        <tr>
+          <td><strong>Admin Card</strong><br><small style="color:#9CA3AF;">booking-card</small></td>
+          <td><span class="tag-before">Issue</span> Card แต่ละใบมี padding 14px + border-radius 12px + shadow ซ้อนกัน ทำให้หน้า admin ดู heavy</td>
+          <td><span class="tag-after">Fix</span> ใช้ table-row สำหรับ list view ปกติ เปลี่ยนเป็น card เฉพาะ mobile หรือ card view mode</td>
+        </tr>
+        <tr>
+          <td><strong>Commented Code</strong><br><small style="color:#9CA3AF;">vehicle.html L81–104</small></td>
+          <td><span class="tag-before">Issue</span> มี block code ที่ comment ออกแต่ยังอยู่ในไฟล์ (budget display, progress bar) เป็น "dead weight" ใน HTML</td>
+          <td><span class="tag-after">Fix</span> ลบออกหากไม่ใช้ หรือ move ไปไว้ใน feature branch — ไม่ควรอยู่ใน production template</td>
+        </tr>
+        <tr>
+          <td><strong>Sidebar Footer</strong><br><small style="color:#9CA3AF;">Logout button</small></td>
+          <td><span class="tag-before">Issue</span> Logout อยู่ด้านล่าง Sidebar เพียวๆ ไม่มี user avatar / ชื่อ ทำให้ไม่รู้ว่า login เป็นใคร</td>
+          <td><span class="tag-after">Fix</span> เพิ่ม user avatar + ชื่อ + role ใน sidebar footer เหมือน Notion/Linear ก่อน logout link</td>
+        </tr>
+        <tr>
+          <td><strong>Font Icon Sets</strong><br><small style="color:#9CA3AF;">FontAwesome + Bootstrap Icons</small></td>
+          <td><span class="tag-before">Issue</span> โหลดทั้ง FontAwesome และ Bootstrap Icons ในทุกหน้า — render blocking 2 icon libraries เพิ่ม load time</td>
+          <td><span class="tag-after">Fix</span> เลือก 1 library (แนะนำ Bootstrap Icons — เบากว่า) และ standardize ทั้งโปรเจกต์</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>💡 Key Insight — Visual Hierarchy:</strong> ปัญหาหลักของ layout คือ <strong>ทุก element มี visual weight เท่ากัน</strong> — card, button, badge, border ต่างใช้สีเข้มและ shadow ใกล้เคียงกัน ผลคือ eye ไม่รู้จะ focus ที่ไหน แก้ด้วยการ establish clear hierarchy: Primary action 1 จุด, Secondary muted, Tertiary text-only
+    </div>
+  </div>
+
+  <!-- ══ SECTION 3: COLOR SYSTEM ══ -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">3</span>
+      Color System — กฎ 60-30-10
+    </div>
+    <p class="section-intro">ข้อเสนอ color palette ใหม่ที่เป็นทางการ professional และ accessible — Navy / White / Amber</p>
+
+    <!-- 60% -->
+    <div class="color-section">
+      <div class="color-section-header">
+        <div class="color-pct" style="color: #1E2B4A;">60%</div>
+        <div>
+          <div class="color-section-title">Primary / Dominant — Navy</div>
+          <div class="color-section-sub">สี "เงียบ" ที่ครองพื้นที่ใหญ่ที่สุด — sidebar, header bg, page structure</div>
+        </div>
+      </div>
+      <div class="color-swatches">
+        <div class="swatch-group">
+          <div class="swatch" style="background:#1E2B4A;"></div>
+          <div class="swatch-label">Navy-900</div>
+          <div class="swatch-hex">#1E2B4A</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#2E3D63;"></div>
+          <div class="swatch-label">Navy-700</div>
+          <div class="swatch-hex">#2E3D63</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#3D5280;"></div>
+          <div class="swatch-label">Navy-500</div>
+          <div class="swatch-hex">#3D5280</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#D4DCEE; border:1px solid #ccc;"></div>
+          <div class="swatch-label">Navy-200</div>
+          <div class="swatch-hex">#D4DCEE</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#F0F3F9; border:1px solid #ccc;"></div>
+          <div class="swatch-label">Navy-50</div>
+          <div class="swatch-hex">#F0F3F9</div>
+        </div>
+      </div>
+      <div class="color-usage">
+        <strong>ใช้ที่:</strong>
+        <ul>
+          <li>Sidebar background</li>
+          <li>Page background (Navy-50)</li>
+          <li>Card borders (Navy-200)</li>
+          <li>Text heading (Navy-900)</li>
+          <li>Footer bar</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 30% -->
+    <div class="color-section">
+      <div class="color-section-header">
+        <div class="color-pct" style="color:#64748B;">30%</div>
+        <div>
+          <div class="color-section-title">Secondary / Content Surface — Neutral White/Slate</div>
+          <div class="color-section-sub">พื้นที่ content หลัก — cards, panels, forms, table rows</div>
+        </div>
+      </div>
+      <div class="color-swatches">
+        <div class="swatch-group">
+          <div class="swatch" style="background:#FFFFFF; border:1px solid #ccc;"></div>
+          <div class="swatch-label">White</div>
+          <div class="swatch-hex">#FFFFFF</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#F7F9FC; border:1px solid #ccc;"></div>
+          <div class="swatch-label">Slate-50</div>
+          <div class="swatch-hex">#F7F9FC</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#E2E8F0; border:1px solid #ccc;"></div>
+          <div class="swatch-label">Slate-200</div>
+          <div class="swatch-hex">#E2E8F0</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#64748B;"></div>
+          <div class="swatch-label">Slate-500</div>
+          <div class="swatch-hex">#64748B</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#1A202C;"></div>
+          <div class="swatch-label">Gray-900</div>
+          <div class="swatch-hex">#1A202C</div>
+        </div>
+      </div>
+      <div class="color-usage">
+        <strong>ใช้ที่:</strong>
+        <ul>
+          <li>Card backgrounds</li>
+          <li>Table rows</li>
+          <li>Form inputs</li>
+          <li>Secondary text</li>
+          <li>Dividers & borders</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 10% -->
+    <div class="color-section">
+      <div class="color-section-header">
+        <div class="color-pct" style="color:#F59E0B;">10%</div>
+        <div>
+          <div class="color-section-title">Accent / Action — Amber Gold</div>
+          <div class="color-section-sub">สีที่ดึงสายตา — primary CTA, active nav item, key highlights เท่านั้น</div>
+        </div>
+      </div>
+      <div class="color-swatches">
+        <div class="swatch-group">
+          <div class="swatch" style="background:#F59E0B;"></div>
+          <div class="swatch-label">Amber-500</div>
+          <div class="swatch-hex">#F59E0B</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#D97706;"></div>
+          <div class="swatch-label">Amber-600</div>
+          <div class="swatch-hex">#D97706</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#B45309;"></div>
+          <div class="swatch-label">Amber-700</div>
+          <div class="swatch-hex">#B45309</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#FEF3C7; border:1px solid #ccc;"></div>
+          <div class="swatch-label">Amber-100</div>
+          <div class="swatch-hex">#FEF3C7</div>
+        </div>
+        <div class="swatch-group">
+          <div class="swatch" style="background:#FFFBEB; border:1px solid #ccc;"></div>
+          <div class="swatch-label">Amber-50</div>
+          <div class="swatch-hex">#FFFBEB</div>
+        </div>
+      </div>
+      <div class="color-usage">
+        <strong>ใช้ที่:</strong>
+        <ul>
+          <li>Primary CTA button ("จองรถ", "อนุมัติ")</li>
+          <li>Active sidebar item</li>
+          <li>Notification badge count</li>
+          <li>Today indicator ในปฏิทิน</li>
+          <li>Key highlights เท่านั้น — ห้ามใช้ทั่วไป</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Status Colors note -->
+    <div class="callout" style="background:#F0F9FF; border-color:#93C5FD; border-left-color:#3B82F6; color:#1E40AF;">
+      <strong>📌 Status Colors — ไม่เปลี่ยน:</strong> สีสถานะ (pending/waiting/approved/rejected) เป็น semantic system colors ไม่ใช่ brand colors จึงยังคง Amber / Blue / Green / Red เหมือนเดิม — ห้ามเปลี่ยนเพราะผู้ใช้ has existing mental model แล้ว
+    </div>
+
+    <!-- Color mockup preview -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:.8rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">ตัวอย่าง UI ด้วย Color ใหม่ (Navy + White + Amber)</div>
+      <div class="mockup-shell">
+        <!-- Sidebar -->
+        <div class="mock-sidebar">
+          <div class="mock-brand">
+            <div class="mock-brand-icon">BB</div>
+            <div class="mock-brand-text">BBCenter</div>
+          </div>
+          <div class="mock-nav">
+            <div class="mock-nav-label">MENU</div>
+            <div class="mock-nav-item active">
+              <span>📅</span> ปฏิทินจองรถ
+              <span style="margin-left:auto;font-size:.6rem;background:rgba(255,255,255,.2);color:#fff;padding:1px 6px;border-radius:10px;">3</span>
+            </div>
+            <div class="mock-nav-item">
+              <span>🕐</span> ประวัติการจอง
+            </div>
+            <div class="mock-nav-label" style="margin-top:12px;">SERVICES</div>
+            <div class="mock-nav-item">
+              <span>🏠</span> Dashboard
+            </div>
+            <div class="mock-nav-item">
+              <span>🖥️</span> แจ้งซ่อม IT
+            </div>
+            <div class="mock-nav-label" style="margin-top:12px;">ADMIN</div>
+            <div class="mock-nav-item">
+              <span>✅</span> อนุมัติการจอง
+              <span class="mock-badge contrast">5</span>
+            </div>
+            <div class="mock-nav-item">
+              <span>📊</span> สรุปค่าใช้จ่าย
+            </div>
+          </div>
+        </div>
+        <!-- Main -->
+        <div class="mock-main">
+          <div class="mock-header">
+            <div class="mock-header-title">ปฏิทินการจองรถ</div>
+            <button class="mock-btn-ghost">← เมษายน 2569 →</button>
+            <button class="mock-btn-accent">+ จองรถ</button>
+          </div>
+          <div class="mock-content">
+            <div class="mock-card">
+              <div class="mock-card-header">
+                <div class="mock-card-title">🚗 ทริป: ประชุมกรุงเทพ — นายสมชาย</div>
+                <span class="mock-status approved">อนุมัติแล้ว</span>
+              </div>
+              <div class="mock-card-body">วันที่ 5 เม.ย. 09:00–17:00 · Toyota Camry · คนขับ: นายวิชัย</div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-card-header">
+                <div class="mock-card-title">🚌 ทริป: รับส่งคณะ — นางสาวรัตนา</div>
+                <span class="mock-status pending">รออนุมัติ</span>
+              </div>
+              <div class="mock-card-body">วันที่ 7 เม.ย. 08:00–12:00 · Ford Everest · รอกำหนดคนขับ</div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-card-header">
+                <div class="mock-card-title">🚗 ทริป: ส่งเอกสาร — นายประสิทธิ์</div>
+                <span class="mock-status waiting">รอ Approver</span>
+              </div>
+              <div class="mock-card-body">วันที่ 8 เม.ย. 13:00–15:00 · Honda CRV</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Problem with current color -->
+    <div class="issue-grid">
+      <div class="issue-card sev-high">
+        <div class="issue-header">
+          <div class="issue-title">🎨 Indigo + Purple ขัดกันใน same page</div>
+          <span class="sev-badge sev-high">Critical</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">ปัจจุบันใช้ Indigo (#4F46E5) และ Purple (#8B5CF6) พร้อมกัน ซึ่งเป็นสี analogous ที่ใกล้เคียงกันมาก ทำให้ยากที่จะแยกว่า Indigo = Primary หรือ Purple = Primary</div>
+          <div class="fix"><strong>💡 Fix (Navy+Amber):</strong> Navy (cool dark) + Amber (warm light) เป็น complementary contrast ที่แยกกันชัดเจน — sidebar navy, CTA amber = instant visual anchor</div>
+        </div>
+      </div>
+      <div class="issue-card sev-med">
+        <div class="issue-header">
+          <div class="issue-title">🌊 Page bg #F0F2F8 (Lavender) รบกวน Indigo</div>
+          <span class="sev-badge sev-med">High</span>
+        </div>
+        <div class="issue-body">
+          <div class="problem">Background มี purple tint (#F0F2F8) ทำให้สีรวมทั้งหน้าดู "ม่วงหมด" — เมื่อรวมกับ sidebar indigo, hover purple, badge purple ทำให้ accents หายไปในสี</div>
+          <div class="fix"><strong>💡 Fix:</strong> เปลี่ยน page bg เป็น neutral #F0F3F9 (Navy-50 ที่ cool แต่ไม่ม่วง) — card จะ pop ขึ้นมาบน bg ได้ชัดขึ้น</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 4: PRIORITY MATRIX ══ -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">4</span>
+      Priority Matrix — ทำอะไรก่อน?
+    </div>
+    <p class="section-intro">จัดลำดับตาม Impact × Effort — เริ่มจาก Quick Wins ก่อน</p>
+
+    <div class="matrix-grid">
+      <div class="matrix-card p1">
+        <h4><span class="dot" style="background:#EF4444;"></span>P1 — ทำเดี๋ยวนี้ (High Impact / Low Effort)</h4>
+        <ul>
+          <li>เปลี่ยน page bg จาก #F0F2F8 → #F0F3F9 (neutral)</li>
+          <li>รวม month nav header ซ้ำ 2 จุดให้เหลือ 1 แถว</li>
+          <li>เพิ่ม user avatar + ชื่อใน sidebar footer</li>
+          <li>ลด notification poll จาก 60s → 20s</li>
+          <li>ลบ commented-out code block ใน vehicle.html</li>
+        </ul>
+      </div>
+      <div class="matrix-card p2">
+        <h4><span class="dot" style="background:#F59E0B;"></span>P2 — Sprint นี้ (High Impact / Medium Effort)</h4>
+        <ul>
+          <li>ปรับ color system เป็น Navy/White/Amber tokens</li>
+          <li>Modal form: แยก Essential / Advanced sections</li>
+          <li>ลด calendar cell height จาก 110px → 85px</li>
+          <li>เพิ่ม onboarding tooltip สำหรับ drag-to-merge</li>
+          <li>เปลี่ยน icon library ให้ใช้แค่ 1 set</li>
+        </ul>
+      </div>
+      <div class="matrix-card p3">
+        <h4><span class="dot" style="background:#10B981;"></span>P3 — Sprint ถัดไป (Medium Impact / Medium Effort)</h4>
+        <ul>
+          <li>Mobile: เพิ่ม FAB button แทน mobile-list trigger</li>
+          <li>Confirmation state หลัง submit booking</li>
+          <li>Admin: ใช้ table row แทน card สำหรับ list view desktop</li>
+          <li>เปลี่ยน "SERVICES" label ใน sidebar</li>
+        </ul>
+      </div>
+      <div class="matrix-card p4">
+        <h4><span class="dot" style="background:#3B82F6;"></span>P4 — Backlog (Low Impact / High Effort)</h4>
+        <ul>
+          <li>Progressive Disclosure booking modal (2-step wizard)</li>
+          <li>Page Visibility API for notifications</li>
+          <li>Full design token migration ทุกไฟล์</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FOOTER ══ -->
+  <div class="report-footer">
+    BBCenter UX Audit — Vehicle Module · Senior UX Lead Review · April 2026<br>
+    Based on Apple Human Interface Guidelines + Google Material Design 3 + WCAG 2.1
+  </div>
+
+</div>
+</body>
+</html>

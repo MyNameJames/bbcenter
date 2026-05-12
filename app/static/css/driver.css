@@ -1,0 +1,600 @@
+/* ============================================================
+   Driver Home — /driver
+   Standard: follows fuel_admin.css (Vercel namespace --vc-*)
+   Scope: .vc-scope on <main>; classes do not leak globally
+   Depends on: design-system.css (Section 8 vc-* tokens)
+   ============================================================ */
+
+
+/* ─────────────────────────────────────────────
+   1. PAGE SHELL
+───────────────────────────────────────────── */
+.driver-page {
+    background: var(--vc-bg);
+    min-height: 100vh;
+    padding: var(--vc-space-6) 0 var(--vc-space-12);
+    color: var(--vc-fg);
+    font-size: var(--vc-text-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+.driver-container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 var(--vc-space-4);
+}
+
+
+/* ─────────────────────────────────────────────
+   2. PAGE HEADER (matches .fuel-header)
+───────────────────────────────────────────── */
+.driver-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+    flex-wrap: wrap;
+    padding-bottom: var(--vc-space-5);
+    margin-bottom: var(--vc-space-6);
+    border-bottom: 1px solid var(--vc-border);
+}
+
+.driver-title {
+    font-size: var(--vc-text-xl);
+    font-weight: 600;
+    letter-spacing: var(--vc-tracking-tight);
+    color: var(--vc-fg);
+    line-height: 1.2;
+    margin: 0;
+}
+
+.driver-subtitle {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    margin: 6px 0 0 0;
+    line-height: 1.4;
+}
+
+.driver-header-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg);
+}
+
+.driver-header-meta .vc-icon-sm {
+    color: var(--vc-fg-subtle);
+}
+
+
+/* ─────────────────────────────────────────────
+   3. TABS (Vercel segmented)
+───────────────────────────────────────────── */
+.driver-tabs {
+    display: inline-flex;
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    padding: 4px;
+    margin-bottom: var(--vc-space-5);
+}
+
+.driver-tabs__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    background: transparent;
+    padding: 6px 14px;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    border-radius: var(--vc-radius-xs);
+    cursor: pointer;
+    line-height: 1;
+    transition: background var(--vc-transition), color var(--vc-transition);
+}
+
+.driver-tabs__btn:hover {
+    color: var(--vc-fg);
+}
+
+.driver-tabs__btn.is-active {
+    background: var(--vc-primary);
+    color: var(--vc-on-primary);
+}
+
+.driver-tabs__count {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
+    background: var(--vc-bg-hover);
+    color: var(--vc-fg-muted);
+    padding: 1px 6px;
+    border-radius: var(--vc-radius-full);
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid var(--vc-border);
+}
+
+.driver-tabs__btn.is-active .driver-tabs__count {
+    background: rgba(255, 255, 255, .15);
+    color: var(--vc-on-primary);
+    border-color: transparent;
+}
+
+
+/* ─────────────────────────────────────────────
+   4. CARD (collapsed/expanded — based on .vc-card)
+───────────────────────────────────────────── */
+.driver-card {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    margin-bottom: var(--vc-space-3);
+    overflow: hidden;
+    transition: border-color var(--vc-transition);
+}
+
+.driver-card:hover {
+    border-color: #D4D4D4;
+}
+
+.driver-card.is-open {
+    border-color: var(--vc-border-hover);
+}
+
+/* Header (always visible) */
+.driver-card__head {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    padding: 14px var(--vc-space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    cursor: pointer;
+    transition: background var(--vc-transition);
+}
+
+.driver-card__head:hover {
+    background: var(--vc-bg-hover);
+}
+
+.driver-card__id {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    font-weight: 500;
+    color: var(--vc-fg);
+    font-size: var(--vc-text-sm);
+    letter-spacing: var(--vc-tracking-tight);
+    flex-shrink: 0;
+}
+
+.driver-card__summary {
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-sm);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.driver-card__summary .dot {
+    margin: 0 8px;
+    color: var(--vc-fg-disabled);
+}
+
+.driver-card__chevron {
+    color: var(--vc-fg-subtle);
+    transition: transform var(--vc-transition);
+    flex-shrink: 0;
+}
+
+.driver-card.is-open .driver-card__chevron {
+    transform: rotate(180deg);
+}
+
+/* Body (expanded) */
+.driver-card__body {
+    border-top: 1px solid var(--vc-border);
+    padding: var(--vc-space-4);
+    display: none;
+}
+
+.driver-card.is-open .driver-card__body {
+    display: block;
+}
+
+
+/* ─────────────────────────────────────────────
+   5. META GRID (booking detail)
+───────────────────────────────────────────── */
+.driver-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px var(--vc-space-4);
+}
+
+.driver-meta__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.driver-meta__icon {
+    color: var(--vc-fg-subtle);
+    width: 18px;
+    text-align: center;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.driver-meta__label {
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    margin-bottom: 4px;
+    line-height: 1;
+}
+
+.driver-meta__value {
+    font-size: var(--vc-text-base);
+    font-weight: 500;
+    color: var(--vc-fg);
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+
+/* ─────────────────────────────────────────────
+   6. SUMMARY BLOCK (read-only after start)
+───────────────────────────────────────────── */
+.driver-summary {
+    background: var(--vc-bg-hover);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    padding: 12px var(--vc-space-4);
+    margin-top: var(--vc-space-4);
+}
+
+.driver-summary__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--vc-text-sm);
+}
+
+.driver-summary__row + .driver-summary__row {
+    margin-top: 8px;
+}
+
+.driver-summary__label {
+    color: var(--vc-fg-muted);
+}
+
+.driver-summary__value {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--vc-fg);
+    font-weight: 500;
+    letter-spacing: var(--vc-tracking-tight);
+}
+
+
+/* ─────────────────────────────────────────────
+   7. INLINE FORM (mileage entry)
+───────────────────────────────────────────── */
+.driver-form {
+    margin-top: var(--vc-space-4);
+}
+
+.driver-form__title {
+    font-size: var(--vc-text-base);
+    font-weight: 500;
+    color: var(--vc-fg);
+    margin-bottom: 10px;
+}
+
+.driver-form .form-control {
+    height: var(--vc-h-input-md);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-bg);
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--vc-text-base);
+    padding: 0 var(--vc-space-3);
+    color: var(--vc-fg);
+    box-shadow: none;
+    transition: border-color var(--vc-transition);
+}
+
+.driver-form .form-control::placeholder {
+    color: var(--vc-fg-disabled);
+    font-family: var(--vc-font-mono);
+}
+
+.driver-form .form-control:focus {
+    border-color: var(--vc-fg);
+    box-shadow: none;
+    outline: 0;
+}
+
+/* Upload zone */
+.driver-upload {
+    margin-top: 10px;
+    border: 1px dashed var(--vc-border-hover);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-bg);
+    padding: var(--vc-space-4);
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: border-color var(--vc-transition), background var(--vc-transition);
+}
+
+.driver-upload:hover {
+    background: var(--vc-bg-hover);
+    border-color: var(--vc-fg);
+}
+
+.driver-upload input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.driver-upload__icon {
+    color: var(--vc-fg-subtle);
+    margin-bottom: 6px;
+    display: inline-flex;
+}
+
+.driver-upload__label {
+    color: var(--vc-fg);
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+}
+
+.driver-upload__hint {
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-xs);
+    margin-top: 2px;
+}
+
+.driver-upload.has-file {
+    border-style: solid;
+    border-color: var(--vc-green);
+    background: var(--vc-green-bg);
+}
+
+.driver-upload.has-file .driver-upload__icon,
+.driver-upload.has-file .driver-upload__label {
+    color: var(--vc-green);
+}
+
+
+/* ─────────────────────────────────────────────
+   8. CTA (matches .vc-btn-primary, full-width)
+───────────────────────────────────────────── */
+.driver-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: var(--vc-h-input-md);
+    padding: 0 var(--vc-space-4);
+    border: 1px solid var(--vc-primary);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-primary);
+    color: var(--vc-on-primary);
+    font-family: inherit;
+    font-size: var(--vc-text-base);
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    margin-top: var(--vc-space-4);
+    transition: background var(--vc-transition), border-color var(--vc-transition);
+}
+
+.driver-cta:hover {
+    background: var(--vc-primary-hover);
+    border-color: var(--vc-primary-hover);
+}
+
+.driver-cta:focus-visible {
+    outline: 2px solid var(--vc-fg);
+    outline-offset: 2px;
+}
+
+.driver-cta:disabled {
+    background: var(--vc-fg-disabled);
+    border-color: var(--vc-fg-disabled);
+    cursor: not-allowed;
+}
+
+
+/* ─────────────────────────────────────────────
+   9. STATUS PILL (matches Vercel badge tone)
+───────────────────────────────────────────── */
+.driver-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--vc-radius-full);
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    border: 1px solid;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.driver-pill--waiting {
+    background: var(--vc-bg-hover);
+    border-color: var(--vc-border);
+    color: var(--vc-fg-muted);
+}
+
+.driver-pill--ontrip {
+    background: var(--vc-amber-bg);
+    border-color: var(--vc-amber-border);
+    color: var(--vc-amber);
+}
+
+.driver-pill--done {
+    background: var(--vc-green-bg);
+    border-color: var(--vc-green-border);
+    color: var(--vc-green);
+}
+
+.driver-pill--upcoming {
+    background: var(--vc-blue-bg);
+    border-color: var(--vc-blue-border);
+    color: var(--vc-blue);
+}
+
+
+/* ─────────────────────────────────────────────
+   10. STATE NOTES (done / readonly)
+───────────────────────────────────────────── */
+.driver-done-summary {
+    background: var(--vc-green-bg);
+    border: 1px solid var(--vc-green-border);
+    border-radius: var(--vc-radius-sm);
+    padding: 10px var(--vc-space-3);
+    margin-top: var(--vc-space-4);
+    color: var(--vc-green);
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.driver-card--readonly .driver-card__head {
+    cursor: default;
+}
+
+.driver-card--readonly .driver-card__head:hover {
+    background: transparent;
+}
+
+.driver-readonly-note {
+    background: var(--vc-blue-bg);
+    border: 1px solid var(--vc-blue-border);
+    border-radius: var(--vc-radius-sm);
+    padding: 10px var(--vc-space-3);
+    color: var(--vc-blue);
+    font-size: var(--vc-text-sm);
+    margin-top: var(--vc-space-4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
+/* ─────────────────────────────────────────────
+   11. EMPTY STATE
+───────────────────────────────────────────── */
+.driver-empty {
+    text-align: center;
+    padding: var(--vc-space-12) var(--vc-space-4);
+    color: var(--vc-fg-muted);
+}
+
+.driver-empty__icon {
+    color: var(--vc-fg-disabled);
+    margin-bottom: var(--vc-space-2);
+    display: inline-flex;
+}
+
+.driver-empty__title {
+    font-size: var(--vc-text-md);
+    font-weight: 500;
+    color: var(--vc-fg);
+    margin-bottom: 4px;
+}
+
+.driver-empty__desc {
+    font-size: var(--vc-text-sm);
+}
+
+
+/* ─────────────────────────────────────────────
+   12. PANELS
+───────────────────────────────────────────── */
+.driver-panel {
+    display: none;
+}
+
+.driver-panel.is-active {
+    display: block;
+}
+
+
+/* ─────────────────────────────────────────────
+   13. ICON SIZES (mirror .vc-icon-*)
+───────────────────────────────────────────── */
+.driver-page .vc-icon-sm,
+.driver-page [data-lucide] {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.75;
+    flex-shrink: 0;
+}
+
+.driver-page .vc-icon-md,
+.driver-page [data-lucide].vc-icon-md {
+    width: 20px;
+    height: 20px;
+}
+
+.driver-page .vc-icon-lg,
+.driver-page [data-lucide].vc-icon-lg {
+    width: 28px;
+    height: 28px;
+}
+
+
+/* ─────────────────────────────────────────────
+   14. RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 575.98px) {
+    .driver-page {
+        padding: var(--vc-space-4) 0 var(--vc-space-10);
+    }
+
+    .driver-container {
+        padding: 0 var(--vc-space-3);
+    }
+
+    .driver-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--vc-space-2);
+    }
+
+    .driver-meta {
+        grid-template-columns: 1fr;
+        gap: var(--vc-space-3);
+    }
+
+    .driver-card__summary {
+        font-size: var(--vc-text-xs);
+    }
+}

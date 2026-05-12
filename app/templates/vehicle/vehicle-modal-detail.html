@@ -1,0 +1,60 @@
+{# vehicle-modal-detail.html — Modal รายการจอง (single + group รวมใน modal เดียว)
+   JS: openEventDetail() อยู่ใน vehicle.js
+#}
+<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable bk-modal-dialog">
+        <div class="card modal-content border-0 bk-modal-content rounded-2">
+
+            {# ── Header: status dot + title + date + close ── #}
+            <div class="card-header bg-white border-0 pt-4 pb-3 px-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div id="detailHeaderDot" class="ds-status-dot ds-status-dot--approved flex-shrink-0"
+                        style="width:44px;height:44px;font-size:1rem;">
+                        <i id="detailHeaderIcon" class="fa-regular fa-circle-check"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold" style="font-size:.95rem;color:var(--ds-text-heading);">รายละเอียดการจอง</div>
+                        <div id="detailDateLine" class="text-muted mt-1" style="font-size:.82rem;"></div>
+                    </div>
+                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            {# ── Dashed divider ── #}
+            <div class="mx-4" style="border-top:1.5px dashed var(--ds-border);"></div>
+
+            {# ── Info rows: time / plate / driver ── #}
+            <div class="px-4 py-4 d-flex flex-column gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-clock text-muted" style="width:16px;font-size:.9rem;text-align:center;"></i>
+                    <span id="detailTime" style="font-size:.88rem;color:var(--ds-text-body);"></span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-truck text-muted" style="width:16px;font-size:.9rem;text-align:center;"></i>
+                    <span id="detailPlate" style="font-size:.88rem;color:var(--ds-text-body);"></span>
+                </div>
+                <div id="detailDriverLine" class="d-flex align-items-center gap-3">
+                    <i class="bi bi-person text-muted" style="width:16px;font-size:.9rem;text-align:center;"></i>
+                    <span id="detailDriver" style="font-size:.88rem;color:var(--ds-text-body);"></span>
+                </div>
+            </div>
+
+            {# ── Divider ── #}
+            <div class="mx-4" style="border-top:1.5px dashed var(--ds-border);"></div>
+
+            {# ── Section label ── #}
+            <div class="px-4 pt-4 pb-2">
+                <span style="font-size:.7rem;font-weight:700;color:var(--ds-text-muted);">ผู้จอง</span>
+            </div>
+
+            {# ── Members list (JS inject) ── #}
+            <div id="detailMembersList" class="px-4 pb-2"></div>
+
+            {# ── Footer actions (single + owner + pending เท่านั้น) ── #}
+            <div class="card-footer border-0 bg-white pb-3 pt-2">
+                <div id="detailActions" class="d-flex justify-content-end gap-2"></div>
+            </div>
+
+        </div>
+    </div>
+</div>

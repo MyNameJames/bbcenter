@@ -1,0 +1,936 @@
+/* ============================================================
+   BBCenter V2 — Design System (Rebuilt 2026-04-11)
+   Style  : Vercel-inspired Light Mode
+   Accent : Indigo #4F46E5
+   Radius : 4–6px  |  Shadow : none (border only)
+   Base   : Bootstrap .card for all surface components
+
+   STRUCTURE:
+   1. Design Tokens
+   2. Typography Scale
+   3. Page Layout
+   4. Component Library
+      - Sidebar & Navigation
+      - Top Header
+      - Cards (Bootstrap .card extension)
+      - Badges & Pills
+      - Buttons
+      - Form Inputs
+      - Tables
+      - Empty States
+      - Alert
+   5. Utility Classes
+   6. Responsive
+   ============================================================ */
+
+
+/* ─────────────────────────────────────────────
+   1. DESIGN TOKENS
+───────────────────────────────────────────── */
+:root {
+
+    /* ── Accent (Indigo) ─────────────────────── */
+    --ds-accent:         #4F46E5;
+    --ds-accent-hover:   #4338CA;
+    --ds-accent-dark:    #3730A3;
+    --ds-accent-light:   #EEF2FF;
+    --ds-accent-border:  #C7D2FE;
+    --ds-accent-text:    #3730A3;
+
+    /* ── Semantic Colors ─────────────────────── */
+    --ds-success:        #16A34A;
+    --ds-success-light:  #F0FDF4;
+    --ds-success-border: #BBF7D0;
+    --ds-success-text:   #14532D;
+
+    --ds-warning:        #D97706;
+    --ds-warning-light:  #FFFBEB;
+    --ds-warning-border: #FDE68A;
+    --ds-warning-text:   #78350F;
+
+    --ds-danger:         #DC2626;
+    --ds-danger-light:   #FEF2F2;
+    --ds-danger-border:  #FECACA;
+    --ds-danger-text:    #7F1D1D;
+
+    --ds-info:           #2563EB;
+    --ds-info-light:     #EFF6FF;
+    --ds-info-border:    #BFDBFE;
+    --ds-info-text:      #1E3A8A;
+
+    --ds-neutral-light:  #F4F4F5;
+    --ds-neutral-border: #E4E4E7;
+    --ds-neutral-text:   #3F3F46;
+
+    /* ── Surface & Background ────────────────── */
+    --ds-bg-page:        #FAFAFA;   /* Near-white page bg        */
+    --ds-bg-surface:     #FFFFFF;   /* Card / panel surface      */
+    --ds-bg-subtle:      #F7F7F8;   /* Muted section / thead     */
+    --ds-bg-hover:       #F5F5F6;   /* Row / nav item hover      */
+
+    /* ── Border — extra-light ────────────────── */
+    --ds-border:         #EFEFEF;   /* Extra-light default border  */
+    --ds-border-strong:  #E4E4E7;   /* Slightly stronger divider   */
+
+    /* ── Text ────────────────────────────────── */
+    --ds-text-heading:   #09090B;   /* Zinc-950 — heading        */
+    --ds-text-body:      #3F3F46;   /* Zinc-700 — body           */
+    --ds-text-secondary: #71717A;   /* Zinc-500 — label / meta   */
+    --ds-text-muted:     #A1A1AA;   /* Zinc-400 — placeholder    */
+    --ds-text-disabled:  #D4D4D8;   /* Zinc-300                  */
+    --ds-text-on-accent: #FFFFFF;
+
+    /* ── Shadow — none (Vercel principle) ────── */
+    --ds-shadow-xs:  none;
+    --ds-shadow-sm:  none;
+    --ds-shadow-md:  none;
+    --ds-shadow-lg:  none;
+    --ds-shadow-xl:  none;
+    --ds-shadow-focus: 0 0 0 3px rgba(79,70,229,.18);
+
+    /* ── Border Radius — Vercel tight ────────── */
+    --ds-radius-xs:   2px;
+    --ds-radius-sm:   4px;
+    --ds-radius-md:   6px;
+    --ds-radius-lg:   6px;   /* max used for cards   */
+    --ds-radius-xl:   8px;   /* modal / large panels */
+    --ds-radius-full: 9999px;
+
+    /* ── Spacing (4px grid) ──────────────────── */
+    --ds-space-1:    4px;
+    --ds-space-2:    8px;
+    --ds-space-3:    12px;
+    --ds-space-4:    16px;
+    --ds-space-5:    20px;
+    --ds-space-6:    24px;
+    --ds-space-8:    32px;
+    --ds-space-10:   40px;
+    --ds-space-12:   48px;
+
+    /* ── Typography ──────────────────────────── */
+    --ds-font-sans:    'Sarabun', -apple-system, sans-serif;
+    --ds-font-display: 'Sarabun', sans-serif;
+    --ds-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+
+    --ds-text-xs:    .72rem;
+    --ds-text-sm:    .8rem;
+    --ds-text-base:  .875rem;
+    --ds-text-md:    .95rem;
+    --ds-text-lg:    1.05rem;
+    --ds-text-xl:    1.2rem;
+    --ds-text-2xl:   1.5rem;
+    --ds-text-3xl:   2rem;
+
+    /* ── Z-index Scale ───────────────────────── */
+    --ds-z-base:      0;
+    --ds-z-raised:    10;
+    --ds-z-dropdown:  100;
+    --ds-z-sticky:    200;
+    --ds-z-sidebar:   300;
+    --ds-z-overlay:   400;
+    --ds-z-modal:     500;
+    --ds-z-toast:     600;
+
+    /* ── Layout ──────────────────────────────── */
+    --ds-sidebar-width:  256px;
+    --ds-header-height:  64px;
+    --ds-transition:     .12s ease;
+}
+
+
+/* ─────────────────────────────────────────────
+   2. TYPOGRAPHY SCALE
+───────────────────────────────────────────── */
+.ds-h1 {
+    font-family: var(--ds-font-display);
+    font-size: var(--ds-text-2xl);
+    font-weight: 700;
+    color: var(--ds-text-heading);
+    line-height: 1.25;
+    letter-spacing: -.02em;
+}
+.ds-h2 {
+    font-size: var(--ds-text-xl);
+    font-weight: 600;
+    color: var(--ds-text-heading);
+    line-height: 1.3;
+    letter-spacing: -.01em;
+}
+.ds-h3 {
+    font-size: var(--ds-text-lg);
+    font-weight: 600;
+    color: var(--ds-text-heading);
+}
+.ds-body {
+    font-size: var(--ds-text-base);
+    color: var(--ds-text-body);
+    line-height: 1.6;
+}
+.ds-caption {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-secondary);
+}
+.ds-overline {
+    font-size: var(--ds-text-xs);
+    font-weight: 700;
+    color: var(--ds-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+.ds-number-lg {
+    font-family: var(--ds-font-display);
+    font-size: var(--ds-text-3xl);
+    font-weight: 700;
+    color: var(--ds-text-heading);
+    line-height: 1;
+    letter-spacing: -.025em;
+}
+.ds-number-md {
+    font-family: var(--ds-font-display);
+    font-size: var(--ds-text-2xl);
+    font-weight: 700;
+    color: var(--ds-text-heading);
+    line-height: 1;
+}
+
+
+/* ─────────────────────────────────────────────
+   3. PAGE LAYOUT
+───────────────────────────────────────────── */
+.ds-page {
+    background: var(--ds-bg-page);
+    min-height: 100vh;
+    font-family: var(--ds-font-sans);
+    color: var(--ds-text-body);
+    font-size: var(--ds-text-base);
+    -webkit-font-smoothing: antialiased;
+}
+
+.ds-app-shell {
+    display: flex;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--ds-bg-page);
+}
+
+.ds-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.ds-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--ds-space-6);
+}
+
+
+/* ─────────────────────────────────────────────
+   4. COMPONENTS
+───────────────────────────────────────────── */
+
+/* ── 4a. Sidebar ──────────────────────────── */
+.ds-sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--ds-sidebar-width);
+    height: 100vh;
+    height: 100dvh;
+    background: var(--ds-bg-surface);
+    border-right: 1px solid var(--ds-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: var(--ds-z-sidebar);
+    overflow: hidden;
+    transition: transform var(--ds-transition);
+}
+
+.ds-sidebar-brand {
+    height: var(--ds-header-height);
+    padding: 0 var(--ds-space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    border-bottom: 1px solid var(--ds-border);
+    flex-shrink: 0;
+}
+
+.ds-sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    text-decoration: none;
+    color: var(--ds-text-heading);
+    font-weight: 700;
+    font-size: var(--ds-text-md);
+    letter-spacing: -.02em;
+    flex: 1;
+    min-width: 0;
+}
+
+.ds-sidebar-logo-icon {
+    width: 28px; height: 28px;
+    background: var(--ds-text-heading);
+    color: #fff;
+    border-radius: var(--ds-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .85rem;
+    flex-shrink: 0;
+}
+
+.ds-sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--ds-space-2) var(--ds-space-2);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.ds-nav-label {
+    font-size: var(--ds-text-xs);
+    font-weight: 600;
+    color: var(--ds-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    padding: var(--ds-space-3) var(--ds-space-2) var(--ds-space-1);
+    margin-top: var(--ds-space-1);
+}
+
+.ds-nav-label:first-child { margin-top: 0; }
+
+.ds-nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: 6px var(--ds-space-2);
+    border-radius: var(--ds-radius-sm);
+    text-decoration: none;
+    color: var(--ds-text-secondary);
+    font-size: var(--ds-text-base);
+    font-weight: 500;
+    transition: background var(--ds-transition), color var(--ds-transition);
+    position: relative;
+}
+
+.ds-nav-item:hover {
+    background: var(--ds-bg-hover);
+    color: var(--ds-text-body);
+}
+
+.ds-nav-item.active {
+    background: var(--ds-accent-light);
+    color: var(--ds-accent);
+}
+
+.ds-nav-item.active .ds-nav-icon { color: var(--ds-accent); }
+
+.ds-nav-icon {
+    width: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    flex-shrink: 0;
+    color: var(--ds-text-muted);
+}
+
+.ds-nav-item:hover .ds-nav-icon { color: var(--ds-text-body); }
+
+.ds-nav-badge {
+    margin-left: auto;
+    background: var(--ds-danger);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: var(--ds-radius-full);
+    min-width: 17px;
+    height: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.ds-sidebar-footer {
+    padding: var(--ds-space-2);
+    border-top: 1px solid var(--ds-border);
+    flex-shrink: 0;
+}
+
+
+/* ── 4b. Top Header ───────────────────────── */
+.ds-header {
+    position: sticky;
+    top: 0;
+    height: var(--ds-header-height);
+    background: var(--ds-bg-surface);
+    border-bottom: 1px solid var(--ds-border);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--ds-space-6);
+    gap: var(--ds-space-3);
+    z-index: var(--ds-z-sticky);
+    flex-shrink: 0;
+}
+
+.ds-header-title {
+    font-size: var(--ds-text-base);
+    font-weight: 600;
+    color: var(--ds-text-heading);
+    flex: 1;
+    letter-spacing: -.01em;
+}
+
+.ds-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+}
+
+.ds-header-avatar {
+    width: 28px; height: 28px;
+    border-radius: var(--ds-radius-full);
+    border: 1px solid var(--ds-border-strong);
+    background: var(--ds-bg-subtle);
+    color: var(--ds-text-body);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--ds-text-xs);
+    font-weight: 700;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.ds-btn-icon {
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 5px;
+    height: 38px; 
+    width: 38px;
+    background: var(--ds-bg-subtle);
+    color: var(--ds-text-body);
+    border: 0.8px solid var(--ds-border);
+    font-size: .9rem; 
+    font-weight: 500;
+    text-decoration: none; 
+    cursor: pointer;
+    transition: background .14s, border-color .14s, color .14s;
+}
+
+
+/* ── 4c. Card — Bootstrap .card extensions ── */
+/*
+   ใช้ Bootstrap .card เป็น base เสมอ
+   ds-* classes เป็น extension เท่านั้น
+   Pattern: <div class="card ds-card"> ... </div>
+*/
+
+.card {
+    border: 1px solid var(--ds-border) !important;
+    border-radius: var(--ds-radius-lg) !important;
+    box-shadow: none !important;
+    background: var(--ds-bg-surface);
+}
+
+/* .card-header {
+    background: var(--ds-bg-surface) !important;
+    border-bottom: 1px solid var(--ds-border) !important;
+    padding: var(--ds-space-3) var(--ds-space-4) !important;
+    font-size: var(--ds-text-base);
+    font-weight: 600;
+    color: var(--ds-text-heading);
+} */
+
+/* .card-body {
+    padding: var(--ds-space-4) !important;
+}
+
+.card-footer {
+    background: var(--ds-bg-subtle) !important;
+    border-top: 1px solid var(--ds-border) !important;
+    padding: var(--ds-space-3) var(--ds-space-4) !important;
+} */
+
+/* Stat card variant — ใช้ .card.ds-stat */
+.ds-stat {
+    padding: var(--ds-space-4);
+}
+
+.ds-stat-label {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-secondary);
+    margin-bottom: var(--ds-space-1);
+}
+
+.ds-stat-value {
+    font-family: var(--ds-font-display);
+    font-size: var(--ds-text-2xl);
+    font-weight: 700;
+    color: var(--ds-text-heading);
+    line-height: 1;
+    letter-spacing: -.02em;
+}
+
+.ds-stat-meta {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-muted);
+    margin-top: var(--ds-space-2);
+}
+
+
+/* ── 4d. Badges ───────────────────────────── */
+.ds-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border-radius: var(--ds-radius-sm);
+    font-size: var(--ds-text-xs);
+    font-weight: 600;
+    line-height: 1.7;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.ds-badge-accent   { background: var(--ds-accent-light);   color: var(--ds-accent-text);   border-color: var(--ds-accent-border); }
+.ds-badge-success  { background: var(--ds-success-light);  color: var(--ds-success-text);  border-color: var(--ds-success-border); }
+.ds-badge-warning  { background: var(--ds-warning-light);  color: var(--ds-warning-text);  border-color: var(--ds-warning-border); }
+.ds-badge-danger   { background: var(--ds-danger-light);   color: var(--ds-danger-text);   border-color: var(--ds-danger-border); }
+.ds-badge-info     { background: var(--ds-info-light);     color: var(--ds-info-text);     border-color: var(--ds-info-border); }
+.ds-badge-neutral  { background: var(--ds-neutral-light);  color: var(--ds-neutral-text);  border-color: var(--ds-neutral-border); }
+
+
+/* ── 4e. Buttons ──────────────────────────── */
+.ds-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px var(--ds-space-3);
+    border-radius: var(--ds-radius-sm);
+    font-family: var(--ds-font-sans);
+    font-size: var(--ds-text-base);
+    font-weight: 500;
+    line-height: 1.4;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background var(--ds-transition), border-color var(--ds-transition), color var(--ds-transition);
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.ds-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--ds-shadow-focus);
+}
+
+/* Primary — Dark fill (Vercel-style CTA) */
+.ds-btn-primary {
+    background: var(--ds-text-heading);
+    color: #fff;
+    border-color: var(--ds-text-heading);
+}
+.ds-btn-primary:hover { background: #27272A; border-color: #27272A; }
+
+/* Accent — Indigo fill */
+.ds-btn-accent {
+    background: var(--ds-accent);
+    color: var(--ds-text-on-accent);
+    border-color: var(--ds-accent);
+}
+.ds-btn-accent:hover { background: var(--ds-accent-hover); border-color: var(--ds-accent-hover); }
+
+/* Secondary — Border only */
+.ds-btn-secondary {
+    background: var(--ds-bg-surface);
+    color: var(--ds-text-body);
+    border-color: var(--ds-border-strong);
+}
+.ds-btn-secondary:hover { background: var(--ds-bg-subtle); }
+
+/* Ghost */
+.ds-btn-ghost {
+    background: transparent;
+    color: var(--ds-text-secondary);
+    border-color: transparent;
+}
+.ds-btn-ghost:hover { background: var(--ds-bg-hover); color: var(--ds-text-body); }
+
+/* Danger */
+.ds-btn-danger {
+    background: var(--ds-bg-surface);
+    color: var(--ds-danger);
+    border-color: var(--ds-danger-border);
+}
+.ds-btn-danger:hover { background: var(--ds-danger); color: #fff; border-color: var(--ds-danger); }
+
+/* Sizes */
+.ds-btn-sm { padding: 4px var(--ds-space-2); font-size: var(--ds-text-sm); }
+.ds-btn-lg { padding: 8px var(--ds-space-5); font-size: var(--ds-text-md); }
+.ds-btn-icon { padding: 6px; }
+
+
+/* ── 4f. Form Inputs ──────────────────────── */
+.ds-input,
+.ds-select,
+.ds-textarea {
+    display: block;
+    width: 100%;
+    padding: 7px var(--ds-space-3);
+    font-family: var(--ds-font-sans);
+    font-size: var(--ds-text-base);
+    color: var(--ds-text-body);
+    background: var(--ds-bg-surface);
+    border: 1px solid var(--ds-border-strong);
+    border-radius: var(--ds-radius-sm);
+    transition: border-color var(--ds-transition);
+    outline: none;
+    box-shadow: none;
+}
+
+.ds-input::placeholder { color: var(--ds-text-muted); }
+
+.ds-input:focus,
+.ds-select:focus,
+.ds-textarea:focus {
+    border-color: var(--ds-accent);
+    box-shadow: var(--ds-shadow-focus);
+}
+
+.ds-label {
+    display: block;
+    font-size: var(--ds-text-sm);
+    font-weight: 500;
+    color: var(--ds-text-body);
+    margin-bottom: 4px;
+}
+
+.ds-form-group { display: flex; flex-direction: column; gap: 4px; }
+.ds-form-hint  { font-size: var(--ds-text-xs); color: var(--ds-text-muted); }
+.ds-form-error { font-size: var(--ds-text-xs); color: var(--ds-danger-text); }
+
+.ds-input-error { border-color: var(--ds-danger) !important; }
+.ds-input-error:focus { box-shadow: 0 0 0 3px rgba(220,38,38,.15); }
+
+
+/* ── 4g. Tables — inside .card ────────────── */
+
+
+.ds-table {
+    font-size: var(--ds-text-base);
+}
+
+.ds-table thead th {
+    background: var(--ds-bg-subtle);
+    font-size: var(--ds-text-xs);
+    font-weight: 700;
+    color: var(--ds-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: var(--ds-space-2) var(--ds-space-4);
+    border-bottom: 1px solid var(--ds-border);
+    border-top: none;
+    white-space: nowrap;
+}
+
+.ds-table tbody td {
+    padding: var(--ds-space-3) var(--ds-space-4);
+    border-bottom: 1px solid var(--ds-border);
+    vertical-align: middle;
+    color: var(--ds-text-body);
+}
+
+.ds-table tbody tr:last-child td { border-bottom: none; }
+.ds-table tbody tr:hover td { background: var(--ds-bg-subtle); }
+
+
+/* ── 4h. Empty States — inside .card ─────── */
+.ds-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--ds-space-12) var(--ds-space-6);
+    text-align: center;
+    gap: var(--ds-space-3);
+}
+
+.ds-empty-icon {
+    width: 40px; height: 40px;
+    background: var(--ds-bg-subtle);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--ds-text-muted);
+}
+
+.ds-empty-title {
+    font-size: var(--ds-text-base);
+    font-weight: 600;
+    color: var(--ds-text-heading);
+    margin: 0;
+}
+
+.ds-empty-desc {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-muted);
+    margin: 0;
+    max-width: 260px;
+}
+
+
+/* ── 4i. Alert ────────────────────────────── */
+.ds-alert {
+    display: flex;
+    gap: var(--ds-space-3);
+    padding: var(--ds-space-3) var(--ds-space-4);
+    border-radius: var(--ds-radius-sm);
+    border: 1px solid transparent;
+    font-size: var(--ds-text-base);
+}
+
+.ds-alert-success { background: var(--ds-success-light); border-color: var(--ds-success-border); color: var(--ds-success-text); }
+.ds-alert-warning { background: var(--ds-warning-light); border-color: var(--ds-warning-border); color: var(--ds-warning-text); }
+.ds-alert-danger  { background: var(--ds-danger-light);  border-color: var(--ds-danger-border);  color: var(--ds-danger-text); }
+.ds-alert-info    { background: var(--ds-info-light);    border-color: var(--ds-info-border);    color: var(--ds-info-text); }
+
+
+/* ── 4j. Overlay ──────────────────────────── */
+.ds-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(9,9,11,.4);
+    z-index: calc(var(--ds-z-sidebar) - 1);
+}
+.ds-overlay.active { display: block; }
+
+
+/* ─────────────────────────────────────────────
+   5. UTILITY CLASSES
+───────────────────────────────────────────── */
+.ds-text-accent      { color: var(--ds-accent); }
+.ds-text-success     { color: var(--ds-success); }
+.ds-text-warning     { color: var(--ds-warning); }
+.ds-text-danger      { color: var(--ds-danger); }
+.ds-text-muted-u     { color: var(--ds-text-muted); }
+.ds-text-secondary-u { color: var(--ds-text-secondary); }
+
+.ds-surface          { background: var(--ds-bg-surface); }
+.ds-truncate         { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-ring             { box-shadow: var(--ds-shadow-focus); outline: none; }
+.ds-border-b         { border-bottom: 1px solid var(--ds-border); }
+.ds-border-t         { border-top: 1px solid var(--ds-border); }
+
+
+/* ─────────────────────────────────────────────
+   6. RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 991.98px) {
+    .ds-sidebar { transform: translateX(-100%); }
+    .ds-sidebar.open { transform: translateX(0); }
+    .ds-main-offset { margin-left: 0 !important; }
+}
+
+@media (min-width: 992px) {
+    .ds-sidebar-toggle { display: none; }
+    .ds-main-offset { margin-left: var(--ds-sidebar-width); }
+}
+
+
+/* ─────────────────────────────────────────────
+   7. STATUS DOT — reusable booking-status icon circle
+   Usage: <div class="ds-status-dot ds-status-dot--{status}">
+              <i class="fa-solid fa-..."></i>
+          </div>
+   Statuses: pending | approver | approved | rejected | group
+───────────────────────────────────────────── */
+.ds-status-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .85rem;
+    flex-shrink: 0;
+}
+
+.ds-status-dot--pending  { background: #FEF3C7; color: #B45309; }
+.ds-status-dot--approver { background: #EFF6FF; color: #2563EB; }
+.ds-status-dot--approved { background: #DCFCE7; color: #16A34A; }
+.ds-status-dot--rejected { background: #FEE2E2; color: #DC2626; }
+.ds-status-dot--group    { background: #CCFBF1; color: #0D9488; }
+
+
+/* ============================================================
+   8. VERCEL NAMESPACE (--vc-*)
+   ─────────────────────────────────────────────────────────────
+   Scoped to Fuel Management page (Phase 2). Opt-in via class
+   wrapper (e.g. <div class="vc-scope">) or used directly in
+   fuel_admin.css. Do NOT cascade these to other pages — keeps
+   existing --ds-* design intact for the rest of the app.
+
+   Reference: vercel.com / Geist Design System
+   ============================================================ */
+:root {
+
+    /* ── Surface (Vercel "accents") ──────────── */
+    --vc-bg:             #FFFFFF;
+    --vc-bg-subtle:      #FAFAFA;        /* accents-1 — thead/zebra/collapse bg */
+    --vc-bg-hover:       #F5F5F5;        /* accents-1.5               */
+    --vc-bg-inverted:    #000000;        /* dark surface (rare)       */
+
+    /* ── Border ──────────────────────────────── */
+    --vc-border:         #EAEAEA;        /* accents-2                 */
+    --vc-border-hover:   #999999;        /* accents-5                 */
+    --vc-border-strong:  #666666;        /* accents-6                 */
+
+    /* ── Foreground / Text ───────────────────── */
+    --vc-fg:             #000000;        /* primary text              */
+    --vc-fg-muted:       #666666;        /* accents-6 — secondary     */
+    --vc-fg-subtle:      #888888;        /* accents-5 — tertiary      */
+    --vc-fg-disabled:    #BBBBBB;        /* accents-4                 */
+    --vc-fg-inverted:    #FFFFFF;
+
+    /* ── Primary action (pure black) ─────────── */
+    --vc-primary:        #000000;
+    --vc-primary-hover:  #333333;
+    --vc-on-primary:     #FFFFFF;
+
+    /* ── Semantic — Vercel Blue ──────────────── */
+    --vc-blue:           #0070F3;
+    --vc-blue-hover:     #0061D5;
+    --vc-blue-bg:        rgba(0,112,243,.10);
+    --vc-blue-border:    rgba(0,112,243,.25);
+
+    /* ── Semantic — Amber (warning / pending) ─ */
+    --vc-amber:          #F5A623;
+    --vc-amber-bg:       rgba(245,166,35,.10);
+    --vc-amber-border:   rgba(245,166,35,.25);
+
+    /* ── Semantic — Red (error / danger) ─────── */
+    --vc-red:            #EE0000;
+    --vc-red-hover:      #C50000;
+    --vc-red-bg:         rgba(238,0,0,.08);
+    --vc-red-border:     rgba(238,0,0,.20);
+
+    /* ── Semantic — Green (success/received) ── */
+    --vc-green:          #0F9D58;
+    --vc-green-bg:       rgba(15,157,88,.10);
+    --vc-green-border:   rgba(15,157,88,.25);
+
+    /* ── Optional violet accent ──────────────── */
+    --vc-purple:         #7928CA;
+
+    /* ── Radius ──────────────────────────────── */
+    --vc-radius-xs:      4px;
+    --vc-radius-sm:      6px;            /* button / input            */
+    --vc-radius-md:      8px;            /* card                      */
+    --vc-radius-lg:      12px;           /* modal                     */
+    --vc-radius-full:    9999px;
+
+    /* ── Spacing (8px grid, with 4px micro) ──── */
+    --vc-space-1:        4px;
+    --vc-space-2:        8px;
+    --vc-space-3:        12px;
+    --vc-space-4:        16px;
+    --vc-space-5:        20px;
+    --vc-space-6:        24px;
+    --vc-space-8:        32px;
+    --vc-space-10:       40px;
+    --vc-space-12:       48px;
+
+    /* ── Type scale (Geist hierarchy) ────────── */
+    --vc-text-xs:        12px;           /* caption / label uppercase */
+    --vc-text-sm:        13px;           /* small / table             */
+    --vc-text-base:      14px;           /* body / button             */
+    --vc-text-md:        16px;           /* lead body                 */
+    --vc-text-lg:        18px;           /* section title             */
+    --vc-text-xl:        24px;           /* h1 page                   */
+    --vc-text-2xl:       32px;           /* KPI                       */
+    --vc-text-3xl:       48px;           /* hero                      */
+
+    /* Letter-spacing — tight on display, neutral on body */
+    --vc-tracking-tight:    -.02em;
+    --vc-tracking-tighter:  -.04em;
+    --vc-tracking-wide:     .02em;       /* uppercase caption         */
+
+    /* ── Font stacks ─────────────────────────── */
+    /* Sans = inherit Sarabun from --ds-font-sans (TH supported)      */
+    /* Mono = Geist Mono (loaded in _header.html), fallback to system */
+    --vc-font-mono:      'Geist Mono', ui-monospace, 'SF Mono', 'Menlo',
+                         'Cascadia Code', 'Consolas', monospace;
+
+    /* ── Component heights ───────────────────── */
+    --vc-h-input-sm:     28px;
+    --vc-h-input:        32px;
+    --vc-h-input-md:     40px;
+    --vc-h-row:          48px;           /* table row                 */
+
+    /* ── Motion ──────────────────────────────── */
+    --vc-transition:     150ms ease;
+    --vc-transition-slow: 250ms ease;
+
+    /* ── Focus ring (2px outline, offset 2px) ── */
+    --vc-focus-ring:     0 0 0 2px var(--vc-bg), 0 0 0 4px var(--vc-fg);
+}
+
+
+/* ─────────────────────────────────────────────
+   8a. VERCEL FOUNDATION UTILITIES
+   ─────────────────────────────────────────────
+   Minimal helpers for Phase 2 components. Heavier
+   component classes (.vc-card, .vc-btn, .vc-badge)
+   live in fuel_admin.css.
+───────────────────────────────────────────── */
+
+/* Mono numbers — apply to KPI values, money cells in tables */
+.vc-mono {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1, "ss01" 1;   /* tabular numbers   */
+    font-variant-numeric: tabular-nums;
+}
+
+/* Tight tracking for display text (Geist signature) */
+.vc-tracking-tight   { letter-spacing: var(--vc-tracking-tight); }
+.vc-tracking-tighter { letter-spacing: var(--vc-tracking-tighter); }
+
+/* Caption — uppercase 12px, tracking wide (KPI labels) */
+.vc-caption {
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    line-height: 1;
+}
+
+/* Lucide icon sizing helpers — stroke 1.5 is set inline on <i data-lucide=""> via JS */
+.vc-icon-sm { width: 14px; height: 14px; }
+.vc-icon    { width: 16px; height: 16px; }
+.vc-icon-md { width: 18px; height: 18px; }
+.vc-icon-lg { width: 20px; height: 20px; }
+
+/* Scope wrapper — apply to fuel page root to opt into vc tokens
+   without leaking to other pages (e.g. <main class="vc-scope">) */
+.vc-scope {
+    color: var(--vc-fg);
+    background: var(--vc-bg);
+    font-size: var(--vc-text-base);
+    line-height: 1.5;
+}

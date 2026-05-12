@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe — /vehicle page</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Caveat+Brush&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   HAND-DRAWN SKETCH SYSTEM
+═══════════════════════════════════════════ */
+:root {
+  --ink:        #1a1a2e;
+  --ink-mid:    #3a3a5c;
+  --ink-light:  #7a7a9a;
+  --paper:      #faf8f3;
+  --paper-warm: #f5f0e8;
+  --paper-grid: #e8e0d0;
+  --sketch-blue:   #2563eb22;
+  --sketch-yellow: #f59e0b22;
+  --sketch-green:  #10b98122;
+  --sketch-red:    #ef444422;
+  --sketch-purple: #7c3aed22;
+  --accent:     #4338ca;
+  --font: 'Caveat', cursive;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper-grid);
+  font-family: var(--font);
+  color: var(--ink);
+  padding: 32px 24px 80px;
+  min-height: 100vh;
+  /* dot grid background */
+  background-image: radial-gradient(circle, #c8b89a55 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ── Page header ── */
+.wf-page-title {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.wf-page-title h1 {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.5px;
+  border-bottom: 3px solid var(--ink);
+  display: inline-block;
+  padding-bottom: 4px;
+}
+.wf-page-title p {
+  font-size: 1.1rem;
+  color: var(--ink-mid);
+  margin-top: 6px;
+}
+
+/* ── Section header ── */
+.wf-section {
+  max-width: 1100px;
+  margin: 0 auto 64px;
+}
+.wf-section-label {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wf-section-label::before {
+  content: '';
+  display: inline-block;
+  width: 28px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* ── Box / Frame ── */
+.sketch-box {
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  position: relative;
+  /* rough border simulation with box-shadow */
+  box-shadow:
+    2px 2px 0 0 var(--ink),
+    -1px 1px 0 0 rgba(0,0,0,.08);
+}
+.sketch-box::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  opacity: .25;
+  transform: rotate(.3deg);
+  pointer-events: none;
+}
+
+/* ── Frame label (top-left badge) ── */
+.frame-label {
+  position: absolute;
+  top: -14px;
+  left: 12px;
+  background: var(--ink);
+  color: #fff;
+  font-size: .85rem;
+  font-weight: 600;
+  padding: 1px 10px;
+  border-radius: 3px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+/* ── Annotation ── */
+.note {
+  position: absolute;
+  font-size: .88rem;
+  color: #b45309;
+  background: #fef3c722;
+  line-height: 1.3;
+  max-width: 160px;
+  font-style: italic;
+}
+.note::before { content: '← '; }
+.note.right::before { content: ''; }
+.note.right::after  { content: ' →'; }
+
+/* ── Hatch fill ── */
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 4px,
+    rgba(0,0,0,.06) 4px, rgba(0,0,0,.06) 5px
+  );
+}
+.hatch-v {
+  background-image: repeating-linear-gradient(
+    90deg, transparent, transparent 6px,
+    rgba(0,0,0,.04) 6px, rgba(0,0,0,.04) 7px
+  );
+}
+
+/* ── Divider line ── */
+.sketch-hr {
+  border: none;
+  border-top: 2px solid var(--ink);
+  opacity: .25;
+  margin: 8px 0;
+}
+.sketch-hr.strong { opacity: .6; }
+
+/* ── Text placeholder ── */
+.text-ph {
+  height: 8px;
+  background: var(--ink);
+  border-radius: 2px;
+  opacity: .15;
+  margin: 4px 0;
+}
+.text-ph.short { width: 55%; }
+.text-ph.med   { width: 75%; }
+.text-ph.full  { width: 100%; }
+.text-ph.xshort{ width: 35%; }
+
+/* ── Button placeholder ── */
+.btn-ph {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-family: var(--font);
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: default;
+}
+.btn-ph.primary {
+  background: var(--ink);
+  color: #fff;
+}
+.btn-ph.small { padding: 2px 8px; font-size: .82rem; }
+.btn-ph.icon-only { padding: 4px 8px; }
+
+/* ── Avatar / Icon circle ── */
+.circle-ph {
+  width: 32px; height: 32px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  flex-shrink: 0;
+}
+
+/* ── Badge ── */
+.badge-ph {
+  display: inline-block;
+  border: 1.5px solid var(--ink);
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-size: .78rem;
+}
+.badge-ph.pending  { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.badge-ph.approved { background: #d1fae5; border-color: #34d399; color: #065f46; }
+.badge-ph.waiting  { background: #dbeafe; border-color: #60a5fa; color: #1e40af; }
+.badge-ph.rejected { background: #fee2e2; border-color: #f87171; color: #991b1b; }
+
+/* ── Responsive wrapper ── */
+.wf-row {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* ═══════════════════════════════════════════
+   DESKTOP LAYOUT WIREFRAME
+═══════════════════════════════════════════ */
+.desktop-shell {
+  display: flex;
+  gap: 0;
+  height: 620px;
+  position: relative;
+}
+
+/* sidebar */
+.wf-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  height: 100%;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sidebar-logo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 8px 6px 12px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 6px;
+  opacity: .8;
+}
+.sidebar-item {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: .95rem;
+  opacity: .6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sidebar-item.active {
+  background: var(--ink);
+  color: #fff;
+  opacity: 1;
+}
+.sidebar-divider {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  opacity: .4;
+  padding: 8px 10px 2px;
+}
+
+/* main */
+.wf-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-left: 2.5px solid var(--ink);
+  overflow: hidden;
+}
+
+/* header */
+.wf-header {
+  height: 52px;
+  border-bottom: 2px solid var(--ink);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.header-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* content */
+.wf-content {
+  flex: 1;
+  padding: 16px 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* toolbar */
+.wf-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* calendar */
+.wf-calendar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cal-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 2px solid var(--ink);
+}
+.cal-head-cell {
+  text-align: center;
+  padding: 6px 2px;
+  font-weight: 700;
+  font-size: .85rem;
+  border-right: 1.5px solid var(--ink);
+  opacity: .7;
+}
+.cal-head-cell:last-child { border-right: none; }
+.cal-head-cell.sun { color: #dc2626; }
+.cal-head-cell.sat { color: #2563eb; }
+
+.cal-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+}
+.cal-cell {
+  border-right: 1px solid rgba(0,0,0,.12);
+  border-bottom: 1px solid rgba(0,0,0,.12);
+  padding: 4px 5px;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: .78rem;
+}
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell.today-cell {
+  background: #4338ca11;
+}
+.cal-cell .day-num {
+  font-weight: 700;
+  font-size: .85rem;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.cal-cell.today-cell .day-num {
+  background: var(--ink);
+  color: #fff;
+}
+.cal-cell.other-month { opacity: .3; }
+
+/* event card in calendar */
+.ev-card {
+  border-left: 3px solid;
+  border-radius: 2px;
+  padding: 1px 4px;
+  font-size: .72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.ev-card.pending  { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.ev-card.approved { background: #d1fae5; border-color: #34d399; color: #065f46; }
+.ev-card.waiting  { background: #dbeafe; border-color: #60a5fa; color: #1e40af; }
+.ev-card.rejected { background: #fee2e2; border-color: #f87171; color: #991b1b; }
+.ev-card.group    { background: #ede9fe; border-color: #7c3aed; color: #4c1d95; }
+.ev-more {
+  font-size: .7rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE LAYOUT
+═══════════════════════════════════════════ */
+.mobile-frame {
+  width: 375px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+.mobile-statusbar {
+  height: 28px;
+  background: rgba(0,0,0,.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: .7rem;
+  border-bottom: 1px solid rgba(0,0,0,.1);
+}
+.mobile-header {
+  height: 48px;
+  border-bottom: 1.5px solid var(--ink);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.mobile-content {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* compact calendar (mobile) */
+.cal-compact {
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.cal-compact-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1.5px solid var(--ink);
+  background: rgba(0,0,0,.03);
+}
+.cal-compact-cell-head {
+  text-align: center;
+  padding: 4px 2px;
+  font-size: .72rem;
+  font-weight: 700;
+}
+.cal-compact-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.cal-day {
+  text-align: center;
+  padding: 5px 2px;
+  font-size: .78rem;
+  position: relative;
+  cursor: default;
+}
+.cal-day .dot-row {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 1px;
+}
+.dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+}
+.dot.pending  { background: #f59e0b; }
+.dot.approved { background: #10b981; }
+.dot.waiting  { background: #3b82f6; }
+.dot.selected {
+  background: var(--ink);
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: -3px auto 0;
+}
+
+/* mobile booking list */
+.mobile-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: .95rem;
+}
+.mobile-card {
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: .85rem;
+  border-left-width: 4px;
+}
+.mobile-card.approved { border-left-color: #10b981; }
+.mobile-card.pending  { border-left-color: #f59e0b; }
+.mobile-card.waiting  { border-left-color: #3b82f6; }
+
+/* ═══════════════════════════════════════════
+   MODAL WIREFRAMES
+═══════════════════════════════════════════ */
+.modal-frame {
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+.modal-header-wf {
+  border-bottom: 2px solid var(--ink);
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.modal-body-wf {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal-footer-wf {
+  border-top: 2px solid var(--ink);
+  padding: 10px 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.form-field-wf {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.form-label-wf {
+  font-size: .78rem;
+  opacity: .6;
+}
+.form-input-wf {
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: .9rem;
+  font-family: var(--font);
+  background: rgba(0,0,0,.02);
+  opacity: .7;
+}
+.form-row-wf {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ═══════════════════════════════════════════
+   ARROW / ANNOTATION HELPERS
+═══════════════════════════════════════════ */
+.annot {
+  font-family: var(--font);
+  font-size: .9rem;
+  color: #b45309;
+  font-style: italic;
+  line-height: 1.3;
+}
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .88rem;
+}
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  border: 1.5px solid;
+}
+
+/* mobile card B — compact horizontal */
+.mobile-card-b {
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: .85rem;
+  border-left-width: 4px;
+}
+.mobile-card-b .time-col {
+  font-size: .78rem;
+  opacity: .6;
+  flex-shrink: 0;
+  width: 48px;
+  text-align: center;
+  margin-top: 2px;
+}
+.mobile-card-b .info-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+</style>
+</head>
+<body>
+
+<!-- ── Page Title ── -->
+<div class="wf-page-title">
+  <h1>✏️ Wireframe — /vehicle</h1>
+  <p>หน้าปฏิทินจองรถ · BBCenter V2 · 2026-04-09</p>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 1: DESKTOP LAYOUT
+════════════════════════════════════════════ -->
+<div class="wf-section">
+  <div class="wf-section-label">1. Desktop Layout</div>
+
+  <div class="sketch-box" style="padding: 0; overflow: hidden; position: relative;">
+    <div class="frame-label">Desktop ≥ 992px</div>
+
+    <div class="desktop-shell">
+
+      <!-- SIDEBAR -->
+      <div class="wf-sidebar hatch-v" style="background: #1a1a2e08;">
+        <div class="sidebar-logo">⬡ BBCenter</div>
+        <div class="sidebar-divider">หลัก</div>
+        <div class="sidebar-item"><span>📊</span> Dashboard</div>
+        <div class="sidebar-item active"><span>🚗</span> จองรถ</div>
+        <div class="sidebar-item"><span>🏠</span> จองห้อง</div>
+        <div class="sidebar-item"><span>🔧</span> แจ้งซ่อม</div>
+        <div class="sidebar-divider" style="margin-top: auto;">ผู้ใช้</div>
+        <div class="sidebar-item" style="opacity:.5;">
+          <div class="circle-ph" style="font-size:.65rem;">JS</div>
+          <div><div style="font-size:.82rem; font-weight:600;">นายเจมส์</div><div style="font-size:.7rem; opacity:.6;">user</div></div>
+        </div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="wf-main">
+
+        <!-- HEADER -->
+        <div class="wf-header">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="btn-ph icon-only" style="font-size:.8rem;">☰</span>
+            <span class="header-title">ปฏิทินการจองรถ</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="circle-ph">JS</div>
+            <span style="font-size:.85rem;">นายเจมส์ จิ</span>
+          </div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="wf-content">
+
+          <!-- TOOLBAR -->
+          <div class="wf-toolbar">
+            <span class="btn-ph icon-only small">‹</span>
+            <span style="font-weight:700; font-size:1.05rem; min-width:120px; text-align:center;">เมษายน 2569</span>
+            <span class="btn-ph icon-only small">›</span>
+            <span class="btn-ph small">วันนี้</span>
+            <div style="margin-left:auto;">
+              <span class="btn-ph primary small">＋ จองรถ</span>
+            </div>
+          </div>
+
+          <!-- CALENDAR -->
+          <div class="wf-calendar">
+            <!-- header row -->
+            <div class="cal-header">
+              <div class="cal-head-cell sun">อา</div>
+              <div class="cal-head-cell">จ</div>
+              <div class="cal-head-cell">อ</div>
+              <div class="cal-head-cell">พ</div>
+              <div class="cal-head-cell">พฤ</div>
+              <div class="cal-head-cell">ศ</div>
+              <div class="cal-head-cell sat">ส</div>
+            </div>
+            <!-- body -->
+            <div class="cal-body">
+              <!-- Week 1 -->
+              <div class="cal-cell other-month"><div class="day-num">30</div></div>
+              <div class="cal-cell other-month"><div class="day-num">31</div></div>
+              <div class="cal-cell"><div class="day-num">1</div><div class="ev-card approved">08:00 ไปกรุงเทพ</div></div>
+              <div class="cal-cell"><div class="day-num">2</div></div>
+              <div class="cal-cell"><div class="day-num">3</div><div class="ev-card pending">09:00 ประชุม</div><div class="ev-card waiting">14:00 ตรวจโครงการ</div></div>
+              <div class="cal-cell"><div class="day-num">4</div></div>
+              <div class="cal-cell"><div class="day-num">5</div></div>
+              <!-- Week 2 -->
+              <div class="cal-cell"><div class="day-num">6</div><div class="ev-card group">09:00 ทริปกลุ่ม</div></div>
+              <div class="cal-cell"><div class="day-num">7</div></div>
+              <div class="cal-cell"><div class="day-num">8</div><div class="ev-card rejected">10:00 ไม่อนุมัติ</div></div>
+              <div class="cal-cell today-cell"><div class="day-num">9</div><div class="ev-card approved">08:30 ส่งเอกสาร</div><div class="ev-card pending">11:00 ประชุม</div></div>
+              <div class="cal-cell"><div class="day-num">10</div></div>
+              <div class="cal-cell"><div class="day-num">11</div></div>
+              <div class="cal-cell"><div class="day-num">12</div><div class="ev-card approved">07:00 ส่งพัสดุ</div></div>
+              <!-- Week 3 -->
+              <div class="cal-cell"><div class="day-num">13</div></div>
+              <div class="cal-cell"><div class="day-num">14</div><div class="ev-card pending">09:00 อบรม</div><div class="ev-card approved">13:00 ส่งงาน</div><div class="ev-more">+2 เพิ่มเติม</div></div>
+              <div class="cal-cell"><div class="day-num">15</div></div>
+              <div class="cal-cell"><div class="day-num">16</div></div>
+              <div class="cal-cell"><div class="day-num">17</div></div>
+              <div class="cal-cell"><div class="day-num">18</div></div>
+              <div class="cal-cell"><div class="day-num">19</div></div>
+              <!-- Week 4 -->
+              <div class="cal-cell"><div class="day-num">20</div></div>
+              <div class="cal-cell"><div class="day-num">21</div></div>
+              <div class="cal-cell"><div class="day-num">22</div></div>
+              <div class="cal-cell"><div class="day-num">23</div><div class="ev-card group">10:00 ทริปร่วม</div></div>
+              <div class="cal-cell"><div class="day-num">24</div></div>
+              <div class="cal-cell"><div class="day-num">25</div></div>
+              <div class="cal-cell"><div class="day-num">26</div></div>
+              <!-- Week 5 -->
+              <div class="cal-cell"><div class="day-num">27</div></div>
+              <div class="cal-cell"><div class="day-num">28</div></div>
+              <div class="cal-cell"><div class="day-num">29</div></div>
+              <div class="cal-cell"><div class="day-num">30</div></div>
+              <div class="cal-cell other-month"><div class="day-num">1</div></div>
+              <div class="cal-cell other-month"><div class="day-num">2</div></div>
+              <div class="cal-cell other-month"><div class="day-num">3</div></div>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="legend-row" style="margin-top:4px;">
+            <span class="annot" style="font-size:.82rem; margin-right: 6px;">สี event :</span>
+            <div class="legend-item"><div class="legend-dot" style="background:#fef3c7; border-color:#f59e0b;"></div><span style="font-size:.82rem;">รออนุมัติ</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#dbeafe; border-color:#60a5fa;"></div><span style="font-size:.82rem;">รอผู้ประสานงาน</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#d1fae5; border-color:#34d399;"></div><span style="font-size:.82rem;">อนุมัติแล้ว</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#fee2e2; border-color:#f87171;"></div><span style="font-size:.82rem;">ไม่อนุมัติ</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ede9fe; border-color:#7c3aed;"></div><span style="font-size:.82rem;">ทริปกลุ่ม</span></div>
+          </div>
+
+        </div><!-- /wf-content -->
+      </div><!-- /wf-main -->
+    </div><!-- /desktop-shell -->
+  </div><!-- /sketch-box -->
+
+  <!-- Desktop annotations -->
+  <div style="display:flex; gap:32px; margin-top:12px; flex-wrap:wrap;">
+    <div class="annot">• Sidebar กว้าง 220px · fixed · dark background</div>
+    <div class="annot">• Header height 52px · แสดงชื่อหน้า + avatar user</div>
+    <div class="annot">• Calendar cell สูง ~68px · overflow → "+N เพิ่มเติม"</div>
+    <div class="annot">• ปุ่ม "จองรถ" อยู่ขวาสุดของ toolbar</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SECTION 2: MOBILE LAYOUT
+════════════════════════════════════════════ -->
+<div class="wf-section">
+  <div class="wf-section-label">2. Mobile Layout &lt; 768px</div>
+
+  <div class="wf-row">
+
+    <!-- STATE A: Calendar expanded -->
+    <div style="position:relative;">
+      <div class="mobile-frame">
+        <div class="mobile-statusbar">
+          <span>9:41</span><span>●●● ⚡</span>
+        </div>
+        <div class="mobile-header">
+          <span class="btn-ph icon-only small">☰</span>
+          <span>ปฏิทินจองรถ</span>
+          <div class="circle-ph" style="width:28px;height:28px;font-size:.65rem;">JS</div>
+        </div>
+        <div class="mobile-content">
+
+          <!-- toolbar compact -->
+          <div style="display:flex; align-items:center; gap:6px; justify-content: space-between;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="btn-ph icon-only small">‹</span>
+              <span style="font-weight:700; font-size:.9rem;">เมษายน 2569</span>
+              <span class="btn-ph icon-only small">›</span>
+            </div>
+          </div>
+
+          <!-- compact calendar — 5 weeks shown -->
+          <div class="cal-compact">
+            <div class="cal-compact-header">
+              <div class="cal-compact-cell-head" style="color:#dc2626;">อา</div>
+              <div class="cal-compact-cell-head">จ</div>
+              <div class="cal-compact-cell-head">อ</div>
+              <div class="cal-compact-cell-head">พ</div>
+              <div class="cal-compact-cell-head">พฤ</div>
+              <div class="cal-compact-cell-head">ศ</div>
+              <div class="cal-compact-cell-head" style="color:#2563eb;">ส</div>
+            </div>
+            <div class="cal-compact-body">
+              <!-- week 1 -->
+              <div class="cal-day" style="opacity:.3;">30</div>
+              <div class="cal-day" style="opacity:.3;">31</div>
+              <div class="cal-day">1<div class="dot-row"><div class="dot approved"></div></div></div>
+              <div class="cal-day">2</div>
+              <div class="cal-day">3<div class="dot-row"><div class="dot pending"></div><div class="dot waiting"></div></div></div>
+              <div class="cal-day">4</div>
+              <div class="cal-day">5</div>
+              <!-- week 2 -->
+              <div class="cal-day">6<div class="dot-row"><div class="dot" style="background:#7c3aed;"></div></div></div>
+              <div class="cal-day">7</div>
+              <div class="cal-day">8<div class="dot-row"><div class="dot rejected" style="background:#ef4444;"></div></div></div>
+              <div class="cal-day">
+                <span class="dot selected">9</span>
+                <div class="dot-row"><div class="dot approved"></div><div class="dot pending"></div></div>
+              </div>
+              <div class="cal-day">10</div>
+              <div class="cal-day">11</div>
+              <div class="cal-day">12<div class="dot-row"><div class="dot approved"></div></div></div>
+              <!-- week 3 -->
+              <div class="cal-day">13</div>
+              <div class="cal-day">14<div class="dot-row"><div class="dot pending"></div><div class="dot approved"></div></div></div>
+              <div class="cal-day">15</div>
+              <div class="cal-day">16</div>
+              <div class="cal-day">17</div>
+              <div class="cal-day">18</div>
+              <div class="cal-day">19</div>
+              <!-- week 4 -->
+              <div class="cal-day">20</div>
+              <div class="cal-day">21</div>
+              <div class="cal-day">22</div>
+              <div class="cal-day">23<div class="dot-row"><div class="dot" style="background:#7c3aed;"></div></div></div>
+              <div class="cal-day">24</div>
+              <div class="cal-day">25</div>
+              <div class="cal-day">26</div>
+              <!-- week 5 -->
+              <div class="cal-day">27</div>
+              <div class="cal-day">28</div>
+              <div class="cal-day">29</div>
+              <div class="cal-day">30</div>
+              <div class="cal-day" style="opacity:.3;">1</div>
+              <div class="cal-day" style="opacity:.3;">2</div>
+              <div class="cal-day" style="opacity:.3;">3</div>
+            </div>
+          </div>
+
+          <!-- mobile list -->
+          <div class="mobile-list-header">
+            <span>9 เมษายน 2569</span>
+            <span class="btn-ph primary small">＋ จองรถ</span>
+          </div>
+
+          <!-- card type A: full detail -->
+          <div class="mobile-card approved">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-weight:700;">08:30 – 10:00</span>
+              <span class="badge-ph approved">อนุมัติแล้ว</span>
+            </div>
+            <div style="font-size:.88rem; opacity:.7;">ส่งเอกสารกรุงเทพ · นายสมชาย</div>
+            <div style="font-size:.78rem; opacity:.5;">Toyota Fortuner (กข-1234)</div>
+          </div>
+
+          <div class="mobile-card pending">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-weight:700;">11:00 – 13:00</span>
+              <span class="badge-ph pending">รออนุมัติ</span>
+            </div>
+            <div style="font-size:.88rem; opacity:.7;">ประชุมนอกสถานที่ · นายสมหมาย</div>
+            <div style="font-size:.78rem; opacity:.5;">ยังไม่ assign รถ</div>
+          </div>
+
+          <div style="height:20px;"></div>
+        </div>
+      </div>
+      <!-- label -->
+      <div style="margin-top:10px; text-align:center;">
+        <span class="annot">State A: Calendar ขยายเต็ม (scroll ขึ้น)</span>
+      </div>
+    </div>
+
+    <!-- STATE B: Calendar collapsed (2 weeks) -->
+    <div style="position:relative;">
+      <div class="mobile-frame" style="width:330px;">
+        <div class="mobile-statusbar">
+          <span>9:41</span><span>●●● ⚡</span>
+        </div>
+        <div class="mobile-header">
+          <span class="btn-ph icon-only small">☰</span>
+          <span>ปฏิทินจองรถ</span>
+          <div class="circle-ph" style="width:28px;height:28px;font-size:.65rem;">JS</div>
+        </div>
+        <div class="mobile-content">
+
+          <div style="display:flex; align-items:center; gap:6px; justify-content: space-between;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="btn-ph icon-only small">‹</span>
+              <span style="font-weight:700; font-size:.9rem;">เมษายน 2569</span>
+              <span class="btn-ph icon-only small">›</span>
+            </div>
+          </div>
+
+          <!-- COLLAPSED: 2 weeks only -->
+          <div class="cal-compact">
+            <div class="cal-compact-header">
+              <div class="cal-compact-cell-head" style="color:#dc2626;">อา</div>
+              <div class="cal-compact-cell-head">จ</div>
+              <div class="cal-compact-cell-head">อ</div>
+              <div class="cal-compact-cell-head">พ</div>
+              <div class="cal-compact-cell-head">พฤ</div>
+              <div class="cal-compact-cell-head">ศ</div>
+              <div class="cal-compact-cell-head" style="color:#2563eb;">ส</div>
+            </div>
+            <div class="cal-compact-body">
+              <!-- only week with today -->
+              <div class="cal-day">6</div>
+              <div class="cal-day">7</div>
+              <div class="cal-day">8</div>
+              <div class="cal-day">
+                <span class="dot selected">9</span>
+                <div class="dot-row"><div class="dot approved"></div></div>
+              </div>
+              <div class="cal-day">10</div>
+              <div class="cal-day">11</div>
+              <div class="cal-day">12</div>
+              <!-- next week -->
+              <div class="cal-day">13</div>
+              <div class="cal-day">14<div class="dot-row"><div class="dot pending"></div></div></div>
+              <div class="cal-day">15</div>
+              <div class="cal-day">16</div>
+              <div class="cal-day">17</div>
+              <div class="cal-day">18</div>
+              <div class="cal-day">19</div>
+            </div>
+          </div>
+
+          <!-- chevron to expand -->
+          <div style="text-align:center; padding:2px 0; opacity:.4; font-size:.8rem; border-top:1px dashed var(--ink); border-bottom: 1px dashed var(--ink);">
+            ▼ scroll ขึ้นเพื่อขยาย
+          </div>
+
+          <!-- mobile list header -->
+          <div class="mobile-list-header">
+            <span>9 เมษายน 2569</span>
+            <span class="btn-ph primary small">＋ จองรถ</span>
+          </div>
+
+          <!-- card type B: compact horizontal -->
+          <div class="mobile-card-b approved" style="border-left-color: #10b981;">
+            <div class="time-col">08:30<br>–<br>10:00</div>
+            <div class="info-col">
+              <div style="font-weight:700; font-size:.88rem;">ส่งเอกสารกรุงเทพ</div>
+              <div style="font-size:.78rem; opacity:.6;">นายสมชาย · Toyota Fortuner</div>
+              <div><span class="badge-ph approved" style="font-size:.72rem;">อนุมัติแล้ว</span></div>
+            </div>
+          </div>
+
+          <div class="mobile-card-b pending" style="border-left-color: #f59e0b;">
+            <div class="time-col">11:00<br>–<br>13:00</div>
+            <div class="info-col">
+              <div style="font-weight:700; font-size:.88rem;">ประชุมนอกสถานที่</div>
+              <div style="font-size:.78rem; opacity:.6;">นายสมหมาย · ยังไม่ assign</div>
+              <div><span class="badge-ph pending" style="font-size:.72rem;">รออนุมัติ</span></div>
+            </div>
+          </div>
+
+          <div style="height:20px;"></div>
+        </div>
+      </div>
+      <div style="margin-top:10px; text-align:center;">
+        <span class="annot">State B: Calendar พับ 2 สัปดาห์ (scroll ลง)</span>
+      </div>
+    </div>
+
+    <!-- Annotations column -->
+    <div style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:14px; padding-top:40px;">
+      <div class="sketch-box" style="padding:14px 16px; background:#fffbeb;">
+        <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">Mobile Behavior</div>
+        <div style="font-size:.9rem; display:flex; flex-direction:column; gap:6px; opacity:.85;">
+          <div>📱 <b>scroll ลง</b> → calendar พับเหลือ 2 สัปดาห์</div>
+          <div>📱 <b>scroll ขึ้น +10px</b> → calendar ขยายเต็ม 5 สัปดาห์</div>
+          <div>📍 <b>คลิก วัน</b> → highlight + แสดง list ด้านล่าง</div>
+          <div>🔵 <b>dot สี</b> บน cell = มี booking วันนั้น</div>
+          <div>⊕ <b>ปุ่มจองรถ</b> — ขวาของ list header</div>
+          <div>🚫 <b>วันที่ผ่านแล้ว</b> — ดูได้ แต่จองไม่ได้</div>
+        </div>
+      </div>
+      <div class="sketch-box" style="padding:14px 16px; background:#f0fdf4;">
+        <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">Mobile Card — ต้องเลือก</div>
+        <div style="font-size:.88rem; opacity:.85; display:flex; flex-direction:column; gap:4px;">
+          <div><b>Type A</b> (ซ้าย) — full detail card</div>
+          <div style="opacity:.7; font-size:.8rem; padding-left:12px;">ชัดเจน แต่กินพื้นที่มาก</div>
+          <div><b>Type B</b> (ขวา) — compact horizontal</div>
+          <div style="opacity:.7; font-size:.8rem; padding-left:12px;">compact กว่า เหมาะถ้า list ยาว</div>
+          <div style="margin-top:6px; color:#b45309; font-style:italic;">⬅ เลือกแบบไหนดี?</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /wf-row -->
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SECTION 3: MODALS
+════════════════════════════════════════════ -->
+<div class="wf-section">
+  <div class="wf-section-label">3. Modals</div>
+
+  <div class="wf-row" style="align-items: flex-start;">
+
+    <!-- MODAL 1: จองรถ -->
+    <div style="flex:1; min-width:280px; max-width:360px;">
+      <div class="annot" style="margin-bottom:8px;">#bookingModal — กดปุ่ม "จองรถ"</div>
+      <div class="modal-frame">
+        <div class="modal-header-wf">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.3rem;">📁</span>
+            <div>
+              <div style="font-size:.72rem; opacity:.5;">ผู้จอง</div>
+              <div style="font-weight:700; font-size:.95rem;">นายเจมส์ จิ</div>
+              <div style="font-size:.75rem; opacity:.55;">กองบริหาร · james@bb.go.th</div>
+            </div>
+          </div>
+          <span style="font-size:1rem; opacity:.4; cursor:pointer;">✕</span>
+        </div>
+        <div class="modal-body-wf">
+          <hr class="sketch-hr strong">
+          <div class="form-field-wf">
+            <div class="form-label-wf">วันที่เดินทาง</div>
+            <div class="form-input-wf">9 เมษายน 2569</div>
+          </div>
+          <div class="form-row-wf">
+            <div class="form-field-wf">
+              <div class="form-label-wf">เวลาออกเดินทาง</div>
+              <div class="form-input-wf">08:00</div>
+            </div>
+            <div class="form-field-wf">
+              <div class="form-label-wf">เวลากลับ</div>
+              <div class="form-input-wf">16:00</div>
+            </div>
+          </div>
+          <div class="form-field-wf">
+            <div class="form-label-wf">ปลายทาง / จุดหมาย</div>
+            <div class="form-input-wf">กรุงเทพมหานคร</div>
+          </div>
+          <div class="form-field-wf">
+            <div class="form-label-wf">วัตถุประสงค์</div>
+            <div class="form-input-wf" style="min-height:56px;">ประชุมกระทรวง</div>
+          </div>
+          <div class="form-row-wf">
+            <div class="form-field-wf">
+              <div class="form-label-wf">จำนวนผู้โดยสาร</div>
+              <div class="form-input-wf">3 คน</div>
+            </div>
+            <div class="form-field-wf">
+              <div class="form-label-wf">จุดรับ</div>
+              <div class="form-input-wf">หน้าอาคาร</div>
+            </div>
+          </div>
+          <hr class="sketch-hr">
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:.88rem;">
+            <label style="display:flex; align-items:center; gap:8px;">
+              <div style="width:14px;height:14px;border:1.5px solid var(--ink);border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;">✓</div>
+              ต้องการคนขับ
+            </label>
+            <label style="display:flex; align-items:center; gap:8px;">
+              <div style="width:14px;height:14px;border:1.5px solid var(--ink);border-radius:3px;"></div>
+              อนุญาตให้คนอื่นร่วมเดินทาง
+            </label>
+          </div>
+          <div class="form-field-wf">
+            <div class="form-label-wf">ประเภทค่าใช้จ่าย</div>
+            <div class="form-input-wf">ค่าใช้จ่ายส่วนกลาง ▾</div>
+          </div>
+        </div>
+        <div class="modal-footer-wf">
+          <span class="btn-ph small">ยกเลิก</span>
+          <span class="btn-ph primary small">ส่งคำขอจอง</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: Event Detail -->
+    <div style="flex:1; min-width:260px; max-width:320px;">
+      <div class="annot" style="margin-bottom:8px;">#eventDetailModal — คลิก event card</div>
+      <div class="modal-frame">
+        <div class="modal-header-wf" style="gap:8px; flex-direction:column; align-items:flex-start;">
+          <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+            <span class="badge-ph approved">อนุมัติแล้ว</span>
+            <span style="font-size:1rem; opacity:.4; cursor:pointer;">✕</span>
+          </div>
+          <div style="font-weight:700; font-size:1.05rem;">08:30 – 10:00 · ส่งเอกสาร</div>
+          <div style="font-size:.8rem; opacity:.6;">9 เมษายน 2569</div>
+        </div>
+        <div class="modal-body-wf" style="gap:8px;">
+          <div style="display:flex; flex-direction:column; gap:5px; font-size:.88rem;">
+            <div style="display:flex; gap:8px;"><span style="opacity:.5; min-width:70px;">ปลายทาง</span><span style="font-weight:600;">กรุงเทพมหานคร</span></div>
+            <div style="display:flex; gap:8px;"><span style="opacity:.5; min-width:70px;">วัตถุประสงค์</span><span>ส่งเอกสารกระทรวง</span></div>
+            <div style="display:flex; gap:8px;"><span style="opacity:.5; min-width:70px;">ผู้โดยสาร</span><span>2 คน</span></div>
+            <div style="display:flex; gap:8px;"><span style="opacity:.5; min-width:70px;">รถ</span><span>Toyota Fortuner (กข-1234)</span></div>
+            <div style="display:flex; gap:8px;"><span style="opacity:.5; min-width:70px;">คนขับ</span><span>นายประสิทธิ์ · 081-xxx</span></div>
+          </div>
+          <hr class="sketch-hr">
+          <!-- admin section (แสดงเมื่อเป็น admin) -->
+          <div style="background: #f8f7ff; border:1px dashed #7c3aed44; border-radius:4px; padding:8px 10px;">
+            <div style="font-size:.78rem; color:#7c3aed; font-weight:600; margin-bottom:6px;">⚙ ส่วน Admin</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <span class="btn-ph small" style="font-size:.75rem;">Assign รถ+คนขับ</span>
+              <span class="btn-ph small" style="font-size:.75rem;">แก้ไข</span>
+              <span class="btn-ph small" style="font-size:.75rem; border-color:#ef4444; color:#ef4444;">ปฏิเสธ</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer-wf" style="justify-content:space-between;">
+          <span class="btn-ph small" style="border-color:#ef4444; color:#ef4444; font-size:.78rem;">ลบการจอง</span>
+          <div style="display:flex; gap:6px;">
+            <span class="btn-ph small">แก้ไข</span>
+            <span class="btn-ph small">ปิด</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 3: Group Detail -->
+    <div style="flex:1; min-width:240px; max-width:300px;">
+      <div class="annot" style="margin-bottom:8px;">#groupDetailModal — คลิก event ทริปกลุ่ม</div>
+      <div class="modal-frame">
+        <div class="modal-header-wf" style="flex-direction:column; align-items:flex-start; gap:4px;">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+            <span style="font-weight:700; font-size:1rem;">ทริปร่วม TRP-001</span>
+            <span style="font-size:1rem; opacity:.4;">✕</span>
+          </div>
+          <div style="font-size:.8rem; opacity:.6;">9 เมษายน · 08:00 – 16:00</div>
+        </div>
+        <div class="modal-body-wf" style="gap:8px;">
+          <div style="font-size:.82rem; opacity:.6; font-weight:600;">สมาชิกในทริป (3 คน)</div>
+          <!-- member rows -->
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:.85rem; border:1px solid rgba(0,0,0,.1); border-radius:4px; padding:6px 8px;">
+              <div class="circle-ph" style="width:26px;height:26px;font-size:.62rem;">SC</div>
+              <div><div style="font-weight:600;">นายสมชาย</div><div style="font-size:.75rem; opacity:.5;">กองบริหาร</div></div>
+              <span class="badge-ph approved" style="margin-left:auto; font-size:.72rem;">อนุมัติ</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:.85rem; border:1px solid rgba(0,0,0,.1); border-radius:4px; padding:6px 8px;">
+              <div class="circle-ph" style="width:26px;height:26px;font-size:.62rem;">SM</div>
+              <div><div style="font-weight:600;">นายสมหมาย</div><div style="font-size:.75rem; opacity:.5;">กองวิชาการ</div></div>
+              <span class="badge-ph pending" style="margin-left:auto; font-size:.72rem;">รออนุมัติ</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:.85rem; border:1px solid rgba(0,0,0,.1); border-radius:4px; padding:6px 8px;">
+              <div class="circle-ph" style="width:26px;height:26px;font-size:.62rem;">JS</div>
+              <div><div style="font-weight:600;">นายเจมส์</div><div style="font-size:.75rem; opacity:.5;">กองบริหาร</div></div>
+              <span class="badge-ph approved" style="margin-left:auto; font-size:.72rem;">อนุมัติ</span>
+            </div>
+          </div>
+          <hr class="sketch-hr">
+          <div style="font-size:.85rem;">
+            <span style="opacity:.5;">รถที่ assign:</span> Toyota Fortuner (กข-1234)
+          </div>
+        </div>
+        <div class="modal-footer-wf">
+          <span class="btn-ph small">ปิด</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /wf-row -->
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SECTION 4: INTERACTION FLOW
+════════════════════════════════════════════ -->
+<div class="wf-section">
+  <div class="wf-section-label">4. Interaction Flow (User)</div>
+
+  <div class="sketch-box" style="padding:24px 28px;">
+    <div style="display:flex; align-items:flex-start; gap:0; flex-wrap:wrap;">
+
+      <!-- step boxes -->
+      <div style="display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:8px;">
+
+        <!-- 1 -->
+        <div style="text-align:center; min-width:120px;">
+          <div class="sketch-box" style="padding:10px 14px; display:inline-flex; flex-direction:column; align-items:center; gap:4px; background:#ede9fe;">
+            <span style="font-size:1.4rem;">📅</span>
+            <span style="font-size:.88rem; font-weight:700;">เปิดหน้า /vehicle</span>
+            <span style="font-size:.75rem; opacity:.6;">เห็น calendar</span>
+          </div>
+        </div>
+
+        <div style="font-size:1.4rem; padding:0 6px; opacity:.4;">→</div>
+
+        <!-- 2 -->
+        <div style="text-align:center; min-width:120px;">
+          <div class="sketch-box" style="padding:10px 14px; display:inline-flex; flex-direction:column; align-items:center; gap:4px;">
+            <span style="font-size:1.4rem;">🖱</span>
+            <span style="font-size:.88rem; font-weight:700;">คลิก event</span>
+            <span style="font-size:.75rem; opacity:.6;">หรือ คลิก "จองรถ"</span>
+          </div>
+        </div>
+
+        <div style="font-size:1.4rem; padding:0 6px; opacity:.4;">→</div>
+
+        <!-- 3a / 3b fork -->
+        <div style="display:flex; flex-direction:column; gap:8px; min-width:140px;">
+          <div class="sketch-box" style="padding:8px 12px; background:#d1fae5;">
+            <div style="font-size:.82rem; font-weight:700;">eventDetailModal</div>
+            <div style="font-size:.72rem; opacity:.6;">ดูรายละเอียด</div>
+          </div>
+          <div class="sketch-box" style="padding:8px 12px; background:#dbeafe;">
+            <div style="font-size:.82rem; font-weight:700;">bookingModal</div>
+            <div style="font-size:.72rem; opacity:.6;">กรอกฟอร์มจอง</div>
+          </div>
+          <div class="sketch-box" style="padding:8px 12px; background:#ede9fe;">
+            <div style="font-size:.82rem; font-weight:700;">groupDetailModal</div>
+            <div style="font-size:.72rem; opacity:.6;">ดูสมาชิกทริป</div>
+          </div>
+        </div>
+
+        <div style="font-size:1.4rem; padding:0 6px; opacity:.4;">→</div>
+
+        <!-- 4 -->
+        <div style="text-align:center; min-width:120px;">
+          <div class="sketch-box" style="padding:10px 14px; display:inline-flex; flex-direction:column; align-items:center; gap:4px; background:#fef3c7;">
+            <span style="font-size:1.4rem;">✉️</span>
+            <span style="font-size:.88rem; font-weight:700;">Submit / Action</span>
+            <span style="font-size:.75rem; opacity:.6;">→ Telegram notify</span>
+          </div>
+        </div>
+
+        <div style="font-size:1.4rem; padding:0 6px; opacity:.4;">→</div>
+
+        <!-- 5 -->
+        <div style="text-align:center; min-width:110px;">
+          <div class="sketch-box" style="padding:10px 14px; display:inline-flex; flex-direction:column; align-items:center; gap:4px; background:#d1fae5;">
+            <span style="font-size:1.4rem;">🔄</span>
+            <span style="font-size:.88rem; font-weight:700;">Refresh calendar</span>
+            <span style="font-size:.75rem; opacity:.6;">event อัปเดต</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="sketch-hr" style="margin:16px 0;">
+
+    <div style="font-size:.9rem; opacity:.7; font-style:italic;">
+      Admin path: คลิก event → eventDetailModal → กด "Assign รถ+คนขับ" → modal ย่อย assign → submit → status เปลี่ยนเป็น approved
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SECTION 5: OPEN DECISIONS
+════════════════════════════════════════════ -->
+<div class="wf-section">
+  <div class="wf-section-label">5. Open Decisions — ต้องเลือก</div>
+
+  <div class="wf-row">
+
+    <div class="sketch-box" style="flex:1; min-width:240px; padding:18px 20px; background:#fffbeb; border-color:#f59e0b;">
+      <div style="font-size:1.1rem; font-weight:700; margin-bottom:10px;">🤔 Mobile Card Style</div>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:.9rem;">
+        <div style="padding:8px 10px; border:1.5px solid var(--ink); border-radius:4px; background:var(--paper);">
+          <b>Option A</b> — Full card<br>
+          <span style="opacity:.65; font-size:.82rem;">เห็นข้อมูลครบ (dest+booker+car) แต่กินพื้นที่</span>
+        </div>
+        <div style="padding:8px 10px; border:1.5px solid var(--ink); border-radius:4px; background:var(--paper);">
+          <b>Option B</b> — Compact horizontal (time col + info col)<br>
+          <span style="opacity:.65; font-size:.82rem;">compact กว่า เหมาะถ้ามีหลาย event</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sketch-box" style="flex:1; min-width:240px; padding:18px 20px; background:#eff6ff; border-color:#3b82f6;">
+      <div style="font-size:1.1rem; font-weight:700; margin-bottom:10px;">🤔 Calendar Collapse Animation</div>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:.9rem;">
+        <div style="padding:8px 10px; border:1.5px solid var(--ink); border-radius:4px; background:var(--paper);">
+          <b>Option 1</b> — max-height transition<br>
+          <span style="opacity:.65; font-size:.82rem;">เรียบง่าย ไม่มี glitch</span>
+        </div>
+        <div style="padding:8px 10px; border:1.5px solid var(--ink); border-radius:4px; background:var(--paper);">
+          <b>Option 2</b> — transform + opacity (slide up + fade)<br>
+          <span style="opacity:.65; font-size:.82rem;">smooth กว่า แต่ซับซ้อนขึ้น</span>
+        </div>
+        <div style="padding:8px 10px; border:1.5px solid var(--ink); border-radius:4px; background:var(--paper);">
+          <b>Option 3</b> — ไม่มี animation (instant)<br>
+          <span style="opacity:.65; font-size:.82rem;">เร็วที่สุด ไม่มี delay</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sketch-box" style="flex:1; min-width:200px; padding:18px 20px; background:#f0fdf4; border-color:#10b981;">
+      <div style="font-size:1.1rem; font-weight:700; margin-bottom:10px;">✅ ตัดสินใจแล้ว</div>
+      <div style="font-size:.88rem; display:flex; flex-direction:column; gap:6px; opacity:.85;">
+        <div>✓ ลบหน้า /vehicle/detail → ใช้ popup แทน</div>
+        <div>✓ Mobile-list CSS — ใช้ Bootstrap class + เก็บ CSS แค่สี/font</div>
+        <div>✓ Status colors — Pending=amber, Waiting=blue, Approved=green, Rejected=red, Group=purple</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- footer -->
+<div style="text-align:center; margin-top:32px; opacity:.35; font-size:.88rem; font-family: var(--font);">
+  Wireframe — /vehicle · BBCenter V2 · เมษายน 2569 · ✏️ hand-drawn sketch
+</div>
+
+</body>
+</html>

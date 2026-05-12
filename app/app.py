@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, redirect, url_for
-from flask_login import LoginManager,current_user
+from flask import Flask, redirect, url_for, render_template
+from flask_login import LoginManager, current_user, login_required
 from models import db, User
 from datetime import timedelta
 from models import Vehicle # อย่าลืม import Vehicle ด้านบนด้วยนะถ้ายังไม่มี ชั่วคราว
@@ -53,6 +53,31 @@ app.register_blueprint(driver_bp)
 from views.room_view import room_bp
 app.register_blueprint(room_bp)
 
+from views.fuel_view import fuel_bp
+app.register_blueprint(fuel_bp)
+
+
+# ==========================================
+# Context processors
+# ==========================================
+
+@app.context_processor
+def inject_approver_pending_count():
+    from flask_login import current_user
+    from models import VehicleBooking, DeptApprover
+    count = 0
+    is_budget_approver = False
+    if current_user.is_authenticated:
+        my_rows = DeptApprover.query.filter_by(user_id=current_user.id).all()
+        if my_rows:
+            is_budget_approver = True
+            my_dept_ids = [r.dept_id for r in my_rows]
+            count = VehicleBooking.query.filter(
+                VehicleBooking.status == 'waiting_approver',
+                VehicleBooking.trip_department_id.in_(my_dept_ids)
+            ).count()
+    return {'approver_pending_count': count, 'is_budget_approver': is_budget_approver}
+
 
 # ==========================================
 
@@ -63,7 +88,32 @@ def index():
         return redirect(url_for('auth.dashboard'))  # ✅ login แล้ว → ไป dashboard
     return redirect(url_for('auth.login'))           # ยังไม่ login → ไปหน้า login
 
+# ==========================================
+# Design System Reference (superadmin only)
+# ==========================================
+@app.route('/design-system')
+@login_required
+def design_system_reference():
+    if not current_user.is_superadmin:
+        return redirect(url_for('auth.dashboard'))
+    return render_template('design_system_reference.html')
+
+
+# ==========================================
+# Notification Scheduler (APScheduler)
+# ==========================================
+# เริ่ม scheduler เฉพาะ process หลัก (ไม่ใช่ reloader child)
+# เพื่อกันไม่ให้ cron job รันซ้ำตอน dev mode
+import os as _os
+if _os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+    try:
+        from views.notification_cron import init_scheduler
+        init_scheduler(app)
+    except Exception as _e:
+        print(f"[Scheduler] init error: {_e}")
+
+
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  
+        db.create_all()
     app.run(host='0.0.0.0', port=5001, debug=True)

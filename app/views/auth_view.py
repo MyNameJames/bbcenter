@@ -1,4 +1,5 @@
 # views/auth_view.py
+import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, User, RepairTicket, MaintenanceTicket, RoomBooking, VehicleBooking
@@ -13,8 +14,16 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username').strip().lower()
         password = request.form.get('password')
+        print("USERNAME:", username)
+        print("PASSWORD:", password)
 
         is_valid, user_info = check_ad_login(username, password)
+        # is_valid = True
+        # user_info = {
+        #     'full_name': 'Test User', 
+        #     'email': 'test@test.com', 
+        #     'department': 'IT'
+        # }
 
         if is_valid:
             user = User.query.filter_by(username=username).first()
@@ -36,6 +45,30 @@ def login():
             flash("User หรือ Password ไม่ถูกต้อง!", "danger")
 
     return render_template('auth/login.html')
+
+
+# ── Dev Bypass Login ────────────────────────────────────────────────────────
+# เปิดใช้ได้เฉพาะเมื่อตั้ง environment variable: DEV_BYPASS=1
+# ห้ามใช้ใน production เด็ดขาด
+#
+# วิธีใช้:
+#   DEV_BYPASS=1 python app.py
+#   แล้วเปิด /dev/login/pjatuporn ใน browser
+# ─────────────────────────────────────────────────────────────────────────────
+@auth_bp.route('/dev/login/<username>')
+def dev_login(username):
+    if os.environ.get('DEV_BYPASS') != '1':
+        flash('ไม่อนุญาต', 'danger')
+        return redirect(url_for('auth.login'))
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        flash(f'ไม่พบ user: {username}', 'danger')
+        return redirect(url_for('auth.login'))
+
+    session.permanent = True
+    login_user(user, remember=True)
+    return redirect(url_for('auth.dashboard'))
 
 
 @auth_bp.route('/logout')
