@@ -1,0 +1,83 @@
+{#
+  Form group — label + input + help/error.
+
+  Usage:
+    {% from '_components/form_group.html' import form_group, form_input %}
+    {{ form_input(name='title', label='หัวข้อ', value=form.title,
+                  required=True, help='สั้นๆ ไม่เกิน 80 ตัว') }}
+
+  Or with custom control via call:
+    {% call form_group(name='note', label='หมายเหตุ', help='optional') %}
+      <textarea name="note" class="vc-form-textarea">{{ form.note }}</textarea>
+    {% endcall %}
+
+  Args:
+    name        used as id + name
+    label       label text
+    value       current value
+    type        input type (text, number, email, password, date)
+    required    bool — adds * to label + html required
+    placeholder
+    help        small grey hint
+    error       red error message (also flips .has-error)
+    disabled    bool
+    inline      bool — label on same row
+#}
+
+{% macro _classes(error, disabled, inline, required) -%}
+{%- set _c = ['vc-form-group'] -%}
+{%- if error %}{% set _ = _c.append('has-error') %}{% endif -%}
+{%- if disabled %}{% set _ = _c.append('is-disabled') %}{% endif -%}
+{%- if inline %}{% set _ = _c.append('vc-form-group--inline') %}{% endif -%}
+{%- if required %}{% set _ = _c.append('vc-form-group--required') %}{% endif -%}
+{{ _c|join(' ') }}
+{%- endmacro %}
+
+
+{% macro form_group(name, label='', help='', error='', disabled=False, inline=False, required=False) %}
+<div class="{{ _classes(error, disabled, inline, required) }}">
+    {% if label %}<label class="vc-form-label" for="{{ name }}">{{ label }}</label>{% endif %}
+    {{ caller() }}
+    {% if help %}<p class="vc-form-help">{{ help }}</p>{% endif %}
+    <p class="vc-form-error">{{ error }}</p>
+</div>
+{% endmacro %}
+
+
+{% macro form_input(name, label='', value='', type='text', placeholder='',
+                    help='', error='', required=False, disabled=False, inline=False) %}
+<div class="{{ _classes(error, disabled, inline, required) }}">
+    {% if label %}<label class="vc-form-label" for="{{ name }}">{{ label }}</label>{% endif %}
+    <input id="{{ name }}" name="{{ name }}" type="{{ type }}"
+           class="vc-form-input"
+           value="{{ value }}"
+           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+           {% if required %}required{% endif %}
+           {% if disabled %}disabled{% endif %}>
+    {% if help %}<p class="vc-form-help">{{ help }}</p>{% endif %}
+    <p class="vc-form-error">{{ error }}</p>
+</div>
+{% endmacro %}
+
+
+{% macro form_select(name, label='', options=[], current='', placeholder='',
+                     help='', error='', required=False, disabled=False, inline=False) %}
+<div class="{{ _classes(error, disabled, inline, required) }}">
+    {% if label %}<label class="vc-form-label" for="{{ name }}">{{ label }}</label>{% endif %}
+    <select id="{{ name }}" name="{{ name }}" class="vc-form-select"
+            {% if required %}required{% endif %}
+            {% if disabled %}disabled{% endif %}>
+        {% if placeholder %}<option value="">{{ placeholder }}</option>{% endif %}
+        {% for opt in options %}
+            {%- if opt is mapping -%}
+                {%- set v = opt.value -%}{%- set t = opt.text -%}
+            {%- else -%}
+                {%- set v = opt[0] -%}{%- set t = opt[1] -%}
+            {%- endif -%}
+            <option value="{{ v }}" {% if current|string == v|string %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+    </select>
+    {% if help %}<p class="vc-form-help">{{ help }}</p>{% endif %}
+    <p class="vc-form-error">{{ error }}</p>
+</div>
+{% endmacro %}

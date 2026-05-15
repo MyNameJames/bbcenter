@@ -1,0 +1,27 @@
+/* ============================================================
+   Component: Modal Shell (token-driven helpers around Bootstrap)
+   ─────────────────────────────────────────────────────────────
+   The active modal macro is built on Bootstrap 5 (.modal …) — this
+   file adds tokenized helpers/overrides only. Use the macro:
+   {% from '_components/_modal.html' import modal %}
+
+   Helpers:
+     .vc-modal-section   spacing block inside .modal-body
+     .vc-modal-divider   subtle hr line
+
+   Created: 2026-05-14 (Phase 2 component library)
+   ============================================================ */
+
+.vc-modal-section {
+    padding: var(--vc-space-4) 0;
+}
+.vc-modal-section + .vc-modal-section {
+    border-top: 1px solid var(--vc-border);
+}
+
+.vc-modal-divider {
+    height: 1px;
+    background: var(--vc-border);
+    margin: var(--vc-space-4) 0;
+    border: 0;
+}

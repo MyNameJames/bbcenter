@@ -1,0 +1,45 @@
+{#
+  Table shell — card wrapper for tables (header, scroll area, footer).
+
+  Usage:
+    {% from '_components/table_shell.html' import table_shell %}
+    {% call table_shell(title='รายการบิล',
+                        actions='<a class="vc-btn vc-btn-primary" href="...">เพิ่ม</a>',
+                        count_label='100 รายการ',
+                        pagination='<nav>...</nav>') %}
+      <table class="vc-table">
+        <thead>...</thead>
+        <tbody>...</tbody>
+      </table>
+    {% endcall %}
+
+  Args:
+    title         h3 in header
+    actions       raw HTML for right side of header (buttons, links)
+    count_label   left side of footer
+    pagination    raw HTML for right side of footer
+    show_head     bool, default True
+    show_foot     bool, default False (auto True if count_label or pagination)
+#}
+
+{% macro table_shell(title='', actions='', count_label='', pagination='',
+                     show_head=true, show_foot=none) %}
+{%- set _show_foot = show_foot if show_foot is not none else (count_label != '' or pagination != '') -%}
+<div class="vc-table-shell">
+    {% if show_head and (title or actions) %}
+    <header class="vc-table-shell__head">
+        {% if title %}<h3 class="vc-table-shell__title">{{ title }}</h3>{% endif %}
+        {% if actions %}<div class="vc-table-shell__actions">{{ actions|safe }}</div>{% endif %}
+    </header>
+    {% endif %}
+    <div class="vc-table-shell__scroll">
+        {{ caller() }}
+    </div>
+    {% if _show_foot %}
+    <footer class="vc-table-shell__foot">
+        <span class="vc-table-shell__count">{{ count_label }}</span>
+        {% if pagination %}{{ pagination|safe }}{% endif %}
+    </footer>
+    {% endif %}
+</div>
+{% endmacro %}

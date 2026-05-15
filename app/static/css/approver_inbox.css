@@ -1,0 +1,175 @@
+/* ============================================================
+   Approver Inbox — BBCenter design system
+   Scope: uses --vc-* tokens only.
+   ============================================================ */
+
+/* ── Flash alert ─────────────────────── */
+.approver-flash {
+    border-radius: var(--vc-radius-sm);
+    font-size: .88rem;
+}
+
+/* ── Budget Card ─────────────────────── */
+.budget-card {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+.budget-progress {
+    height: 4px;
+    background: var(--vc-border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0 5px;
+}
+.budget-bar {
+    height: 100%;
+    background: var(--vc-fg);
+    border-radius: 4px;
+}
+.ac-budget-icon   { font-size: .78rem; color: var(--vc-fg-subtle); }
+.ac-budget-name   { font-size: .875rem; font-weight: 600; color: var(--vc-fg); }
+.ac-budget-amount { font-size: .875rem; font-weight: 600; color: var(--vc-fg); }
+.ac-budget-total  { color: var(--vc-fg-subtle); font-weight: 400; }
+.ac-budget-used   { font-size: .74rem; color: var(--vc-fg-subtle); }
+
+/* ── Tabs ─────────────────────────────── */
+.inbox-tabs {
+    display: flex;
+    border-bottom: 1.5px solid var(--vc-border);
+    margin-bottom: 14px;
+}
+.inbox-tab {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--vc-fg-subtle);
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1.5px;
+    transition: color .15s, border-color .15s;
+}
+.inbox-tab.active {
+    color: var(--vc-fg);
+    font-weight: 600;
+    border-bottom-color: var(--vc-fg);
+}
+.tab-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vc-bg-hover);
+    color: var(--vc-fg-subtle);
+    border-radius: 99px;
+    padding: 0 6px;
+    height: 18px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.inbox-tab.active .tab-count-badge {
+    background: var(--vc-fg);
+    color: var(--vc-fg-inverted);
+}
+
+/* ── Booking Card ─────────────────────── */
+.approver-card {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+.ac-header {
+    padding: 14px 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    user-select: none;
+}
+.ac-header:hover { background: var(--vc-bg-hover); }
+.ac-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.ac-ref {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--vc-fg);
+}
+.ac-meta {
+    font-size: 0.78rem;
+    color: var(--vc-fg-subtle);
+}
+.ac-chevron {
+    font-size: 0.68rem;
+    color: var(--vc-fg-muted);
+    transition: transform .2s;
+    flex-shrink: 0;
+}
+.ac-chevron.rotated { transform: rotate(180deg); }
+.ac-body {
+    border-top: 1px solid var(--vc-border);
+    padding: 14px 16px 16px;
+}
+.ac-field-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--vc-fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+}
+.ac-field-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--vc-fg);
+}
+.ac-reject-reason { color: var(--vc-red); }
+
+/* ── Reject inline form ──────────────── */
+.ac-reject-input  { border-radius: var(--vc-radius-sm) !important; font-size: .85rem !important; }
+.ac-reject-cancel { border: 1px solid var(--vc-border) !important; border-radius: var(--vc-radius-sm) !important; }
+
+/* ── Action Buttons ───────────────────── */
+.btn-approve-action {
+    width: 100%;
+    background: var(--vc-primary);
+    color: var(--vc-on-primary);
+    border: 1.5px solid var(--vc-primary);
+    border-radius: var(--vc-radius-sm);
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+}
+.btn-approve-action:hover { opacity: 0.85; }
+.btn-reject-action {
+    width: 100%;
+    background: var(--vc-bg);
+    color: var(--vc-red);
+    border: 1.5px solid var(--vc-red-border);
+    border-radius: var(--vc-radius-sm);
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.btn-reject-action:hover {
+    background: var(--vc-red-bg);
+    border-color: var(--vc-red);
+}
+
+/* ── Empty state (FA icon inside vc-empty) ── */
+.approver-empty-icon { font-size: 1.1rem; }

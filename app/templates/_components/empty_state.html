@@ -1,0 +1,35 @@
+{#
+  Empty state — "ไม่มีข้อมูล" card (matches bbcenter-design skill).
+
+  Usage:
+    {% from '_components/empty_state.html' import empty_state %}
+    {{ empty_state(title='ยังไม่มีบิล',
+                   desc='เริ่มต้นด้วยการบันทึกบิลใบแรก',
+                   icon='receipt') }}
+
+  With CTA inside the block ({% call %}):
+    {% call empty_state(title='...', desc='...', icon='plus') %}
+      <button class="vc-btn vc-btn-primary vc-btn-sm" data-action="create">
+        <i data-lucide="plus" class="vc-icon-sm"></i> เพิ่มรายการ
+      </button>
+    {% endcall %}
+
+  Args:
+    title    headline
+    desc     subtext (optional)
+    icon     lucide icon name (optional, rendered 20×20)
+    compact  smaller padding
+#}
+
+{% macro empty_state(title='ไม่มีข้อมูล', desc='', icon='inbox', compact=False) %}
+<div class="vc-empty {% if compact %}vc-empty--compact{% endif %}">
+    {% if icon %}
+    <div class="vc-empty-icon">
+        <i data-lucide="{{ icon }}" style="width:20px;height:20px;"></i>
+    </div>
+    {% endif %}
+    <p class="vc-empty-title">{{ title }}</p>
+    {% if desc %}<p class="vc-empty-desc">{{ desc }}</p>{% endif %}
+    {%- if caller is defined -%}{{ caller() }}{%- endif %}
+</div>
+{% endmacro %}

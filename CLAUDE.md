@@ -1,6 +1,6 @@
 # BBCenter V2 — Project Rules
 
-> **อัปเดตล่าสุด:** 2026-04-25
+> **อัปเดตล่าสุด:** 2026-05-14 (namespace alignment — `--vc-*` canonical, `--ds-*` frozen-legacy)
 
 ## 📖 Reading Strategy
 
@@ -65,7 +65,7 @@
 
 ## Stack (Quick Ref)
 
-Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + in-app + APScheduler notify · `--ds-*` design tokens
+Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + in-app + APScheduler notify · `--vc-*` design tokens (canonical) — `--ds-*` = legacy, ห้ามใช้ใน code ใหม่, รอ retire ตอน Phase 5 cleanup
 
 รายละเอียด → [architecture.md](docs/notes/architecture.md)
 
@@ -104,7 +104,7 @@ booking.telegram_message_id = msg_id; db.session.commit()
 ## Design Quick Rules
 
 - Vercel-inspired light, accent `#4F46E5`
-- **No shadow** → ใช้ border (`var(--ds-border)` = `#E4E4E7`)
+- **No shadow** → ใช้ border (`var(--vc-border)` = `#EAEAEA`)
 - Radius 4–6px
 - Icons: Font Awesome (`fa-solid` นำหน้าทุก field เทคนิค)
 - **No `border-left/top` สีพิเศษ** บน card/KPI (ดู AI-generated)

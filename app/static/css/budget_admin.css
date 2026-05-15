@@ -52,31 +52,7 @@
 }
 
 
-/* ─────────────────────────────────────────────
-   2. KPI 6-CELL VARIANT
-   ─────────────────────────────────────────────
-   ใช้ร่วมกับ .vc-kpi-group:
-   <div class="vc-kpi-group vc-kpi-group--6"> ... </div>
-───────────────────────────────────────────── */
-.vc-kpi-group--6 {
-    grid-template-columns: repeat(6, 1fr);
-}
-
-@media (max-width: 1199.98px) {
-    .vc-kpi-group--6 { grid-template-columns: repeat(3, 1fr); }
-    .vc-kpi-group--6 .vc-kpi-cell:nth-child(3) { border-right: none; }
-    .vc-kpi-group--6 .vc-kpi-cell:nth-child(n+4) { border-top: 1px solid var(--vc-border); }
-}
-
-@media (max-width: 767.98px) {
-    .vc-kpi-group--6 { grid-template-columns: repeat(2, 1fr); }
-    .vc-kpi-group--6 .vc-kpi-cell { border-right: 1px solid var(--vc-border); }
-    .vc-kpi-group--6 .vc-kpi-cell:nth-child(2n) { border-right: none; }
-    .vc-kpi-group--6 .vc-kpi-cell:nth-child(n+3) { border-top: 1px solid var(--vc-border); }
-}
-
-.vc-kpi-value--purple { color: var(--vc-purple); }
-.vc-kpi-value--warn   { color: var(--vc-amber); }
+/* 2. KPI 6-cell variant + value tones — moved to components/kpi.css (Phase 2). */
 
 
 /* ─────────────────────────────────────────────

@@ -1,0 +1,53 @@
+{#
+  KPI macros — Vercel dashboard signature (matches bbcenter-design skill).
+
+  Pattern:
+    {% from '_components/kpi.html' import kpi_group, kpi_cell %}
+    {% call kpi_group(cols=3) %}
+      {{ kpi_cell(label='เงินสำรอง', value='1,234', unit='บาท',
+                  icon='wallet', meta='วงเงิน admin') }}
+      {{ kpi_cell(label='คงเหลือ', value=-200, unit='บาท',
+                  tone='danger', meta='หลังหักบิลค้างเบิก') }}
+    {% endcall %}
+
+  kpi_group(cols=3|6)
+    cols=6 → applies .vc-kpi-group--6 (responsive 6/3/2)
+
+  kpi_cell(label, value, unit='', icon='', meta='', tone='', action='', data_attr='')
+    tone:  '' | muted | success | danger | blue | purple | warn
+    icon:  lucide icon name (default render: <i data-lucide="...">)
+           — pass icon_kind='fa' to force Font Awesome `fa-<name>`
+    meta:  context line (HTML allowed via |safe)
+    action: raw HTML for bottom slot (e.g. settings button)
+    data_attr: extra attributes to drop on the cell (raw string)
+#}
+
+{% macro kpi_group(cols=3, class='') %}
+{%- set _cls = ['vc-kpi-group'] -%}
+{%- if cols == 6 %}{% set _ = _cls.append('vc-kpi-group--6') %}{% endif -%}
+{%- if class %}{% set _ = _cls.append(class) %}{% endif -%}
+<div class="{{ _cls|join(' ') }}">
+{{ caller() }}
+</div>
+{% endmacro %}
+
+
+{% macro kpi_cell(label, value, unit='', icon='', meta='', tone='', action='', data_attr='', icon_kind='lucide') %}
+{%- set _val_cls = ['vc-kpi-value'] -%}
+{%- if tone %}{% set _ = _val_cls.append('vc-kpi-value--' ~ tone) %}{% endif -%}
+<div class="vc-kpi-cell"{% if data_attr %} {{ data_attr|safe }}{% endif %}>
+    <p class="vc-kpi-label">
+        {% if icon -%}
+        {%- if icon_kind == 'fa' -%}
+        <i class="fa-solid {{ icon }} vc-icon-sm"></i>
+        {%- else -%}
+        <i data-lucide="{{ icon }}" class="vc-icon-sm"></i>
+        {%- endif %}
+        {%- endif %}
+        {{ label }}
+    </p>
+    <p class="{{ _val_cls|join(' ') }}">{{ value }}{% if unit %}<span class="vc-kpi-unit">{{ unit }}</span>{% endif %}</p>
+    {% if meta %}<p class="vc-kpi-meta">{{ meta|safe }}</p>{% endif %}
+    {% if action %}<div class="vc-kpi-action">{{ action|safe }}</div>{% endif %}
+</div>
+{% endmacro %}

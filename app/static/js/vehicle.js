@@ -20,11 +20,11 @@ const STATUS_LABEL = {
     completed:        'เสร็จแล้ว'
 };
 const STATUS_BADGE = {
-    pending:          'badge-pending',
-    waiting_approver: 'badge-approver',
-    approved:         'badge-approved',
-    rejected:         'bg-danger text-white',
-    completed:        'bg-secondary text-white'
+    pending:          'vc-badge vc-badge-warning vc-badge-dot',
+    waiting_approver: 'vc-badge vc-badge-blue vc-badge-dot',
+    approved:         'vc-badge vc-badge-success vc-badge-dot',
+    rejected:         'vc-badge vc-badge-danger vc-badge-dot',
+    completed:        'vc-badge vc-badge-neutral vc-badge-dot'
 };
 const STATUS_DOT = {
     pending:          'pending',
@@ -386,7 +386,7 @@ function buildDesktopEventCards(dayEvents, ds) {
             return `<div class="d-flex align-items-center gap-2 mb-1 pb-1"
                 style="border-bottom:1px solid #f3f4f6;cursor:pointer;"
                 onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${e.id}),200)">
-                <span class="badge rounded-pill ${STATUS_BADGE[e.status]||'bg-secondary'} " style="font-size:.65rem;">${STATUS_LABEL[e.status]||e.status}</span>
+                <span class="${STATUS_BADGE[e.status]||'vc-badge vc-badge-neutral vc-badge-dot'}">${STATUS_LABEL[e.status]||e.status}</span>
                 <span style="font-size:.75rem;font-weight:600;">${e.time}</span>
                 <span class="text-truncate" style="font-size:.72rem;max-width:110px;">${e.dest}</span>
             </div>`;
@@ -631,7 +631,7 @@ function openMoreEvents(dateStr) {
                 onclick="moreEventsModal.hide();setTimeout(()=>openEventDetail(${e.id}),280)">
                 <div class="d-flex align-items-center justify-content-between">
                     <span style="font-weight:700;font-size:.85rem;">${e.time} – ${e.dest}</span>
-                    <span class="badge rounded-pill ${STATUS_BADGE[e.status]||'bg-secondary'}" style="font-size:.7rem;">${STATUS_LABEL[e.status]||e.status}</span>
+                    <span class="${STATUS_BADGE[e.status]||'vc-badge vc-badge-neutral vc-badge-dot'}">${STATUS_LABEL[e.status]||e.status}</span>
                 </div>
                 <div style="font-size:.78rem;margin-top:3px;opacity:.75;">
                     <i class="bi bi-person-fill me-1"></i>${e.booker}

@@ -20,11 +20,11 @@ const STATUS_ICON = {
 };
 
 const STATUS_BADGE = {
-    pending:          { cls:'badge-pending',  label:'รออนุมัติ' },
-    waiting_approver: { cls:'badge-approver', label:'ส่ง Approver' },
-    forwarded:        { cls:'badge-approver', label:'ส่ง Approver' },
-    approved:         { cls:'badge-approved', label:'อนุมัติแล้ว' },
-    rejected:         { cls:'badge-rejected', label:'ปฏิเสธ' },
+    pending:          { cls:'vc-badge-warning vc-badge-dot', label:'รออนุมัติ' },
+    waiting_approver: { cls:'vc-badge-blue vc-badge-dot',    label:'ส่ง Approver' },
+    forwarded:        { cls:'vc-badge-blue vc-badge-dot',    label:'ส่ง Approver' },
+    approved:         { cls:'vc-badge-success vc-badge-dot', label:'อนุมัติแล้ว' },
+    rejected:         { cls:'vc-badge-danger vc-badge-dot',  label:'ปฏิเสธ' },
 };
 
 /* ── State ────────────────────────────────────── */
@@ -177,10 +177,11 @@ function renderBefore() {
     const list = document.getElementById('bookingList');
 
     if (!filtered.length) {
-        list.innerHTML = `<div class="bl-empty">
-            <i class="fa-solid fa-car-side"></i>
-            <div class="bl-empty-title">ไม่มีรายการจองรถ</div>
+        list.innerHTML = `<div class="vc-empty">
+            <div class="vc-empty-icon"><i data-lucide="car" style="width:20px;height:20px;"></i></div>
+            <p class="vc-empty-title">ไม่มีรายการจองรถ</p>
         </div>`;
+        if (window.lucide) window.lucide.createIcons();
         return;
     }
 
@@ -224,7 +225,7 @@ function renderSingleRow(b) {
                id="chk-n-${b.id}"
                ${isNotifySel ? 'checked' : ''}
                onclick="event.stopPropagation();toggleNotifySel(${b.id})">`
-        : `<div class="bl-badge ${sb.cls}">${sb.label}</div>`;
+        : `<span class="vc-badge ${sb.cls}">${sb.label}</span>`;
 
     const actions = buildRowActions(b);
 
@@ -307,7 +308,7 @@ function renderGroupRow(grpName, members) {
         ? `<input type="checkbox" class="bl-sel-check bl-sel-check--notify form-check-input"
                ${isGrpNotifySel ? 'checked' : ''}
                onclick="event.stopPropagation();toggleGroupNotifySel('${grpName}')">`
-        : `<div class="bl-badge badge-group flex-shrink-0">${members.length} งานรวม</div>`;
+        : `<span class="vc-badge vc-badge-solid vc-badge-dot flex-shrink-0">${members.length} งานรวม</span>`;
 
     const subItems = members.map(b => {
         const si = STATUS_ICON[b.status] || STATUS_ICON.pending;
@@ -317,7 +318,7 @@ function renderGroupRow(grpName, members) {
             <div class="flex-grow-1 overflow-hidden">
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="fw-semibold text-truncate" style="font-size:.82rem;color:var(--ds-text-heading);">${esc(b.booker)}</span>
-                    <div class="bl-badge ${sb.cls}" style="font-size:10px; padding: 1px 8px;">${sb.label}</div>
+                    <span class="vc-badge vc-badge-xs ${sb.cls}">${sb.label}</span>
                 </div>
                 <div class="text-muted d-inline-block text-truncate" style="font-size:.72rem;">
                     <i data-lucide="users" class="vc-icon-sm me-1" style="width:11px;height:11px;"></i>${b.pax}
@@ -561,10 +562,11 @@ function renderAfter() {
     const list = document.getElementById('tripList');
 
     if (!done.length) {
-        list.innerHTML = `<div class="bl-empty">
-            <i class="fa-solid fa-car-side"></i>
-            <div class="bl-empty-title">ไม่มีทริปที่เสร็จแล้ว</div>
+        list.innerHTML = `<div class="vc-empty">
+            <div class="vc-empty-icon"><i data-lucide="route" style="width:20px;height:20px;"></i></div>
+            <p class="vc-empty-title">ไม่มีทริปที่เสร็จแล้ว</p>
         </div>`;
+        if (window.lucide) window.lucide.createIcons();
         return;
     }
 

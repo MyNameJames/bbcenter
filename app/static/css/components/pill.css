@@ -1,0 +1,59 @@
+/* ============================================================
+   Component: Pill (larger, fully-rounded — for filters / toggles)
+   ─────────────────────────────────────────────────────────────
+   Pattern:
+   <button class="vc-pill is-active">ทั้งหมด</button>
+   <span class="vc-pill vc-pill--accent">ใหม่</span>
+
+   Variant of badge: bigger, pill-radius, more contrast.
+   Use for filter-tabs / segmented controls, not for tiny status.
+
+   States:    .is-active     selected (filled bg)
+   Variants:  --accent --success --danger
+
+   Macro: app/templates/_components/pill.html
+   Created: 2026-05-14 (Phase 2 component library)
+   ============================================================ */
+
+.vc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--vc-h-input-sm);
+    padding: 0 12px;
+    font-family: inherit;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    line-height: 1;
+    border-radius: var(--vc-radius-full);
+    border: 1px solid var(--vc-border);
+    background: var(--vc-bg);
+    color: var(--vc-fg-muted);
+    cursor: pointer;
+    transition: var(--vc-transition);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.vc-pill:hover {
+    border-color: var(--vc-border-hover);
+    color: var(--vc-fg);
+}
+
+.vc-pill.is-active {
+    background: var(--vc-fg);
+    color: var(--vc-fg-inverted);
+    border-color: var(--vc-fg);
+}
+
+/* ── Variants (resting + active states) ─────────── */
+.vc-pill--accent.is-active  { background: var(--vc-accent); border-color: var(--vc-accent); color: #fff; }
+.vc-pill--success.is-active { background: var(--vc-green);  border-color: var(--vc-green);  color: #fff; }
+.vc-pill--danger.is-active  { background: var(--vc-red);    border-color: var(--vc-red);    color: #fff; }
+
+/* ── Group (segmented control) ──────────────────── */
+.vc-pill-group {
+    display: inline-flex;
+    gap: var(--vc-space-2);
+    flex-wrap: wrap;
+}

@@ -2,7 +2,7 @@
 
 > **Claude: อ่านไฟล์นี้ก่อนเสมอ** เมื่อต้องหา symbol/route/feature แทนการ glob/grep
 > ทุกคอลัมน์ `file:line` คลิกเปิดได้เลย
-> **อัปเดตล่าสุด:** 2026-05-08 (driver_home Vercel-style rewrite + new driver.css; วันนี้/พรุ่งนี้ tabs, accordion cards, refuel UI removed)
+> **อัปเดตล่าสุด:** 2026-05-15 (Phase 0.5 + 1 + 2 + 3 frontend refactor: ลบ dead `vehicle_calendar.html` + route `/vehicle/calendar` · fix typo `--vc-bg-card` → `--vc-bg` · ลบ duplicate `design-system.css` load · **Phase 1**: แยก tokens ออกเป็น `app/static/css/tokens.css`, เพิ่ม `--vc-accent` Indigo · **Phase 2**: สร้าง `app/static/css/components/*.css` 8 ไฟล์ + `app/templates/_components/*.html` 7 macros; ย้าย KPI+filter จาก fuel_admin.css/budget_admin.css ไป components/ · **Phase 3.1 (fuel-admin)**: align macros + component CSS ให้ตรงกับ skill `bbcenter-design` (flat vocab `vc-badge-warning`, `vc-empty-title`, lucide icons), ลบ duplicate badge+empty จาก `fuel_admin.css`, migrate `admin_fuel.html` empty states → macro, update `/bbcenter-design` SKILL.md เพิ่ม §2.0 macro shorthand · **Phase 3.2 (vehicle-admin)**: ลบ `.bl-badge`/`.badge-pending`/`.badge-approver`/`.badge-approved`/`.badge-rejected`/`.badge-cancel`/`.badge-group`/`.bl-empty` จาก `vehicle_admin.css` (6 HEX violations + page-specific empty), update `vehicle_admin.js` STATUS_BADGE map + 4 innerHTML spots → `vc-badge-warning|blue|success|danger|neutral|solid` + `vc-empty` + `vc-empty-icon/-title` + lucide; re-add `vc-badge-solid` ใน `components/badge.css` สำหรับ "งานรวม" emphasis · **Phase 3.3 (mileage-admin)**: stripped `mileage_admin.css` 1095 → ~35 lines (ลบ ~30 dead `.mlg-kpi*/-btn*/-panel*/-breakdown*/-month*/-filter*/-table*/-empty*/-summary` blocks + duplicate `ds-alert*` + modal/state styling ที่ template inlines แล้ว); fix `mileage_admin.html` inline HEX `#DC2626`→`var(--vc-red)` ×3 + `var(--ds-accent)`→`var(--vc-fg)` ×1 · **Phase 3.4 (repair)**: migrate empty state → `empty_state` macro (`{% call %}`); เปลี่ยน `repair.css` `--ds-*` ทั้งหมด → `--vc-*` + HEX icon bg/border → `--vc-amber/blue/green-bg/border` · **Phase 3.5 (driver)**: 2 empty states → macro; ลบ inline `style=""` ทั้งหมด → `.driver-flash-alert/-plate/-unset`; ลบ dead `§1/.driver-page/.driver-container` + `§11/.driver-empty*` + `§13` icon overrides; `#D4D4D4` → `var(--vc-border-hover)` · **Phase 3.6 (vehicle user-facing)**: `STATUS_BADGE` map → `vc-badge-dot`; ลบ `.badge-approved/.badge-pending/.badge-approver` CSS; `vehicle-modal-book.html` info card `badge-pending` → `.bk-info-note`; `--ds-border`/`#111827` → `--vc-*` ใน bk-modal · **Phase 3.7 (ot/vehicle_cost)**: `--ds-text-2xl/sm` → `--vc-text-*`; HEX print section → `var(--vc-fg/fg-muted/fg-subtle/border)`; เพิ่ม `.cost-action-group`; ลบ inline `style=""` 4 จุดใน template · **Phase 3.8 (approver-inbox)**: ลบ inline `<style>` 197 lines + `<script>` → `approver_inbox.css` + `approver_inbox.js`; badge-waiting/approved/rejected → `vc-badge-dot`; 3 empty states → `vc-empty`; ลบ inline `style=""` ทั้งหมด · **Phase 4.0 (core JS)**: สร้าง `app/static/js/core/{icons,format,http}.js` เป็น ES modules — foundation สำหรับ feature module migration (Phase 4.1+). ยังไม่สร้าง `modal/toast/form` (รอ feature ต้องการ) · **Phase 4.1 pilot (approver-inbox)**: `approver_inbox.js` → `pages/approver-inbox.js` ES module; template `<script type="module">`; window expose สำหรับ legacy `onclick=""` · **Phase 4.1.5 (sidebar extract)**: ย้าย `.sidebar/.sb-*` (+ ลบ legacy `.menu-item/.brand-logo/.sidebar-menu`) จาก `vehicle.css` → `components/sidebar.css` + เพิ่มเข้า `design-system.css` @import → approver_inbox sidebar กลับมาทำงาน (และทุก page ได้ฟรี); vehicle.css 618 → 460 lines · **Phase 4.2 (repair)**: `repair.js` → `pages/repair.js` ES module; imports `initIcons`/`bindModalReinit` จาก `core/icons.js`; ลบ `$(document).ready()` wrapper
 
 ---
 
@@ -45,7 +45,7 @@ docs/notes/
 | `auth_bp` | [app/views/auth_view.py](../../app/views/auth_view.py) | `/` | 6 |
 | `repair_bp` | [app/views/repair_view.py](../../app/views/repair_view.py) | `/repair` | 4 |
 | `maintenance_bp` | [app/views/maintenance_view.py](../../app/views/maintenance_view.py) | `/maintenance` | 5 |
-| `vehicle_bp` | [app/views/vehicle_view.py](../../app/views/vehicle_view.py) | `/vehicle`, `/api` | ~25 |
+| `vehicle_bp` | [app/views/vehicle_view.py](../../app/views/vehicle_view.py) | `/vehicle`, `/api` | ~24 |
 | `adminfleet_bp` | [app/views/vehicle_view.py](../../app/views/vehicle_view.py) | `/admin/*` | 8 |
 | `admincost_bp` | [app/views/vehicle_view.py](../../app/views/vehicle_view.py) | `/admin/cost`, `/vehicle/mileage/override-fuel` | 3 |
 | `driver_bp` | [app/views/vehicle_view.py](../../app/views/vehicle_view.py) | `/driver` | 2 |
@@ -91,7 +91,6 @@ docs/notes/
 | GET/POST | `/vehicle/edit/<id>` | [vehicle_view.py:136](../../app/views/vehicle_view.py#L136) |
 | POST | `/vehicle/delete/<id>` | [vehicle_view.py:175](../../app/views/vehicle_view.py#L175) |
 | GET | `/vehicle/detail/<id>` | [vehicle_view.py:210](../../app/views/vehicle_view.py#L210) |
-| GET | `/vehicle/calendar` | [vehicle_view.py:226](../../app/views/vehicle_view.py#L226) |
 | GET | `/api/vehicle/bookings` | [vehicle_view.py:233](../../app/views/vehicle_view.py#L233) |
 | GET | `/api/custom-bookings` | [vehicle_view.py:255](../../app/views/vehicle_view.py#L255) |
 | POST | `/vehicle/approve/<id>` | [vehicle_view.py:282](../../app/views/vehicle_view.py#L282) |
@@ -279,32 +278,37 @@ docs/notes/
 **Shared partials** (include ทุกหน้า):
 | Partial | File |
 |---------|------|
-| `_sidebar.html` | [app/templates/_sidebar.html](../../app/templates/_sidebar.html) — `active_menu` keys: `dashboard` `history` `vehicle`/`calendar` `repair` `room` `admin` `mileage` `fleet` `cost` `budget` `fuel` `approver`. **Icons: Lucide** (`data-lucide="..."`) — load via `_header.html` |
+| `_sidebar.html` | [app/templates/_sidebar.html](../../app/templates/_sidebar.html) — `active_menu` keys: `dashboard` `history` `vehicle` `repair` `room` `admin` `mileage` `fleet` `cost` `budget` `fuel` `approver`. **Icons: Lucide** (`data-lucide="..."`) — load via `_header.html` |
 | `_header.html` | [app/templates/_header.html](../../app/templates/_header.html) |
 | `_notification_panel.html` | [app/templates/_notification_panel.html](../../app/templates/_notification_panel.html) |
 | `_notification_toast.html` | [app/templates/_notification_toast.html](../../app/templates/_notification_toast.html) |
+| `_components/*.html` | Reusable Jinja macros (Phase 2 + 3) — see § Design System > Component library. Files: `kpi.html` (`kpi_cell` accepts `icon_kind='lucide'\|'fa'`, default lucide), `filter_bar.html`, `badge.html` (`badge(text, tone, dot=False, icon='', size='')`, lucide), `pill.html`, `empty_state.html` (`empty_state(title, desc, icon, compact)`, lucide, `{% call %}` for CTA), `form_group.html`, `table_shell.html`, `_modal.html`. Phase 3 aligned to flat vocab matching `/bbcenter-design` skill. |
+
+**Repair templates:**
+| File | ใช้สำหรับ |
+|------|----------|
+| `repair/repair.html` | ระบบแจ้งซ่อมไอที — **vc-scope shell** (2026-05-13 redesign): `repair-header` pattern, 5-cell KPI (admin only), `vc-table` + `vc-card-head`, DataTable (langUrl via data attr), 3 modals (repairFormModal/acceptModal/closeModal), `vc-badge`/`vc-btn`, Lucide icons. Loads `repair.css` + `pages/repair.js` (Phase 4.2 — `type="module"`). **Phase 3.4 (2026-05-15):** empty state migrated → `{% call empty_state(icon='wrench') %}` macro with CTA button caller; ลบ inline `style="width:20px;height:20px;"`. **Phase 4.2 (2026-05-15):** script → ES module `pages/repair.js`. |
 
 **Vehicle templates:**
 | File | ใช้สำหรับ |
 |------|----------|
 | `vehicle/vehicle.html` | หน้าจองหลัก |
-| `vehicle/vehicle_calendar.html` | calendar view | ไม่ใช้แล้ว ลบทิ้งได้เลย
 | `vehicle/vehicle_history.html` | ประวัติ |
 | `vehicle/vehicle_edit.html` | แก้ไข booking |
-| `vehicle/approver_inbox.html` | Approver inbox — budget card + 3 tabs (รออนุมัติ/อนุมัติแล้ว/ปฏิเสธ) + accordion cards + inline reject form |
-| `vehicle/admin/mileage_admin.html` | บันทึกเลขไมล์ (admin) — KPI + breakdown + filter + checkbox summary + modal 3-state |
-| `vehicle/driver_home.html` | หน้าคนขับ — **Vercel namespace** (2026-05-08, rev2): `<body class="vc-scope">` + lucide icons only (no Font Awesome). Header + segmented tabs (วันนี้/พรุ่งนี้, no "ย้อนหลัง"), accordion cards (`[data-card]` open one→close others within active panel), inline mileage form (no modal), upload zone (no separate camera button), CTA black `--vc-primary`. Tomorrow tab read-only with "เริ่มงานได้ในวันที่ …" note. Refuel UI removed. Loads lucide UMD inline + `driver.css`. |
-| `vehicle/vehicle-modal-book.html` | `#bookingModal` |
+| `vehicle/approver_inbox.html` | Approver inbox — budget card + 3 tabs (รออนุมัติ/อนุมัติแล้ว/ปฏิเสธ) + accordion cards + inline reject form. **Phase 3.8 (2026-05-15):** ลบ inline `<style>` (197 lines) → `approver_inbox.css`; ลบ inline `<script>` → `approver_inbox.js`; `.badge-waiting/.badge-approved/.badge-rejected` → `vc-badge vc-badge-warning/success/danger vc-badge-dot`; 3 empty states → `vc-empty/vc-empty-icon/vc-empty-title`; ลบ inline `style=""` ทุกจุด (dynamic width คง). **Phase 4.1 (2026-05-15):** script → ES module `<script type="module" src="js/pages/approver-inbox.js">`. |
+| `vehicle/admin/mileage_admin.html` | บันทึกเลขไมล์ (admin) — **vc-scope shell** (2026-05-13): `fuel-header` pattern, 4-cell KPI (`va-kpi-card` + `vc-kpi-group.va-kpi-4`), `vc-filter-bar`, checkbox summary strip (`vc-card`), `vc-table` + `vc-card-head`, lucide icons, `vc-badge`/`vc-btn` (ลบ breakdownPanel/monthPager แล้ว). Loads `fuel_admin.css` + `mileage_admin.css` (page-only row+modal styles). **Phase 3.3 (2026-05-14):** inline HEX `#DC2626` → `var(--vc-red)` (3 จุด), `var(--ds-accent)` → `var(--vc-fg)` (1 จุด). |
+| `vehicle/driver_home.html` | หน้าคนขับ — **Vercel namespace** (2026-05-08, rev2): `<body class="vc-scope">` + lucide icons only (no Font Awesome). Header + segmented tabs (วันนี้/พรุ่งนี้, no "ย้อนหลัง"), accordion cards (`[data-card]` open one→close others within active panel), inline mileage form (no modal), upload zone (no separate camera button), CTA black `--vc-primary`. Tomorrow tab read-only with "เริ่มงานได้ในวันที่ …" note. Refuel UI removed. Loads lucide UMD inline + `driver.css`. **Phase 3.5 (2026-05-15):** 2 empty states → `{{ empty_state(...) }}` macro; ลบ inline `style=""` ทั้งหมด (flash alert → `driver-flash-alert`, plate span → `driver-plate`, unset span → `driver-unset`). |
+| `vehicle/vehicle-modal-book.html` | `#bookingModal`. **Phase 3.6 (2026-05-15):** ลบ `badge-pending` ออกจาก info card → ใช้ `.bk-info-note` แทน |
 | `vehicle/vehicle-modal-edit.html` | `#editBookingModal` |
 | `vehicle/vehicle-modal-detail.html` | `#eventDetailModal` (single + group รวมใน modal เดียว) |
 | `vehicle/vehicle-modal-group.html` | *(merged into vehicle-modal-detail.html)* |
 | `vehicle/vehicle-modal-more-events.html` | `#moreEventsModal` |
-| `vehicle/admin/vehicle_admin.html` | admin dashboard — **Vercel shell** (`.vc-scope`), 4-cell KPI strip (รออนุมัติ/ส่ง Approver/อนุมัติ/ปฏิเสธ), week navigator (dark active fill), 2-col split: Bookings+Trips (col-8) / Vehicle status grid (col-4 sticky), 4 modals: `#assignModal` `#swapModal` `#repairModal` `#revertModal`. Reuses `fuel_admin.css` primitives (`.vc-card/.vc-kpi-*/.vc-btn/.vc-modal/.vc-form-*`). Lucide icons. |
+| `vehicle/admin/vehicle_admin.html` | admin dashboard — **Vercel shell** (`.vc-scope`), 4-cell KPI strip (รออนุมัติ/ส่ง Approver/อนุมัติ/ปฏิเสธ), week navigator (dark active fill), 2-col split: Bookings+Trips (col-8) / Vehicle status grid (col-4 sticky), 4 modals: `#assignModal` `#swapModal` `#repairModal` `#revertModal`. Reuses shared primitives: `.vc-kpi-*` (components/kpi.css), `.vc-badge-*` + `.vc-empty-*` (components/badge.css + empty_state.css — Phase 3.2), `.vc-card/.vc-btn/.vc-modal/.vc-form-*` (design-system.css). Lucide icons. KPI cells kept raw HTML (canonical per `/bbcenter-design`); status badges + empty states rendered by JS now emit `vc-badge-{warning\|blue\|success\|danger\|neutral\|solid} vc-badge-dot` + `vc-empty` + `vc-empty-icon/-title` + lucide icons. |
 | `vehicle/admin/admin_manage_fleet.html` | จัดการรถ + คนขับ + ตารางผู้อนุมัติประจำกอง (view-only); service/tax date อยู่ใน edit modal |
-| `vehicle/admin/vehicle_cost.html` | จัดการค่าล่วงเวลา (OT) คนขับ — KPI, ตาราง, อนุมัติ, พิมพ์ใบเสร็จ |
+| `vehicle/admin/vehicle_cost.html` | จัดการค่าล่วงเวลา (OT) คนขับ — KPI (3 cell raw), filter bar (date range/driver GET), table + status tabs (vc-tab/vc-tab-count), edit modal (slot rows dynamic), rate config modal, print receipt (`@media print`). Loads `vehicle_cost.css` + `ot_admin.js`. **Phase 3.7 (2026-05-15):** ลบ inline `style="display:inline;"` ×3 → `.d-inline`; `style="display:inline-flex;gap:4px;"` → `.cost-action-group`; ลบ `style="width:20px;height:20px;"` จาก empty-state lucide icon. |
 | `vehicle/admin/budget_manage.html` | จัดการงบ |
 | `vehicle/admin/budget_personal.html` | personal reimbursement |
-| `vehicle/admin/admin_fuel.html` | **Phase 2.3–2.7 + 4.1/4.3** — Vercel shell, 6 KPI cells, filter bar (year/month/vehicle/driver GET), Bills data table (Excel export link, anchor `#billsCard`), Reimbursements accordion, **Pivot รถ×เดือน** (heatmap, sticky col, footer sum, **drill-down → Bills filter year+vehicle+month**), **5 modals (bill/reimb/reserve/price/budget)** + JS controller |
+| `vehicle/admin/admin_fuel.html` | **Phase 2.3–2.7 + 3 + 4.1/4.3** — Vercel shell, 6 KPI cells (raw), filter bar (year/month/vehicle/driver GET — raw), Bills data table (Excel export link, anchor `#billsCard`), Reimbursements accordion, **Pivot รถ×เดือน** (heatmap, sticky col, footer sum, **drill-down → Bills filter year+vehicle+month**), **5 modals (bill/reimb/reserve/price/budget)** + JS controller. **Phase 3:** empty states use `empty_state` macro; KPI/filter/table kept raw as canonical reference for `/bbcenter-design`. |
 | `vehicle/admin/fuel-modal-bill.html` | Bill create/edit/delete modal — date/vehicle/driver/amount/payment radio segmented/mileage/note. `#fuelBillModal` |
 | `vehicle/admin/fuel-modal-reimbursement.html` | Reimbursement create/edit modal — bill list summary + เลขใบเบิก/แหล่ง/วันส่ง/note. `#fuelReimbModal` |
 | `vehicle/admin/fuel-modal-reserve.html` | Reserve adjust modal — current summary + signed change + note (required) + history 20. `#fuelReserveModal` |
@@ -317,36 +321,70 @@ docs/notes/
 
 ## 🎨 Design System
 
-**Entry point:** [app/static/css/design-system.css](../../app/static/css/design-system.css)
-- CSS variables: `--ds-*` (accent, bg, text, border, radius) — global, ทุกหน้า
-- Primary: `#4F46E5` (Indigo-600)
-- Shadow: ไม่มี (ใช้ border แทน)
+**Token source (single):** [app/static/css/tokens.css](../../app/static/css/tokens.css) — 2026-05-14 split out (Phase 1)
+- Part A `--ds-*` — **legacy** (Indigo accent, Tailwind palette) — frozen, ห้าม add ใหม่, retire ใน Phase 5 cleanup
+- Part B `--vc-*` — **canonical** (Vercel-Black + Indigo accent) — ใช้ใน new code ทุกที่
+- `@import`-ed by `design-system.css` (everyone loads it transitively)
+- Migration map: see [design_system.md §14](design_system.md)
 
-**Vercel namespace `--vc-*`** (Section 8 ในไฟล์เดียวกัน, 2026-05-05):
-- Scope: opt-in via `.vc-scope` หรือใช้ใน `fuel_admin.css` เท่านั้น (ห้ามไหลไปหน้าอื่น)
-- Primary: `#000` (pure black) · Border: `#EAEAEA` · Radius card 8px
-- Mono: Geist Mono (โหลดใน `_header.html`) — ใช้ผ่าน `.vc-mono`
-- Utilities: `.vc-mono` `.vc-caption` `.vc-tracking-tight` `.vc-icon{,-sm,-md,-lg}` `.vc-scope`
+**Component entry:** [app/static/css/design-system.css](../../app/static/css/design-system.css) — typography + components + `.vc-mono/-caption/-icon*/-scope` utilities (no token defs anymore). `@import`s `tokens.css` + every file in `components/`.
+
+**Component library (Phase 2, 2026-05-14):**
+| Component | CSS | Macro | Notes |
+|-----------|-----|-------|-------|
+| KPI strip | [components/kpi.css](../../app/static/css/components/kpi.css) | [_components/kpi.html](../../app/templates/_components/kpi.html) | `kpi_group(cols=3\|6)` + `kpi_cell(label,value,unit,icon,meta,tone)`. Tones: muted/success/danger/blue/purple/warn. Extracted from `fuel_admin.css`+`budget_admin.css`. |
+| Filter bar | [components/filter_bar.css](../../app/static/css/components/filter_bar.css) | [_components/filter_bar.html](../../app/templates/_components/filter_bar.html) | `filter_bar()` wraps a `<form>`; `filter_select`/`filter_date` for fields. Extracted from `fuel_admin.css §21`. |
+| Badge | [components/badge.css](../../app/static/css/components/badge.css) | [_components/badge.html](../../app/templates/_components/badge.html) | `.vc-badge` + tones `-neutral/-warning/-blue/-success/-danger/-solid`, `.vc-badge-dot` left dot, `.vc-badge-xs` small. `-solid` = inverted black-fg/white-bg for strong emphasis (re-added Phase 3.2 for "X งานรวม" pill). Page-local extension `.vc-badge-purple` in `budget_admin.css`. Phase 3 aligned to flat vocab matching `/bbcenter-design` skill. |
+| Pill | [components/pill.css](../../app/static/css/components/pill.css) | [_components/pill.html](../../app/templates/_components/pill.html) | Rounded chip for filter tabs/segmented. `.is-active`, tones `accent/success/danger`. |
+| Empty state | [components/empty_state.css](../../app/static/css/components/empty_state.css) | [_components/empty_state.html](../../app/templates/_components/empty_state.html) | `empty_state(title, desc, icon, compact)` — lucide icon. Use `{% call %}…{% endcall %}` for CTA button. Phase 3 aligned to flat vocab (`vc-empty-title/-desc/-icon`). |
+| Form group | [components/form_group.css](../../app/static/css/components/form_group.css) | [_components/form_group.html](../../app/templates/_components/form_group.html) | `form_input/form_select/form_group(call)`. States `.has-error/.is-disabled`. |
+| Table shell | [components/table_shell.css](../../app/static/css/components/table_shell.css) | [_components/table_shell.html](../../app/templates/_components/table_shell.html) | `.vc-table-shell` wrapper + `.vc-table` skin. |
+| Modal | [components/modal_shell.css](../../app/static/css/components/modal_shell.css) | [_components/_modal.html](../../app/templates/_components/_modal.html) | Bootstrap-based macro (predates Phase 2) + new tokenized helpers (`.vc-modal-section/-divider`). |
+| Sidebar | [components/sidebar.css](../../app/static/css/components/sidebar.css) | (template: `_sidebar.html`) | `.sidebar` + `.sb-brand/-logo(-icon,-text)/-close/-nav/-section-label/-item(.active)/-icon/-label/-badge/-footer/-logout`. Defines `--sidebar-width: 250px`. **Moved Phase 4.1.5 (2026-05-15)** from `vehicle.css` so every page (incl. approver_inbox ที่ไม่โหลด vehicle.css) ได้ sidebar styles ฟรีผ่าน `design-system.css` @import. |
+
+Total: 9 component CSS files + 8 macros (7 new in Phase 2 + 1 pre-existing `_modal.html`).
+
+**Highlights:**
+- `--vc-accent` `#4F46E5` (Indigo) — active states + focus ring (legacy alias `--ds-accent` ยังมีใน tokens.css Part A — ห้ามอ้างใน code ใหม่)
+- `--vc-primary` `#000` — primary CTA · `--vc-border` `#EAEAEA` · `--vc-radius-md` 8px (card)
+- Shadow: ไม่มี (border only)
+- Mono: Geist Mono via `.vc-mono`
+- `.vc-scope` = opt-in body class for pages using `--vc-*` foundation
 
 **Per-page CSS:**
 | File | ใช้กับ |
 |------|--------|
-| `vehicle.css` | หน้า user vehicle + calendar + history |
-| `driver.css` | **`/driver` only** (2026-05-08, **rev2 → Vercel namespace**) — uses `--vc-*` tokens (matches `fuel_admin.css` standard), body wrapped in `.vc-scope`. Classes: `.driver-page/-container/-header/-title/-subtitle/-header-meta/-tabs(__btn,__count)/-card(__head,__id,__summary,__chevron,__body, .is-open, --readonly)/-meta(__item,__icon,__label,__value)/-summary(__row,__label,__value)/-form(__title)/-upload(.has-file,__icon,__label,__hint)/-cta/-pill(--waiting,--ontrip,--done,--upcoming)/-done-summary/-readonly-note/-empty(__icon,__title,__desc)/-panel(.is-active)`. Mono font (Geist Mono) for BK-id, KPI numbers, inputs. Black primary CTA via `--vc-primary`. Lucide icons sized via `.vc-icon-sm/md/lg`. JS: tab switch + accordion (open one→close others within panel) + actual_start/end timestamp stamp + upload zone file feedback + lucide.createIcons(). |
-| `vehicle_admin.css` | admin dashboard + budget pages. **Rewritten 2026-05-07** for Vercel shell: depends on `fuel_admin.css` (vc-* primitives) + `design-system.css` (vc-* tokens). Page-specific only: `.va-page-header/.va-kpi-4/.va-week-*/.va-collapsed-bar/.va-filter-tabs+.ftab/.va-list/.va-vehicle-grid/.va-modal-*/.va-exp-tabs/.va-budget-bar/.va-swap-list/.adm-toast`. JS-rendered classes restyled: `.bl-*` `.pts-*` `.vs-*` (vehicle status row) `.swap-veh-*` `.adm-exp-tab`. Mobile breakpoints ≤767px (list actions wrap) and ≤575px (vehicle row + filter tab compact) |
-| `fuel_admin.css` | **Vercel namespace** — fuel page only. Sections: page shell, header, card, KPI strip, btn, table+badge+empty, list+collapse+meta-grid, form input/segmented radio/modal Bootstrap-override skin/history scroll table, **§21 filter bar** (`.vc-filter-bar/.vc-filter-select`), **§22 pivot table** (`.vc-pivot-*`, heatmap via `--cell-heat`, `.vc-pivot-link` drill-down with `:focus-visible` + `:has()` hover boost) |
+| `vehicle.css` | หน้า user vehicle + history (calendar ถูกลบใน Phase 0.5). **Phase 3.6 (2026-05-15):** ลบ `.badge-approved/.badge-pending/.badge-approver` (3 HEX blocks); `--ds-border`→`--vc-border` + `#111827`→`var(--vc-fg)` ใน bk-modal; เพิ่ม `.bk-info-note` (amber token). **Phase 4.1.5 (2026-05-15):** ลบ sidebar section + legacy `.menu-item`/`.brand-logo`/`.sidebar-menu`/`.menu-section` (158 lines, 618 → 460); ย้ายไป `components/sidebar.css` |
+| `driver.css` | **`/driver` only** (2026-05-08, **rev2 → Vercel namespace**) — uses `--vc-*` tokens (matches `fuel_admin.css` standard), body wrapped in `.vc-scope`. Classes: `.driver-flash-alert/-plate/-unset/-header/-title/-subtitle/-header-meta/-tabs(__btn,__count)/-card(__head,__id,__summary,__chevron,__body, .is-open, --readonly)/-meta(__item,__icon,__label,__value)/-summary(__row,__label,__value)/-form(__title)/-upload(.has-file,__icon,__label,__hint)/-cta/-pill(--waiting,--ontrip,--done,--upcoming)/-done-summary/-readonly-note/-panel(.is-active)`. Mono font (Geist Mono) for BK-id, KPI numbers, inputs. Black primary CTA via `--vc-primary`. **Phase 3.5 (2026-05-15):** ลบ dead `.driver-page/-container` (§1), `.driver-empty*` (§11 — ใช้ macro แทน), icon overrides scoped to `.driver-page` (§13); แทน `#D4D4D4` → `var(--vc-border-hover)`; เพิ่ม `.driver-flash-alert/-plate/-unset`. |
+| `vehicle_admin.css` | admin dashboard + budget pages. **Rewritten 2026-05-07** for Vercel shell. **Phase 3.2 (2026-05-14):** ลบ `.bl-badge`/`.badge-pending`-`.badge-group`/`.bl-empty` (รวม 6 HEX colors) → page ใช้ `components/badge.css` + `components/empty_state.css` แทน. Depends on `components/kpi.css` + `components/filter_bar.css` + `components/badge.css` + `components/empty_state.css` (Phase 2+3 primitives) + `design-system.css`. Page-specific only: `.va-page-header/.va-kpi-4/.va-week-*/.va-collapsed-bar/.va-filter-tabs+.ftab/.va-list/.va-vehicle-grid/.va-modal-*/.va-exp-tabs/.va-budget-bar/.va-swap-list/.adm-toast/.bl-selected/.bl-notify-selected`. JS-rendered classes restyled: `.pts-*` `.vs-*` (vehicle status row) `.swap-veh-*` `.adm-exp-tab`. Mobile breakpoints ≤767px (list actions wrap) and ≤575px (vehicle row + filter tab compact) |
+| `fuel_admin.css` | **Vercel namespace** — fuel page only. Page-specific only now (Phase 2 moved KPI+filter → `components/`; Phase 3 moved badge+empty-state → `components/badge.css` + `components/empty_state.css`). Sections: page shell, header, card, btn, table, list+collapse+meta-grid, form input/segmented radio/modal Bootstrap-override skin/history scroll table, **§22 pivot table** (`.vc-pivot-*`, heatmap via `--cell-heat`, `.vc-pivot-link` drill-down with `:focus-visible` + `:has()` hover boost) |
+| `mileage_admin.css` | mileage admin page only. **Phase 3.3 (2026-05-14):** stripped from 1095 → ~35 lines — removed ~30 dead class blocks (`.mlg-page-header/-kpi-*/-btn-*/-missing-pill/-panel-pill/-badge*/-month-current-pill/-panel*/-breakdown-*/-bd-*/-month-pager/-pager-*/-month-page*/-month-row*/-mr-*/-filter*/-summary except summary-box/-table*/-col-check/-col-id/-num/-edit-btn/-empty*/-modal-eyebrow` + duplicate `ds-alert*` + most `.mlg-modal/-info-grid/-info-item/-state-title/-summary-box/-preview/-timestamp-box/-refuel-box` styling that template inlines via `var(--vc-*)`) → page now inherits `vc-modal/vc-table/vc-card/vc-filter-bar/vc-kpi/vc-badge/vc-empty` from `fuel_admin.css` + `components/`. Page-only: `.mlg-row/-row-check/-col-dest/-complete-row/-refuel-box .form-check` |
+| `vehicle_cost.css` | **`/admin/cost` only** — OT page. Pure `--vc-*` (Phase 3.7). Classes: `.cost-header/-title/-subtitle/-header-actions`, `.cost-rate-banner/-banner-title/-rate-pills/-rate-pill`, `.vc-tabs/.vc-tab/.vc-tab-count` (tab bar), `.cost-slot-tag/-morning/-evening/-night/-slot-rate` (time band chips), `.cost-table-footer/-meta/-total`, `.cost-slot-row/-row-field/-row-remove/-row-hint`, `.cost-total-box/-label/-hours/-amount`, `.cost-slot-add-btn`, `.cost-range-chip`, `.cost-action-group` (inline-flex gap-1 for row actions), `.cost-print-*` (receipt @media print). |
+| `repair.css` | **`/repair` only** (2026-05-14) — `vc-scope` page. Classes: `.repair-header/-title/-subtitle/-header-actions`, `.repair-kpi-5` (5-col grid, responsive), `.repair-modal-icon(--warning/--blue/--success)`, `.repair-modal-title/-subtitle`, `.repair-form-section-label`, `.repair-info-box/-info-avatar/.repair-dashed`, `.repair-upload-zone`, `.resolved-note-cell`, `.repair-flash-wrap`, `.repair-kpi-card`, `.repair-time-sub`, `.repair-category-sub`, `.repair-reporter-name`, `.repair-select`, `.repair-input-lg`, `.repair-textarea`, `.repair-required`, `.repair-note-hint`. **Phase 3.4 (2026-05-15):** เปลี่ยน `--ds-*` ทั้งหมด → `--vc-*`; แทน HEX `#FFFBEB/#FDE68A` → `--vc-amber-bg/border`, `#EFF6FF/#BFDBFE` → `--vc-blue-bg/border`, `#F0FDF4/#BBF7D0` → `--vc-green-bg/border`. ไม่มี `--ds-*` เหลือ. |
+| `approver_inbox.css` | **`/vehicle/approver` only** (Phase 3.8, 2026-05-15) — ย้ายออกจาก inline `<style>`; ใช้ `--vc-*` ทั้งหมด. Classes: `.approver-flash`, `.budget-card/-progress/-bar`, `.ac-budget-icon/-name/-amount/-total/-used`, `.inbox-tabs/.inbox-tab/.tab-count-badge`, `.approver-card`, `.ac-header/-header-row/-ref/-meta/-chevron(.rotated)/-body/-field-label/-field-value/-reject-reason`, `.ac-reject-input/-cancel`, `.btn-approve-action/-reject-action`, `.approver-empty-icon` |
 | `notification.css` | notification panel + toast |
 | `main.css`, `util.css` | common utilities |
+
+**Core JS modules** (`app/static/js/core/`, Phase 4.0 — 2026-05-15):
+| File | Exports |
+|------|---------|
+| `core/icons.js` | `initIcons()` — guarded `lucide.createIcons()`; `bindModalReinit()` — re-render on `shown.bs.modal` |
+| `core/format.js` | `thb(n)`, `km(n)`, `number(n)`, `thaiDate(d, {abbr})`, `thaiTime(d)` — Thai BE year + locale formatting |
+| `core/http.js` | `get(url, params)`, `post(url, data)`, `del(url)` — auto JSON parse, CSRF from `<meta name="csrf-token">`, throws `HttpError` on non-2xx |
+
+**ที่ยังไม่สร้าง** (จะเพิ่มเมื่อ feature module ต้องการ): `core/modal.js`, `core/toast.js`, `core/form.js`
 
 **Per-page JS:**
 | File | โหลดใน |
 |------|--------|
-| `vehicle.js` | vehicle templates (รวม modals ทั้งหมด) |
-| `vehicle_admin.js` | admin pages |
-| `mileage_admin.js` | admin mileage page (modal 3-state, realtime cost, checkbox summary, drill-down) |
+| `vehicle.js` | vehicle templates (รวม modals ทั้งหมด). **Phase 3.6 (2026-05-15):** `STATUS_BADGE` map → `vc-badge vc-badge-{warning|blue|success|danger|neutral} vc-badge-dot`; ลบ `badge rounded-pill` wrapper + inline `style="font-size:..."` จาก 2 template literals |
+| `vehicle_admin.js` | admin dashboard — booking + trip list rendering, vehicle status grid, 4 modal handlers (assign/swap/repair/revert), week navigator, KPI counters, bulk merge + notify selectors. **Phase 3.2 (2026-05-14):** emits `vc-badge-{warning\|blue\|success\|danger\|neutral\|solid} vc-badge-dot` + `vc-empty` + `vc-empty-icon/-title` + lucide icons (was `bl-badge`+`badge-*`+`bl-empty`+FA). |
+| `mileage_admin.js` | admin mileage page (modal 3-state, realtime cost, checkbox summary, export-link sync) — ลบ drillDown/toggleBreakdown/monthPager แล้ว (2026-05-13) |
 | `fuel_admin.js` | fuel page — 5-modal controller, checkbox→merge, kebab→edit, lucide re-init on shown.bs.modal, **wireFilterBar** (auto-submit GET on select change) |
+| `pages/repair.js` | repair page (Phase 4.2, 2026-05-15) — ES module (`type="module"`); imports `initIcons`/`bindModalReinit` from `core/icons.js`. ลบ `$(document).ready()` wrapper (module deferred). DataTable init + lucide re-init on draw, modal:รับงาน/ปิดงาน handlers, auto-open edit modal, tooltips, upload zone. jQuery+bootstrap+DataTable ยังใช้ผ่าน global |
 | `notification.js` | ทุกหน้าที่มี notification panel |
 | `ot_admin.js` | vehicle_cost.html — tab switching, edit modal, slot calc, print receipt |
+| `pages/approver-inbox.js` | approver_inbox.html (Phase 4.1, 2026-05-15) — ES module (`type="module"`); functions: `switchTab()`, `showRejectForm(id)`, `hideRejectForm(id)`, chevron rotation. Exposes to `window.*` สำหรับ legacy `onclick=""` ใน template |
 
 **Reference page:** `/design-system` (superadmin) → [design_system_reference.html](../../app/templates/design_system_reference.html)
 

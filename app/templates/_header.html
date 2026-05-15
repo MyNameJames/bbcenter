@@ -5,7 +5,7 @@
      show_month_nav  — True ถ้าต้องการปุ่ม prev/next เดือน (default: False)
 #}
 <header class="top-header container-xxl d-flex align-items-center gap-2" id="topHeader"
-    style="position:sticky;top:0;z-index:5;border-bottom:1px solid var(--ds-border);">
+    style="position:sticky;top:0;z-index:5;">
 
     {# ── Hamburger (mobile) ── #}
     <button type="button" class="ds-btn-icon rounded-3 d-xl-none bg-white ms-1" id="mobileToggle"
@@ -14,10 +14,6 @@
     </button>
 
     {# ── Page title ── #}
-    <h1 class="head-title fw-bold ms-3" id="topPageTitle"
-        style="font-size:1.28rem; color:var(--ds-text-heading);margin:0;white-space:nowrap;">
-        {{ page_title | default('ระบบจองรถ') }}
-    </h1>
 
     {# ── Right-side actions ── #}
     <div class="ms-auto d-flex align-items-center gap-2 me-1" style="position:relative;">

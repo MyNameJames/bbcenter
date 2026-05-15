@@ -7,22 +7,21 @@
 
 
 /* ─────────────────────────────────────────────
-   1. PAGE SHELL
+   1. INLINE STYLE REPLACEMENTS
 ───────────────────────────────────────────── */
-.driver-page {
-    background: var(--vc-bg);
-    min-height: 100vh;
-    padding: var(--vc-space-6) 0 var(--vc-space-12);
-    color: var(--vc-fg);
-    font-size: var(--vc-text-base);
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
+.driver-flash-alert {
+    border-radius: var(--vc-radius-sm);
+    border: 1px solid var(--vc-border);
 }
 
-.driver-container {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 var(--vc-space-4);
+.driver-plate {
+    color: var(--vc-fg-muted);
+    font-weight: 400;
+}
+
+.driver-unset {
+    color: var(--vc-fg-disabled);
+    font-weight: 400;
 }
 
 
@@ -139,7 +138,7 @@
 }
 
 .driver-card:hover {
-    border-color: #D4D4D4;
+    border-color: var(--vc-border-hover);
 }
 
 .driver-card.is-open {
@@ -509,34 +508,7 @@
 
 
 /* ─────────────────────────────────────────────
-   11. EMPTY STATE
-───────────────────────────────────────────── */
-.driver-empty {
-    text-align: center;
-    padding: var(--vc-space-12) var(--vc-space-4);
-    color: var(--vc-fg-muted);
-}
-
-.driver-empty__icon {
-    color: var(--vc-fg-disabled);
-    margin-bottom: var(--vc-space-2);
-    display: inline-flex;
-}
-
-.driver-empty__title {
-    font-size: var(--vc-text-md);
-    font-weight: 500;
-    color: var(--vc-fg);
-    margin-bottom: 4px;
-}
-
-.driver-empty__desc {
-    font-size: var(--vc-text-sm);
-}
-
-
-/* ─────────────────────────────────────────────
-   12. PANELS
+   11. PANELS
 ───────────────────────────────────────────── */
 .driver-panel {
     display: none;
@@ -548,41 +520,9 @@
 
 
 /* ─────────────────────────────────────────────
-   13. ICON SIZES (mirror .vc-icon-*)
-───────────────────────────────────────────── */
-.driver-page .vc-icon-sm,
-.driver-page [data-lucide] {
-    width: 16px;
-    height: 16px;
-    stroke-width: 1.75;
-    flex-shrink: 0;
-}
-
-.driver-page .vc-icon-md,
-.driver-page [data-lucide].vc-icon-md {
-    width: 20px;
-    height: 20px;
-}
-
-.driver-page .vc-icon-lg,
-.driver-page [data-lucide].vc-icon-lg {
-    width: 28px;
-    height: 28px;
-}
-
-
-/* ─────────────────────────────────────────────
-   14. RESPONSIVE
+   12. RESPONSIVE
 ───────────────────────────────────────────── */
 @media (max-width: 575.98px) {
-    .driver-page {
-        padding: var(--vc-space-4) 0 var(--vc-space-10);
-    }
-
-    .driver-container {
-        padding: 0 var(--vc-space-3);
-    }
-
     .driver-header {
         flex-direction: column;
         align-items: flex-start;

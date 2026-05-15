@@ -1,7 +1,7 @@
 {# templates/_sidebar.html
    วิธีใช้: {% include '_sidebar.html' %}
    ตัวแปรที่ต้องมี: current_user (Flask-Login)
-   Optional: active_menu = 'vehicle' | 'calendar' | 'history' | 'repair' | 'room' | 'dashboard' | 'admin' | 'mileage' | 'fleet' | 'cost' | 'budget' | 'fuel' | 'approver'
+   Optional: active_menu = 'vehicle' | 'history' | 'repair' | 'room' | 'dashboard' | 'admin' | 'mileage' | 'fleet' | 'cost' | 'budget' | 'fuel' | 'approver'
    Icons: Lucide (data-lucide) — โหลดผ่าน _header.html
 #}
 <aside class="sidebar" id="sidebar">
@@ -38,7 +38,7 @@
         {# ─ บริการ ─────────────────────────── #}
         <div class="sb-section-label">บริการ</div>
 
-        <a class="sb-item {% if active_menu == 'vehicle' or active_menu == 'calendar' %}active{% endif %}"
+        <a class="sb-item {% if active_menu == 'vehicle' %}active{% endif %}"
             href="{{ url_for('vehicle.index') }}">
             <span class="sb-icon"><i data-lucide="car"></i></span>
             <span class="sb-label">ปฏิทินการจองรถ</span>
@@ -52,7 +52,7 @@
 
         <a class="sb-item {% if active_menu == 'maintenance' %}active{% endif %}"
             href="{{ url_for('maintenance.index') }}">
-            <span class="sb-icon"><i data-lucide="wrench"></i></span>
+            <span class="sb-icon"><i data-lucide="building-2"></i></span>
             <span class="sb-label">แจ้งซ่อมทั่วไป</span>
         </a>
 
@@ -87,22 +87,22 @@
             <span class="sb-label">จัดการรถและทีม</span>
         </a>
 
-        <a class="sb-item {% if active_menu == 'cost' %}active{% endif %}"
-            href="{{ url_for('admincost.cost_summary') }}">
-            <span class="sb-icon"><i data-lucide="pie-chart"></i></span>
-            <span class="sb-label">สรุปค่าใช้จ่าย</span>
-        </a>
-
         <a class="sb-item {% if active_menu == 'budget' %}active{% endif %}"
             href="{{ url_for('adminfleet.budget_manage') }}">
             <span class="sb-icon"><i data-lucide="wallet"></i></span>
             <span class="sb-label">จัดการงบประมาณ</span>
         </a>
 
+        <a class="sb-item {% if active_menu == 'cost' %}active{% endif %}"
+            href="{{ url_for('admincost.cost_summary') }}">
+            <span class="sb-icon"><i data-lucide="pie-chart"></i></span>
+            <span class="sb-label">จัดการค่าล่วงเวลา (OT)</span>
+        </a>
+
         <a class="sb-item {% if active_menu == 'fuel' %}active{% endif %}"
             href="{{ url_for('fuel.admin_fuel') }}">
             <span class="sb-icon"><i data-lucide="fuel"></i></span>
-            <span class="sb-label">ค่าน้ำมัน</span>
+            <span class="sb-label">จัดการค่าน้ำมัน</span>
         </a>
 
         {% if is_budget_approver %}

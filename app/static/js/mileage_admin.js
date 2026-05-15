@@ -264,60 +264,6 @@
         });
     });
 
-    // ─── Drill-down: cell click in breakdown ──────────────
-    window.drillDown = function (cell) {
-        const vid   = cell.dataset.vehicle;
-        const month = cell.dataset.month;
-        const year  = cell.dataset.year;
-        if (!vid || !month) return;
-        const start = `${year}-${String(month).padStart(2,'0')}-01`;
-        // last day of month
-        const lastDay = new Date(year, Number(month), 0).getDate();
-        const end   = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
-        const url = new URL(window.location.href);
-        url.searchParams.set('vehicle_id', vid);
-        url.searchParams.set('date_start', start);
-        url.searchParams.set('date_end',   end);
-        window.location.href = url.pathname + '?' + url.searchParams.toString();
-    };
-
-    // ─── Month pager (breakdown by month) ────────────────
-    (function monthPager() {
-        const pages = Array.from(document.querySelectorAll('.mlg-month-page'));
-        if (!pages.length) return;
-        const lbl     = document.getElementById('mlgPagerLabel');
-        const btnOld  = document.getElementById('mlgPagerOlder'); // ◀ go to older month → page+1
-        const btnNew  = document.getElementById('mlgPagerNewer'); // ▶ go to newer month → page-1
-        const total   = pages.length;
-        let cur = 1;
-
-        function show(p) {
-            if (p < 1 || p > total) return;
-            cur = p;
-            pages.forEach(el => {
-                if (Number(el.dataset.page) === cur) el.removeAttribute('hidden');
-                else el.setAttribute('hidden', '');
-            });
-            lbl.textContent = (cur === 1) ? 'เดือนนี้' : `ย้อน ${cur - 1} เดือน`;
-            btnNew.disabled = (cur === 1);       // newest already
-            btnOld.disabled = (cur === total);   // oldest already
-        }
-
-        btnOld.addEventListener('click', () => show(cur + 1));
-        btnNew.addEventListener('click', () => show(cur - 1));
-        show(1);
-    })();
-
-    // ─── Breakdown toggle ────────────────────────────────
-    let breakdownVisible = true;
-    window.toggleBreakdown = function () {
-        const panel = document.getElementById('breakdownPanel');
-        const lbl   = document.getElementById('breakdownToggleLabel');
-        breakdownVisible = !breakdownVisible;
-        panel.style.display = breakdownVisible ? '' : 'none';
-        lbl.textContent = breakdownVisible ? 'ซ่อนรายเดือน' : 'แสดงรายเดือน';
-    };
-
     // ─── Export link: sync with current filter ───────────
     (function syncExport() {
         const link = document.getElementById('exportLink');

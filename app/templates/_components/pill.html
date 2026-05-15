@@ -1,0 +1,30 @@
+{#
+  Pill — bigger rounded chip, for filter-tabs/segmented controls.
+
+  Usage (tab list):
+    {% from '_components/pill.html' import pill, pill_group %}
+    {% call pill_group() %}
+      {{ pill('ทั้งหมด', href='?status=', active=(status=='')) }}
+      {{ pill('เปิด',    href='?status=open', active=(status=='open'),
+              icon='fa-circle-dot', tone='success') }}
+    {% endcall %}
+
+  pill(text, href='', icon='', tone='', active=False)
+    tone: '' | accent | success | danger    (resting always neutral)
+#}
+
+{% macro pill_group() %}
+<div class="vc-pill-group">{{ caller() }}</div>
+{% endmacro %}
+
+
+{% macro pill(text, href='', icon='', tone='', active=False) %}
+{%- set _cls = ['vc-pill'] -%}
+{%- if tone %}{% set _ = _cls.append('vc-pill--' ~ tone) %}{% endif -%}
+{%- if active %}{% set _ = _cls.append('is-active') %}{% endif -%}
+{%- if href -%}
+<a href="{{ href }}" class="{{ _cls|join(' ') }}">{% if icon %}<i class="fa-solid {{ icon }}"></i>{% endif %}{{ text }}</a>
+{%- else -%}
+<button type="button" class="{{ _cls|join(' ') }}">{% if icon %}<i class="fa-solid {{ icon }}"></i>{% endif %}{{ text }}</button>
+{%- endif -%}
+{% endmacro %}

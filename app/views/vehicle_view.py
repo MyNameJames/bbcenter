@@ -289,15 +289,8 @@ def approver_inbox():
 
 
 # ─────────────────────────────────────────────
-# ปฏิทิน + API
+# API ปฏิทิน
 # ─────────────────────────────────────────────
-@vehicle_bp.route('/vehicle/calendar')
-@login_required
-def calendar_view():
-    # vehicle_calendar.html เลิกใช้แล้ว → redirect ไป vehicle.html
-    return redirect(url_for('vehicle.index'))
-
-
 @vehicle_bp.route('/api/vehicle/bookings')
 @login_required
 def api_bookings():

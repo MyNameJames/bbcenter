@@ -1,0 +1,116 @@
+/* ============================================================
+   Component: Form Group (label + input + help/error)
+   ─────────────────────────────────────────────────────────────
+   Pattern:
+   <div class="vc-form-group">
+     <label class="vc-form-label">ชื่อผู้ใช้</label>
+     <input class="vc-form-input" type="text">
+     <p class="vc-form-help">ห้ามมีช่องว่าง</p>
+   </div>
+
+   States (apply to .vc-form-group):
+     .has-error    → border-red, error message shows
+     .is-disabled  → grey input
+   Mods:
+     --inline      → label + input on one row
+     --required    → adds * to label
+
+   Macro: app/templates/_components/form_group.html
+   Created: 2026-05-14 (Phase 2 component library)
+   ============================================================ */
+
+.vc-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: var(--vc-space-3);
+}
+
+.vc-form-label {
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg);
+    line-height: 1;
+    margin: 0;
+}
+
+.vc-form-group--required > .vc-form-label::after {
+    content: "*";
+    color: var(--vc-red);
+    margin-left: 4px;
+}
+
+.vc-form-input,
+.vc-form-select,
+.vc-form-textarea {
+    width: 100%;
+    height: var(--vc-h-input);
+    padding: 0 12px;
+    font-family: inherit;
+    font-size: var(--vc-text-base);
+    color: var(--vc-fg);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    transition: border-color var(--vc-transition);
+}
+
+.vc-form-textarea {
+    height: auto;
+    min-height: 80px;
+    padding: 10px 12px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.vc-form-input:hover,
+.vc-form-select:hover,
+.vc-form-textarea:hover { border-color: var(--vc-border-hover); }
+
+.vc-form-input:focus,
+.vc-form-select:focus,
+.vc-form-textarea:focus {
+    outline: none;
+    border-color: var(--vc-fg);
+    box-shadow: var(--vc-accent-ring);
+}
+
+.vc-form-help {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    line-height: 1.4;
+    margin: 0;
+}
+
+.vc-form-error {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-red);
+    line-height: 1.4;
+    margin: 0;
+    display: none;
+}
+
+/* ── States ─────────────────────────────────────── */
+.vc-form-group.has-error .vc-form-input,
+.vc-form-group.has-error .vc-form-select,
+.vc-form-group.has-error .vc-form-textarea {
+    border-color: var(--vc-red);
+}
+.vc-form-group.has-error .vc-form-error { display: block; }
+.vc-form-group.has-error .vc-form-help  { display: none; }
+
+.vc-form-group.is-disabled .vc-form-input,
+.vc-form-group.is-disabled .vc-form-select,
+.vc-form-group.is-disabled .vc-form-textarea {
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-disabled);
+    cursor: not-allowed;
+}
+
+/* ── Inline variant ─────────────────────────────── */
+.vc-form-group--inline {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--vc-space-3);
+}
+.vc-form-group--inline .vc-form-label { min-width: 100px; }

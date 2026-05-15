@@ -10,11 +10,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/driver.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
 </head>
 <body class="vc-scope">
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
+{% from '_components/empty_state.html' import empty_state %}
 {% set active_menu = 'approver' %}
 {% include '_sidebar.html' %}
 
@@ -27,8 +27,7 @@
         {# ── Flash ── #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}{% for cat, msg in messages %}
-            <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert"
-                 style="border-radius: var(--vc-radius-sm); border: 1px solid var(--vc-border);">
+            <div class="alert alert-{{ cat }} alert-dismissible fade show driver-flash-alert" role="alert">
                 {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             {% endfor %}{% endif %}
@@ -127,11 +126,11 @@
                                         <div class="driver-meta__value">
                                             {% if b.assigned_vehicle %}
                                                 {{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}
-                                                <span style="color: var(--vc-fg-muted); font-weight: 400;">
+                                                <span class="driver-plate">
                                                     ({{ b.assigned_vehicle.license_plate }})
                                                 </span>
                                             {% else %}
-                                                <span style="color: var(--vc-fg-disabled); font-weight: 400;">ยังไม่ระบุ</span>
+                                                <span class="driver-unset">ยังไม่ระบุ</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -230,11 +229,7 @@
                     </div>
                 {% endfor %}
             {% else %}
-                <div class="driver-empty">
-                    <div class="driver-empty__icon"><i data-lucide="calendar-check" class="vc-icon-lg"></i></div>
-                    <div class="driver-empty__title">ไม่มีงานวันนี้</div>
-                    <div class="driver-empty__desc">พักผ่อนได้เลยครับ</div>
-                </div>
+                {{ empty_state(title='ไม่มีงานวันนี้', desc='พักผ่อนได้เลย', icon='calendar-check') }}
             {% endif %}
         </div>
 
@@ -283,11 +278,11 @@
                                         <div class="driver-meta__value">
                                             {% if b.assigned_vehicle %}
                                                 {{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}
-                                                <span style="color: var(--vc-fg-muted); font-weight: 400;">
+                                                <span class="driver-plate">
                                                     ({{ b.assigned_vehicle.license_plate }})
                                                 </span>
                                             {% else %}
-                                                <span style="color: var(--vc-fg-disabled); font-weight: 400;">ยังไม่ระบุ</span>
+                                                <span class="driver-unset">ยังไม่ระบุ</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -309,11 +304,7 @@
                     </div>
                 {% endfor %}
             {% else %}
-                <div class="driver-empty">
-                    <div class="driver-empty__icon"><i data-lucide="calendar" class="vc-icon-lg"></i></div>
-                    <div class="driver-empty__title">ไม่มีงานพรุ่งนี้</div>
-                    <div class="driver-empty__desc">ตอนนี้ยังไม่มีคิวที่ถูกจัดให้คุณ</div>
-                </div>
+                {{ empty_state(title='ไม่มีงานพรุ่งนี้', desc='ตอนนี้ยังไม่มีคิวที่ถูกจัดให้คุณ', icon='calendar') }}
             {% endif %}
         </div>
 

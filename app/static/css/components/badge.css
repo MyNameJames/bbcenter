@@ -1,0 +1,84 @@
+/* ============================================================
+   Component: Badge (semantic chip — small, contextual)
+   ─────────────────────────────────────────────────────────────
+   Pattern (matches admin_fuel.html — flat naming, single-dash):
+   <span class="vc-badge vc-badge-success vc-badge-dot">รับเรื่อง</span>
+
+   Tones:  -neutral (default) -warning -blue -success -danger
+   Dot:    add `vc-badge-dot` → left colored dot
+   Sizes:  default 22px tall · `vc-badge-xs` 18px
+
+   Macro: app/templates/_components/badge.html
+   Created: 2026-05-14 (Phase 2)
+   Aligned to skill flat vocab: 2026-05-14 (Phase 3)
+   ============================================================ */
+
+.vc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: var(--vc-radius-sm);
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    line-height: 1.6;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.vc-badge .fa-solid,
+.vc-badge i { font-size: .85em; }
+
+/* ── Tones (flat naming, single-dash) ─────────── */
+.vc-badge-neutral {
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    border-color: var(--vc-border);
+}
+.vc-badge-warning {
+    background: var(--vc-amber-bg);
+    color: var(--vc-amber);
+    border-color: var(--vc-amber-border);
+}
+.vc-badge-blue {
+    background: var(--vc-blue-bg);
+    color: var(--vc-blue);
+    border-color: var(--vc-blue-border);
+}
+.vc-badge-success {
+    background: var(--vc-green-bg);
+    color: var(--vc-green);
+    border-color: var(--vc-green-border);
+}
+.vc-badge-danger {
+    background: var(--vc-red-bg);
+    color: var(--vc-red);
+    border-color: var(--vc-red-border);
+}
+
+/* ── Solid (inverted) — for strong emphasis like "X งานรวม" ── */
+.vc-badge-solid {
+    background: var(--vc-fg);
+    color: var(--vc-fg-inverted);
+    border-color: var(--vc-fg);
+}
+.vc-badge-solid.vc-badge-dot::before {
+    background: var(--vc-fg-inverted);
+}
+
+/* ── Left dot (for status badges) ─────────────── */
+.vc-badge-dot::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+/* ── Sizes ──────────────────────────────────────── */
+.vc-badge-xs {
+    padding: 1px 6px;
+    font-size: 11px;
+}

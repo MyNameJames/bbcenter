@@ -1,0 +1,146 @@
+/* ============================================================
+   Sidebar — shared component (used by `_sidebar.html`)
+   Moved here Phase 4.1.5 (2026-05-15) so every page loading
+   design-system.css gets sidebar styling for free.
+   ============================================================ */
+
+:root {
+    --sidebar-width: 250px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR  —  static fixed full-height (ทุก breakpoint)
+═══════════════════════════════════════════════════════════ */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: var(--sidebar-width);
+    background: #fff;
+    border-right: 1px solid var(--vc-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: 1040;
+    overflow: hidden;
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+
+/* Brand row */
+.sb-brand {
+    height: 62px;
+    padding: 0 1.25rem;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--vc-border);
+    flex-shrink: 0;
+}
+.sb-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; color: var(--vc-fg);
+    font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em;
+    flex: 1; min-width: 0;
+}
+.sb-logo-icon {
+    width: 40px; height: 40px;
+    background: var(--vc-fg);
+    color: var(--vc-fg-inverted);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .95rem;
+    flex-shrink: 0;
+}
+.sb-logo-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-close {
+    background: none; border: none; color: var(--vc-fg-subtle);
+    width: 30px; height: 30px; display: flex; align-items: center;
+    justify-content: center; border-radius: 8px; cursor: pointer;
+    font-size: 1rem; padding: 0;
+}
+.sb-close:hover { background: var(--vc-bg-subtle); color: var(--vc-fg-muted); }
+
+/* Nav scroll area */
+.sb-nav {
+    flex: 1; overflow-y: auto; padding: .75rem 0;
+    scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent;
+}
+.sb-nav::-webkit-scrollbar { width: 4px; }
+.sb-nav::-webkit-scrollbar-thumb { background: var(--vc-border); border-radius: 4px; }
+
+/* Section label */
+.sb-section-label {
+    font-size: .65rem;
+    font-weight: 700;
+    color: var(--vc-fg-subtle);
+    padding: 0 1.25rem;
+    margin: 1rem 0 .3rem;
+}
+.sb-section-label:first-child { margin-top: .25rem; }
+
+/* Nav item */
+.sb-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: .48rem .9rem;
+    margin: .06rem .65rem;
+    border-radius: 9px;
+    color: var(--vc-fg-muted);
+    font-size: .88rem; font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .14s, color .14s;
+    position: relative;
+}
+.sb-item:hover {
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg);
+}
+.sb-item.active {
+    background: var(--vc-bg-hover);
+    color: var(--vc-fg);
+    font-weight: 600;
+}
+.sb-item.active .sb-icon { color: var(--vc-fg); }
+
+.sb-icon {
+    width: 20px; height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--vc-fg-subtle);
+    flex-shrink: 0;
+    transition: color .20s;
+}
+.sb-item:hover .sb-icon { color: var(--vc-fg-muted); }
+.sb-item.active .sb-icon {
+    background: none;
+    color: var(--vc-fg);
+}
+
+.sb-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Badge (pending count) */
+.sb-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    background: var(--vc-purple);
+    color: var(--vc-fg-inverted);
+    border-radius: var(--vc-radius-full);
+    font-size: .62rem; font-weight: 700; line-height: 1;
+}
+
+/* Footer / logout */
+.sb-footer {
+    border-top: 1px solid var(--vc-border);
+    padding: .6rem 0;
+    flex-shrink: 0;
+}
+.sb-logout {
+    color: var(--vc-fg-subtle);
+}
+.sb-logout:hover {
+    background: var(--vc-red-bg);
+    color: var(--vc-red);
+}
+.sb-logout:hover .sb-icon { color: var(--vc-red); }

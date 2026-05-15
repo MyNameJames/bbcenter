@@ -1,3 +1,4 @@
+{# OT Cost Management — Admin Page (Vercel-flavored, vc-* design system) #}
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -7,600 +8,391 @@
     <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
-    <style>
-        /* ── KPI Cards ─────────────────────────────── */
-        .kpi-card {
-            background: var(--ds-bg-surface);
-            border: 1px solid var(--ds-border);
-            border-radius: var(--ds-radius-md);
-            padding: 14px 16px;
-        }
-        .kpi-label {
-            font-size: var(--ds-text-xs);
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            color: var(--ds-text-secondary);
-            margin-bottom: 6px;
-        }
-        .kpi-value {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: var(--ds-text-heading);
-            line-height: 1;
-        }
-        .kpi-value.warning { color: var(--ds-warning, #D97706); }
-        .kpi-value.accent  { color: var(--ds-accent, #4F46E5); }
-        .kpi-value.success { color: var(--ds-success, #16A34A); }
-        .kpi-sub { font-size: var(--ds-text-xs); color: var(--ds-text-muted); margin-top: 4px; }
-        .kpi-icon {
-            width: 32px; height: 32px; border-radius: var(--ds-radius-sm);
-            display: flex; align-items: center; justify-content: center;
-            font-size: .8rem; flex-shrink: 0;
-        }
-        .kpi-icon-neutral { background: var(--ds-bg-subtle);         color: var(--ds-text-secondary); }
-        .kpi-icon-warning { background: var(--ds-warning-light);    color: var(--ds-warning); }
-        .kpi-icon-accent  { background: var(--ds-accent-light);     color: var(--ds-accent); }
-        .kpi-icon-success { background: var(--ds-success-light);    color: var(--ds-success); }
-
-        /* ── Rate Banner ────────────────────────────── */
-        .rate-banner {
-            background: var(--ds-accent-light, #EEF2FF);
-            border: 1px solid var(--ds-accent-border, #C7D2FE);
-            border-radius: var(--ds-radius-md);
-            padding: 9px 14px;
-            font-size: var(--ds-text-sm);
-            color: var(--ds-accent-text, #3730A3);
-        }
-        .rate-pill {
-            display: inline-flex; align-items: center; gap: 4px;
-            padding: 2px 10px;
-            border-radius: var(--ds-radius-full);
-            font-size: var(--ds-text-xs); font-weight: 600;
-            background: var(--ds-bg-surface);
-            border: 1px solid var(--ds-accent-border, #C7D2FE);
-            color: var(--ds-accent-text, #3730A3);
-        }
-
-        /* ── Tabs ───────────────────────────────────── */
-        .ot-tabs { border-bottom: 1px solid var(--ds-border); margin-bottom: 0; }
-        .ot-tab {
-            padding: 10px 16px; font-size: var(--ds-text-sm); font-weight: 500;
-            color: var(--ds-text-secondary); cursor: pointer;
-            border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
-            background: none; font-family: 'Sarabun', sans-serif;
-            display: inline-flex; align-items: center; gap: 6px;
-            transition: color .1s;
-        }
-        .ot-tab:hover  { color: var(--ds-text-heading); background: var(--ds-bg-hover); }
-        .ot-tab.active { color: var(--ds-accent, #4F46E5); border-bottom-color: var(--ds-accent, #4F46E5); font-weight: 700; }
-        .tab-badge {
-            display: inline-flex; align-items: center; justify-content: center;
-            min-width: 18px; height: 16px; padding: 0 4px;
-            border-radius: var(--ds-radius-full); font-size: .65rem; font-weight: 700;
-        }
-        .tab-badge-neutral { background: var(--ds-bg-subtle);    color: var(--ds-text-secondary); }
-        .tab-badge-warning { background: #FFFBEB;                color: #D97706; }
-        .tab-badge-accent  { background: var(--ds-accent-light, #EEF2FF); color: var(--ds-accent, #4F46E5); }
-        .tab-badge-success { background: #F0FDF4;                color: #16A34A; }
-
-        /* ── Table ──────────────────────────────────── */
-        .ds-table { font-size: var(--ds-text-sm); }
-        .ds-table thead th {
-            background: var(--ds-bg-subtle);
-            color: var(--ds-text-secondary);
-            font-size: var(--ds-text-xs); font-weight: 700;
-            text-transform: uppercase; letter-spacing: .05em;
-            padding: 8px 12px; border-bottom: 1px solid var(--ds-border-strong);
-            border-top: none; white-space: nowrap;
-        }
-        .ds-table tbody td {
-            padding: 10px 12px; border-bottom: 1px solid var(--ds-border);
-            vertical-align: middle;
-        }
-        .ds-table tbody tr:hover    { background: var(--ds-bg-hover); }
-        .ds-table tbody tr:last-child td { border-bottom: none; }
-
-        /* ── Slot Tags ──────────────────────────────── */
-        .slot-tag { display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:var(--ds-radius-sm); font-size:.68rem; font-weight:600; margin:1px 2px 1px 0; white-space:nowrap; }
-        .slot-morning { background:var(--ds-info-light);    color:var(--ds-info-text);    border:1px solid var(--ds-info-border); }
-        .slot-evening { background:var(--ds-warning-light); color:var(--ds-warning-text); border:1px solid var(--ds-warning-border); }
-        .slot-night   { background:var(--ds-danger-light);  color:var(--ds-danger-text);  border:1px solid var(--ds-danger-border); }
-
-        /* ── Action Buttons ─────────────────────────── */
-        .btn-act {
-            padding: 4px 7px; border-radius: var(--ds-radius-sm); font-size: .7rem;
-            border: 1px solid var(--ds-border-strong); background: none; cursor: pointer;
-            color: var(--ds-text-secondary); transition: background .1s, color .1s;
-            line-height: 1.4; font-family: 'Sarabun', sans-serif;
-        }
-        .btn-act:hover            { background: var(--ds-bg-hover); color: var(--ds-text-heading); }
-        .btn-act.approve          { border-color:var(--ds-success-border); color:var(--ds-success); }
-        .btn-act.approve:hover    { background:var(--ds-success-light); }
-        .btn-act.pay              { border-color:var(--ds-accent-border); color:var(--ds-accent); }
-        .btn-act.pay:hover        { background:var(--ds-accent-light); }
-        .btn-act.danger           { border-color:var(--ds-danger-border); color:var(--ds-danger); }
-        .btn-act.danger:hover     { background:var(--ds-danger-light); }
-
-        /* ── DS Form helpers ────────────────────────── */
-        .ds-label { font-size:.72rem; font-weight:700; color:var(--ds-text-secondary); margin-bottom:4px; display:block; }
-        .ds-input, .ds-select, .ds-textarea {
-            border: 1px solid var(--ds-border-strong);
-            border-radius: var(--ds-radius-sm); padding: 7px 10px;
-            font-family: 'Sarabun', sans-serif; font-size: var(--ds-text-sm);
-            color: var(--ds-text-body); background: var(--ds-bg-surface); outline: none; width: 100%;
-        }
-        .ds-input:focus, .ds-select:focus, .ds-textarea:focus {
-            border-color: var(--ds-accent, #4F46E5);
-            box-shadow: 0 0 0 3px rgba(79,70,229,.1);
-        }
-        .ds-textarea { resize: vertical; }
-
-        /* ── Slot Row (modal) ───────────────────────── */
-        .slot-row { border:1px solid var(--ds-border); border-radius:var(--ds-radius-md); padding:12px; background:var(--ds-bg-subtle); }
-        .slot-amount { font-weight:700; font-size:.88rem; color:var(--ds-text-heading); }
-        .slot-hrs    { font-size:.7rem; color:var(--ds-text-secondary); }
-
-        /* ── Modal ──────────────────────────────────── */
-        .modal-content { border:1px solid var(--ds-border); border-radius:var(--ds-radius-xl,8px); box-shadow:none !important; }
-        .modal-header  { border-bottom:1px solid var(--ds-border); padding:14px 20px; }
-        .modal-body    { padding:20px; }
-        .modal-footer  { border-top:1px solid var(--ds-border); padding:12px 20px; background:var(--ds-bg-subtle); border-radius:0 0 var(--ds-radius-xl,8px) var(--ds-radius-xl,8px); }
-        .modal-title   { font-size:var(--ds-text-md); font-weight:700; color:var(--ds-text-heading); }
-
-        /* ── Print Receipt ──────────────────────────── */
-        #printReceipt { display: none; }
-        @media print {
-            body > *      { display: none !important; }
-            #printReceipt { display: block !important; }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_cost.css') }}">
 </head>
 <body>
-<div class="app-container">
+{% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
+
+<div class="container-fluid container-p-y">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% set active_menu = 'cost' %}
     {% include '_sidebar.html' %}
 
-    <main class="main-content">
+    <main class="main-content vc-scope">
         {% set page_title = 'จัดการค่าล่วงเวลา (OT)' %}
         {% include '_header.html' %}
 
-        <div style="overflow-y:auto; height:calc(100vh - 60px); background:var(--ds-bg-page);">
-        <div class="container-xxl px-3 py-4">
+        <div class="container-xxl px-3 pt-2">
 
-            {# ── Flash ── #}
+            {# ── Flash messages ─────────────────────────── #}
             {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for cat, msg in messages %}
-            <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3"
-                 style="border-radius:var(--ds-radius-md); font-size:var(--ds-text-sm);">
-                {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}{% endif %}
+                {% if messages %}
+                <div class="vc-stack" style="margin-bottom: var(--vc-space-4);">
+                    {% for category, message in messages %}
+                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             {% endwith %}
 
-            {# ── KPI Row ── #}
-            <div class="row g-3 mb-3">
-                <div class="col-6 col-xl-2">
-                    <div class="kpi-card h-100">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="kpi-label">รายการ</div>
-                                <div class="kpi-value">{{ kpi_records }}</div>
-                                <div class="kpi-sub">ในช่วงที่เลือก</div>
-                            </div>
-                            <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-list-check"></i></div>
-                        </div>
-                    </div>
+            {# ── Page header ────────────────────────────── #}
+            <div class="cost-header">
+                <div>
+                    <h1 class="cost-title">จัดการค่าล่วงเวลา (OT)</h1>
+                    <p class="cost-subtitle">อนุมัติ · บันทึกการจ่าย · ออกใบเสร็จคนขับ
+                        <span class="cost-range-chip" style="margin-left:var(--vc-space-2);">
+                            <i data-lucide="calendar-range" class="vc-icon-sm"></i>
+                            {{ range_label }}
+                        </span>
+                    </p>
                 </div>
-                <div class="col-6 col-xl-2">
-                    <div class="kpi-card h-100">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="kpi-label">ชั่วโมงรวม</div>
-                                <div class="kpi-value">{{ kpi_hours }}<span style="font-size:.9rem;font-weight:400;color:var(--ds-text-secondary)"> ชม.</span></div>
-                                <div class="kpi-sub">ทุกสถานะ</div>
-                            </div>
-                            <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-hourglass-half"></i></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-xl-2">
-                    <div class="kpi-card h-100">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="kpi-label">ยอดรวม</div>
-                                <div class="kpi-value">฿{{ '{:,.0f}'.format(kpi_total) }}</div>
-                                <div class="kpi-sub">ทุกสถานะ</div>
-                            </div>
-                            <div class="kpi-icon kpi-icon-neutral"><i class="fa-solid fa-receipt"></i></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-xl-2">
-                    <div class="kpi-card h-100">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="kpi-label">รออนุมัติ</div>
-                                <div class="kpi-value warning">฿{{ '{:,.0f}'.format(kpi_pending) }}</div>
-                                <div class="kpi-sub">{{ count_pending }} รายการ</div>
-                            </div>
-                            <div class="kpi-icon kpi-icon-warning"><i class="fa-solid fa-clock"></i></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-xl-2">
-                    <div class="kpi-card h-100">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="kpi-label">อนุมัติแล้ว</div>
-                                <div class="kpi-value accent">฿{{ '{:,.0f}'.format(kpi_approved) }}</div>
-                                <div class="kpi-sub">{{ count_approved }} รายการ รอจ่าย</div>
-                            </div>
-                            <div class="kpi-icon kpi-icon-accent"><i class="fa-solid fa-thumbs-up"></i></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-xl-2">
-                    <div class="kpi-card h-100">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="kpi-label">จ่ายแล้ว</div>
-                                <div class="kpi-value success">฿{{ '{:,.0f}'.format(kpi_paid) }}</div>
-                                <div class="kpi-sub">{{ count_paid }} รายการ</div>
-                            </div>
-                            <div class="kpi-icon kpi-icon-success"><i class="fa-solid fa-circle-check"></i></div>
-                        </div>
-                    </div>
+                <div class="cost-header-actions">
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="printAllBtn" title="พิมพ์ใบเสร็จคนขับ (ตาม tab ที่เลือก)">
+                        <i data-lucide="printer" class="vc-icon-sm"></i>
+                        พิมพ์
+                    </button>
+                    <a href="{{ url_for('admincost.cost_export', from_month=from_month, from_year=from_year, to_month=to_month, to_year=to_year, driver_id=sel_driver or '', status=sel_status) }}"
+                       class="vc-btn vc-btn-secondary vc-btn-sm" title="ดาวน์โหลด Excel">
+                        <i data-lucide="download" class="vc-icon-sm"></i>
+                        Excel
+                    </a>
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-toggle="modal" data-bs-target="#rateConfigModal" title="แก้ไขอัตราค่าตอบแทน OT">
+                        <i data-lucide="settings-2" class="vc-icon-sm"></i>
+                        ตั้งค่าอัตรา
+                    </button>
                 </div>
             </div>
 
-            {# ── Rate Banner ── #}
-            <div class="rate-banner mb-3">
-                <div class="row align-items-center g-2">
-                    <div class="col-auto">
-                        <i class="fa-solid fa-circle-info me-1"></i>
-                        <strong>อัตราค่าตอบแทน OT</strong>
+            {# ── KPI Group — 3 cards (pending / approved / paid) ── #}
+            <div class="vc-card" style="margin-bottom: var(--vc-space-4);">
+                <div class="vc-kpi-group">
+
+                    <div class="vc-kpi-cell">
+                        <p class="vc-kpi-label">
+                            <i data-lucide="clock" class="vc-icon-sm"></i>
+                            รออนุมัติ
+                        </p>
+                        <p class="vc-kpi-value {% if kpi_pending == 0 %}vc-kpi-value--muted{% endif %}">
+                            {{ '{:,.0f}'.format(kpi_pending) }}<span class="vc-kpi-unit">บาท</span>
+                        </p>
+                        <p class="vc-kpi-meta">{{ count_pending }} รายการ · รอ admin อนุมัติ</p>
                     </div>
+
+                    <div class="vc-kpi-cell">
+                        <p class="vc-kpi-label">
+                            <i data-lucide="circle-check" class="vc-icon-sm"></i>
+                            อนุมัติแล้ว
+                        </p>
+                        <p class="vc-kpi-value vc-kpi-value--blue {% if kpi_approved == 0 %}vc-kpi-value--muted{% endif %}">
+                            {{ '{:,.0f}'.format(kpi_approved) }}<span class="vc-kpi-unit">บาท</span>
+                        </p>
+                        <p class="vc-kpi-meta">{{ count_approved }} รายการ · รอบันทึกการจ่าย</p>
+                    </div>
+
+                    <div class="vc-kpi-cell">
+                        <p class="vc-kpi-label">
+                            <i data-lucide="banknote" class="vc-icon-sm"></i>
+                            จ่ายแล้ว
+                        </p>
+                        <p class="vc-kpi-value vc-kpi-value--success {% if kpi_paid == 0 %}vc-kpi-value--muted{% endif %}">
+                            {{ '{:,.0f}'.format(kpi_paid) }}<span class="vc-kpi-unit">บาท</span>
+                        </p>
+                        <p class="vc-kpi-meta">{{ count_paid }} รายการ · ปิดงานเรียบร้อย</p>
+                    </div>
+
+                </div>
+            </div>
+
+            {# ── Rate banner (informational) ────────────── #}
+            <div class="cost-rate-banner">
+                <span class="cost-rate-banner-title">
+                    <i data-lucide="info" class="vc-icon-sm"></i>
+                    อัตราค่าตอบแทน OT
+                </span>
+                <div class="cost-rate-pills">
                     {% for cfg in rate_configs %}
-                    <div class="col-auto">
-                        <span class="rate-pill">{{ cfg.label }} ({{ cfg.start_time }}–{{ cfg.end_time }}) → ฿{{ cfg.rate|int }}/ชม.</span>
-                    </div>
-                    {% endfor %}
-                    <div class="col-auto ms-auto">
-                        <button class="btn-act" data-bs-toggle="modal" data-bs-target="#rateConfigModal"
-                                style="border-color:var(--ds-accent-border,#C7D2FE); color:var(--ds-accent,#4F46E5); font-size:.7rem; padding:3px 10px;">
-                            <i class="fa-solid fa-gear me-1"></i>แก้ไขอัตรา
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {# ── Filter Bar ── #}
-            <div class="card mb-3">
-                <div class="card-header d-flex align-items-center justify-content-between py-2 px-3">
-                    <span style="font-size:var(--ds-text-sm); font-weight:600; color:var(--ds-text-heading);">
-                        <i class="fa-solid fa-filter me-1" style="color:var(--ds-text-muted)"></i>ตัวกรอง
-                        <span style="font-size:var(--ds-text-xs); color:var(--ds-text-secondary); font-weight:400; margin-left:6px;">{{ range_label }}</span>
+                    <span class="cost-rate-pill">
+                        {{ cfg.label }} ({{ cfg.start_time }}–{{ cfg.end_time }})
+                        <strong>฿{{ cfg.rate|int }}/ชม.</strong>
                     </span>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-outline-secondary" onclick="printDriverReceipt()"
-                                style="border-color:var(--ds-border-strong); font-size:var(--ds-text-sm);">
-                            <i class="fa-solid fa-print me-1"></i>พิมพ์
-                        </button>
-                        <a href="{{ url_for('admincost.cost_export', from_month=from_month, from_year=from_year, to_month=to_month, to_year=to_year, driver_id=sel_driver or '', status=sel_status) }}"
-                           class="btn btn-sm btn-outline-secondary"
-                           style="border-color:var(--ds-border-strong); font-size:var(--ds-text-sm);">
-                            <i class="fa-solid fa-file-excel me-1" style="color:var(--ds-success)"></i>Excel
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body py-2 px-3">
-                    <form method="GET" action="{{ url_for('admincost.cost_summary') }}">
-                        <div class="row g-2 align-items-end">
-                            <div class="col-auto">
-                                <label class="ds-label"><i class="fa-solid fa-id-card me-1" style="color:var(--ds-text-muted)"></i>คนขับ</label>
-                                <select name="driver_id" class="ds-select" style="min-width:140px">
-                                    <option value="">ทุกคน</option>
-                                    {% for d in drivers %}
-                                    <option value="{{ d.id }}" {% if sel_driver == d.id %}selected{% endif %}>{{ d.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-auto">
-                                <label class="ds-label"><i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>เดือน (จาก)</label>
-                                <div class="d-flex gap-1">
-                                    <select name="from_month" class="ds-select" style="width:90px">
-                                        {% set th_m = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
-                                        {% for m in range(1,13) %}
-                                        <option value="{{ m }}" {% if m == from_month %}selected{% endif %}>{{ th_m[m] }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <select name="from_year" class="ds-select" style="width:80px">
-                                        {% for y in range(now.year - 2, now.year + 2) %}
-                                        <option value="{{ y }}" {% if y == from_year %}selected{% endif %}>{{ y + 543 }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-auto" style="padding-top:18px; color:var(--ds-text-muted); font-size:.8rem;">ถึง</div>
-                            <div class="col-auto">
-                                <label class="ds-label"><i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>เดือน (ถึง)</label>
-                                <div class="d-flex gap-1">
-                                    <select name="to_month" class="ds-select" style="width:90px">
-                                        {% for m in range(1,13) %}
-                                        <option value="{{ m }}" {% if m == to_month %}selected{% endif %}>{{ th_m[m] }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <select name="to_year" class="ds-select" style="width:80px">
-                                        {% for y in range(now.year - 2, now.year + 2) %}
-                                        <option value="{{ y }}" {% if y == to_year %}selected{% endif %}>{{ y + 543 }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <label class="ds-label" style="opacity:0">x</label>
-                                <button type="submit" class="btn btn-sm btn-dark"
-                                        style="padding:7px 16px; border-radius:var(--ds-radius-sm); font-size:var(--ds-text-sm);">
-                                    <i class="fa-solid fa-magnifying-glass me-1"></i>ค้นหา
-                                </button>
-                            </div>
-                            <div class="col-auto ms-auto d-flex align-items-end pb-1">
-                                <span style="font-size:var(--ds-text-xs); color:var(--ds-text-secondary);">
-                                    <i class="fa-solid fa-filter-circle-dollar me-1" style="color:var(--ds-text-muted)"></i>
-                                    แสดง <strong>{{ ots|length }}</strong> รายการ
-                                </span>
-                            </div>
-                        </div>
-                    </form>
+                    {% endfor %}
                 </div>
             </div>
 
-            {# ── Main Table Card ── #}
-            <div class="card">
+            {# ── Filter Bar ─────────────────────────────── #}
+            <form method="get" action="{{ url_for('admincost.cost_summary') }}" class="vc-filter-bar" id="filterForm">
+                <input type="hidden" name="status" value="{{ sel_status }}">
+                <div class="vc-filter-group">
+                    <span class="vc-filter-label">จาก เดือน</span>
+                    <select name="from_month" class="vc-filter-select">
+                        {% for m in range(1, 13) %}
+                        <option value="{{ m }}" {% if m == from_month %}selected{% endif %}>{{ TH_MONTHS[m-1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="vc-filter-group">
+                    <span class="vc-filter-label">ปี</span>
+                    <select name="from_year" class="vc-filter-select">
+                        {% for y in range(now.year - 2, now.year + 2) %}
+                        <option value="{{ y }}" {% if y == from_year %}selected{% endif %}>{{ y + 543 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="vc-filter-group">
+                    <span class="vc-filter-label">ถึง เดือน</span>
+                    <select name="to_month" class="vc-filter-select">
+                        {% for m in range(1, 13) %}
+                        <option value="{{ m }}" {% if m == to_month %}selected{% endif %}>{{ TH_MONTHS[m-1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="vc-filter-group">
+                    <span class="vc-filter-label">ปี</span>
+                    <select name="to_year" class="vc-filter-select">
+                        {% for y in range(now.year - 2, now.year + 2) %}
+                        <option value="{{ y }}" {% if y == to_year %}selected{% endif %}>{{ y + 543 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="vc-filter-group">
+                    <span class="vc-filter-label">คนขับ</span>
+                    <select name="driver_id" class="vc-filter-select">
+                        <option value="">ทุกคน</option>
+                        {% for d in drivers %}
+                        <option value="{{ d.id }}" {% if sel_driver == d.id %}selected{% endif %}>{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="vc-filter-actions">
+                    {% if sel_driver or sel_status %}
+                    <a href="{{ url_for('admincost.cost_summary', from_month=from_month, from_year=from_year, to_month=to_month, to_year=to_year) }}"
+                       class="vc-btn vc-btn-ghost vc-btn-sm" title="ล้าง filter">
+                        <i data-lucide="x" class="vc-icon-sm"></i>
+                        ล้าง
+                    </a>
+                    {% endif %}
+                    <noscript>
+                        <button type="submit" class="vc-btn vc-btn-secondary vc-btn-sm">
+                            <i data-lucide="filter" class="vc-icon-sm"></i>
+                            กรอง
+                        </button>
+                    </noscript>
+                </div>
+            </form>
 
-                {# Tabs #}
-                <div class="px-3 pt-2">
-                    <div class="ot-tabs d-flex">
-                        <button class="ot-tab {% if not sel_status %}active{% endif %}"
-                                onclick="switchTab(this,'all')">
-                            ทั้งหมด <span class="tab-badge tab-badge-neutral">{{ kpi_records }}</span>
-                        </button>
-                        <button class="ot-tab {% if sel_status == 'pending' %}active{% endif %}"
-                                onclick="switchTab(this,'pending')">
-                            รออนุมัติ <span class="tab-badge tab-badge-warning">{{ count_pending }}</span>
-                        </button>
-                        <button class="ot-tab {% if sel_status == 'approved' %}active{% endif %}"
-                                onclick="switchTab(this,'approved')">
-                            อนุมัติแล้ว <span class="tab-badge tab-badge-accent">{{ count_approved }}</span>
-                        </button>
-                        <button class="ot-tab {% if sel_status == 'paid' %}active{% endif %}"
-                                onclick="switchTab(this,'paid')">
-                            จ่ายแล้ว <span class="tab-badge tab-badge-success">{{ count_paid }}</span>
-                        </button>
-                    </div>
+            {# ── Main Card: tabs + table + footer ───────── #}
+            {% set _qs = {'driver_id': sel_driver or '', 'from_month': from_month, 'from_year': from_year, 'to_month': to_month, 'to_year': to_year} %}
+            <div class="vc-card" id="otCard">
+
+                <div class="vc-tabs">
+                    <a class="vc-tab {% if not sel_status %}is-active{% endif %}"
+                       href="{{ url_for('admincost.cost_summary', **_qs) }}"
+                       data-status-val="all" title="ดูทั้งหมด">
+                        ทั้งหมด <span class="vc-tab-count">{{ kpi_records }}</span>
+                    </a>
+                    <a class="vc-tab {% if sel_status == 'pending' %}is-active{% endif %}"
+                       href="{{ url_for('admincost.cost_summary', status='pending', **_qs) }}"
+                       data-status-val="pending" title="เฉพาะรออนุมัติ">
+                        รออนุมัติ <span class="vc-tab-count">{{ count_pending }}</span>
+                    </a>
+                    <a class="vc-tab {% if sel_status == 'approved' %}is-active{% endif %}"
+                       href="{{ url_for('admincost.cost_summary', status='approved', **_qs) }}"
+                       data-status-val="approved" title="เฉพาะอนุมัติแล้ว">
+                        อนุมัติแล้ว <span class="vc-tab-count">{{ count_approved }}</span>
+                    </a>
+                    <a class="vc-tab {% if sel_status == 'paid' %}is-active{% endif %}"
+                       href="{{ url_for('admincost.cost_summary', status='paid', **_qs) }}"
+                       data-status-val="paid" title="เฉพาะจ่ายแล้ว">
+                        จ่ายแล้ว <span class="vc-tab-count">{{ count_paid }}</span>
+                    </a>
                 </div>
 
-                {# Table #}
+                {% if ots %}
                 <div class="table-responsive">
-                    <table class="table ds-table mb-0" id="otTable">
+                    <table class="vc-table mb-0" id="otTable">
                         <thead>
                             <tr>
-                                <th style="width:95px">วันที่</th>
-                                <th style="width:150px">คนขับ</th>
-                                <th style="width:185px">Booking</th>
+                                <th style="width:120px;">วันที่</th>
+                                <th style="width:160px;">คนขับ</th>
+                                <th style="width:200px;">Booking</th>
                                 <th>ช่วงเวลา OT</th>
-                                <th style="width:60px; text-align:right">ชม.</th>
-                                <th style="width:90px; text-align:right">ยอด</th>
-                                <th style="width:115px; text-align:center">สถานะ</th>
-                                <th style="width:130px; text-align:right; padding-right:14px">จัดการ</th>
+                                <th class="text-end" style="width:70px;">ชม.</th>
+                                <th class="text-end" style="width:110px;">ยอด</th>
+                                <th style="width:120px;">สถานะ</th>
+                                <th class="vc-table-actions"></th>
                             </tr>
                         </thead>
                         <tbody>
-                        {% if ots %}
                         {% for ot in ots %}
-                        <tr data-status="{{ ot.status }}">
+                        <tr data-status="{{ ot.status }}" data-ot-id="{{ ot.id }}">
                             <td>
-                                <div style="font-weight:600; color:var(--ds-text-heading)">{{ ot.date.strftime('%Y-%m-%d') }}</div>
-                                <div style="font-size:.7rem; color:var(--ds-text-muted)">{{ ot.ot_number }}</div>
+                                <div class="vc-td-strong">
+                                    {{ '%02d'|format(ot.date.day) }} {{ TH_MONTHS[ot.date.month - 1] }} {{ ot.date.year + 543 }}
+                                </div>
+                                <div class="vc-td-muted vc-mono" style="font-size: var(--vc-text-xs);">{{ ot.ot_number }}</div>
                             </td>
                             <td>
-                                <div style="font-weight:600; color:var(--ds-text-heading)">{{ ot.driver.name if ot.driver else '-' }}</div>
+                                <div class="vc-td-strong">{{ ot.driver.name if ot.driver else '—' }}</div>
                                 {% if ot.driver and ot.driver.user and ot.driver.user.phone %}
-                                <div style="font-size:.7rem; color:var(--ds-text-secondary)">{{ ot.driver.user.phone }}</div>
+                                <div class="vc-td-muted" style="font-size: var(--vc-text-xs);">{{ ot.driver.user.phone }}</div>
                                 {% endif %}
                             </td>
                             <td>
-                                <div style="font-weight:600; color:var(--ds-accent,#4F46E5); font-size:.8rem">
-                                    BK-{{ ot.booking.id if ot.booking else '—' }}
-                                </div>
+                                <div class="vc-td-strong vc-mono">BK-{{ ot.booking.id if ot.booking else '—' }}</div>
                                 {% if ot.booking %}
-                                <div style="font-size:.7rem; color:var(--ds-text-secondary)">
-                                    <i class="fa-solid fa-location-dot" style="color:var(--ds-text-muted)"></i>
+                                <div class="vc-td-muted" style="font-size: var(--vc-text-xs);">
                                     {{ ot.booking.destination|truncate(28, true, '…') }}
                                 </div>
                                 {% endif %}
                             </td>
                             <td>
                                 {% for slot in ot.slots %}
-                                {% if 'เช้า' in slot.slot_label %}
-                                    {% set sc = 'slot-morning' %}
-                                {% elif 'หัวค่ำ' in slot.slot_label or 'เย็น' in slot.slot_label %}
-                                    {% set sc = 'slot-evening' %}
-                                {% else %}
-                                    {% set sc = 'slot-night' %}
-                                {% endif %}
-                                <span class="slot-tag {{ sc }}">{{ slot.slot_label }} {{ slot.start_time }}–{{ slot.end_time }} ฿{{ slot.rate|int }}</span>
+                                    {% if 'เช้า' in slot.slot_label %}{% set sc = 'cost-slot-morning' %}
+                                    {% elif 'หัวค่ำ' in slot.slot_label or 'เย็น' in slot.slot_label %}{% set sc = 'cost-slot-evening' %}
+                                    {% else %}{% set sc = 'cost-slot-night' %}{% endif %}
+                                    <span class="cost-slot-tag {{ sc }}">
+                                        {{ slot.slot_label }} {{ slot.start_time }}–{{ slot.end_time }}
+                                        <span class="cost-slot-rate">฿{{ slot.rate|int }}</span>
+                                    </span>
                                 {% endfor %}
                             </td>
-                            <td style="text-align:right; font-weight:700; color:var(--ds-text-heading)">{{ ot.total_hours }}</td>
-                            <td style="text-align:right">
-                                <span style="font-weight:700; font-size:.92rem; color:var(--ds-text-heading)">
-                                    ฿{{ '{:,.0f}'.format(ot.total_amount) }}
-                                </span>
-                            </td>
-                            <td style="text-align:center">
+                            <td class="vc-td-num vc-td-strong">{{ '{:,.2f}'.format(ot.total_hours) }}</td>
+                            <td class="vc-td-num vc-td-strong vc-mono">฿{{ '{:,.0f}'.format(ot.total_amount) }}</td>
+                            <td>
                                 {% if ot.status == 'pending' %}
-                                    <span class="ds-badge ds-badge-warning">รออนุมัติ</span>
+                                    <span class="vc-badge vc-badge-warning vc-badge-dot">รออนุมัติ</span>
                                 {% elif ot.status == 'approved' %}
-                                    <span class="ds-badge ds-badge-success">อนุมัติแล้ว</span>
+                                    <span class="vc-badge vc-badge-blue vc-badge-dot">อนุมัติแล้ว</span>
                                 {% else %}
-                                    <span class="ds-badge ds-badge-accent">จ่ายแล้ว</span>
+                                    <span class="vc-badge vc-badge-success vc-badge-dot">จ่ายแล้ว</span>
                                 {% endif %}
                             </td>
-                            <td style="text-align:right; padding-right:12px">
-                                <div class="d-flex gap-1 justify-content-end flex-wrap">
-                                    {# Approve #}
+                            <td class="vc-table-actions">
+                                <div class="cost-action-group">
                                     {% if ot.status == 'pending' %}
-                                    <form method="POST" action="{{ url_for('admincost.ot_approve', ot_id=ot.id) }}" style="display:inline">
-                                        <button type="submit" class="btn-act approve" title="อนุมัติ">
-                                            <i class="fa-solid fa-check"></i>
+                                    <form method="POST" action="{{ url_for('admincost.ot_approve', ot_id=ot.id) }}" class="d-inline">
+                                        <button type="submit" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="อนุมัติ">
+                                            <i data-lucide="check" class="vc-icon-sm"></i>
                                         </button>
                                     </form>
                                     {% endif %}
-                                    {# Mark Paid #}
                                     {% if ot.status == 'approved' %}
-                                    <form method="POST" action="{{ url_for('admincost.ot_mark_paid', ot_id=ot.id) }}" style="display:inline">
-                                        <button type="submit" class="btn-act pay" title="บันทึกการจ่าย">
-                                            <i class="fa-solid fa-money-bill-transfer"></i>
+                                    <form method="POST" action="{{ url_for('admincost.ot_mark_paid', ot_id=ot.id) }}" class="d-inline">
+                                        <button type="submit" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="บันทึกการจ่าย">
+                                            <i data-lucide="banknote" class="vc-icon-sm"></i>
                                         </button>
                                     </form>
                                     {% endif %}
-                                    {# Edit #}
-                                    <button class="btn-act" title="แก้ไข"
-                                            onclick="openEditModal({{ ot.id }}, '{{ ot.driver_id }}', '{{ ot.date.strftime('%Y-%m-%d') }}', {{ ot.booking_id }}, {{ ot.slots | map(attribute='id') | list | tojson }}, {{ ot.slots | map(attribute='slot_label') | list | tojson }}, {{ ot.slots | map(attribute='start_time') | list | tojson }}, {{ ot.slots | map(attribute='end_time') | list | tojson }}, {{ ot.slots | map(attribute='rate') | list | map('float') | list | tojson }}, {{ ot.slots | map(attribute='rate_config_id') | list | tojson }}, '{{ ot.note or '' }}')">
-                                        <i class="fa-solid fa-pen"></i>
+                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" data-cost-action="edit" data-ot-id="{{ ot.id }}" title="แก้ไข">
+                                        <i data-lucide="pencil" class="vc-icon-sm"></i>
                                     </button>
-                                    {# Delete #}
-                                    <form method="POST" action="{{ url_for('admincost.ot_delete', ot_id=ot.id) }}" style="display:inline"
-                                          onsubmit="return confirm('ลบ {{ ot.ot_number }} ใช่ไหม?')">
-                                        <button type="submit" class="btn-act danger" title="ลบ">
-                                            <i class="fa-solid fa-trash"></i>
+                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" data-cost-action="print" data-ot-id="{{ ot.id }}" title="พิมพ์ใบเสร็จ">
+                                        <i data-lucide="printer" class="vc-icon-sm"></i>
+                                    </button>
+                                    <form method="POST" action="{{ url_for('admincost.ot_delete', ot_id=ot.id) }}" class="d-inline"
+                                          onsubmit="return confirm('ลบ {{ ot.ot_number }} ใช่ไหม?');">
+                                        <button type="submit" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="ลบ">
+                                            <i data-lucide="trash-2" class="vc-icon-sm"></i>
                                         </button>
                                     </form>
-                                    {# Print single #}
-                                    <button class="btn-act" title="พิมพ์" onclick="printSingle({{ ot.id }})">
-                                        <i class="fa-solid fa-print"></i>
-                                    </button>
                                 </div>
                             </td>
                         </tr>
                         {% endfor %}
-                        {% else %}
-                        <tr>
-                            <td colspan="8">
-                                <div style="padding:40px 0; text-align:center; color:var(--ds-text-muted);">
-                                    <i class="fa-solid fa-clock-rotate-left" style="font-size:1.8rem; margin-bottom:8px; display:block;"></i>
-                                    <div style="font-size:var(--ds-text-sm)">ไม่มีข้อมูล OT ในช่วงที่เลือก</div>
-                                    <div style="font-size:var(--ds-text-xs); margin-top:4px;">OT จะถูกสร้างอัตโนมัติเมื่อคนขับปิดงาน (บันทึกเลขไมล์ end)</div>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endif %}
                         </tbody>
                     </table>
                 </div>
 
-                {# Table Footer #}
-                <div class="card-footer d-flex justify-content-between align-items-center"
-                     style="background:var(--ds-bg-subtle); border-top:1px solid var(--ds-border);">
-                    <span style="font-size:var(--ds-text-xs); color:var(--ds-text-secondary)">
-                        <i class="fa-solid fa-hourglass-half me-1" style="color:var(--ds-text-muted)"></i>
-                        ชั่วโมงรวม: <strong style="color:var(--ds-text-heading)">{{ ots | sum(attribute='total_hours') | round(2) }} ชม.</strong>
+                <div class="cost-table-footer">
+                    <span class="cost-table-footer-meta">
+                        ชั่วโมงรวม: <strong>{{ '{:,.2f}'.format(ots | sum(attribute='total_hours')) }} ชม.</strong>
                     </span>
-                    <span style="font-size:var(--ds-text-sm); font-weight:700; color:var(--ds-text-heading)">
+                    <span class="cost-table-footer-total">
                         รวมทั้งหมด: ฿{{ '{:,.0f}'.format(ots | sum(attribute='total_amount')) }}
                     </span>
                 </div>
+                {% else %}
+                <div class="vc-empty">
+                    <div class="vc-empty-icon">
+                        <i data-lucide="clock-arrow-down"></i>
+                    </div>
+                    <p class="vc-empty-title">ไม่มีข้อมูล OT ในช่วงที่เลือก</p>
+                    <p class="vc-empty-desc">OT จะถูกสร้างอัตโนมัติเมื่อคนขับปิดงาน (บันทึกเลขไมล์ end)</p>
+                </div>
+                {% endif %}
 
-            </div>{# /card #}
+            </div>
 
-        </div>{# /container-fluid #}
-        </div>{# /scroll-area #}
+        </div>
     </main>
-</div>{# /app-container #}
+</div>
 
 
 {# ════════════════════════════════════════════════
    MODAL: แก้ไข OT
    ════════════════════════════════════════════════ #}
-<div class="modal fade" id="editOtModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:560px">
+<div class="modal fade vc-modal" id="editOtModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:600px;">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fa-solid fa-pen-to-square me-2" style="color:var(--ds-accent,#4F46E5)"></i>
+                    <i data-lucide="pencil" class="vc-icon-sm"></i>
                     <span id="editModalTitle">แก้ไข OT</span>
                 </h5>
-                <button type="button" class="btn-act" data-bs-dismiss="modal" style="border:none; font-size:1rem">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
             </div>
             <form method="POST" id="editOtForm">
                 <div class="modal-body">
 
-                    {# Driver + Date #}
-                    <div class="row g-3 mb-3">
-                        <div class="col-7">
-                            <label class="ds-label">
-                                <i class="fa-solid fa-id-card me-1" style="color:var(--ds-text-muted)"></i>คนขับ
-                            </label>
-                            <select name="driver_id" class="ds-select" id="editDriverId">
+                    <div class="vc-form-row" style="margin-bottom: var(--vc-space-4);">
+                        <div class="vc-form-group" style="flex: 1.4;">
+                            <label class="vc-label">คนขับ</label>
+                            <select name="driver_id" class="vc-select" id="editDriverId">
                                 {% for d in drivers %}
                                 <option value="{{ d.id }}">{{ d.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-5">
-                            <label class="ds-label">
-                                <i class="fa-solid fa-calendar me-1" style="color:var(--ds-text-muted)"></i>วันที่
-                            </label>
-                            <input type="date" name="date" class="ds-input" id="editDate">
+                        <div class="vc-form-group" style="flex: 1;">
+                            <label class="vc-label">วันที่</label>
+                            <input type="date" name="date" class="vc-input" id="editDate">
                         </div>
                     </div>
 
-                    {# OT Slots #}
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="ds-label mb-0">
-                            <i class="fa-solid fa-clock me-1" style="color:var(--ds-text-muted)"></i>ช่วงเวลา OT
-                        </label>
-                        <button type="button"
-                                style="background:transparent; color:var(--ds-accent,#4F46E5); border:1px solid var(--ds-accent-border,#C7D2FE); padding:3px 10px; border-radius:var(--ds-radius-sm); font-size:.75rem; font-weight:600; cursor:pointer; font-family:'Sarabun',sans-serif;"
-                                onclick="addEditSlot()">
-                            <i class="fa-solid fa-plus me-1"></i>เพิ่มช่วง
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--vc-space-2);">
+                        <label class="vc-label" style="margin: 0;">ช่วงเวลา OT</label>
+                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm cost-slot-add-btn" id="addSlotBtn" title="เพิ่มช่วง">
+                            <i data-lucide="plus" class="vc-icon-sm"></i>
+                            เพิ่มช่วง
                         </button>
                     </div>
 
-                    <div id="editSlotsContainer" class="d-flex flex-column gap-2 mb-3"></div>
+                    <div id="editSlotsContainer" style="display:flex; flex-direction:column; gap: var(--vc-space-2);"></div>
 
-                    {# Total Box #}
-                    <div id="editTotalBox"
-                         style="background:var(--ds-bg-subtle); border:1px solid var(--ds-border-strong); border-radius:var(--ds-radius-md); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                        <span style="font-size:var(--ds-text-sm); font-weight:600; color:var(--ds-text-secondary)">รวมทั้งหมด</span>
-                        <div style="text-align:right">
-                            <div style="font-size:.7rem; color:var(--ds-text-secondary)" id="editTotalHrs">— ชม.</div>
-                            <div style="font-size:1.05rem; font-weight:700; color:var(--ds-text-heading)" id="editTotalAmt">฿—</div>
+                    <div class="cost-total-box">
+                        <span class="cost-total-box-label">รวมทั้งหมด</span>
+                        <div style="text-align:right;">
+                            <div class="cost-total-box-hours" id="editTotalHrs">— ชม.</div>
+                            <div class="cost-total-box-amount" id="editTotalAmt">฿—</div>
                         </div>
                     </div>
 
-                    {# Note #}
-                    <div>
-                        <label class="ds-label">
-                            <i class="fa-solid fa-note-sticky me-1" style="color:var(--ds-text-muted)"></i>หมายเหตุ
-                        </label>
-                        <textarea name="note" class="ds-textarea" id="editNote" rows="2" placeholder="เช่น ส่งของด่วน"></textarea>
+                    <div class="vc-form-group" style="margin-top: var(--vc-space-4); margin-bottom: 0;">
+                        <label class="vc-label">หมายเหตุ</label>
+                        <textarea name="note" class="vc-textarea" id="editNote" rows="2" placeholder="เช่น ส่งของด่วน"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-sm btn-dark" style="padding:7px 16px;">
-                        <i class="fa-solid fa-floppy-disk me-1"></i>บันทึก
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
+                        <i data-lucide="save" class="vc-icon-sm"></i>
+                        บันทึก
                     </button>
                 </div>
             </form>
@@ -612,49 +404,67 @@
 {# ════════════════════════════════════════════════
    MODAL: อัตรา OT
    ════════════════════════════════════════════════ #}
-<div class="modal fade" id="rateConfigModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:560px">
+<div class="modal fade vc-modal" id="rateConfigModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:600px;">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fa-solid fa-gear me-2" style="color:var(--ds-accent,#4F46E5)"></i>แก้ไขอัตรา OT
+                    <i data-lucide="settings-2" class="vc-icon-sm"></i>
+                    แก้ไขอัตรา OT
                 </h5>
-                <button type="button" class="btn-act" data-bs-dismiss="modal" style="border:none; font-size:1rem">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
             </div>
             <form method="POST" action="{{ url_for('admincost.ot_rate_config_update') }}">
                 <div class="modal-body">
-                    <p style="font-size:var(--ds-text-xs); color:var(--ds-text-secondary); margin-bottom:16px;">
-                        <i class="fa-solid fa-circle-info me-1"></i>
-                        การเปลี่ยนอัตรา จะมีผลกับ OT ที่สร้างใหม่เท่านั้น — OT ที่มีอยู่แล้วใช้อัตราที่ถูก snapshot ไว้
+                    <p class="vc-form-hint" style="margin-bottom: var(--vc-space-4);">
+                        <i data-lucide="info" class="vc-icon-sm"></i>
+                        การเปลี่ยนอัตรา มีผลกับ OT ที่สร้างใหม่เท่านั้น — OT ที่มีอยู่แล้วใช้อัตราที่ snapshot ไว้
                     </p>
+
+                            <div class="cost-slot-row-field" data-col-full>
+                                <label class="vc-label">ช่วง OT</label>
+                                <select name="slot_cfg[]" class="vc-select js-slot-cfg">${opts}</select>
+                            </div>
+                            <div class="cost-slot-row-field">
+                                <label class="vc-label">เริ่ม</label>
+                                <input type="time" name="slot_start[]" class="vc-input js-slot-start" value="${st}">
+                            </div>
+                            <div class="cost-slot-row-field">
+                                <label class="vc-label">สิ้นสุด</label>
+                                <input type="time" name="slot_end[]" class="vc-input js-slot-end" value="${en}">
+                            </div>
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm cost-slot-row-remove js-slot-remove" title="ลบช่วงนี้">
+                                <i data-lucide="x" class="vc-icon-sm"></i>
+                            </button>
+                            <p class="cost-slot-row-hint js-slot-hint"></p>
+
                     {% for cfg in rate_configs %}
-                    <div class="row g-2 mb-3 align-items-end">
+                    <div class="vc-form-row" style="margin-bottom: var(--vc-space-3);">
                         <input type="hidden" name="cfg_id[]" value="{{ cfg.id }}">
-                        <div class="col-4">
-                            <label class="ds-label">ชื่อ Band</label>
-                            <input type="text" name="cfg_label[]" class="ds-input" value="{{ cfg.label }}" required>
+                        <div class="vc-form-group" style="flex: 1.4;">
+                            <label class="vc-label">ชื่อ Band</label>
+                            <input type="text" name="cfg_label[]" class="vc-input" value="{{ cfg.label }}" required>
                         </div>
-                        <div class="col-3">
-                            <label class="ds-label">เริ่ม</label>
-                            <input type="text" name="cfg_start[]" class="ds-input" value="{{ cfg.start_time }}" placeholder="06:00" required>
+                        <div class="vc-form-group" style="flex: 1;">
+                            <label class="vc-label">เริ่ม</label>
+                            <input type="text" name="cfg_start[]" class="vc-input" value="{{ cfg.start_time }}" placeholder="06:00" required>
                         </div>
-                        <div class="col-3">
-                            <label class="ds-label">สิ้นสุด</label>
-                            <input type="text" name="cfg_end[]" class="ds-input" value="{{ cfg.end_time }}" placeholder="08:00" required>
+                        <div class="vc-form-group" style="flex: 1;">
+                            <label class="vc-label">สิ้นสุด</label>
+                            <input type="text" name="cfg_end[]" class="vc-input" value="{{ cfg.end_time }}" placeholder="08:00" required>
                         </div>
-                        <div class="col-2">
-                            <label class="ds-label">฿/ชม.</label>
-                            <input type="number" name="cfg_rate[]" class="ds-input" value="{{ cfg.rate|int }}" min="0" step="1" required>
+                        <div class="vc-form-group" style="flex: .9;">
+                            <label class="vc-label">฿/ชม.</label>
+                            <input type="number" name="cfg_rate[]" class="vc-input" value="{{ cfg.rate|int }}" min="0" step="1" required>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-sm btn-dark" style="padding:7px 16px;">
-                        <i class="fa-solid fa-floppy-disk me-1"></i>บันทึกอัตรา
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
+                        <i data-lucide="save" class="vc-icon-sm"></i>
+                        บันทึกอัตรา
                     </button>
                 </div>
             </form>
@@ -666,101 +476,82 @@
 {# ════════════════════════════════════════════════
    PRINT RECEIPT (hidden — @media print เท่านั้น)
    ════════════════════════════════════════════════ #}
-<div id="printReceipt">
-    <div style="font-family:'Sarabun',sans-serif; max-width:210mm; margin:0 auto; padding:15mm 20mm; font-size:13px; color:#09090B;">
+<div class="cost-print-receipt" id="printReceipt">
+    <div class="cost-print-title">ใบเสร็จรับเงิน</div>
 
-        <div style="text-align:center; font-size:1.4rem; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:2px solid #09090B;">
-            ใบเสร็จรับเงิน
-        </div>
+    <table class="cost-print-header">
+        <tr><td class="label">วันที่</td><td class="value" id="receiptDate"></td></tr>
+        <tr><td class="label">ข้าเจ้าของ</td><td class="value" id="receiptName"></td></tr>
+        <tr><td class="label">บัตรประจำตัวเลขที่</td><td class="value"></td></tr>
+        <tr><td class="label">โทร</td><td class="value" id="receiptPhone"></td></tr>
+    </table>
 
-        <table style="width:100%; border-collapse:collapse; font-size:.85rem; margin-bottom:8px;" id="receiptHeader">
+    <p class="cost-print-intro">ได้รับเงินเพื่อชำระค่าสินค้า หรือค่าบริการดังรายละเอียดข้างท้ายดังนี้ ถูกต้องเรียบร้อยแล้ว</p>
+
+    <table class="cost-print-table">
+        <thead>
             <tr>
-                <td style="width:160px; color:#71717A; padding:3px 0;">วันที่</td>
-                <td id="receiptDate" style="padding:3px 0;"></td>
+                <th class="desc">รายการ</th>
+                <th class="money">จำนวนเงิน</th>
             </tr>
+        </thead>
+        <tbody id="receiptRows"></tbody>
+        <tfoot>
             <tr>
-                <td style="color:#71717A; padding:3px 0;">ข้าเจ้าของ</td>
-                <td id="receiptName" style="padding:3px 0; font-weight:600;"></td>
+                <td>รวมเงิน</td>
+                <td id="receiptTotal"></td>
             </tr>
-            <tr>
-                <td style="color:#71717A; padding:3px 0;">บัตรประจำตัวเลขที่</td>
-                <td style="padding:3px 0;"></td>
-            </tr>
-            <tr>
-                <td style="color:#71717A; padding:3px 0;">โทร</td>
-                <td id="receiptPhone" style="padding:3px 0;"></td>
-            </tr>
-        </table>
+        </tfoot>
+    </table>
 
-        <p style="margin:12px 0 8px; font-size:.82rem; color:#3F3F46;">
-            ได้รับเงินเพื่อชำระค่าสินค้า หรือค่าบริการดังรายละเอียดข้างท้ายดังนี้ ถูกต้องเรียบร้อยแล้ว
-        </p>
-
-        <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
-            <thead>
-                <tr>
-                    <th style="border-top:1px solid #09090B; border-bottom:1px solid #09090B; padding:6px 8px; text-align:center; font-weight:700; width:60%">รายการ</th>
-                    <th style="border-top:1px solid #09090B; border-bottom:1px solid #09090B; padding:6px 8px; text-align:right; font-weight:700; width:120px">จำนวนเงิน</th>
-                </tr>
-            </thead>
-            <tbody id="receiptRows"></tbody>
-            <tfoot>
-                <tr>
-                    <td style="border-top:2px solid #09090B; padding:10px 8px; font-weight:700; text-align:right;">รวมเงิน</td>
-                    <td style="border-top:2px solid #09090B; padding:10px 8px; font-weight:700; text-align:right;" id="receiptTotal"></td>
-                </tr>
-            </tfoot>
-        </table>
-
-        <div style="margin-top:50px; text-align:right;">
-            <div style="display:inline-block; text-align:center; min-width:260px;">
-                <div style="border-top:1px solid #09090B; padding-top:6px; font-size:.85rem;">
-                    ลงชื่อ..............................................................ผู้รับเงิน
-                </div>
-                <div id="receiptSignName" style="font-size:.82rem; margin-top:6px; color:#3F3F46;"></div>
-            </div>
+    <div class="cost-print-sign">
+        <div class="cost-print-sign-inner">
+            <div class="cost-print-sign-line">ลงชื่อ..............................................................ผู้รับเงิน</div>
+            <div class="cost-print-sign-name" id="receiptSignName"></div>
         </div>
     </div>
 </div>
 
 
 {# ════════════════════════════════════════════════
-   DATA สำหรับ JS
+   DATA สำหรับ JS (JSON injection — ไม่ใช่ inline logic)
    ════════════════════════════════════════════════ #}
-<script>
-const OT_DATA = {{ ots | map(attribute='id') | list | tojson }};
-const OT_MAP  = {
-    {% for ot in ots %}
-    {{ ot.id }}: {
-        id: {{ ot.id }},
-        ot_number: "{{ ot.ot_number }}",
-        driver_id: {{ ot.driver_id }},
-        driver_name: "{{ ot.driver.name if ot.driver else '' }}",
-        driver_phone: "{{ ot.driver.user.phone if ot.driver and ot.driver.user and ot.driver.user.phone else '' }}",
-        date: "{{ ot.date.strftime('%Y-%m-%d') }}",
-        booking_id: {{ ot.booking_id }},
-        destination: "{{ ot.booking.destination if ot.booking else '' }}",
-        total_hours: {{ ot.total_hours }},
-        total_amount: {{ ot.total_amount }},
-        status: "{{ ot.status }}",
-        note: "{{ ot.note or '' }}",
-        slots: [
-            {% for s in ot.slots %}
-            {label:"{{ s.slot_label }}", start:"{{ s.start_time }}", end:"{{ s.end_time }}", rate:{{ s.rate }}, hours:{{ s.hours }}, amount:{{ s.amount }}, cfg_id:{{ s.rate_config_id or 'null' }}},
-            {% endfor %}
-        ]
-    },
-    {% endfor %}
-};
-const RATE_CONFIGS = [
+<script type="application/json" id="otCostData">
+{
+  "editUrlTemplate": "{{ url_for('admincost.ot_edit', ot_id=0) }}",
+  "activeStatus": "{{ sel_status or 'all' }}",
+  "rateConfigs": [
     {% for cfg in rate_configs %}
-    {id:{{ cfg.id }}, label:"{{ cfg.label }}", start:"{{ cfg.start_time }}", end:"{{ cfg.end_time }}", rate:{{ cfg.rate }}},
+    {"id": {{ cfg.id }}, "label": {{ cfg.label|tojson }}, "start": "{{ cfg.start_time }}", "end": "{{ cfg.end_time }}", "rate": {{ cfg.rate }}}{% if not loop.last %},{% endif %}
     {% endfor %}
-];
-const EDIT_URL_TEMPLATE = "{{ url_for('admincost.ot_edit', ot_id=0) }}".replace('/0/', '/{id}/');
+  ],
+  "ots": {
+    {% for ot in ots %}
+    "{{ ot.id }}": {
+      "id": {{ ot.id }},
+      "ot_number": {{ ot.ot_number|tojson }},
+      "driver_id": {{ ot.driver_id }},
+      "driver_name": {{ (ot.driver.name if ot.driver else '')|tojson }},
+      "driver_phone": {{ (ot.driver.user.phone if ot.driver and ot.driver.user and ot.driver.user.phone else '')|tojson }},
+      "date": "{{ ot.date.strftime('%Y-%m-%d') }}",
+      "date_display": "{{ '%02d'|format(ot.date.day) }} {{ TH_MONTHS[ot.date.month - 1] }} {{ ot.date.year + 543 }}",
+      "destination": {{ (ot.booking.destination if ot.booking else '')|tojson }},
+      "total_hours": {{ ot.total_hours }},
+      "total_amount": {{ ot.total_amount }},
+      "status": "{{ ot.status }}",
+      "note": {{ (ot.note or '')|tojson }},
+      "slots": [
+        {% for s in ot.slots %}
+        {"label": {{ s.slot_label|tojson }}, "start": "{{ s.start_time }}", "end": "{{ s.end_time }}", "rate": {{ s.rate }}, "hours": {{ s.hours }}, "amount": {{ s.amount }}, "cfg_id": {{ s.rate_config_id or 'null' }}}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  }
+}
 </script>
 
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/ot_admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ot_admin.js') }}" defer></script>
 </body>
 </html>

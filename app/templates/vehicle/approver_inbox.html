@@ -8,208 +8,8 @@
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-    
-    <style>
-        /* ── Budget Card ─────────────────────── */
-        .budget-card {
-            background: #fff;
-            border: 1px solid var(--ds-border);
-            border-radius: 8px;
-            padding: 14px 16px;
-            margin-bottom: 12px;
-        }
-        .budget-progress {
-            height: 4px;
-            background: #E4E4E7;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 8px 0 5px;
-        }
-        .budget-bar {
-            height: 100%;
-            background: var(--ds-text-heading);
-            border-radius: 4px;
-        }
-
-        /* ── Tabs ─────────────────────────────── */
-        .inbox-tabs {
-            display: flex;
-            border-bottom: 1.5px solid var(--ds-border);
-            margin-bottom: 14px;
-        }
-        .inbox-tab {
-            flex: 1;
-            padding: 10px 4px;
-            text-align: center;
-            font-size: 0.82rem;
-            font-weight: 500;
-            color: var(--ds-text-secondary);
-            cursor: pointer;
-            border: none;
-            background: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1.5px;
-            transition: color .15s, border-color .15s;
-        }
-        .inbox-tab.active {
-            color: var(--ds-text-heading);
-            font-weight: 600;
-            border-bottom-color: var(--ds-text-heading);
-        }
-        .tab-count-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #F4F4F5;
-            color: var(--ds-text-secondary);
-            border-radius: 99px;
-            padding: 0 6px;
-            height: 18px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            margin-left: 4px;
-            vertical-align: middle;
-        }
-        .inbox-tab.active .tab-count-badge {
-            background: var(--ds-text-heading);
-            color: #fff;
-        }
-
-        /* ── Booking Card ─────────────────────── */
-        .approver-card {
-            background: #fff;
-            border: 1px solid var(--ds-border);
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-        .ac-header {
-            padding: 14px 16px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            user-select: none;
-        }
-        .ac-header:hover { background: var(--ds-bg-hover); }
-        .ac-header-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .ac-ref {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--ds-text-heading);
-        }
-        .ac-meta {
-            font-size: 0.78rem;
-            color: var(--ds-text-secondary);
-        }
-        .ac-chevron {
-            font-size: 0.68rem;
-            color: var(--ds-text-muted);
-            transition: transform .2s;
-            flex-shrink: 0;
-        }
-        .ac-chevron.rotated { transform: rotate(180deg); }
-        .ac-body {
-            border-top: 1px solid var(--ds-border);
-            padding: 14px 16px 16px;
-        }
-        .ac-field-label {
-            font-size: 0.7rem;
-            font-weight: 500;
-            color: var(--ds-text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            margin-bottom: 2px;
-        }
-        .ac-field-value {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--ds-text-heading);
-        }
-
-        /* ── Status Badges ────────────────────── */
-        .badge-waiting {
-            display: inline-flex; align-items: center; gap: 4px;
-            background: #FFFBEB; color: #78350F;
-            border: 1px solid #FDE68A;
-            border-radius: 99px; padding: 2px 10px;
-            font-size: 0.7rem; font-weight: 600;
-            white-space: nowrap;
-        }
-        .badge-approved {
-            display: inline-flex; align-items: center; gap: 4px;
-            background: #F0FDF4; color: #14532D;
-            border: 1px solid #BBF7D0;
-            border-radius: 99px; padding: 2px 10px;
-            font-size: 0.7rem; font-weight: 600;
-            white-space: nowrap;
-        }
-        .badge-rejected {
-            display: inline-flex; align-items: center; gap: 4px;
-            background: #FEF2F2; color: #7F1D1D;
-            border: 1px solid #FECACA;
-            border-radius: 99px; padding: 2px 10px;
-            font-size: 0.7rem; font-weight: 600;
-            white-space: nowrap;
-        }
-
-        /* ── Action Buttons ───────────────────── */
-        .btn-approve-action {
-            width: 100%;
-            background: #09090B;
-            color: #fff;
-            border: 1.5px solid #09090B;
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity .15s;
-        }
-        .btn-approve-action:hover { opacity: 0.85; }
-        .btn-reject-action {
-            width: 100%;
-            background: #fff;
-            color: #DC2626;
-            border: 1.5px solid #FECACA;
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background .15s, border-color .15s;
-        }
-        .btn-reject-action:hover { background: #FEF2F2; border-color: #FCA5A5; }
-
-        /* ── Empty State ──────────────────────── */
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 48px 16px;
-        }
-        .empty-state-icon {
-            width: 44px; height: 44px;
-            border-radius: 50%;
-            border: 1.5px solid var(--ds-border-strong);
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 12px;
-            color: var(--ds-text-muted);
-            font-size: 1rem;
-        }
-        .empty-state-text {
-            font-size: 0.875rem;
-            color: var(--ds-text-secondary);
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/approver_inbox.css') }}">
 </head>
 <body>
 
@@ -219,7 +19,7 @@
 {% set active_menu = 'approver' %}
 {% include '_sidebar.html' %}
 
-<main class="main-content">
+<main class="main-content vc-scope">
     {% set page_title = 'รายการรออนุมัติ' %}
     {% include '_header.html' %}
 
@@ -228,8 +28,7 @@
         {# ── Flash messages ──────────────────── #}
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
-        <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3"
-             style="border-radius:8px;font-size:.88rem;">
+        <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3 approver-flash">
             {{ msg }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -241,23 +40,18 @@
         <div class="budget-card">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-credit-card"
-                       style="font-size:.78rem;color:var(--ds-text-secondary);"></i>
-                    <span style="font-size:.875rem;font-weight:600;color:var(--ds-text-heading);">
-                        งบ {{ budget.department.name }}
-                    </span>
+                    <i class="fa-solid fa-credit-card ac-budget-icon"></i>
+                    <span class="ac-budget-name">งบ {{ budget.department.name }}</span>
                 </div>
-                <span style="font-size:.875rem;font-weight:600;color:var(--ds-text-heading);">
+                <span class="ac-budget-amount">
                     ฿{{ '{:,.0f}'.format(budget.used_amount | float) }}
-                    <span style="color:var(--ds-text-secondary);font-weight:400;">
-                        / {{ '{:,.0f}'.format(budget.budget_amount | float) }}
-                    </span>
+                    <span class="ac-budget-total">/ {{ '{:,.0f}'.format(budget.budget_amount | float) }}</span>
                 </span>
             </div>
             <div class="budget-progress">
                 <div class="budget-bar" style="width:{{ budget.percent_used }}%;"></div>
             </div>
-            <div style="font-size:.74rem;color:var(--ds-text-secondary);">
+            <div class="ac-budget-used">
                 ใช้แล้ว ฿{{ '{:,.0f}'.format(budget.used_amount | float) }}
                 &nbsp;·&nbsp;{{ budget.percent_used }}%
             </div>
@@ -298,10 +92,7 @@
                     <div class="ac-header-row">
                         <span class="ac-ref">{{ b.snap_department_name or b.trip_department or '-' }}</span>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge-waiting">
-                                <i class="fa-solid fa-circle" style="font-size:.4rem;"></i>
-                                รออนุมัติ
-                            </span>
+                            <span class="vc-badge vc-badge-warning vc-badge-dot">รออนุมัติ</span>
                             <i class="fa-solid fa-chevron-down ac-chevron" id="chev-{{ b.id }}"></i>
                         </div>
                     </div>
@@ -371,22 +162,19 @@
                                   action="{{ url_for('vehicle.approve_booking', booking_id=b.id) }}">
                                 <input type="hidden" name="action" value="reject">
                                 <input type="text" name="reject_reason"
-                                       class="form-control form-control-sm mb-2"
-                                       style="border-radius:6px;font-size:.85rem;"
+                                       class="form-control form-control-sm mb-2 ac-reject-input"
                                        placeholder="ระบุเหตุผลที่ปฏิเสธ..." required>
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <button type="button"
-                                                class="btn btn-sm w-100"
-                                                style="border:1px solid var(--ds-border);border-radius:6px;"
+                                                class="btn btn-sm w-100 ac-reject-cancel"
                                                 onclick="hideRejectForm({{ b.id }})">
                                             ยกเลิก
                                         </button>
                                     </div>
                                     <div class="col-6">
                                         <button type="submit"
-                                                class="btn btn-sm btn-danger w-100"
-                                                style="border-radius:6px;">
+                                                class="btn btn-sm btn-danger w-100">
                                             ยืนยันปฏิเสธ
                                         </button>
                                     </div>
@@ -399,11 +187,11 @@
             {% endfor %}
             {% else %}
             <div class="approver-card">
-                <div class="empty-state">
-                    <div class="empty-state-icon">
-                        <i class="fa-solid fa-check"></i>
+                <div class="vc-empty">
+                    <div class="vc-empty-icon">
+                        <i class="fa-solid fa-circle-check approver-empty-icon"></i>
                     </div>
-                    <div class="empty-state-text">ยังไม่มีรายการที่รออนุมัติ</div>
+                    <p class="vc-empty-title">ยังไม่มีรายการที่รออนุมัติ</p>
                 </div>
             </div>
             {% endif %}
@@ -423,10 +211,7 @@
                     <div class="ac-header-row">
                         <span class="ac-ref">{{ 'BK-%04d' % b.id }}</span>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge-approved">
-                                <i class="fa-solid fa-check" style="font-size:.6rem;"></i>
-                                อนุมัติแล้ว
-                            </span>
+                            <span class="vc-badge vc-badge-success vc-badge-dot">อนุมัติแล้ว</span>
                             <i class="fa-solid fa-chevron-down ac-chevron" id="chev-hist-{{ b.id }}"></i>
                         </div>
                     </div>
@@ -468,11 +253,11 @@
             {% endfor %}
             {% else %}
             <div class="approver-card">
-                <div class="empty-state">
-                    <div class="empty-state-icon">
-                        <i class="fa-solid fa-check"></i>
+                <div class="vc-empty">
+                    <div class="vc-empty-icon">
+                        <i class="fa-solid fa-circle-check approver-empty-icon"></i>
                     </div>
-                    <div class="empty-state-text">ยังไม่มีรายการที่อนุมัติ</div>
+                    <p class="vc-empty-title">ยังไม่มีรายการที่อนุมัติ</p>
                 </div>
             </div>
             {% endif %}
@@ -492,10 +277,7 @@
                     <div class="ac-header-row">
                         <span class="ac-ref">{{ 'BK-%04d' % b.id }}</span>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge-rejected">
-                                <i class="fa-solid fa-xmark" style="font-size:.6rem;"></i>
-                                ปฏิเสธ
-                            </span>
+                            <span class="vc-badge vc-badge-danger vc-badge-dot">ปฏิเสธ</span>
                             <i class="fa-solid fa-chevron-down ac-chevron" id="chev-rej-{{ b.id }}"></i>
                         </div>
                     </div>
@@ -533,9 +315,7 @@
                             {% if b.reject_reason %}
                             <div class="col-12">
                                 <div class="ac-field-label">เหตุผลที่ปฏิเสธ</div>
-                                <div class="ac-field-value" style="color:#DC2626;">
-                                    {{ b.reject_reason }}
-                                </div>
+                                <div class="ac-field-value ac-reject-reason">{{ b.reject_reason }}</div>
                             </div>
                             {% endif %}
                         </div>
@@ -545,11 +325,11 @@
             {% endfor %}
             {% else %}
             <div class="approver-card">
-                <div class="empty-state">
-                    <div class="empty-state-icon">
-                        <i class="fa-solid fa-check"></i>
+                <div class="vc-empty">
+                    <div class="vc-empty-icon">
+                        <i class="fa-solid fa-circle-xmark approver-empty-icon"></i>
                     </div>
-                    <div class="empty-state-text">ยังไม่มีรายการที่ปฏิเสธ</div>
+                    <p class="vc-empty-title">ยังไม่มีรายการที่ปฏิเสธ</p>
                 </div>
             </div>
             {% endif %}
@@ -560,39 +340,6 @@
 </div>
 
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script>
-function switchTab(tab, el) {
-    document.querySelectorAll('.tab-content-section').forEach(s => s.classList.add('d-none'));
-    document.querySelectorAll('.inbox-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.remove('d-none');
-    el.classList.add('active');
-}
-
-function showRejectForm(id) {
-    document.getElementById('action-btns-' + id).classList.add('d-none');
-    var form = document.getElementById('reject-form-' + id);
-    form.classList.remove('d-none');
-    form.querySelector('input[name="reject_reason"]').focus();
-}
-
-function hideRejectForm(id) {
-    document.getElementById('reject-form-' + id).classList.add('d-none');
-    document.getElementById('action-btns-' + id).classList.remove('d-none');
-}
-
-// Chevron rotation via Bootstrap collapse events
-document.addEventListener('show.bs.collapse', function(e) {
-    var hdr = e.target.previousElementSibling;
-    if (hdr && hdr.classList.contains('ac-header')) {
-        hdr.querySelector('.ac-chevron')?.classList.add('rotated');
-    }
-});
-document.addEventListener('hide.bs.collapse', function(e) {
-    var hdr = e.target.previousElementSibling;
-    if (hdr && hdr.classList.contains('ac-header')) {
-        hdr.querySelector('.ac-chevron')?.classList.remove('rotated');
-    }
-});
-</script>
+<script type="module" src="{{ url_for('static', filename='js/pages/approver-inbox.js') }}"></script>
 </body>
 </html>

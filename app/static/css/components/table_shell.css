@@ -1,0 +1,97 @@
+/* ============================================================
+   Component: Table Shell (card wrapper for tables)
+   ─────────────────────────────────────────────────────────────
+   Pattern:
+   <div class="vc-table-shell">
+     <header class="vc-table-shell__head">
+       <h3 class="vc-table-shell__title">รายการ</h3>
+       <div class="vc-table-shell__actions">…</div>
+     </header>
+     <div class="vc-table-shell__scroll">
+       <table class="vc-table">…</table>
+     </div>
+     <footer class="vc-table-shell__foot">
+       <span class="vc-table-shell__count">100 รายการ</span>
+       <nav>…pagination…</nav>
+     </footer>
+   </div>
+
+   Macro: app/templates/_components/table_shell.html
+   Created: 2026-05-14 (Phase 2 component library)
+   ============================================================ */
+
+.vc-table-shell {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    overflow: hidden;
+}
+
+.vc-table-shell__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--vc-space-3) var(--vc-space-5);
+    border-bottom: 1px solid var(--vc-border);
+    background: var(--vc-bg-subtle);
+    gap: var(--vc-space-3);
+}
+
+.vc-table-shell__title {
+    margin: 0;
+    font-size: var(--vc-text-md);
+    font-weight: 500;
+    color: var(--vc-fg);
+    letter-spacing: var(--vc-tracking-tight);
+}
+
+.vc-table-shell__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    flex-wrap: wrap;
+}
+
+.vc-table-shell__scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.vc-table-shell__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--vc-space-3) var(--vc-space-5);
+    border-top: 1px solid var(--vc-border);
+    background: var(--vc-bg-subtle);
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    gap: var(--vc-space-3);
+}
+
+.vc-table-shell__count { font-variant-numeric: tabular-nums; }
+
+/* ── Base table inside the shell ────────────────── */
+.vc-table-shell .vc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--vc-text-sm);
+}
+.vc-table-shell .vc-table th,
+.vc-table-shell .vc-table td {
+    padding: var(--vc-space-3) var(--vc-space-4);
+    text-align: left;
+    border-bottom: 1px solid var(--vc-border);
+    vertical-align: middle;
+}
+.vc-table-shell .vc-table th {
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    font-size: var(--vc-text-xs);
+    letter-spacing: var(--vc-tracking-wide);
+    background: var(--vc-bg);
+    border-bottom: 1px solid var(--vc-border);
+}
+.vc-table-shell .vc-table tbody tr:last-child td { border-bottom: none; }
+.vc-table-shell .vc-table tbody tr:hover { background: var(--vc-bg-hover); }

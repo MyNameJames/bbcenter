@@ -1,20 +1,45 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
 .venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Database
-app/instance/*.db
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+app/instance/*.db*
+app/bbcenter.db
 
-# Environment variables (สำคัญมาก!)
+# Environment variables
 .env
+app/.env
 
-# macOS
+# macOS & OS
 .DS_Store
+Thumbs.db
 
-# Uploads
-app/static/uploads/**/*.jpg
-app/static/uploads/**/*.jpeg
-app/static/uploads/**/*.png
-app/static/uploads/**/*.gif
-app/static/uploads/**/*.webp
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Uploads - Ignore all uploaded content but keep folder structure via .gitkeep
+app/static/uploads/**/*
+!app/static/uploads/**/.gitkeep
+
+# Claude Internal
+.claude/settings.local.json

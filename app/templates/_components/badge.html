@@ -1,0 +1,23 @@
+{#
+  Badge — semantic chip (matches bbcenter-design skill).
+
+  Usage:
+    {% from '_components/badge.html' import badge %}
+    {{ badge('รอเบิก', tone='warning', dot=True) }}
+    {{ badge('โอน', tone='neutral') }}
+
+  Args:
+    text  display text
+    tone  '' | neutral | warning | blue | success | danger    (default neutral via CSS)
+    dot   True → add left colored dot (for status pills)
+    icon  optional lucide icon name (rendered as <i data-lucide="...">)
+    size  '' | xs
+#}
+
+{% macro badge(text, tone='', dot=False, icon='', size='') %}
+{%- set _cls = ['vc-badge'] -%}
+{%- if tone %}{% set _ = _cls.append('vc-badge-' ~ tone) %}{% endif -%}
+{%- if dot %}{% set _ = _cls.append('vc-badge-dot') %}{% endif -%}
+{%- if size %}{% set _ = _cls.append('vc-badge-' ~ size) %}{% endif -%}
+<span class="{{ _cls|join(' ') }}">{% if icon %}<i data-lucide="{{ icon }}" class="vc-icon-sm"></i>{% endif %}{{ text }}</span>
+{% endmacro %}

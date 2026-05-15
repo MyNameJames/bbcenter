@@ -1,12 +1,14 @@
 /* ============================================================
-   BBCenter V2 — Design System (Rebuilt 2026-04-11)
+   BBCenter V2 — Design System
    Style  : Vercel-inspired Light Mode
-   Accent : Indigo #4F46E5
+   Accent : Indigo #4F46E5 (legacy --ds-) / Black + Indigo (--vc-)
    Radius : 4–6px  |  Shadow : none (border only)
    Base   : Bootstrap .card for all surface components
 
+   Tokens live in tokens.css (imported below).
+   This file holds typography scale + component classes only.
+
    STRUCTURE:
-   1. Design Tokens
    2. Typography Scale
    3. Page Layout
    4. Component Library
@@ -21,120 +23,31 @@
       - Alert
    5. Utility Classes
    6. Responsive
+   8. Vercel namespace foundation utilities
+
+   Updated: 2026-05-14 (Phase 2 — component library wired)
    ============================================================ */
 
+@import url('./tokens.css');
 
-/* ─────────────────────────────────────────────
-   1. DESIGN TOKENS
-───────────────────────────────────────────── */
-:root {
+/* Phase 2 — Component library (each component owns its own file).
+   Macros live at app/templates/_components/<name>.html. */
+@import url('./components/kpi.css');
+@import url('./components/filter_bar.css');
+@import url('./components/badge.css');
+@import url('./components/pill.css');
+@import url('./components/empty_state.css');
+@import url('./components/form_group.css');
+@import url('./components/table_shell.css');
+@import url('./components/modal_shell.css');
+@import url('./components/sidebar.css');
 
-    /* ── Accent (Indigo) ─────────────────────── */
-    --ds-accent:         #4F46E5;
-    --ds-accent-hover:   #4338CA;
-    --ds-accent-dark:    #3730A3;
-    --ds-accent-light:   #EEF2FF;
-    --ds-accent-border:  #C7D2FE;
-    --ds-accent-text:    #3730A3;
-
-    /* ── Semantic Colors ─────────────────────── */
-    --ds-success:        #16A34A;
-    --ds-success-light:  #F0FDF4;
-    --ds-success-border: #BBF7D0;
-    --ds-success-text:   #14532D;
-
-    --ds-warning:        #D97706;
-    --ds-warning-light:  #FFFBEB;
-    --ds-warning-border: #FDE68A;
-    --ds-warning-text:   #78350F;
-
-    --ds-danger:         #DC2626;
-    --ds-danger-light:   #FEF2F2;
-    --ds-danger-border:  #FECACA;
-    --ds-danger-text:    #7F1D1D;
-
-    --ds-info:           #2563EB;
-    --ds-info-light:     #EFF6FF;
-    --ds-info-border:    #BFDBFE;
-    --ds-info-text:      #1E3A8A;
-
-    --ds-neutral-light:  #F4F4F5;
-    --ds-neutral-border: #E4E4E7;
-    --ds-neutral-text:   #3F3F46;
-
-    /* ── Surface & Background ────────────────── */
-    --ds-bg-page:        #FAFAFA;   /* Near-white page bg        */
-    --ds-bg-surface:     #FFFFFF;   /* Card / panel surface      */
-    --ds-bg-subtle:      #F7F7F8;   /* Muted section / thead     */
-    --ds-bg-hover:       #F5F5F6;   /* Row / nav item hover      */
-
-    /* ── Border — extra-light ────────────────── */
-    --ds-border:         #EFEFEF;   /* Extra-light default border  */
-    --ds-border-strong:  #E4E4E7;   /* Slightly stronger divider   */
-
-    /* ── Text ────────────────────────────────── */
-    --ds-text-heading:   #09090B;   /* Zinc-950 — heading        */
-    --ds-text-body:      #3F3F46;   /* Zinc-700 — body           */
-    --ds-text-secondary: #71717A;   /* Zinc-500 — label / meta   */
-    --ds-text-muted:     #A1A1AA;   /* Zinc-400 — placeholder    */
-    --ds-text-disabled:  #D4D4D8;   /* Zinc-300                  */
-    --ds-text-on-accent: #FFFFFF;
-
-    /* ── Shadow — none (Vercel principle) ────── */
-    --ds-shadow-xs:  none;
-    --ds-shadow-sm:  none;
-    --ds-shadow-md:  none;
-    --ds-shadow-lg:  none;
-    --ds-shadow-xl:  none;
-    --ds-shadow-focus: 0 0 0 3px rgba(79,70,229,.18);
-
-    /* ── Border Radius — Vercel tight ────────── */
-    --ds-radius-xs:   2px;
-    --ds-radius-sm:   4px;
-    --ds-radius-md:   6px;
-    --ds-radius-lg:   6px;   /* max used for cards   */
-    --ds-radius-xl:   8px;   /* modal / large panels */
-    --ds-radius-full: 9999px;
-
-    /* ── Spacing (4px grid) ──────────────────── */
-    --ds-space-1:    4px;
-    --ds-space-2:    8px;
-    --ds-space-3:    12px;
-    --ds-space-4:    16px;
-    --ds-space-5:    20px;
-    --ds-space-6:    24px;
-    --ds-space-8:    32px;
-    --ds-space-10:   40px;
-    --ds-space-12:   48px;
-
-    /* ── Typography ──────────────────────────── */
-    --ds-font-sans:    'Sarabun', -apple-system, sans-serif;
-    --ds-font-display: 'Sarabun', sans-serif;
-    --ds-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
-
-    --ds-text-xs:    .72rem;
-    --ds-text-sm:    .8rem;
-    --ds-text-base:  .875rem;
-    --ds-text-md:    .95rem;
-    --ds-text-lg:    1.05rem;
-    --ds-text-xl:    1.2rem;
-    --ds-text-2xl:   1.5rem;
-    --ds-text-3xl:   2rem;
-
-    /* ── Z-index Scale ───────────────────────── */
-    --ds-z-base:      0;
-    --ds-z-raised:    10;
-    --ds-z-dropdown:  100;
-    --ds-z-sticky:    200;
-    --ds-z-sidebar:   300;
-    --ds-z-overlay:   400;
-    --ds-z-modal:     500;
-    --ds-z-toast:     600;
-
-    /* ── Layout ──────────────────────────────── */
-    --ds-sidebar-width:  256px;
-    --ds-header-height:  64px;
-    --ds-transition:     .12s ease;
+.main-content {
+    margin-left: var(--sidebar-width);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    width: calc(100% - var(--sidebar-width));
 }
 
 
@@ -777,118 +690,6 @@
 .ds-status-dot--group    { background: #CCFBF1; color: #0D9488; }
 
 
-/* ============================================================
-   8. VERCEL NAMESPACE (--vc-*)
-   ─────────────────────────────────────────────────────────────
-   Scoped to Fuel Management page (Phase 2). Opt-in via class
-   wrapper (e.g. <div class="vc-scope">) or used directly in
-   fuel_admin.css. Do NOT cascade these to other pages — keeps
-   existing --ds-* design intact for the rest of the app.
-
-   Reference: vercel.com / Geist Design System
-   ============================================================ */
-:root {
-
-    /* ── Surface (Vercel "accents") ──────────── */
-    --vc-bg:             #FFFFFF;
-    --vc-bg-subtle:      #FAFAFA;        /* accents-1 — thead/zebra/collapse bg */
-    --vc-bg-hover:       #F5F5F5;        /* accents-1.5               */
-    --vc-bg-inverted:    #000000;        /* dark surface (rare)       */
-
-    /* ── Border ──────────────────────────────── */
-    --vc-border:         #EAEAEA;        /* accents-2                 */
-    --vc-border-hover:   #999999;        /* accents-5                 */
-    --vc-border-strong:  #666666;        /* accents-6                 */
-
-    /* ── Foreground / Text ───────────────────── */
-    --vc-fg:             #000000;        /* primary text              */
-    --vc-fg-muted:       #666666;        /* accents-6 — secondary     */
-    --vc-fg-subtle:      #888888;        /* accents-5 — tertiary      */
-    --vc-fg-disabled:    #BBBBBB;        /* accents-4                 */
-    --vc-fg-inverted:    #FFFFFF;
-
-    /* ── Primary action (pure black) ─────────── */
-    --vc-primary:        #000000;
-    --vc-primary-hover:  #333333;
-    --vc-on-primary:     #FFFFFF;
-
-    /* ── Semantic — Vercel Blue ──────────────── */
-    --vc-blue:           #0070F3;
-    --vc-blue-hover:     #0061D5;
-    --vc-blue-bg:        rgba(0,112,243,.10);
-    --vc-blue-border:    rgba(0,112,243,.25);
-
-    /* ── Semantic — Amber (warning / pending) ─ */
-    --vc-amber:          #F5A623;
-    --vc-amber-bg:       rgba(245,166,35,.10);
-    --vc-amber-border:   rgba(245,166,35,.25);
-
-    /* ── Semantic — Red (error / danger) ─────── */
-    --vc-red:            #EE0000;
-    --vc-red-hover:      #C50000;
-    --vc-red-bg:         rgba(238,0,0,.08);
-    --vc-red-border:     rgba(238,0,0,.20);
-
-    /* ── Semantic — Green (success/received) ── */
-    --vc-green:          #0F9D58;
-    --vc-green-bg:       rgba(15,157,88,.10);
-    --vc-green-border:   rgba(15,157,88,.25);
-
-    /* ── Optional violet accent ──────────────── */
-    --vc-purple:         #7928CA;
-
-    /* ── Radius ──────────────────────────────── */
-    --vc-radius-xs:      4px;
-    --vc-radius-sm:      6px;            /* button / input            */
-    --vc-radius-md:      8px;            /* card                      */
-    --vc-radius-lg:      12px;           /* modal                     */
-    --vc-radius-full:    9999px;
-
-    /* ── Spacing (8px grid, with 4px micro) ──── */
-    --vc-space-1:        4px;
-    --vc-space-2:        8px;
-    --vc-space-3:        12px;
-    --vc-space-4:        16px;
-    --vc-space-5:        20px;
-    --vc-space-6:        24px;
-    --vc-space-8:        32px;
-    --vc-space-10:       40px;
-    --vc-space-12:       48px;
-
-    /* ── Type scale (Geist hierarchy) ────────── */
-    --vc-text-xs:        12px;           /* caption / label uppercase */
-    --vc-text-sm:        13px;           /* small / table             */
-    --vc-text-base:      14px;           /* body / button             */
-    --vc-text-md:        16px;           /* lead body                 */
-    --vc-text-lg:        18px;           /* section title             */
-    --vc-text-xl:        24px;           /* h1 page                   */
-    --vc-text-2xl:       32px;           /* KPI                       */
-    --vc-text-3xl:       48px;           /* hero                      */
-
-    /* Letter-spacing — tight on display, neutral on body */
-    --vc-tracking-tight:    -.02em;
-    --vc-tracking-tighter:  -.04em;
-    --vc-tracking-wide:     .02em;       /* uppercase caption         */
-
-    /* ── Font stacks ─────────────────────────── */
-    /* Sans = inherit Sarabun from --ds-font-sans (TH supported)      */
-    /* Mono = Geist Mono (loaded in _header.html), fallback to system */
-    --vc-font-mono:      'Geist Mono', ui-monospace, 'SF Mono', 'Menlo',
-                         'Cascadia Code', 'Consolas', monospace;
-
-    /* ── Component heights ───────────────────── */
-    --vc-h-input-sm:     28px;
-    --vc-h-input:        32px;
-    --vc-h-input-md:     40px;
-    --vc-h-row:          48px;           /* table row                 */
-
-    /* ── Motion ──────────────────────────────── */
-    --vc-transition:     150ms ease;
-    --vc-transition-slow: 250ms ease;
-
-    /* ── Focus ring (2px outline, offset 2px) ── */
-    --vc-focus-ring:     0 0 0 2px var(--vc-bg), 0 0 0 4px var(--vc-fg);
-}
 
 
 /* ─────────────────────────────────────────────
@@ -932,5 +733,6 @@
     color: var(--vc-fg);
     background: var(--vc-bg);
     font-size: var(--vc-text-base);
+    padding-bottom: 1.5rem;   /* extra breathing room for mobile */
     line-height: 1.5;
 }

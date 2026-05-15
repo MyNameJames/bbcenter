@@ -1,7 +1,9 @@
 {# Fuel Management — Admin Page
-   Phase 2.3 ✓ KPI Cards (Vercel-flavored)
-   Phase 2.4–2.7 pending: Bills table, Reimbursements, Modals, Filter, Pivot
+   Phase 3: canonical reference for /bbcenter-design skill.
+   • KPI / filter / table / pivot kept RAW (copy-paste source of truth).
+   • Empty states use the empty_state macro (clean shorthand).
 #}
+{% from '_components/empty_state.html' import empty_state %}
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -64,6 +66,7 @@
             {# ────────────────────────────────────────────────
                KPI GROUP A — Cash Reserve
                เงินสำรอง · คงเหลือ · ใช้ไป
+               (raw HTML — canonical reference for /bbcenter-design)
             ──────────────────────────────────────────────── #}
             <div class="vc-card" style="margin-bottom: var(--vc-space-4);">
                 <div class="vc-kpi-group">
@@ -427,18 +430,16 @@
                         </table>
                     </div>
                     {% else %}
-                    <div class="vc-empty">
-                        <div class="vc-empty-icon">
-                            <i data-lucide="receipt" style="width:20px;height:20px;"></i>
-                        </div>
-                        <p class="vc-empty-title">ยังไม่มีบิลในช่วงที่เลือก</p>
-                        <p class="vc-empty-desc">เริ่มต้นด้วยการบันทึกบิลค่าน้ำมันใบแรกของปีนี้</p>
-                        <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
-                                data-fuel-action="bill-create" title="กรอกบิลใหม่">
-                            <i data-lucide="plus" class="vc-icon-sm"></i>
-                            บิลใหม่
-                        </button>
-                    </div>
+                        {% call empty_state(
+                            title='ยังไม่มีบิลในช่วงที่เลือก',
+                            desc='เริ่มต้นด้วยการบันทึกบิลค่าน้ำมันใบแรกของปีนี้',
+                            icon='receipt') %}
+                            <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
+                                    data-fuel-action="bill-create" title="กรอกบิลใหม่">
+                                <i data-lucide="plus" class="vc-icon-sm"></i>
+                                บิลใหม่
+                            </button>
+                        {% endcall %}
                     {% endif %}
                 </div>
 
@@ -576,13 +577,10 @@
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <div class="vc-empty">
-                        <div class="vc-empty-icon">
-                            <i data-lucide="file-text" style="width:20px;height:20px;"></i>
-                        </div>
-                        <p class="vc-empty-title">ยังไม่มีใบเบิก</p>
-                        <p class="vc-empty-desc">เลือกบิล "รอเบิก" หลายใบในตารางซ้ายแล้วกด "รวมบิลที่เลือก"</p>
-                    </div>
+                        {{ empty_state(
+                            title='ยังไม่มีใบเบิก',
+                            desc='เลือกบิล "รอเบิก" หลายใบในตารางซ้ายแล้วกด "รวมบิลที่เลือก"',
+                            icon='file-text') }}
                     {% endif %}
                 </div>
             </div>

@@ -1,0 +1,52 @@
+{#
+  Filter bar — horizontal label+select row, with right-aligned actions.
+
+  Usage:
+    {% from '_components/filter_bar.html' import filter_bar, filter_select %}
+    {% call filter_bar(action=url_for('fuel.admin_fuel'), form_id='filterForm') %}
+      {{ filter_select(name='year', label='ปี', options=year_opts, current=f.year) }}
+      {{ filter_select(name='month', label='เดือน', options=month_opts, current=f.month) }}
+      <div class="vc-filter-actions">
+        <button class="vc-btn vc-btn-primary">กรอง</button>
+      </div>
+    {% endcall %}
+
+  filter_select(name, label, options, current='', placeholder='')
+    options: list of (value, text) tuples OR list of dicts with .value/.text
+#}
+
+{% macro filter_bar(action='', method='get', form_id='', class='') %}
+<form method="{{ method }}" action="{{ action }}"
+      class="vc-filter-bar {{ class }}"
+      {% if form_id %}id="{{ form_id }}"{% endif %}>
+    {{ caller() }}
+</form>
+{% endmacro %}
+
+
+{% macro filter_select(name, label, options, current='', placeholder='', extra_class='') %}
+<div class="vc-filter-group">
+    <span class="vc-filter-label">{{ label }}</span>
+    <select name="{{ name }}" class="vc-filter-select {{ extra_class }}">
+        {% if placeholder %}<option value="">{{ placeholder }}</option>{% endif %}
+        {% for opt in options %}
+            {%- if opt is mapping -%}
+                {%- set v = opt.value -%}{%- set t = opt.text -%}
+            {%- else -%}
+                {%- set v = opt[0] -%}{%- set t = opt[1] -%}
+            {%- endif -%}
+            <option value="{{ v }}" {% if current|string == v|string %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endmacro %}
+
+
+{% macro filter_date(name, label, value='', min_width='130px') %}
+<div class="vc-filter-group">
+    <span class="vc-filter-label">{{ label }}</span>
+    <input type="date" name="{{ name }}" value="{{ value }}"
+           class="vc-filter-select"
+           style="min-width:{{ min_width }}; background-image:none;">
+</div>
+{% endmacro %}

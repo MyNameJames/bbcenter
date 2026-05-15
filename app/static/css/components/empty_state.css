@@ -1,0 +1,66 @@
+/* ============================================================
+   Component: Empty state (no-data zone)
+   ─────────────────────────────────────────────────────────────
+   Pattern (matches admin_fuel.html — flat naming, lucide icons):
+     <div class="vc-empty">
+         <div class="vc-empty-icon">
+             <i data-lucide="receipt" style="width:20px;height:20px;"></i>
+         </div>
+         <p class="vc-empty-title">ยังไม่มีบิล</p>
+         <p class="vc-empty-desc">เริ่มต้นด้วยการบันทึกบิลใบแรก</p>
+         <button class="vc-btn vc-btn-primary vc-btn-sm">…</button>
+     </div>
+
+   Modifier: vc-empty--compact
+
+   Macro: app/templates/_components/empty_state.html
+   Created: 2026-05-14 (Phase 2)
+   Aligned to skill flat vocab: 2026-05-14 (Phase 3)
+   ============================================================ */
+
+.vc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--vc-space-12) var(--vc-space-6);
+    gap: var(--vc-space-2);
+}
+
+.vc-empty-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    color: var(--vc-fg-subtle);
+    margin-bottom: var(--vc-space-2);
+}
+
+.vc-empty-title {
+    font-size: var(--vc-text-base);
+    font-weight: 500;
+    color: var(--vc-fg);
+    margin: 0;
+}
+
+.vc-empty-desc {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    margin: 0 0 var(--vc-space-2) 0;
+    max-width: 320px;
+    line-height: 1.5;
+}
+
+/* Compact: less padding, smaller icon — for tight inline zones */
+.vc-empty--compact {
+    padding: var(--vc-space-6) var(--vc-space-4);
+}
+.vc-empty--compact .vc-empty-icon {
+    width: 32px;
+    height: 32px;
+}
