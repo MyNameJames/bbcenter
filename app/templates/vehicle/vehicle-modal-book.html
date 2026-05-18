@@ -17,7 +17,7 @@
                                 <div class="col d-flex align-items-start gap-2">
                                     <div class="row">
                                         <div class="col-auto">
-                                            <span class="ps-2"><i class="bi bi-folder-plus fs-4"></i></span>
+                                            <span class="ps-2"><i data-lucide="folder-plus" style="width:22px;height:22px;"></i></span>
                                         </div>
                                         <div class="col">
                                             <div class="row">
@@ -43,7 +43,7 @@
                         <label for="bk_date" class="form-label mb-1"><small>วันที่เดินทาง :</small></label>
                         <div class="bk-field-wrap">
                             <input type="date" class="form-control" id="bk_date" required>
-                            <i class="bi bi-check-circle bk-valid-icon"></i>
+                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
                             <div class="invalid-feedback">กรุณาเลือกวันที่เดินทาง</div>
                         </div>
                     </div>
@@ -54,19 +54,20 @@
                             <div class="col-5">
                                 <div class="bk-field-wrap">
                                     <input type="time" id="bk_start_time" class="form-control" required>
-                                    <i class="bi bi-check-circle bk-valid-icon"></i>
+                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
                                     <div class="invalid-feedback">กรุณาระบุเวลาออก</div>
                                 </div>
                             </div>
-                            <i class="col-auto bi bi-arrow-right"></i>
+                            <span class="col-auto d-flex align-items-center"><i data-lucide="arrow-right" style="width:16px;height:16px;color:var(--vc-fg-subtle);"></i></span>
                             <div class="col-5">
                                 <div class="bk-field-wrap">
                                     <input type="time" id="bk_end_time" class="form-control" required>
-                                    <i class="bi bi-check-circle bk-valid-icon"></i>
+                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
                                     <div class="invalid-feedback">กรุณาระบุเวลากลับ</div>
                                 </div>
                             </div>
                         </div>
+                        <div id="bk_duration_preview" class="bk-duration-preview" aria-live="polite"></div>
                     </div>
 
                     <div class="mb-2">
@@ -75,7 +76,7 @@
                                 <label for="bk_purpose" class="form-label mb-1"><small>วัตถุประสงค์การเดินทาง :</small></label>
                                 <div class="bk-field-wrap">
                                     <input type="text" name="purpose" id="bk_purpose" class="form-control pe-5" required>
-                                    <i class="bi bi-check-circle bk-valid-icon"></i>
+                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
                                     <div class="invalid-feedback">กรุณาระบุวัตถุประสงค์</div>
                                 </div>
                             </div>
@@ -83,7 +84,7 @@
                                 <label for="bk_passenger_count" class="form-label mb-1"><small>จำนวนผู้เดินทาง :</small></label>
                                 <div class="bk-field-wrap">
                                     <input type="number" name="passenger_count" id="bk_passenger_count" class="form-control pe-5" min="1" value="1" max="10" required>
-                                    <i class="bi bi-check-circle bk-valid-icon"></i>
+                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
                                     <div class="invalid-feedback">กรุณาระบุจำนวน</div>
                                 </div>
                             </div>
@@ -94,7 +95,7 @@
                         <label for="bk_destination" class="form-label mb-1"><small>สถานที่ปลายทาง :</small></label>
                         <div class="bk-field-wrap">
                             <input type="text" name="destination" id="bk_destination" class="form-control pe-5" required>
-                            <i class="bi bi-check-circle bk-valid-icon"></i>
+                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
                             <div class="invalid-feedback">กรุณาระบุสถานที่ปลายทาง</div>
                         </div>
                     </div>
@@ -103,7 +104,7 @@
                         <label for="bk_pickup_location" class="form-label mb-1"><small>จุดขึ้นรถ :</small></label>
                         <div class="bk-field-wrap">
                             <input type="text" name="pickup_location" id="bk_pickup_location" class="form-control pe-5" placeholder="เช่น หน้าอาคารเรียน 1" required>
-                            <i class="bi bi-check-circle bk-valid-icon"></i>
+                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
                             <div class="invalid-feedback">กรุณาระบุจุดขึ้นรถ</div>
                         </div>
                     </div>
@@ -119,7 +120,7 @@
 
                     <div class="bk-info-note col-12 rounded-2 py-3 px-3 mt-3">
                         <div class="row">
-                            <span class="col-1 pe-1"><i class="bi bi-info-circle"></i></span>
+                            <span class="col-1 pe-1"><i data-lucide="info" style="width:16px;height:16px;"></i></span>
                             <div class="col">
                                 <div class="row">
                                     <small class="fw-bold">Admin :</small>
@@ -131,9 +132,10 @@
                 </div>
 
                 <div class="card-footer bg-white d-flex justify-content-end gap-2 pt-2 pb-3">
-                    <button type="button" class="btn btn-secondary rounded-2 px-3 py-2" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-dark rounded-2 px-3 py-2">
-                        ส่งคำขอ <i class="bi bi-arrow-right-circle-fill ms-2"></i>
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary" title="ส่งคำขอจองรถ">
+                        ส่งคำขอ
+                        <i data-lucide="arrow-right" class="vc-icon-sm"></i>
                     </button>
                 </div>
 

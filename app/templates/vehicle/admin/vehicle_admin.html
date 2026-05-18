@@ -43,13 +43,14 @@
                     <h1 class="va-page-title">อนุมัติการจองรถ</h1>
                     <p class="va-page-subtitle">ตรวจสอบ · มอบหมายรถ-คนขับ · ติดตามการเดินทาง</p>
                 </div>
+                <div class="va-page-header-actions"></div>
             </div>
 
             {# ────────────────────────────────────────────────
                KPI STRIP — 4 cells
                รออนุมัติ · ส่ง Approver · อนุมัติแล้ว · ปฏิเสธ
             ──────────────────────────────────────────────── #}
-            <div class="vc-card va-kpi-card mb-4">
+            <div class="vc-card va-kpi-card mb-4 d-md-block d-none">
                 <div class="vc-kpi-group va-kpi-4">
 
                     <div class="vc-kpi-cell">
@@ -102,11 +103,11 @@
             {# ── Week Navigator (page-specific dark active) ── #}
             <div class="vc-card va-week-card mb-4">
                 <div class="va-week-bar">
-                    <button type="button" class="va-week-nav" onclick="shiftWeek(-1)" aria-label="สัปดาห์ก่อนหน้า">
+                    <button type="button" class="va-week-nav" onclick="shiftWeek(-1)" aria-label="สัปดาห์ก่อนหน้า" title="สัปดาห์ก่อนหน้า">
                         <i data-lucide="chevron-left" class="vc-icon-sm"></i>
                     </button>
                     <div class="va-week-strip" id="wnStrip"></div>
-                    <button type="button" class="va-week-nav" onclick="shiftWeek(1)" aria-label="สัปดาห์ถัดไป">
+                    <button type="button" class="va-week-nav" onclick="shiftWeek(1)" aria-label="สัปดาห์ถัดไป" title="สัปดาห์ถัดไป">
                         <i data-lucide="chevron-right" class="vc-icon-sm"></i>
                     </button>
                 </div>
@@ -126,9 +127,8 @@
                         <div class="vc-card" id="sectionBefore">
                             <div class="vc-card-head d-flex align-items-center justify-content-between">
                                 <h3 class="vc-card-head-title col">
-                                    <i data-lucide="clipboard-list" class="vc-icon"></i>
+                                    <i data-lucide="clipboard-list" class="vc-icon-sm"></i>
                                     รายละเอียด
-                                    {# <span class="vc-card-head-meta" id="beforeCount">0 รายการ</span> #}
                                 </h3>
                                 <div class="vc-card-head-actions d-inline-flex col-auto" id="beforeHeaderRight">
                                     <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="btnMerge" onclick="toggleGroupMode()" title="รวมหลายงานในเที่ยวเดียว">
@@ -139,13 +139,13 @@
                                         <i data-lucide="send" class="vc-icon-sm"></i>
                                         แจ้ง Telegram
                                     </button>
-                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="btnMergeCancel" onclick="cancelGroupMode()" style="display:none">ยกเลิก</button>
-                                    <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="btnMergeConfirm" onclick="confirmMerge()" style="display:none" disabled>
+                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="btnMergeCancel" onclick="cancelGroupMode()" style="display:none" title="ยกเลิกการรวมงาน">ยกเลิก</button>
+                                    <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="btnMergeConfirm" onclick="confirmMerge()" style="display:none" disabled title="ยืนยันรวมงานที่เลือก">
                                         <i data-lucide="check" class="vc-icon-sm"></i>
                                         รวม (0)
                                     </button>
-                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="btnNotifyCancel" onclick="cancelNotifyMode()" style="display:none">ยกเลิก</button>
-                                    <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="btnNotifyConfirm" onclick="confirmNotify()" style="display:none" disabled>
+                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="btnNotifyCancel" onclick="cancelNotifyMode()" style="display:none" title="ยกเลิกการแจ้ง">ยกเลิก</button>
+                                    <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="btnNotifyConfirm" onclick="confirmNotify()" style="display:none" disabled title="ส่งแจ้งเตือนผ่าน Telegram">
                                         <i data-lucide="send" class="vc-icon-sm"></i>
                                         แจ้ง (0)
                                     </button>
@@ -154,9 +154,9 @@
 
                             {# Collapsed state — when all approved #}
                             <div class="va-collapsed-bar" id="beforeCollapsed" style="display:none">
-                                <i data-lucide="circle-check" class="vc-icon" style="color:var(--vc-green)"></i>
+                                <i data-lucide="circle-check" class="vc-icon-sm"></i>
                                 <span id="beforeCollapsedText">อนุมัติแล้ว 0/0 รายการ</span>
-                                <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm ms-auto" onclick="toggleBeforeExpand()">
+                                <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm ms-auto" onclick="toggleBeforeExpand()" title="ขยายแสดงทุกรายการ">
                                     ดูรายละเอียด
                                     <i data-lucide="chevron-down" class="vc-icon-sm"></i>
                                 </button>
@@ -165,19 +165,19 @@
                             {# Expanded #}
                             <div id="beforeExpanded">
                                 <div class="va-filter-tabs">
-                                    <button class="ftab active" data-filter="all" onclick="setFilter('all',this)">
+                                    <button class="ftab active" data-filter="all" onclick="setFilter('all',this)" title="แสดงทั้งหมด">
                                         ทั้งหมด <span class="ftab-cnt" id="cnt-all">0</span>
                                     </button>
-                                    <button class="ftab" data-filter="pending" onclick="setFilter('pending',this)">
+                                    <button class="ftab" data-filter="pending" onclick="setFilter('pending',this)" title="รออนุมัติเท่านั้น">
                                         รออนุมัติ <span class="ftab-cnt" id="cnt-pending">0</span>
                                     </button>
-                                    <button class="ftab" data-filter="waiting_approver" onclick="setFilter('waiting_approver',this)">
+                                    <button class="ftab" data-filter="waiting_approver" onclick="setFilter('waiting_approver',this)" title="ส่ง approver แล้ว">
                                         ส่ง Approver <span class="ftab-cnt" id="cnt-approver">0</span>
                                     </button>
-                                    <button class="ftab" data-filter="approved" onclick="setFilter('approved',this)">
+                                    <button class="ftab" data-filter="approved" onclick="setFilter('approved',this)" title="อนุมัติแล้วเท่านั้น">
                                         อนุมัติแล้ว <span class="ftab-cnt" id="cnt-approved">0</span>
                                     </button>
-                                    <button class="ftab" data-filter="rejected" onclick="setFilter('rejected',this)">
+                                    <button class="ftab" data-filter="rejected" onclick="setFilter('rejected',this)" title="ปฏิเสธเท่านั้น">
                                         ปฏิเสธ <span class="ftab-cnt" id="cnt-rejected">0</span>
                                     </button>
                                 </div>
@@ -189,7 +189,7 @@
                         <div class="vc-card" id="sectionAfter">
                             <div class="vc-card-head">
                                 <h3 class="vc-card-head-title">
-                                    <i data-lucide="route" class="vc-icon"></i>
+                                    <i data-lucide="route" class="vc-icon-sm"></i>
                                     รายละเอียดการเดินทาง
                                     <span class="vc-card-head-meta" id="afterCount">0 รายการ</span>
                                 </h3>
@@ -205,7 +205,7 @@
                     <div class="vc-card va-vehicle-card">
                         <div class="vc-card-head">
                             <h3 class="vc-card-head-title">
-                                <i data-lucide="car" class="vc-icon"></i>
+                                <i data-lucide="car" class="vc-icon-sm"></i>
                                 การใช้รถ
                             </h3>
                         </div>
@@ -234,7 +234,7 @@
                     </h5>
                     <p class="va-modal-sub" id="assignModalSub"></p>
                 </div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
             </div>
 
             <div class="modal-body">
@@ -242,36 +242,44 @@
                 <div class="vc-form-row vc-form-row-2">
                     <div class="vc-form-group">
                         <label class="vc-label" for="modalVehSel">
-                            <i data-lucide="car" class="vc-icon pe-1 mb-1"></i> เลือกรถ
+                            <i data-lucide="car" class="vc-icon-sm"></i> เลือกรถ
                         </label>
                         <select class="vc-select" id="modalVehSel" onchange="checkAssignReady()">
                             <option value="">— เลือกรถ —</option>
                         </select>
+                        <div class="va-conflict-warn" id="vehConflictWarn" hidden>
+                            <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
+                            <span data-conflict-text></span>
+                        </div>
                     </div>
                     <div class="vc-form-group">
                         <label class="vc-label" for="modalDrvSel">
-                            <i data-lucide="user" class="vc-icon pe-1 mb-1"></i> เลือกคนขับ
+                            <i data-lucide="user" class="vc-icon-sm"></i> เลือกคนขับ
                         </label>
                         <select class="vc-select" id="modalDrvSel" onchange="checkAssignReady()">
                             <option value="">— เลือกคนขับ —</option>
                         </select>
+                        <div class="va-conflict-warn" id="drvConflictWarn" hidden>
+                            <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
+                            <span data-conflict-text></span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="va-modal-section">EXPENSE TYPE</div>
+                <div class="va-modal-section">ประเภทค่าใช้จ่าย</div>
                 <div class="va-exp-tabs" id="modalExpTabs">
-                    <button type="button" class="adm-exp-tab active" data-type="central" onclick="setModalExpType('central',this)">
+                    <button type="button" class="adm-exp-tab active" data-type="central" onclick="setModalExpType('central',this)" title="ใช้งบส่วนกลาง">
                         <i data-lucide="building" class="vc-icon-sm"></i> ส่วนกลาง
                     </button>
-                    <button type="button" class="adm-exp-tab" data-type="department" onclick="setModalExpType('department',this)">
+                    <button type="button" class="adm-exp-tab" data-type="department" onclick="setModalExpType('department',this)" title="ใช้งบส่วนกอง">
                         <i data-lucide="users" class="vc-icon-sm"></i> ส่วนกอง
                     </button>
-                    <button type="button" class="adm-exp-tab" data-type="personal" onclick="setModalExpType('personal',this)">
-                        <i data-lucide="user" class="vc-icon-sm"></i> ส่วนตัว 
+                    <button type="button" class="adm-exp-tab" data-type="personal" onclick="setModalExpType('personal',this)" title="จ่ายเอง">
+                        <i data-lucide="user" class="vc-icon-sm"></i> ส่วนตัว
                     </button>
                 </div>
 
-                <div class="vc-form-group" style="margin-top: var(--vc-space-3); margin-bottom: 0;">
+                <div class="vc-form-group va-exp-sub-group">
                     <select class="vc-select" id="modalExpSubSel" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
                         <option value="">— เลือกหมวด —</option>
                     </select>
@@ -289,13 +297,14 @@
                         <span class="va-budget-value vc-mono" id="modalBudgetValue">—</span>
                     </div>
                     <div class="va-budget-track"><div class="va-budget-fill" id="modalBudgetFill"></div></div>
+                    <p class="va-budget-warn" id="modalBudgetWarn" hidden></p>
                 </div>
 
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="assignConfirmBtn" onclick="submitAssign()" disabled>
+                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="assignConfirmBtn" onclick="submitAssign()" disabled title="อนุมัติและส่งแจ้ง Telegram">
                     <i data-lucide="send" class="vc-icon-sm"></i>
                     ยืนยันและแจ้ง Telegram
                 </button>
@@ -320,7 +329,7 @@
                     </h5>
                     <p class="va-modal-sub" id="swapModalSub"></p>
                 </div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
             </div>
 
             <div class="modal-body">
@@ -329,8 +338,8 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="swapConfirmBtn" onclick="submitSwap()" disabled>
+                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="swapConfirmBtn" onclick="submitSwap()" disabled title="ยืนยันเปลี่ยนรถ">
                     <i data-lucide="check" class="vc-icon-sm"></i>
                     ยืนยัน Swap
                 </button>
@@ -355,7 +364,7 @@
                     </h5>
                     <p class="va-modal-sub" id="repairModalSub"></p>
                 </div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
             </div>
 
             <div class="modal-body">
@@ -372,8 +381,8 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" onclick="submitRepair()">
+                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" onclick="submitRepair()" title="บันทึกการส่งซ่อม">
                     <i data-lucide="check" class="vc-icon-sm"></i>
                     บันทึกการส่งซ่อม
                 </button>
@@ -395,7 +404,7 @@
                     <i data-lucide="rotate-ccw" class="vc-icon-sm"></i>
                     ย้อนสถานะ
                 </h5>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
             </div>
 
             <div class="modal-body">
@@ -407,8 +416,8 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-danger vc-btn-sm" onclick="submitRevert()">
+                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="vc-btn vc-btn-danger vc-btn-sm" onclick="submitRevert()" title="ย้อนสถานะกลับเป็นรออนุมัติ">
                     <i data-lucide="rotate-ccw" class="vc-icon-sm"></i>
                     ย้อนเป็นรออนุมัติ
                 </button>
@@ -493,6 +502,6 @@ window.SERVER_NOW = {{ now.isoformat() | tojson }};
 
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/vehicle_admin.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/pages/vehicle-admin.js') }}"></script>
 </body>
 </html>

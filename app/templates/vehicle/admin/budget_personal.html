@@ -22,24 +22,24 @@
         }
         @media (max-width: 575px) { .kpi-row { grid-template-columns: 1fr 1fr; } }
         .kpi-card {
-            background: var(--ds-bg-surface);
-            border: 1px solid var(--ds-border);
-            border-radius: var(--ds-radius-md);
+            background: var(--vc-bg);
+            border: 1px solid var(--vc-border);
+            border-radius: var(--vc-radius-sm);
             padding: 14px 16px;
         }
         .kpi-label {
-            font-size: var(--ds-text-xs);
+            font-size: var(--vc-text-xs);
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .06em;
-            color: var(--ds-text-muted);
+            color: var(--vc-fg-subtle);
             margin-bottom: 6px;
             display: flex; align-items: center; gap: 5px;
         }
         .kpi-value {
             font-size: 1.35rem;
             font-weight: 700;
-            color: var(--ds-text-heading);
+            color: var(--vc-fg);
             line-height: 1.1;
         }
 
@@ -47,29 +47,29 @@
         .filter-tabs {
             display: flex;
             gap: 4px;
-            background: var(--ds-bg-subtle);
-            border: 1px solid var(--ds-border);
-            border-radius: var(--ds-radius-md);
+            background: var(--vc-bg-subtle);
+            border: 1px solid var(--vc-border);
+            border-radius: var(--vc-radius-sm);
             padding: 3px;
             width: fit-content;
         }
         .filter-tab {
             padding: 5px 14px;
-            border-radius: calc(var(--ds-radius-md) - 2px);
-            font-size: var(--ds-text-sm);
+            border-radius: calc(var(--vc-radius-sm) - 2px);
+            font-size: var(--vc-text-sm);
             font-weight: 500;
-            color: var(--ds-text-secondary);
+            color: var(--vc-fg-subtle);
             text-decoration: none;
             transition: background .12s, color .12s;
             white-space: nowrap;
         }
         .filter-tab.active {
-            background: var(--ds-bg-surface);
-            color: var(--ds-text-heading);
-            border: 1px solid var(--ds-border);
+            background: var(--vc-bg);
+            color: var(--vc-fg);
+            border: 1px solid var(--vc-border);
             font-weight: 600;
         }
-        .filter-tab:hover:not(.active) { color: var(--ds-text-body); }
+        .filter-tab:hover:not(.active) { color: var(--vc-fg-muted); }
 
         /* ── Mark paid button ───────────────────── */
         .btn-mark-paid {
@@ -78,8 +78,8 @@
             background: #F0FDF4;
             color: #14532D;
             border: 1px solid #BBF7D0;
-            border-radius: var(--ds-radius-sm);
-            font-size: var(--ds-text-xs);
+            border-radius: var(--vc-radius-xs);
+            font-size: var(--vc-text-xs);
             font-weight: 600;
             cursor: pointer;
             transition: background .12s, border-color .12s, transform 160ms cubic-bezier(0.23,1,0.32,1);
@@ -91,40 +91,40 @@
         .btn-mark-unpaid {
             display: inline-flex; align-items: center; gap: 5px;
             height: 28px; padding: 0 10px;
-            background: var(--ds-bg-subtle);
-            color: var(--ds-text-secondary);
-            border: 1px solid var(--ds-border);
-            border-radius: var(--ds-radius-sm);
-            font-size: var(--ds-text-xs);
+            background: var(--vc-bg-subtle);
+            color: var(--vc-fg-subtle);
+            border: 1px solid var(--vc-border);
+            border-radius: var(--vc-radius-xs);
+            font-size: var(--vc-text-xs);
             font-weight: 500;
             cursor: pointer;
             transition: background .12s, transform 160ms cubic-bezier(0.23,1,0.32,1);
         }
-        .btn-mark-unpaid:hover  { background: var(--ds-bg-hover); color: var(--ds-text-body); }
+        .btn-mark-unpaid:hover  { background: var(--vc-bg-hover); color: var(--vc-fg-muted); }
         .btn-mark-unpaid:active { transform: scale(0.96); }
 
         /* ── Status badge ───────────────────────── */
         .status-pending {
             display: inline-flex; align-items: center; gap: 4px;
-            font-size: var(--ds-text-xs); font-weight: 600;
+            font-size: var(--vc-text-xs); font-weight: 600;
             color: #78350F; background: #FFFBEB;
             border: 1px solid #FDE68A;
-            border-radius: var(--ds-radius-full);
+            border-radius: var(--vc-radius-full);
             padding: 2px 8px;
         }
         .status-paid {
             display: inline-flex; align-items: center; gap: 4px;
-            font-size: var(--ds-text-xs); font-weight: 600;
+            font-size: var(--vc-text-xs); font-weight: 600;
             color: #14532D; background: #F0FDF4;
             border: 1px solid #BBF7D0;
-            border-radius: var(--ds-radius-full);
+            border-radius: var(--vc-radius-full);
             padding: 2px 8px;
         }
 
         /* ── Table ──────────────────────────────── */
         .ds-table td, .ds-table th { vertical-align: middle; }
         .row-paid { opacity: .65; }
-        .paid-info { font-size: var(--ds-text-xs); color: var(--ds-text-muted); }
+        .paid-info { font-size: var(--vc-text-xs); color: var(--vc-fg-subtle); }
     </style>
 </head>
 <body>
@@ -137,14 +137,14 @@
         {% set page_title = 'งบส่วนตัว — เรียกเก็บเงิน' %}
         {% include '_header.html' %}
 
-        <div style="overflow-y:auto; height:calc(100vh - 60px); background:var(--ds-bg-page);">
+        <div style="overflow-y:auto; height:calc(100vh - 60px); background:var(--vc-bg-subtle);">
             <div class="container-fluid" style="max-width:1100px; padding:20px 20px 40px;">
 
                 {# Flash #}
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}{% for cat, msg in messages %}
                 <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3"
-                     style="border-radius:var(--ds-radius-md); font-size:var(--ds-text-sm);">
+                     style="border-radius:var(--vc-radius-sm); font-size:var(--vc-text-sm);">
                     {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
                 {% endfor %}{% endif %}
@@ -188,7 +188,7 @@
                 <div class="kpi-row mb-4">
                     <div class="kpi-card">
                         <div class="kpi-label">
-                            <i class="fa-solid fa-list" style="color:var(--ds-text-muted);"></i>
+                            <i class="fa-solid fa-list" style="color:var(--vc-fg-subtle);"></i>
                             รายการทั้งหมด
                         </div>
                         <div class="kpi-value">{{ rows | length }}</div>
@@ -213,11 +213,11 @@
                 {% if rows %}
                 <div class="card">
                     <div class="card-header d-flex align-items-center justify-content-between">
-                        <span class="fw-bold" style="font-size:var(--ds-text-base);">
-                            <i class="fa-solid fa-user-tag me-2" style="color:var(--ds-text-muted);"></i>
+                        <span class="fw-bold" style="font-size:var(--vc-text-base);">
+                            <i class="fa-solid fa-user-tag me-2" style="color:var(--vc-fg-subtle);"></i>
                             รายการงบส่วนตัว — {{ month_label }}
                         </span>
-                        <span class="ds-caption" style="color:var(--ds-text-muted);">{{ rows | length }} รายการ</span>
+                        <span class="ds-caption" style="color:var(--vc-fg-subtle);">{{ rows | length }} รายการ</span>
                     </div>
                     <div class="table-responsive">
                         <table class="table ds-table mb-0">
@@ -235,29 +235,29 @@
                             {% for r in rows %}
                             <tr id="row-{{ r.mileage_id }}" class="{% if r.status == 1 %}row-paid{% endif %}">
                                 <td>
-                                    <div class="fw-600" style="font-size:var(--ds-text-sm);">{{ r.user_name }}</div>
-                                    <div style="font-size:var(--ds-text-xs); color:var(--ds-text-muted);">
+                                    <div class="fw-600" style="font-size:var(--vc-text-sm);">{{ r.user_name }}</div>
+                                    <div style="font-size:var(--vc-text-xs); color:var(--vc-fg-subtle);">
                                         <i class="fa-solid fa-building fa-xs me-1"></i>{{ r.department }}
                                     </div>
                                 </td>
                                 <td>
-                                    <div style="font-size:var(--ds-text-sm);">
-                                        <i class="fa-solid fa-location-dot fa-xs me-1" style="color:var(--ds-text-muted);"></i>
+                                    <div style="font-size:var(--vc-text-sm);">
+                                        <i class="fa-solid fa-location-dot fa-xs me-1" style="color:var(--vc-fg-subtle);"></i>
                                         {{ r.destination }}
                                     </div>
                                     {% if r.actual_end %}
-                                    <div style="font-size:var(--ds-text-xs); color:var(--ds-text-muted);">
+                                    <div style="font-size:var(--vc-text-xs); color:var(--vc-fg-subtle);">
                                         <i class="fa-solid fa-clock fa-xs me-1"></i>
                                         {{ r.actual_end.strftime('%d/%m/%y %H:%M') }}
                                     </div>
                                     {% endif %}
                                 </td>
-                                <td style="font-size:var(--ds-text-sm);">
-                                    <i class="fa-solid fa-gauge-high fa-xs me-1" style="color:var(--ds-text-muted);"></i>
+                                <td style="font-size:var(--vc-text-sm);">
+                                    <i class="fa-solid fa-gauge-high fa-xs me-1" style="color:var(--vc-fg-subtle);"></i>
                                     {{ '{:,.0f}'.format(r.distance) }} กม.
                                 </td>
                                 <td>
-                                    <span class="fw-bold" style="font-size:var(--ds-text-sm);">
+                                    <span class="fw-bold" style="font-size:var(--vc-text-sm);">
                                         ฿{{ '{:,.2f}'.format(r.cost) }}
                                     </span>
                                 </td>
@@ -298,10 +298,10 @@
                     </div>
                 </div>
                 {% else %}
-                <div class="text-center py-5" style="color:var(--ds-text-muted);">
+                <div class="text-center py-5" style="color:var(--vc-fg-subtle);">
                     <i class="fa-solid fa-user-tag fa-2x mb-3 d-block" style="opacity:.3;"></i>
                     <div class="fw-bold mb-1">ไม่มีรายการงบส่วนตัว</div>
-                    <div style="font-size:var(--ds-text-sm);">{{ month_label }} ยังไม่มีทริปที่ใช้งบส่วนตัว</div>
+                    <div style="font-size:var(--vc-text-sm);">{{ month_label }} ยังไม่มีทริปที่ใช้งบส่วนตัว</div>
                 </div>
                 {% endif %}
 

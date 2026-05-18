@@ -1,33 +1,33 @@
-/* ══════════════════════════════════════════════════════════════
-   Notification System — Client
+/* pages/notification.js — Notification System (ES module)
    - Polling /api/notifications ทุก 30 วิ
    - Dropdown panel (group by booking, tabs, sticky payment)
    - Toast popup (desktop only, สำหรับ event สำคัญ)
-   ══════════════════════════════════════════════════════════════ */
-(function () {
-    'use strict';
-    if (window.__notifInit) return;
-    window.__notifInit = true;
+   โหลดจาก _header.html → ทุกหน้าที่มี header
+*/
 
-    const POLL_INTERVAL_MS = 30000;
-    const TOAST_DURATION_MS = 3000;
-    const IMPORTANT_CATEGORIES = new Set(['payment', 'payment_admin']);
-    const IMPORTANT_NTYPES_FOR_TOAST = new Set(['success', 'danger', 'warning']);
+const POLL_INTERVAL_MS = 30000;
+const TOAST_DURATION_MS = 3000;
+const IMPORTANT_CATEGORIES = new Set(['payment', 'payment_admin']);
+const IMPORTANT_NTYPES_FOR_TOAST = new Set(['success', 'danger', 'warning']);
 
-    // ── Elements ─────────────────────────────
-    const bellBtn   = document.getElementById('notifBellBtn');
-    const badge     = document.getElementById('notifBadge');
-    const panel     = document.getElementById('notifPanel');
-    const tabsEl    = document.getElementById('notifTabs');
-    const bodyEl    = document.getElementById('notifBody');
-    const stickyEl  = document.getElementById('notifStickySection');
-    const listEl    = document.getElementById('notifList');
-    const markAllBtn = document.getElementById('notifMarkAll');
-    const toastContainer = document.getElementById('notifToastContainer');
-    if (!bellBtn || !panel || !bodyEl) return;
+// ── Elements ─────────────────────────────
+const bellBtn   = document.getElementById('notifBellBtn');
+const badge     = document.getElementById('notifBadge');
+const panel     = document.getElementById('notifPanel');
+const tabsEl    = document.getElementById('notifTabs');
+const bodyEl    = document.getElementById('notifBody');
+const stickyEl  = document.getElementById('notifStickySection');
+const listEl    = document.getElementById('notifList');
+const markAllBtn = document.getElementById('notifMarkAll');
+const toastContainer = document.getElementById('notifToastContainer');
 
+if (bellBtn && panel && bodyEl) {
+    bootNotifications();
+}
+
+function bootNotifications() {
     // ── State ────────────────────────────────
-    let state = {
+    const state = {
         panelOpen: false,
         currentTab: 'all',       // 'all' | 'unread' | 'payment'
         lastData: null,
@@ -225,10 +225,6 @@
             badge.textContent = (raw > 30) ? '30+' : String(raw);
             badge.classList.add('show');
             bellBtn.classList.add('has-unread');
-            // Swap icon to solid
-            const icon = bellBtn.querySelector('i');
-            // if (icon) { icon.classList.remove('fa-regular'); icon.classList.add('fa-solid'); }
-
             // Pop animation เมื่อ count เพิ่ม
             if (raw > state.lastBadge && state.lastBadge !== 0) {
                 badge.classList.remove('pop'); void badge.offsetWidth; badge.classList.add('pop');
@@ -290,7 +286,6 @@
                 IMPORTANT_CATEGORIES.has(n.category) ||
                 IMPORTANT_NTYPES_FOR_TOAST.has(n.ntype);
             if (!isImportant) return;
-            // ตรวจว่าเพิ่งเกิด (ภายใน ~45 วิจาก poll ล่าสุด)
             const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})$/.exec(n.created_at || '');
             if (!m) return;
             const t = new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5]).getTime();
@@ -420,7 +415,6 @@
         if (!btn) return;
         e.preventDefault();
         const bookingId = parseInt(btn.dataset.booking, 10);
-        // ต้องหา mileage_id — ใช้ API ช่วย (endpoint เล็กๆ)
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่ง...';
         try {
@@ -450,4 +444,4 @@
     // ── Start polling ─────────────────────
     refresh();
     setInterval(refresh, POLL_INTERVAL_MS);
-})();
+}

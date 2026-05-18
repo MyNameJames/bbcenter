@@ -153,6 +153,22 @@ def manual_adjust(budget: VehicleBudget, amount, *, note: str):
     return _apply(budget, 'adjust', change_amount=Decimal(str(amount)), note=note)
 
 
+def set_active(budget: VehicleBudget, active: bool, *, note: str = ''):
+    """ปิด/เปิดใช้งาน budget — log event_type='set_active' หรือ 'set_inactive'
+    ไม่กระทบ used_amount/budget_amount; ประวัติ + ledger ยังครบ"""
+    budget = _lock_budget(budget.id)
+    target = bool(active)
+    if budget.is_active == target:
+        return None  # no-op
+    budget.is_active = target
+    event = 'set_active' if target else 'set_inactive'
+    return _apply(
+        budget, event,
+        change_amount=D0,
+        note=note or f'{event} by admin',
+    )
+
+
 # ──────────────────────────────────────────────────────────────
 # Verify (เรียกจาก cron รายเดือน — alert ถ้าไม่ตรง)
 # ──────────────────────────────────────────────────────────────

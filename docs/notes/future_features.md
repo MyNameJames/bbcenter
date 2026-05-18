@@ -25,5 +25,7 @@
 
 ## วิธีใช้
 
+| 13 | Phase 5.3 — ลบ inline `style=""` ใน templates | Frontend | ไฟล์ที่มีมากสุด: `mileage_admin.html` (112 จุด, ส่วนใหญ่เป็น dynamic Jinja values เช่น width/color จาก data), `design_system_reference.html` (86, token swatches), `dashboard.html` (73). กลยุทธ์: สร้าง CSS class สำหรับ patterns ที่ซ้ำ (font-size/color combos), คง dynamic width/color ที่ขึ้นกับ Jinja data ไว้เป็น inline | 2026-05-16 |
+
 - เมื่อมีคำสั่ง **"ไว้เป็น future feature"** → เพิ่มแถวในตารางด้านบน
 - ระบุ Module, บริบท, และวันที่บันทึกทุกครั้ง

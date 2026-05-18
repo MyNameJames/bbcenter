@@ -6,6 +6,20 @@
    ============================================================ */
 
 /* ─────────────────────────────────────────────
+   0. ICON FOUC FIX
+   reserve space ให้ <i data-lucide=""> ก่อน
+   lucide.createIcons() swap เป็น <svg>
+───────────────────────────────────────────── */
+.vc-scope [data-lucide]:not(svg) {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    vertical-align: -0.125em;
+    flex-shrink: 0;
+}
+
+
+/* ─────────────────────────────────────────────
    1. PAGE HEADER
 ───────────────────────────────────────────── */
 .va-page-header {
@@ -18,6 +32,14 @@
     margin-bottom: var(--vc-space-6);
     border-bottom: 1px solid var(--vc-border);
 }
+
+.va-page-header-actions {
+    display: flex;
+    gap: var(--vc-space-2);
+    align-items: center;
+}
+
+.va-page-header-actions:empty { display: none; }
 
 .va-page-title {
     font-size: var(--vc-text-xl);            /* 24px */
@@ -70,7 +92,7 @@
 
 
 /* ─────────────────────────────────────────────
-   3. WEEK NAVIGATOR — keep dark active fill
+   3. WEEK NAVIGATOR — polished frame + spacing
 ───────────────────────────────────────────── */
 .va-week-card {
     border-radius: var(--vc-radius-md);
@@ -82,25 +104,34 @@
     display: flex;
     align-items: stretch;
     border-bottom: 1px solid var(--vc-border);
-    height: 72px;
+    padding: var(--vc-space-2);
+    gap: var(--vc-space-2);
 }
 
 .va-week-nav {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
+    width: 40px;
     background: transparent;
     border: none;
+    border-radius: var(--vc-radius-sm);
     color: var(--vc-fg-muted);
-    transition: background var(--vc-transition), color var(--vc-transition);
+    transition: background var(--vc-transition), color var(--vc-transition), border-color var(--vc-transition);
+    flex-shrink: 0;
 }
-.va-week-nav:hover { background: var(--vc-bg-hover); color: var(--vc-fg); }
+.va-week-nav:hover {
+    background: var(--vc-bg-hover);
+    color: var(--vc-fg);
+    border-color: var(--vc-border-hover);
+}
 
 .va-week-strip {
     flex: 1;
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    min-width: 0;
 }
 
 .va-week-day {
@@ -109,31 +140,40 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    border-left: 1px solid var(--vc-border);
+    padding: var(--vc-space-3) 4px;
+    border: 1px solid transparent;
+    border-radius: var(--vc-radius-sm);
     transition: all var(--vc-transition);
     position: relative;
+    min-width: 0;
+    overflow: hidden;
 }
-.va-week-day:first-child { border-left: none; }
+.va-week-day:hover {
+    background: var(--vc-bg-hover);
+    border-color: var(--vc-border);
+}
 
 .va-week-day-name {
     font-size: 10px;
     font-weight: 600;
     color: var(--vc-fg-muted);
     text-transform: uppercase;
-    margin-bottom: 2px;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
 }
 .va-week-day-num {
     font-size: var(--vc-text-base);
     font-weight: 700;
     color: var(--vc-fg);
+    line-height: 1;
 }
 
 /* Today marker */
 .va-week-day-today::after {
-    content: 'TODAY';
     position: absolute;
     top: 4px;
-    font-size: 8px;
+    right: 4px;
+    font-size: 7px;
     font-weight: 800;
     color: var(--vc-blue);
     letter-spacing: 0.05em;
@@ -141,21 +181,37 @@
 
 /* Selected state — Dark Vercel feel */
 .va-week-day-active {
-    background: var(--vc-fg); /* Dark bg */
+    background: var(--vc-fg);
+    border-color: var(--vc-fg);
+}
+.va-week-day-active:hover {
+    background: var(--vc-fg);
+    border-color: var(--vc-fg);
 }
 .va-week-day-active .va-week-day-name,
 .va-week-day-active .va-week-day-num {
-    color: var(--vc-bg);    /* Light text */
+    color: var(--vc-bg);
+}
+.va-week-day-active.va-week-day-today::after {
+    color: var(--vc-bg);
+    opacity: 0.6;
 }
 
-/* Booking dot indicator */
+/* Booking volume indicator (1 / 2-3 / 4+ events per day) */
 .va-week-day-dot {
     width: 4px;
     height: 4px;
     border-radius: 50%;
     background: transparent;
-    margin-top: 4px;
+    margin-top: 6px;
+    transition: width var(--vc-transition);
 }
+.va-week-day-dot--sm { background: var(--vc-fg); }
+.va-week-day-dot--md { width: 15px; border-radius: 4px; background: var(--vc-fg); }
+.va-week-day-dot--lg { width: 25px; border-radius: 4px; background: var(--vc-fg); }
+.va-week-day-active .va-week-day-dot--sm,
+.va-week-day-active .va-week-day-dot--md,
+.va-week-day-active .va-week-day-dot--lg { background: var(--vc-bg); }
 
 .va-week-heading {
     padding: var(--vc-space-3) var(--vc-space-5);
@@ -163,6 +219,16 @@
     font-size: var(--vc-text-sm);
     font-weight: 600;
     color: var(--vc-fg);
+}
+
+@media (max-width: 575.98px) {
+    .va-week-bar { padding: 6px; gap: 4px; }
+    .va-week-nav { width: 32px; }
+    .va-week-strip { gap: 2px; }
+    .va-week-day { padding: var(--vc-space-2) 2px; }
+    .va-week-day-name { font-size: 9px; margin-bottom: 2px; }
+    .va-week-day-num { font-size: var(--vc-text-sm); }
+    .va-week-day-today::after { display: none; }
 }
 
 
@@ -215,29 +281,19 @@
     cursor: pointer;
 }
 .va-collapsed-bar:hover { background: var(--vc-bg-hover); }
+.va-collapsed-bar > [data-lucide="circle-check"] { color: var(--vc-green); }
 
 
 /* ─────────────────────────────────────────────
    6. LIST CONTAINER (booking & trip)
-   JS renders cards via innerHTML (existing
-   bl-* / pts-* classes). Keep them visually
-   Vercel-flavored.
+   JS renders cards via innerHTML using .bl-* / .va-trip-*.
 ───────────────────────────────────────────── */
 .va-list {
-    padding: var(--vc-space-2) var(--vc-space-3);
+    padding: var(--vc-space-3);
     min-height: 80px;
-}
-
-.va-list .card {
-    border: 1px solid var(--vc-border) !important;
-    border-radius: var(--vc-radius-md) !important;
-    box-shadow: none !important;
-    background: var(--vc-bg);
-    transition: border-color var(--vc-transition);
-}
-.va-list .card:hover { border-color: var(--vc-border-hover) !important; }
-.va-list .card .card-body {
-    padding: var(--vc-space-3) var(--vc-space-4) !important;
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
 }
 
 
@@ -279,7 +335,7 @@
     display: flex;
     align-items: center;
     gap: var(--vc-space-3);
-    padding: var(--vc-space-4) var(--vc-space-5);
+    padding: var(--vc-space-3) var(--vc-space-4);
     border-bottom: 1px solid var(--vc-border);
     transition: background var(--vc-transition);
 }
@@ -299,7 +355,10 @@
     flex-shrink: 0;
 }
 .vs-icon-active { background: var(--vc-fg); color: var(--vc-bg); }
-.vs-icon-maintenance { background: #FEF2F2; color: var(--vc-red); }
+.vs-icon-maintenance {
+    background: var(--vc-red-bg);
+    color: var(--vc-red);
+}
 
 .vs-info { flex: 1; min-width: 0; }
 .vs-name { font-size: 13.5px; font-weight: 700; color: var(--vc-fg); }
@@ -311,82 +370,204 @@
 .vs-detail-available { color: var(--vc-green); font-weight: 600; display: flex; align-items: center; gap: 4px; }
 .vs-detail-maintenance { color: var(--vc-red); font-weight: 600; display: flex; align-items: center; gap: 4px; }
 
+.vs-brand { font-size: 11px; color: var(--vc-fg-muted); margin-top: 1px; }
+
 .vs-actions { flex-shrink: 0; }
 .vs-btn {
     appearance: none;
     background: var(--vc-bg-hover);
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-sm);
-    padding: 4px 10px;
-    font-size: 10.5px;
+    padding: 5px 12px;
+    font-size: 11.5px;
     font-weight: 600;
     color: var(--vc-fg);
     transition: all var(--vc-transition);
-}
-.vs-btn:hover { border-color: var(--vc-fg); background: var(--vc-bg); }
-.vs-btn-fix { color: var(--vc-green); }
-.vs-btn-repair { padding: 4px 6px; }
-
-
-/* ─────────────────────────────────────────────
-   8. TRIP SUMMARY (Bottom section)
-───────────────────────────────────────────── */
-.pts-row {
-    transition: background var(--vc-transition);
-}
-.pts-no-mileage { opacity: 0.65; }
-
-.pts-plate { font-size: 13px; font-weight: 700; color: var(--vc-fg); }
-.pts-name { font-size: 14px; font-weight: 500; color: var(--vc-fg); margin-bottom: 2px; }
-
-.pts-exp-badge {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 4px;
-    text-transform: uppercase;
-}
-.pts-exp-central { background: #F1F5F9; color: #475569; }
-.pts-exp-department { background: #EEF2FF; color: #4F46E5; }
-.pts-exp-personal { background: #FEF2F2; color: #EF4444; }
-
-.pts-amount { font-size: 16px; font-weight: 700; color: var(--vc-fg); }
-
-.pts-detail { display: flex; flex-direction: column; gap: 1px; }
-.pts-detail-main { font-size: 11.5px; font-weight: 600; color: var(--vc-fg); }
-.pts-detail-sub { font-size: 10.5px; color: var(--vc-fg-muted); }
-
-.pts-paid-stamp {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 11px;
+}
+.vs-btn:hover { border-color: var(--vc-fg); background: var(--vc-bg); }
+.vs-btn-fix { color: var(--vc-green); }
+.vs-btn-repair { padding: 5px 8px; }
+
+
+/* ─────────────────────────────────────────────
+   8. TRIP CARD (Post-trip section)
+───────────────────────────────────────────── */
+.va-trip {
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-bg);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+    transition: border-color var(--vc-transition);
+}
+.va-trip:hover { border-color: var(--vc-border-hover); }
+.va-trip--no-mileage { opacity: 0.92; }
+
+/* ── Head: plate + exp + status + amount ── */
+.va-trip-head {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    flex-wrap: wrap;
+}
+.va-trip-plate {
+    font-size: 14px;
     font-weight: 700;
+    color: var(--vc-fg);
+    letter-spacing: 0.02em;
+}
+.va-trip-exp {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 999px;
+    line-height: 1.4;
+}
+.va-trip-exp--central {
+    background: var(--vc-bg-hover);
+    color: var(--vc-fg-muted);
+}
+.va-trip-exp--department {
+    background: var(--vc-blue-bg);
+    color: var(--vc-blue);
+}
+.va-trip-exp--personal {
+    background: var(--vc-red-bg);
+    color: var(--vc-red);
+}
+.va-trip-status { margin-left: auto; }
+.va-trip-amount {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vc-fg);
+}
+
+/* ── Person row: avatar + name + dest ── */
+.va-trip-person {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+}
+.va-trip-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--vc-bg-hover);
+    color: var(--vc-fg-subtle);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.va-trip-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vc-fg);
+}
+.va-trip-dest {
+    font-size: 12px;
+    color: var(--vc-fg-muted);
+    margin-left: auto;
+    text-align: right;
+}
+
+/* ── Mileage 1-line strip ── */
+.va-trip-mileage {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--vc-space-2);
+    padding: var(--vc-space-2) var(--vc-space-3);
+    background: var(--vc-bg-subtle);
+    border-radius: var(--vc-radius-xs);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.va-trip-mileage-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--vc-fg-subtle);
+    letter-spacing: 0.08em;
+    margin-right: 2px;
+}
+.va-trip-mileage-range,
+.va-trip-mileage-dist {
+    font-weight: 600;
+    color: var(--vc-fg);
+}
+.va-trip-mileage-rate {
+    color: var(--vc-fg-muted);
+}
+.va-trip-mileage-dot {
+    color: var(--vc-fg-subtle);
+}
+
+/* ── Foot: meta + actions (divider above) ── */
+.va-trip-foot {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    padding-top: var(--vc-space-3);
+    border-top: 1px solid var(--vc-border);
+    flex-wrap: wrap;
+}
+.va-trip-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--vc-fg-muted);
+}
+.va-trip-meta--pending { color: var(--vc-fg-muted); }
+.va-trip-meta--ok {
     color: var(--vc-green);
+    font-weight: 600;
+}
+.va-trip-foot-actions {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--vc-space-2);
 }
 
-.pts-btn-paid {
+/* ── Foot buttons (keep legacy color theme) ── */
+.va-trip-btn {
     appearance: none;
-    background: #DCFCE7;
-    border: 1px solid #BBF7D0;
-    color: #166534;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: var(--vc-radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: var(--vc-radius-xs);
     transition: all var(--vc-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    line-height: 1.4;
 }
-.pts-btn-paid:hover { background: #BBF7D0; }
-
-.pts-btn-telegram {
-    appearance: none;
-    background: #EFF6FF;
-    border: 1px solid #DBEAFE;
-    color: #1E40AF;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: var(--vc-radius-sm);
+.va-trip-btn--tg {
+    background: var(--vc-blue-bg);
+    border: 1px solid var(--vc-blue-border);
+    color: var(--vc-blue);
+}
+.va-trip-btn--tg:hover {
+    background: var(--vc-blue);
+    color: var(--vc-bg);
+    border-color: var(--vc-blue);
+}
+.va-trip-btn--paid {
+    background: var(--vc-fg);
+    border: 1px solid var(--vc-fg);
+    color: var(--vc-bg);
+}
+.va-trip-btn--paid:hover {
+    background: var(--vc-green);
+    border-color: var(--vc-green);
+    color: var(--vc-bg);
 }
 
 
@@ -438,15 +619,21 @@
 }
 .adm-exp-tab i { display: block; font-size: 1.1rem; margin-bottom: 4px; opacity: 0.8; }
 
+.va-exp-sub-group { margin-top: var(--vc-space-3); margin-bottom: 0; }
+
 .va-approver-info {
     margin-top: var(--vc-space-4);
     padding: var(--vc-space-3) var(--vc-space-4);
-    background: #F8FAFC;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-md);
     font-size: 13px;
-    color: #475569;
-    border: 1px solid #E2E8F0;
+    color: var(--vc-fg-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
 }
+.va-approver-info strong { color: var(--vc-fg); }
 
 .va-budget-bar {
     margin-top: var(--vc-space-5);
@@ -457,20 +644,77 @@
     font-size: 12px;
     font-weight: 600;
     margin-bottom: 6px;
+    color: var(--vc-fg);
 }
-.va-budget-track { height: 6px; background: #E2E8F0; border-radius: 3px; overflow: hidden; }
-.va-budget-fill { height: 100%; width: 0; transition: width 0.6s ease; }
+.va-budget-track {
+    height: 6px;
+    background: var(--vc-bg-hover);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.va-budget-fill {
+    height: 100%;
+    width: 0;
+    background: var(--vc-green);
+    transition: width 0.6s ease, background 0.3s ease;
+}
+.va-budget--warn   .va-budget-fill { background: var(--vc-amber); }
+.va-budget--danger .va-budget-fill { background: var(--vc-red); }
+
+.va-budget-warn {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-radius: var(--vc-radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.va-budget--warn   .va-budget-warn {
+    background: var(--vc-amber-bg);
+    border: 1px solid var(--vc-amber-border);
+    color: var(--vc-amber);
+}
+.va-budget--danger .va-budget-warn {
+    background: var(--vc-red-bg);
+    border: 1px solid var(--vc-red-border);
+    color: var(--vc-red);
+}
+
+/* Resource conflict warning under select */
+.va-conflict-warn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: var(--vc-amber-bg);
+    border: 1px solid var(--vc-amber-border);
+    border-radius: var(--vc-radius-sm);
+    color: var(--vc-amber);
+    font-size: 12px;
+    font-weight: 600;
+}
+.va-conflict-warn[hidden] { display: none; }
+.va-conflict-warn > [data-lucide] { flex-shrink: 0; }
 
 .va-modal-confirm { font-size: 15px; font-weight: 500; margin-bottom: var(--vc-space-4); }
 .va-modal-warning {
     display: flex;
     gap: var(--vc-space-3);
     padding: var(--vc-space-4);
-    background: #FFFBEB;
-    border: 1px solid #FDE68A;
+    background: var(--vc-amber-bg);
+    border: 1px solid var(--vc-amber-border);
     border-radius: var(--vc-radius-md);
     font-size: 13px;
-    color: #92400E;
+    color: var(--vc-fg);
+    align-items: flex-start;
+}
+.va-modal-warning > [data-lucide] {
+    color: var(--vc-amber);
+    margin-top: 2px;
+    flex-shrink: 0;
 }
 
 /* Swap list */
@@ -497,46 +741,166 @@
 
 
 /* ─────────────────────────────────────────────
-   10. COMPONENTS & UTILS
+   10. BOOKING ROW — LEFT-ICON LAYOUT
 ───────────────────────────────────────────── */
-.bl-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
 
-.bl-ico-btn {
-    appearance: none;
-    background: var(--vc-bg-hover);
+/* Booking card: [icon] [content] [actions]  + (optional collapse on row 2) */
+.bl-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-4);
     border: 1px solid var(--vc-border);
-    width: 28px;
-    height: 28px;
-    display: flex;
+    border-radius: var(--vc-radius-md);
+    background: var(--vc-bg);
+    transition: border-color var(--vc-transition), background var(--vc-transition);
+}
+.bl-card:hover { border-color: var(--vc-border-hover); }
+
+/* Group card — green accent border */
+.bl-card--group {
+    border-color: var(--vc-green);
+    /* background: var(--vc-green-bg); */
+}
+.bl-card--group:hover { border-color: var(--vc-green); }
+
+/* Left status icon — 40px circle */
+.bl-licon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    font-size: 12px;
-    color: var(--vc-fg);
-    transition: all var(--vc-transition);
-}
-.bl-ico-btn:hover { border-color: var(--vc-fg); background: var(--vc-bg); }
-
-.bl-ico-approve { color: var(--vc-green); }
-.bl-ico-approve:hover { background: #DCFCE7; border-color: var(--vc-green); }
-.bl-ico-reject { color: var(--vc-red); }
-.bl-ico-reject:hover { background: #FEF2F2; border-color: var(--vc-red); }
-
-.bl-txt-btn {
-    appearance: none;
-    background: transparent;
-    border: none;
-    font-size: 11px;
-    font-weight: 700;
+    flex-shrink: 0;
+    background: var(--vc-bg-hover);
     color: var(--vc-fg-muted);
-    padding: 4px 8px;
-    transition: color var(--vc-transition);
 }
-.bl-txt-btn:hover { color: var(--vc-fg); }
+.bl-licon--pending   { background: var(--vc-bg-hover);   color: var(--vc-fg-muted); }
+.bl-licon--approver  { background: var(--vc-bg-hover);   color: var(--vc-fg-muted); }
+.bl-licon--approved  { background: var(--vc-green-bg);   color: var(--vc-green); }
+.bl-licon--rejected  { background: var(--vc-red-bg);     color: var(--vc-red); }
+.bl-licon--group     { background: var(--vc-bg);         color: var(--vc-green); border: 1px solid var(--vc-green); }
+
+/* Content area */
+.bl-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bl-title-row {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    min-width: 0;
+}
+.bl-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--vc-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.bl-meta {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--vc-fg-muted);
+    line-height: 1.3;
+}
+.bl-meta-ico {
+    color: var(--vc-fg-subtle);
+    margin-right: 2px;
+}
+.bl-meta-dot {
+    color: var(--vc-fg-subtle);
+    margin: 0 2px;
+}
+
+/* Right-side actions */
+.bl-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.bl-status-text {
+    font-size: 12px;
+    color: var(--vc-fg-subtle);
+    font-style: italic;
+    padding: 0 var(--vc-space-2);
+}
+
+/* Group expand — sub-items (spans full row under the 3-col header) */
+.bl-grp-collapse {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--vc-border);
+}
+.bl-grp-collapse.show {
+    margin-top: var(--vc-space-3);
+    padding-top: var(--vc-space-2);
+}
+.bl-group-sub {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-2) var(--vc-space-3);
+    border-top: 1px solid var(--vc-border);
+}
+.bl-group-sub:first-child { border-top: none; }
+.bl-group-sub-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.bl-group-sub-head {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+}
+.bl-group-sub-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vc-fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bl-group-sub-meta {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 11.5px;
+    color: var(--vc-fg-muted);
+}
+.bl-group-sub-dest {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Chevron rotate on expand */
+.bl-grp-chev[aria-expanded="true"] [data-lucide] {
+    transform: rotate(180deg);
+    transition: transform var(--vc-transition);
+}
+.bl-grp-chev [data-lucide] {
+    transition: transform var(--vc-transition);
+}
 
 /* Toast */
 .adm-toast {

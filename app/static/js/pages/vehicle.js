@@ -1,13 +1,28 @@
-// ============================================================
-//  vehicle.js — BB Center
-//  ข้อ 1: scroll ขึ้น+10px → expand ปฏิทินเต็ม
-//  ข้อ 2: tripGroup เหลือ 1 → แสดงเป็นงานเดี่ยว
-//  ข้อ 3: desktop event-card รวม group card
-//  ข้อ 4: วันผ่านมา mobile ดูได้ แต่จองไม่ได้
-//  ข้อ 5: admin page มี sidebar+header layout ผ่าน _header.html
-// ============================================================
+/* ══════════════════════════════════════════════════
+   pages/vehicle.js — BB Center user-facing vehicle page (ES module)
+   Calendar + booking + group rendering + 4 modals.
+══════════════════════════════════════════════════ */
 
-// ── Constants ────────────────────────────────────────────────
+import { initIcons, bindModalReinit } from '../core/icons.js';
+bindModalReinit();
+// Popover content (calendar "+N รายการ") render asynchronously — re-init Lucide ตอน popover เปิด
+document.addEventListener('shown.bs.popover', () => {
+    document.querySelectorAll('.popover').forEach(tip => initIcons(tip));
+});
+
+// Keyboard navigation — ← / → เปลี่ยนเดือน, T = วันนี้
+// Skip เมื่อ focus อยู่ใน input/textarea/contenteditable หรือ modal เปิดอยู่
+document.addEventListener('keydown', (ev) => {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    const t = ev.target;
+    if (t && (t.matches('input,textarea,select,[contenteditable="true"]') ||
+              t.closest('.modal.show'))) return;
+    if (ev.key === 'ArrowLeft')       document.getElementById('prevMonthBtn')?.click();
+    else if (ev.key === 'ArrowRight') document.getElementById('nextMonthBtn')?.click();
+    else if (ev.key === 't' || ev.key === 'T') document.getElementById('todayBtn')?.click();
+});
+
+/* ── Constants ────────────────────────────────── */
 const TH_MONTHS = [
     'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
     'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'
@@ -34,21 +49,21 @@ const STATUS_DOT = {
     completed:        'approved',
 };
 const STATUS_ICON = {
-    pending:          'fa-regular fa-clock',
-    waiting_approver: 'fa-regular fa-paper-plane',
-    approved:         'fa-regular fa-circle-check',
-    rejected:         'fa-regular fa-circle-xmark',
-    completed:        'fa-regular fa-circle-check'
+    pending:          'clock',
+    waiting_approver: 'send',
+    approved:         'circle-check',
+    rejected:         'circle-x',
+    completed:        'circle-check'
 };
 const EVENT_CARD_STYLE = {
-    pending:          'background:#FEF3C7;border-color:#F59E0B;color:#92400E;',
-    waiting_approver: 'background:#DBEAFE;border-color:#60A5FA;color:#1E40AF;',
-    approved:         'background:#D1FAE5;border-color:#34D399;color:#065F46;',
-    rejected:         'background:#FEE2E2;border-color:#F87171;color:#991B1B;',
-    completed:        'background:#F3F4F6;border-color:#9CA3AF;color:#374151;'
+    pending:          'background:var(--vc-amber-bg);border-color:var(--vc-amber-border);color:var(--vc-amber);',
+    waiting_approver: 'background:var(--vc-blue-bg);border-color:var(--vc-blue-border);color:var(--vc-blue);',
+    approved:         'background:var(--vc-green-bg);border-color:var(--vc-green-border);color:var(--vc-green);',
+    rejected:         'background:var(--vc-red-bg);border-color:var(--vc-red-border);color:var(--vc-red);',
+    completed:        'background:var(--vc-bg-subtle);border-color:var(--vc-border);color:var(--vc-fg-muted);'
 };
 
-// ── State ─────────────────────────────────────────────────────
+/* ── State ─────────────────────────────────────── */
 let currentDate      = new Date();
 currentDate.setDate(1);
 let selectedDate     = new Date();
@@ -59,7 +74,7 @@ const mockEvents = window.BOOKINGS || [];
 const VEHICLES   = window.VEHICLES || [];
 const DRIVERS    = window.DRIVERS  || [];
 
-// ── Helpers ───────────────────────────────────────────────────
+/* ── Helpers ───────────────────────────────────── */
 function sortByTime(arr) {
     return [...arr].sort((a, b) => {
         const m = t => { const [h, mm] = t.split(':').map(Number); return h * 60 + mm; };
@@ -73,8 +88,6 @@ function calcDuration(s, e) {
     return h===0?`${m} นาที`:m===0?`${h} ชั่วโมง`:`${h} ชม. ${m} นาที`;
 }
 
-// ── ข้อ 2: ตรวจว่า booking นี้ "solo" หรือไม่ ─────────────────
-// solo = ไม่มี tripGroup หรือ มี tripGroup แต่ active partner = 0
 function isSoloBooking(e) {
     if (!e.tripGroup) return true;
     const partners = mockEvents.filter(b =>
@@ -84,95 +97,89 @@ function isSoloBooking(e) {
     return partners.length === 0;
 }
 
-// ── DOM Ready ─────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    bookingModal     = new bootstrap.Modal(document.getElementById('bookingModal'));
-    editBookingModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
-    eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
-    moreEventsModal  = new bootstrap.Modal(document.getElementById('moreEventsModal'));
+/* ── Init (module deferred — DOM is ready) ────── */
+bookingModal     = new bootstrap.Modal(document.getElementById('bookingModal'));
+editBookingModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
+eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
+moreEventsModal  = new bootstrap.Modal(document.getElementById('moreEventsModal'));
 
-    initFlatpickr();
+initFlatpickr();
+renderCalendar();
+initMobileScrollCollapse();
+
+/* ── Month navigation ──────────────────────────── */
+document.getElementById('prevMonthBtn')?.addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() - 1);
     renderCalendar();
-    initMobileScrollCollapse();
-
-    // ── Month navigation ───────────────────────────────────────
-    document.getElementById('prevMonthBtn')?.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar();
-    });
-    document.getElementById('nextMonthBtn')?.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar();
-    });
-    document.getElementById('todayBtn')?.addEventListener('click', () => {
-        currentDate = new Date(); currentDate.setDate(1);
-        selectedDate = new Date();
-        renderCalendar();
-    });
-
-    // ── Unlock month nav prev button after every render ────────
-    const calBody = document.getElementById('calendarBody');
-    function unlockMonthNav() {
-        const prev = document.getElementById('prevMonthBtn');
-        if (prev) prev.disabled = false;
-    }
-    function hideOtherMonthEvents() {
-        document.querySelectorAll('.calendar-cell.other-month .events-container')
-            .forEach(c => { c.innerHTML = ''; });
-    }
-    if (calBody) {
-        new MutationObserver(unlockMonthNav).observe(calBody, { childList: true });
-        new MutationObserver(hideOtherMonthEvents).observe(calBody, { childList: true, subtree: true });
-    }
-    unlockMonthNav();
-
-    // ── bookingForm validation (moved from vehicle.html) ───────
-    document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        this.classList.add('was-validated');
-        if (!this.checkValidity()) return;
-        const date   = document.getElementById('bk_date').value;
-        const tStart = document.getElementById('bk_start_time').value;
-        const tEnd   = document.getElementById('bk_end_time').value;
-        document.getElementById('bk_start_datetime').value = date + 'T' + tStart;
-        document.getElementById('bk_end_datetime').value   = date + 'T' + tEnd;
-        this.submit();
-    });
-    // live validation — แสดง check icon ทันทีที่กรอกถูกต้อง
-    document.querySelectorAll('#bookingForm [required]').forEach(field => {
-        ['input', 'change'].forEach(evt => field.addEventListener(evt, () => {
-            field.classList.toggle('is-valid', field.checkValidity());
-        }));
-    });
-    document.getElementById('bookingModal')?.addEventListener('shown.bs.modal', function() {
-        // trigger check icon บน field ที่มี value ตั้งต้น (เช่น passenger_count = 1)
-        document.querySelectorAll('#bookingForm [required]').forEach(field => {
-            if (field.value) field.classList.toggle('is-valid', field.checkValidity());
-        });
-    });
-    document.getElementById('bookingModal')?.addEventListener('hidden.bs.modal', function() {
-        const f = document.getElementById('bookingForm');
-        if (f) {
-            f.classList.remove('was-validated');
-            f.reset();
-            f.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
-        }
-    });
-
-    // ── editBookingForm validation ─────────────────────────────
-    document.getElementById('editBookingForm')?.addEventListener('submit', function(e) {
-        this.classList.add('was-validated');
-        if (!this.checkValidity()) e.preventDefault();
-    });
-    document.getElementById('editBookingModal')?.addEventListener('hidden.bs.modal', function() {
-        const f = document.getElementById('editBookingForm');
-        if (f) f.classList.remove('was-validated');
-    });
+});
+document.getElementById('nextMonthBtn')?.addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+});
+document.getElementById('todayBtn')?.addEventListener('click', () => {
+    currentDate = new Date(); currentDate.setDate(1);
+    selectedDate = new Date();
+    renderCalendar();
 });
 
-// ── ข้อ 1: Mobile scroll logic ───────────────────────────────
-// scroll ลง > 10px → collapse 2 สัปดาห์
-// scroll ขึ้น (position <= 10px) → expand เต็ม
+/* ── Unlock month nav prev button after every render ── */
+const calBody = document.getElementById('calendarBody');
+function unlockMonthNav() {
+    const prev = document.getElementById('prevMonthBtn');
+    if (prev) prev.disabled = false;
+}
+function hideOtherMonthEvents() {
+    document.querySelectorAll('.calendar-cell.other-month .events-container')
+        .forEach(c => { c.innerHTML = ''; });
+}
+if (calBody) {
+    new MutationObserver(unlockMonthNav).observe(calBody, { childList: true });
+    new MutationObserver(hideOtherMonthEvents).observe(calBody, { childList: true, subtree: true });
+}
+unlockMonthNav();
+
+/* ── bookingForm validation ────────────────────── */
+document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    this.classList.add('was-validated');
+    if (!this.checkValidity()) return;
+    const date   = document.getElementById('bk_date').value;
+    const tStart = document.getElementById('bk_start_time').value;
+    const tEnd   = document.getElementById('bk_end_time').value;
+    document.getElementById('bk_start_datetime').value = date + 'T' + tStart;
+    document.getElementById('bk_end_datetime').value   = date + 'T' + tEnd;
+    this.submit();
+});
+document.querySelectorAll('#bookingForm [required]').forEach(field => {
+    ['input', 'change'].forEach(evt => field.addEventListener(evt, () => {
+        field.classList.toggle('is-valid', field.checkValidity());
+    }));
+});
+document.getElementById('bookingModal')?.addEventListener('shown.bs.modal', function() {
+    document.querySelectorAll('#bookingForm [required]').forEach(field => {
+        if (field.value) field.classList.toggle('is-valid', field.checkValidity());
+    });
+});
+document.getElementById('bookingModal')?.addEventListener('hidden.bs.modal', function() {
+    const f = document.getElementById('bookingForm');
+    if (f) {
+        f.classList.remove('was-validated');
+        f.reset();
+        f.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
+    }
+});
+
+/* ── editBookingForm validation ────────────────── */
+document.getElementById('editBookingForm')?.addEventListener('submit', function(e) {
+    this.classList.add('was-validated');
+    if (!this.checkValidity()) e.preventDefault();
+});
+document.getElementById('editBookingModal')?.addEventListener('hidden.bs.modal', function() {
+    const f = document.getElementById('editBookingForm');
+    if (f) f.classList.remove('was-validated');
+});
+
+/* ── Mobile scroll logic ───────────────────────── */
 function initMobileScrollCollapse() {
     const list = document.getElementById('mobileListContent');
     if (!list) return;
@@ -210,24 +217,37 @@ function expandCalendar() {
     });
 }
 
-// ── Flatpickr ─────────────────────────────────────────────────
-// bookingModal ใช้ native date/time inputs แล้ว — flatpickr เฉพาะ editBookingModal
+/* ── Flatpickr ─────────────────────────────────── */
 function initFlatpickr() {
-    // ── ตั้ง min date ให้ native input วันที่จอง ──
     const bkDate = document.getElementById('bk_date');
     if (bkDate) {
         const today = new Date();
         const pad   = n => String(n).padStart(2, '0');
         bkDate.min  = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
     }
-    // ── end_time ต้อง > start_time ──
     const bkStart = document.getElementById('bk_start_time');
     const bkEnd   = document.getElementById('bk_end_time');
+    const bkDur   = document.getElementById('bk_duration_preview');
+    const updateDuration = () => {
+        if (!bkDur) return;
+        const s = bkStart?.value, e = bkEnd?.value;
+        if (!s || !e || e <= s) { bkDur.textContent = ''; return; }
+        const [sh, sm] = s.split(':').map(Number);
+        const [eh, em] = e.split(':').map(Number);
+        const mins = (eh * 60 + em) - (sh * 60 + sm);
+        const h = Math.floor(mins / 60), m = mins % 60;
+        const parts = [];
+        if (h) parts.push(`${h} ชม.`);
+        if (m) parts.push(`${m} นาที`);
+        bkDur.textContent = `ระยะเวลา ${parts.join(' ')}`;
+    };
     if (bkStart && bkEnd) {
         bkStart.addEventListener('change', () => {
             bkEnd.min = bkStart.value;
             if (bkEnd.value && bkEnd.value <= bkStart.value) bkEnd.value = '';
+            updateDuration();
         });
+        bkEnd.addEventListener('change', updateDuration);
     }
 }
 
@@ -252,7 +272,7 @@ function initFlatpickrInModal() {
     });
 }
 
-// ── Calendar ──────────────────────────────────────────────────
+/* ── Calendar ──────────────────────────────────── */
 function renderCalendar() {
     const year=currentDate.getFullYear(), month=currentDate.getMonth();
     document.getElementById('currentMonthLabel').textContent = `${TH_MONTHS[month]} ${year+543}`;
@@ -285,6 +305,9 @@ function createCell(day, year, month, isOtherMonth, isToday=false) {
 
     const cell=document.createElement('div');
     cell.className=`calendar-cell${isOtherMonth?' other-month':''}${isToday?' today':''}${isPast?' past-day':''}`;
+    cell.setAttribute('role', 'gridcell');
+    cell.setAttribute('aria-label', `${day} ${TH_MONTHS[tMonth]} ${tYear + 543}`);
+    if (isToday) cell.setAttribute('aria-current', 'date');
     if(selectedDate&&!isOtherMonth
         &&selectedDate.getDate()===day
         &&selectedDate.getMonth()===tMonth
@@ -299,14 +322,12 @@ function createCell(day, year, month, isOtherMonth, isToday=false) {
         if(vehiclesLeft<=0) html+=`<span class="vehicle-full-badge">รถเต็ม</span>`;
     }
 
-    // ── ข้อ 2: other-month cell — ไม่แสดง events เลย ──────────
     if(!isOtherMonth){
         if(dayEvents.length===1) html+=`<span class="mobile-indicator"></span>`;
         else if(dayEvents.length>=4) html+=`<span class="mobile-indicator" style="width:25px;border-radius:4px;"></span>`;
         else if(dayEvents.length>=2) html+=`<span class="mobile-indicator" style="width:15px;border-radius:4px;"></span>`;
     }
 
-    // ── ข้อ 3: desktop event cards รวม group ─────────────────
     html+=`<div class="events-container mt-auto">`;
     html+=isOtherMonth ? '' : buildDesktopEventCards(dayEvents, ds);
     html+=`</div>`;
@@ -324,7 +345,6 @@ function createCell(day, year, month, isOtherMonth, isToday=false) {
         document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el=>{
             bootstrap.Popover.getInstance(el)?.hide();
         });
-        // ── ข้อ 4: desktop คลิก cell → เปิด modal จอง (ยกเว้นวันผ่านมา / other-month)
         if (window.innerWidth >= 768 && !isOtherMonth && !isPast) {
             openBookingModal(ds);
         }
@@ -333,11 +353,9 @@ function createCell(day, year, month, isOtherMonth, isToday=false) {
     document.getElementById('calendarBody').appendChild(cell);
 }
 
-// ── ข้อ 3: สร้าง event cards บน desktop (รวม group) ─────────
 function buildDesktopEventCards(dayEvents, ds) {
     if(!dayEvents.length) return '';
 
-    // จัด group
     const grouped={}, singles=[];
     dayEvents.forEach(e=>{
         const solo=isSoloBooking(e);
@@ -349,16 +367,12 @@ function buildDesktopEventCards(dayEvents, ds) {
         }
     });
 
-    // รวม group + single เข้า display list
-    const displayItems=[]; // { type:'group'|'single', data }
-
-    // group card ใหญ่ (1 card ต่อ group)
+    const displayItems=[];
     Object.entries(grouped).forEach(([grp,members])=>{
         displayItems.push({type:'group', grp, members:sortByTime(members)});
     });
     singles.forEach(e=>displayItems.push({type:'single', e}));
 
-    // เรียงตาม time (ใช้ time ตัวแรกของ item)
     displayItems.sort((a,b)=>{
         const ta=a.type==='group'?a.members[0].time:a.e.time;
         const tb=b.type==='group'?b.members[0].time:b.e.time;
@@ -375,16 +389,16 @@ function buildDesktopEventCards(dayEvents, ds) {
             if(item.type==='group'){
                 const f=item.members[0];
                 return `<div class="d-flex align-items-center gap-2 mb-1 pb-1"
-                    style="border-bottom:1px solid #f3f4f6;cursor:pointer;"
+                    style="border-bottom:1px solid var(--vc-border);cursor:pointer;"
                     onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${f.id}),200)">
-                    <i class="bi bi-people-fill" style="color:#2563EB;font-size:.65rem;"></i>
+                    <i data-lucide="users" class="vc-icon-sm" style="color:var(--vc-blue);"></i>
                     <span style="font-size:.75rem;font-weight:600;">${f.time}</span>
                     <span class="text-truncate" style="font-size:.72rem;max-width:100px;">ทริปร่วม (${item.members.length})</span>
                 </div>`;
             }
             const e=item.e;
             return `<div class="d-flex align-items-center gap-2 mb-1 pb-1"
-                style="border-bottom:1px solid #f3f4f6;cursor:pointer;"
+                style="border-bottom:1px solid var(--vc-border);cursor:pointer;"
                 onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${e.id}),200)">
                 <span class="${STATUS_BADGE[e.status]||'vc-badge vc-badge-neutral vc-badge-dot'}">${STATUS_LABEL[e.status]||e.status}</span>
                 <span style="font-size:.75rem;font-weight:600;">${e.time}</span>
@@ -401,10 +415,10 @@ function buildDesktopEventCards(dayEvents, ds) {
 
     displayItems.slice(0,maxShow).forEach(item=>{
         if(item.type==='group'){
-            const members=item.members; // sorted by time
+            const members=item.members;
             const f=members[0];
-            const second=members[1]||null; // บรรทัดที่ 2 (ถ้ามี)
-            const style=EVENT_CARD_STYLE.approved; // ทริปร่วม = อนุมัติแล้วทั้งหมด
+            const second=members[1]||null;
+            const style=EVENT_CARD_STYLE.approved;
 
             html+=`<div class="event-card p-1"
                 style="${style}border-radius:4px;flex-direction:column;align-items:flex-start;white-space:normal;"
@@ -433,7 +447,6 @@ function buildDesktopEventCards(dayEvents, ds) {
     return html;
 }
 
-// ── ข้อ 4: Mobile List — วันผ่านมาดูได้ แต่จองไม่ได้ ─────────
 function updateMobileList(dateObj) {
     if(!dateObj) return;
     const pad=n=>String(n).padStart(2,'0');
@@ -444,7 +457,6 @@ function updateMobileList(dateObj) {
     document.getElementById('mobileListDateLabel').textContent =
         `${dateObj.getDate()} ${TH_MONTHS[dateObj.getMonth()]} ${dateObj.getFullYear()+543}`;
 
-    // ── ข้อ 4: ปุ่มจองรถ ซ่อนถ้าเป็นวันผ่านมา ──────────────
     const bookBtn=document.getElementById('mobileDateCountBtn');
     if(bookBtn){
         if(isPastDate){
@@ -462,14 +474,14 @@ function updateMobileList(dateObj) {
     const content=document.getElementById('mobileListContent');
 
     if(!dayEvents.length){
-        content.innerHTML=`<div class="text-center text-muted py-5 small">
-            <i class="bi bi-calendar-x d-block mb-2 fs-2 opacity-50"></i>
-            ไม่มีการจองในวันนี้
+        content.innerHTML=`<div class="text-center py-5" style="color:var(--vc-fg-subtle);">
+            <i data-lucide="calendar-x" class="d-block mx-auto mb-2" style="width:32px;height:32px;opacity:.6;"></i>
+            <small>ไม่มีการจองในวันนี้</small>
         </div>`;
+        initIcons(content);
         return;
     }
 
-    // แยก grouped vs singles (ใช้ isSoloBooking)
     const grouped={}, singles=[];
     dayEvents.forEach(e=>{
         if(!isSoloBooking(e) && e.tripGroup){
@@ -481,24 +493,19 @@ function updateMobileList(dateObj) {
     });
 
     let html='';
-    // group cards
     Object.entries(grouped)
         .sort((a,b)=>{
             const m=t=>{const[h,mm]=t.split(':').map(Number);return h*60+mm;};
             return m(a[1][0].time)-m(b[1][0].time);
         })
- 
+
         .forEach(([grpName,members])=>{
             const sorted=sortByTime(members);
-            // ── คำนวณ time range รวม ──
             const toMins=t=>{const[h,m]=t.split(':').map(Number);return h*60+m;};
             const minTime=sorted[0].time;
             const maxTimeEnd=sorted.reduce((best,e)=>toMins(e.timeEnd)>toMins(best)?e.timeEnd:best, sorted[0].timeEnd);
-            // ── รวม pax ──
             const totalPax=members.reduce((sum,e)=>sum+(parseInt(e.pax)||0),0);
-            // ── vehicle label (ตัด license plate ออก) ──
             const carLabel=(members[0].car||'').split('(')[0].trim() || grpName;
-            // ── collapse ID ──
             const collapseId=`grp-${grpName.replace(/[^a-z0-9]/gi,'')}`;
 
             html+=`
@@ -506,38 +513,36 @@ function updateMobileList(dateObj) {
                 <div class="card-body py-2 px-3">
                     <div class="d-flex align-items-center gap-3">
 
-                        <div class="ds-status-dot ds-status-dot--approved flex-shrink-0">
-                            <i class="fa-solid fa-person-walking"></i>
+                        <div class="vc-status-dot vc-status-dot--group flex-shrink-0">
+                            <i data-lucide="merge" class="vc-icon-sm"></i>
                         </div>
 
                         <div class="flex-grow-1 overflow-hidden" onclick="document.getElementById('${collapseId}').classList.toggle('show'); document.querySelector('[data-bs-target=\'#${collapseId}\']').classList.toggle('collapsed');" style="cursor:pointer;">
                             <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--ds-text-heading);">
-                                    <i class="fa-solid fa-van-shuttle me-1" style="font-size:.8rem;"></i>${carLabel}
+                                <span class="fw-semibold text-truncate d-inline-flex align-items-center gap-1" style="font-size:.88rem;color:var(--vc-fg);">
+                                    ${carLabel}
                                 </span>
-                                <span class="flex-shrink-0 rounded-pill px-2 py-0" style="font-size:.65rem;font-weight:600;background:#EFF6FF;color:#3B82F6;border:0.5px solid #3B82F6;">
-                                    ${members.length} งานรวม
-                                </span>
+                                <span class="vc-badge vc-badge-success flex-shrink-0">${members.length} งานรวม</span>
                             </div>
-                            <div class="text-muted" style="font-size:.75rem;">
-                                <i class="bi bi-person me-1"></i>${totalPax}
+                            <div class="d-flex align-items-center gap-1 flex-wrap" style="font-size:.75rem;color:var(--vc-fg-muted);">
+                                <i data-lucide="user" class="vc-icon-sm"></i>${totalPax}
                                 <span class="mx-1">·</span>
-                                <i class="bi bi-clock me-1"></i>${minTime} – ${maxTimeEnd}
+                                <i data-lucide="clock" class="vc-icon-sm"></i>${minTime} – ${maxTimeEnd}
                             </div>
                         </div>
 
                         <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                            <button class="btn btn-sm rounded-2"
-                                    style="border:1px solid var(--ds-border);padding:4px 8px;"
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm"
+                                    title="ดูรายละเอียดกลุ่ม"
                                     onclick="event.stopPropagation(); openEventDetail(${members[0].id})">
-                                <i class="fa-solid fa-pen" style="font-size:.7rem;color:var(--ds-text-muted);"></i>
+                                <i data-lucide="pencil" class="vc-icon-sm"></i>
                             </button>
-                            <button class="btn btn-sm rounded-2 grp-toggle collapsed"
-                                    style="border:1px solid var(--ds-border);padding:4px 8px;"
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm grp-toggle collapsed"
+                                    title="ขยาย/ยุบสมาชิกในกลุ่ม"
                                     data-bs-toggle="collapse"
                                     data-bs-target="#${collapseId}"
                                     onclick="event.stopPropagation();">
-                                <i class="fa-solid fa-chevron-down grp-chevron" style="font-size:.7rem;color:var(--ds-text-muted);"></i>
+                                <i data-lucide="chevron-down" class="vc-icon-sm grp-chevron"></i>
                             </button>
                         </div>
 
@@ -545,28 +550,28 @@ function updateMobileList(dateObj) {
                 </div>
 
                 <div class="collapse" id="${collapseId}">
-                    <div class="px-3 pb-2 d-flex flex-column gap-2" style="border-top:1px solid var(--ds-border);">
+                    <div class="px-3 pb-2 d-flex flex-column gap-2" style="border-top:1px solid var(--vc-border);">
                         <div class="pt-2"></div>
                         ${sorted.map(e=>{
                             const driverDisplay=e.driverName||(e.needDriver?'รอคนขับ':'');
                             return `
                             <div class="card mb-0" onclick="openEventDetail(${e.id})" style="cursor:pointer;">
-                                <div class="card-body py-2 px-2">
+                                <div class="card-body py-2 px-2 ps-3">
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="flex-grow-1 overflow-hidden">
-                                            <div class="fw-semibold text-truncate" style="font-size:.82rem;color:var(--ds-text-heading);">${e.booker}</div>
-                                            <div class="text-muted text-truncate" style="font-size:.72rem;">
-                                                <i class="bi bi-person me-1"></i>${e.pax}
+                                            <div class="fw-semibold text-truncate" style="font-size:.82rem;color:var(--vc-fg);">${e.booker}</div>
+                                            <div class="d-flex align-items-center gap-1 flex-wrap text-truncate pt-1" style="font-size:.72rem;color:var(--vc-fg-muted);">
+                                                <i data-lucide="user" class="vc-icon-sm"></i>${e.pax}
                                                 <span class="mx-1">·</span>
-                                                <i class="bi bi-clock me-1"></i>${e.time}
-                                                ${e.dest?`<span class="mx-1">·</span><i class="bi bi-geo-alt me-1"></i>${e.dest}`:''}
+                                                <i data-lucide="clock" class="vc-icon-sm"></i>${e.time}
+                                                ${e.dest?`<span class="mx-1">·</span><i data-lucide="map-pin" class="vc-icon-sm"></i>${e.dest}`:''}
                                             </div>
                                         </div>
                                         <div class="flex-shrink-0">
-                                            <button class="btn btn-sm rounded-2"
-                                                    style="border:1px solid var(--ds-border);padding:3px 6px;"
+                                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm"
+                                                    title="เปิดรายละเอียด"
                                                     onclick="event.stopPropagation(); openEventDetail(${e.id})">
-                                                <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:.65rem;color:var(--ds-text-muted);"></i>
+                                                <i data-lucide="arrow-up-right" class="vc-icon-sm"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -581,32 +586,32 @@ function updateMobileList(dateObj) {
 
     singles.forEach(e=>{
         const driverDisplay = e.driverName || (e.needDriver ? 'รอคนขับ' : '');
-        const iconClass = (STATUS_ICON[e.status] || 'fa-regular fa-circle-check');
+        const iconName = (STATUS_ICON[e.status] || 'circle-check');
         html+=`
         <div class="card mb-2" onclick="openEventDetail(${e.id})" style="cursor:pointer;">
             <div class="card-body py-2 px-3">
                 <div class="d-flex align-items-center gap-3">
 
-                    <div class="ds-status-dot ds-status-dot--${STATUS_DOT[e.status]||'approved'} flex-shrink-0">
-                        <i class="${iconClass}"></i>
+                    <div class="vc-status-dot vc-status-dot--${STATUS_DOT[e.status]||'approved'} flex-shrink-0">
+                        <i data-lucide="${iconName}" class="vc-icon-sm"></i>
                     </div>
 
-                    <div class="flex-grow-1 overflow-hidden">
-                        <div class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--ds-text-heading);">${e.booker}</div>
-                        <div class="text-black-50 text-truncate" style="font-size:.75rem;">
-                            <i class="bi bi-person me-1"></i>${e.pax}
+                    <div class="flex-grow-1 overflow-hidden ">
+                        <div class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--vc-fg);">${e.booker}</div>
+                        <div class="d-flex align-items-center gap-1 flex-wrap text-truncate pt-1" style="font-size:.75rem;color:var(--vc-fg-muted);">
+                            <i data-lucide="user" class="vc-icon-sm"></i>${e.pax}
                             <span class="mx-1">·</span>
-                            <i class="bi bi-clock me-1"></i>${e.time}
-                            ${e.dest ? `<span class="mx-1">·</span><i class="bi bi-geo-alt me-1"></i>${e.dest}` : ''}
+                            <i data-lucide="clock" class="vc-icon-sm"></i>${e.time}
+                            ${e.dest ? `<span class="mx-1">·</span><i data-lucide="map-pin" class="vc-icon-sm"></i>${e.dest}` : ''}
                         </div>
                     </div>
 
                     ${(e.isOwner || e.isPending) ? `
                     <div class="flex-shrink-0">
-                        <button class="btn btn-sm rounded-2"
-                                style="border:1px solid var(--ds-border);padding:4px 8px;"
+                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm"
+                                title="แก้ไขการจอง"
                                 onclick="event.stopPropagation(); openEditBookingModal(${e.id})">
-                            <i class="fa-solid fa-pen" style="font-size:.7rem;color:var(--ds-text-muted);"></i>
+                            <i data-lucide="pencil" class="vc-icon-sm"></i>
                         </button>
                     </div>` : ''}
 
@@ -616,9 +621,9 @@ function updateMobileList(dateObj) {
     });
 
     content.innerHTML=html;
+    initIcons(content);
 }
 
-// ── More Events Modal ─────────────────────────────────────────
 function openMoreEvents(dateStr) {
     const events=sortByTime(mockEvents.filter(e=>e.date===dateStr));
     const [y,m,d]=dateStr.split('-').map(Number);
@@ -633,14 +638,13 @@ function openMoreEvents(dateStr) {
                     <span style="font-weight:700;font-size:.85rem;">${e.time} – ${e.dest}</span>
                     <span class="${STATUS_BADGE[e.status]||'vc-badge vc-badge-neutral vc-badge-dot'}">${STATUS_LABEL[e.status]||e.status}</span>
                 </div>
-                <div style="font-size:.78rem;margin-top:3px;opacity:.75;">
-                    <i class="bi bi-person-fill me-1"></i>${e.booker}
+                <div class="d-flex align-items-center gap-1" style="font-size:.78rem;margin-top:3px;opacity:.75;">
+                    <i data-lucide="user" class="vc-icon-sm"></i>${e.booker}
                 </div>
             </div>`).join('')+`</div>`;
     moreEventsModal.show();
 }
 
-// ── helpers ───────────────────────────────────────────────────
 const TH_DAYS_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 
 function _thaiDateFull(dateStr) {
@@ -656,7 +660,6 @@ function _plateLabel(e) {
     return plate ? `${plate}  ${brand}` : brand;
 }
 
-// ── Event Detail (single + group) ────────────────────────────
 function openEventDetail(eventId) {
     const e = mockEvents.find(b => b.id === eventId);
     if (!e) return;
@@ -669,21 +672,17 @@ function openEventDetail(eventId) {
     const members = isGroup ? groupMembers : [e];
     const rep     = isGroup ? (members.find(b => b.car) || e) : e;
 
-    // Header dot (status-based)
     const dotKey = isGroup ? 'group' : (STATUS_DOT[e.status] || 'approved');
     const headerDot = document.getElementById('detailHeaderDot');
-    headerDot.className = `ds-status-dot ds-status-dot--${dotKey} flex-shrink-0`;
-    headerDot.style.cssText = 'width:44px;height:44px;font-size:1rem;';
-    document.getElementById('detailHeaderIcon').className = isGroup
-        ? 'fa-solid fa-person-walking fs-5'
-        : (STATUS_ICON[e.status] || 'fa-regular fa-circle-check');
+    headerDot.className = `vc-status-dot vc-status-dot--${dotKey} flex-shrink-0 bk-detail-header-dot`;
+    const headerIconName = isGroup ? 'users' : (STATUS_ICON[e.status] || 'circle-check');
+    document.getElementById('detailHeaderIcon').outerHTML =
+        `<i id="detailHeaderIcon" data-lucide="${headerIconName}" style="width:20px;height:20px;"></i>`;
 
-    // Date, time, car
     document.getElementById('detailDateLine').textContent = _thaiDateFull(e.date);
     document.getElementById('detailTime').textContent     = `${e.time} – ${e.timeEnd}`;
     document.getElementById('detailPlate').textContent    = _plateLabel(rep);
 
-    // Driver
     const driverLine = document.getElementById('detailDriverLine');
     if (rep.needDriver) {
         document.getElementById('detailDriver').textContent = rep.driver || 'รอ Admin มอบหมาย';
@@ -692,50 +691,46 @@ function openEventDetail(eventId) {
         driverLine.style.display = 'none';
     }
 
-    // Members list
     document.getElementById('detailMembersList').innerHTML = members.map((m, idx) => `
         <div class="d-flex align-items-center gap-3 py-3${idx < members.length - 1 ? ' border-bottom' : ''} ">
-            <div class="ds-status-dot ds-status-dot--${isGroup ? 'group' : (STATUS_DOT[m.status]||'approved')} flex-shrink-0 ">
-                <i class="fa-regular fa-user" style="font-size:.8rem;"></i>
+            <div class="vc-status-dot vc-status-dot--${isGroup ? 'group' : (STATUS_DOT[m.status]||'approved')} flex-shrink-0 ">
+                <i data-lucide="user" class="vc-icon-sm"></i>
             </div>
             <div class="flex-grow-1 overflow-hidden">
                 <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-                    <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--ds-text-heading);">${m.booker || '–'}</span>
-                    <span class="d-inline-flex align-items-center bg-body-secondary text-muted rounded-2 px-2 py-1 flex-shrink-0">
-                        <i class="bi bi-people-fill me-1" style="font-size:.82rem;"></i>
-                        <span style="font-size:.78rem;">${m.pax || '–'}</span>
+                    <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--vc-fg);">${m.booker || '–'}</span>
+                    <span class="vc-badge vc-badge-neutral flex-shrink-0 d-inline-flex align-items-center gap-1">
+                        <i data-lucide="users" class="vc-icon-sm"></i>${m.pax || '–'}
                     </span>
                 </div>
-                <div class="d-flex align-items-center gap-1 overflow-hidden mb-1">
-                    <span class="text-muted text-truncate" style="font-size:.8rem;">${m.purpose || '–'}</span>
-                    <i class="bi bi-arrow-right text-muted flex-shrink-0" style="font-size:.75rem;"></i>
-                    <span class="text-muted text-truncate" style="font-size:.8rem;">${m.dest || '–'}</span>
+                <div class="d-flex align-items-center gap-1 overflow-hidden mb-1" style="color:var(--vc-fg-muted);">
+                    <span class="text-truncate" style="font-size:.8rem;">${m.purpose || '–'}</span>
+                    <i data-lucide="arrow-right" class="vc-icon-sm flex-shrink-0"></i>
+                    <span class="text-truncate" style="font-size:.8rem;">${m.dest || '–'}</span>
                 </div>
                 ${m.pickup && m.pickup.trim() ? `
-                <div class="d-flex align-items-center gap-1 mt-1">
-                    <i class="bi bi-geo-alt text-muted flex-shrink-0" style="font-size:.75rem;"></i>
-                    <span class="text-muted text-truncate" style="font-size:.78rem;">${m.pickup}</span>
+                <div class="d-flex align-items-center gap-1 mt-1" style="color:var(--vc-fg-muted);">
+                    <span class="text-truncate" style="font-size:.78rem;">ขึ้นรถที่ :: ${m.pickup}</span>
                 </div>` : ''}
             </div>
         </div>`
     ).join('');
 
-    // Action buttons (single เจ้าของ + pending เท่านั้น)
     const actDiv = document.getElementById('detailActions');
     actDiv.innerHTML = '';
     if (!isGroup && e.isOwner && e.isPending) {
         actDiv.innerHTML = `
             <div class="d-flex justify-content-end gap-2">
-                <button class="btn btn-sm fw-bold px-3 py-2"
-                    style="background:#F4F4F5;color:#111827;border-radius:8px;"
+                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" title="แก้ไขการจอง"
                     onclick="eventDetailModal.hide();setTimeout(()=>openEditBookingModal(${e.id}),300)">
-                    <i class="bi bi-pencil me-1"></i>แก้ไข
+                    <i data-lucide="pencil" class="vc-icon-sm"></i>
+                    แก้ไข
                 </button>
                 <form action="${e.deleteUrl}" method="POST"
                     onsubmit="return confirm('ยืนยันยกเลิกการจองนี้?')">
-                    <button type="submit" class="btn btn-sm fw-bold px-3 py-2"
-                        style="background:#FEE2E2;color:#991B1B;border-radius:10px;">
-                        <i class="bi bi-trash3 me-1"></i>ยกเลิกการจอง
+                    <button type="submit" class="vc-btn vc-btn-danger vc-btn-sm" title="ยกเลิกการจองนี้">
+                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                        ยกเลิกการจอง
                     </button>
                 </form>
             </div>`;
@@ -744,7 +739,6 @@ function openEventDetail(eventId) {
     eventDetailModal.show();
 }
 
-// ── Edit Booking ──────────────────────────────────────────────
 function openEditBookingModal(eventId) {
     const e = mockEvents.find(b => b.id === eventId);
     if (!e) return;
@@ -759,7 +753,6 @@ function openEditBookingModal(eventId) {
     document.getElementById('editNeedDriver').checked = e.needDriver;
     document.getElementById('editPickup').value       = e.pickup  || '';
 
-    // init flatpickr ก่อน (ถ้ายังไม่ได้ init) แล้วค่อย set date
     initFlatpickrInModal();
     setTimeout(() => {
         const sd = document.getElementById('editStartDatetime')?._flatpickr;
@@ -770,7 +763,6 @@ function openEditBookingModal(eventId) {
     }, 50);
 }
 
-// ── Booking Modal ─────────────────────────────────────────────
 function openBookingModal(dateStr=null) {
     if(eventDetailModal) eventDetailModal.hide();
     if(moreEventsModal)  moreEventsModal.hide();
@@ -779,7 +771,6 @@ function openBookingModal(dateStr=null) {
         ? `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth()+1)}-${pad(selectedDate.getDate())}`
         : null);
 
-    // ── pre-fill native date/time inputs ──
     const bkDate  = document.getElementById('bk_date');
     const bkStart = document.getElementById('bk_start_time');
     const bkEnd   = document.getElementById('bk_end_time');
@@ -789,3 +780,22 @@ function openBookingModal(dateStr=null) {
 
     bookingModal.show();
 }
+
+/* ── Expose for HTML-string onclick handlers ── */
+Object.assign(window, {
+    openEventDetail, openEditBookingModal, openMoreEvents, openBookingModal,
+});
+Object.defineProperty(window, 'eventDetailModal', { get: () => eventDetailModal, configurable: true });
+Object.defineProperty(window, 'moreEventsModal',  { get: () => moreEventsModal,  configurable: true });
+
+/* ── ?pay=<booking_id> deep-link from notification ── */
+(function handlePayDeeplink() {
+    const pay = new URLSearchParams(window.location.search).get('pay');
+    if (!pay) return;
+    const id = parseInt(pay, 10);
+    if (!id) return;
+    openEventDetail(id);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('pay');
+    history.replaceState(null, '', url.toString());
+})();

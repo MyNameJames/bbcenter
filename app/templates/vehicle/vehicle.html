@@ -2,16 +2,17 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>จองรถบางบาล - BBCenter</title>
     <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="{{ url_for('static', filename='vendor/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='vendor/datatables/css/responsive.bootstrap5.min.css') }}" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
 </head>
 <body>
@@ -23,57 +24,66 @@
     {% include '_sidebar.html' %}
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content vc-scope">
         {% set page_title = 'ปฏิทินการจองรถ' %}
         {% include '_header.html' %}
 
         <!-- VIEW: CALENDAR -->
-        <div id="calendarView" class="view-section p-md-3">
+        <div id="calendarView" class="container-xxl px-3 pt-2">
 
             {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            <div class="px-3 pt-2">
-                {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show mb-2"
-                    style="border-radius:10px;font-size:.88rem;">
-                    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                {% if messages %}
+                <div class="vc-stack px-3 pt-2" style="margin-bottom: var(--vc-space-4);">
+                    {% for category, message in messages %}
+                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
-            {% endif %}
+                {% endif %}
             {% endwith %}
 
+            <div class="va-page-header">
+                <div>
+                    <h1 class="va-page-title">ปฏิทินการจองรถ</h1>
+                    <p class="va-page-subtitle">ระยะเวลาการใช้รถ 08:00 - 17:00 · วันอาทิตย์ไม่ให้บริการ</p>
+                </div>
+                <div class="va-page-header-actions"></div>
+            </div>
+
             <!-- Toolbar -->
-            <div class="container-xxl flex-grow-1 pt-4 pb-2">
+            <div class="flex-grow-1 pt-2 pb-3">
                 <div class="toolbar">
                     <div class="row w-100 gx-0 d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center gap-2 col-auto">
-                            <button class="ds-btn-icon rounded-2 bg-white" id="prevMonthBtn"><i class="fa-solid fa-angle-left"></i></button>
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm me-auto" id="prevMonthBtn" title="เดือนก่อนหน้า">
+                                <i data-lucide="chevron-left" class="vc-icon-sm"></i>
+                            </button>
                             <h5 class="d-flex align-items-center mx-2 mb-0 fw-bold" id="currentMonthLabel" style="text-align:center;min-width:120px;"></h5>
-                            <button class="ds-btn-icon rounded-2 bg-white" id="nextMonthBtn"><i class="fa-solid fa-angle-right"></i></button>
-                            <button class="card rounded-2 d-none d-md-inline-flex py-2 px-3" id="todayBtn" style="font-size:.8rem;">วันนี้</button>
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" id="nextMonthBtn" title="เดือนถัดไป">
+                                <i data-lucide="chevron-right" class="vc-icon-sm"></i>
+                            </button>
+                            <button type="button" class="vc-btn vc-btn-secondary justify-content-end" id="todayBtn" title="กระโดดไปวันนี้">วันนี้</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="container-xxl flex-grow-1">
+            <div class="flex-grow-1">
                 <div class="row mb-3">
                     <div class="col-12">
-                        <div class="card h-100">
+                        <div class="vc-card p-3" role="grid" aria-label="ปฏิทินการจองรถ — ใช้ปุ่มลูกศรซ้าย-ขวาเปลี่ยนเดือน, T เพื่อกระโดดไปวันนี้">
                             <div class="card-header bg-white">
-                                <div class="calendar-grid">
-                                    <div class="calendar-header-cell text-danger">อา</div>
-                                    <div class="calendar-header-cell">จ</div>
-                                    <div class="calendar-header-cell">อ</div>
-                                    <div class="calendar-header-cell">พ</div>
-                                    <div class="calendar-header-cell">พฤ</div>
-                                    <div class="calendar-header-cell">ศ</div>
-                                    <div class="calendar-header-cell text-primary">ส</div>
+                                <div class="calendar-grid" role="row">
+                                    <div class="calendar-header-cell text-danger" role="columnheader" aria-label="อาทิตย์">อา</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="จันทร์">จ</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="อังคาร">อ</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="พุธ">พ</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="พฤหัสบดี">พฤ</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="ศุกร์">ศ</div>
+                                    <div class="calendar-header-cell text-primary" role="columnheader" aria-label="เสาร์">ส</div>
                                 </div>
                             </div>
                             <div class="card-body pt-2">
-                                <div class="calendar-grid" id="calendarBody"></div>
+                                <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
                             </div>
                         </div>
                     </div>
@@ -84,9 +94,10 @@
                     <div class="col-12">
                         <div class="mobile-list-header mb-2">
                             <span id="mobileListDateLabel" class="pt-2 px-0">รายการจอง</span>
-                            <button class="btn btn-dark btn-sm rounded-2 px-3 py-2" id="mobileDateCountBtn"
-                                data-bs-toggle="modal" data-bs-target="#bookingModal">
-                                <i class="bi bi-plus me-1"></i> จองรถ
+                            <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="mobileDateCountBtn"
+                                data-bs-toggle="modal" data-bs-target="#bookingModal" title="จองรถ">
+                                <i data-lucide="plus" class="vc-icon-sm"></i>
+                                จองรถ
                             </button>
                         </div>
                         <div class="mobile-list-section" id="mobileListSection">
@@ -170,36 +181,7 @@ window.BOOKINGS = [
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
-<script src="{{ url_for('static', filename='js/vehicle.js') }}"></script>
-
-{# ── เปิด eventDetailModal อัตโนมัติเมื่อมาจาก notification (?pay=<booking_id>) ── #}
-<script>
-(function () {
-    const pay = new URLSearchParams(window.location.search).get('pay');
-    if (!pay) return;
-    const id = parseInt(pay, 10);
-    if (!id) return;
-
-    // รอให้ vehicle.js init เสร็จ (mockEvents + modal objects พร้อม) แล้วค่อยเปิด
-    function tryOpen(attempt) {
-        if (typeof openEventDetail === 'function' && typeof mockEvents !== 'undefined') {
-            openEventDetail(id);
-            // เอา ?pay= ออกจาก URL โดยไม่ reload
-            const url = new URL(window.location.href);
-            url.searchParams.delete('pay');
-            history.replaceState(null, '', url.toString());
-        } else if (attempt < 20) {
-            setTimeout(() => tryOpen(attempt + 1), 100);
-        }
-    }
-    // รอ DOMContentLoaded + vehicle.js init
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => tryOpen(0));
-    } else {
-        tryOpen(0);
-    }
-})();
-</script>
+<script type="module" src="{{ url_for('static', filename='js/pages/vehicle.js') }}"></script>
 
 </body>
 </html>

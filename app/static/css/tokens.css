@@ -1,143 +1,20 @@
 /* ============================================================
    BBCenter V2 — Design Tokens (single source of truth)
    ─────────────────────────────────────────────────────────────
-   CANONICAL: --vc-* (Part B) — use in ALL new CSS/templates/JS
-   LEGACY:    --ds-* (Part A) — frozen, do NOT add new refs
+   CANONICAL: --vc-* — use in ALL CSS/templates/JS
 
-   Why both exist: ~617 live references to --ds-* across CSS/templates/JS
-   pre-date the --vc-* namespace. Replacing them is Phase 5 cleanup
-   (see docs/notes/log/2026-05-14_frontend-architecture-plan.md).
+   ⚠️  LINT RULE: ห้ามเพิ่ม --ds-* ใหม่ทุกกรณี
+       Phase 5.1 (2026-05-16): --ds-* Part A ลบครบแล้ว
+       ถ้า grep --ds- เจอใน .css/.html → BUG ให้แก้ทันที
+       Quick check: grep -r "var(--ds-" app/static/css app/templates
 
-   Rule: when you touch a file with --ds-* refs, leave them alone
-   unless that file is explicitly part of your migration scope.
-   Never mix --ds-* and --vc-* in the same new component.
-
-   Migration map: see docs/notes/design_system.md §14
    No component classes here — components live in design-system.css
    and component-specific CSS files.
 
-   Updated: 2026-05-14 (Phase 1 split + Phase 3 namespace alignment —
-            docs unified to --vc-* canonical message)
+   Updated: 2026-05-16 (Phase 5.1: ลบ --ds-* Part A ทั้งหมด → migrate ครบแล้ว)
    ============================================================ */
 
 
-/* ─────────────────────────────────────────────
-   PART A — --ds-* (legacy, Vercel-Indigo)
-───────────────────────────────────────────── */
-:root {
-
-    /* ── Accent (Indigo) ─────────────────────── */
-    --ds-accent:         #4F46E5;
-    --ds-accent-hover:   #4338CA;
-    --ds-accent-dark:    #3730A3;
-    --ds-accent-light:   #EEF2FF;
-    --ds-accent-border:  #C7D2FE;
-    --ds-accent-text:    #3730A3;
-
-    /* ── Semantic Colors (Tailwind palette) ──── */
-    --ds-success:        #16A34A;
-    --ds-success-light:  #F0FDF4;
-    --ds-success-border: #BBF7D0;
-    --ds-success-text:   #14532D;
-
-    --ds-warning:        #D97706;
-    --ds-warning-light:  #FFFBEB;
-    --ds-warning-border: #FDE68A;
-    --ds-warning-text:   #78350F;
-
-    --ds-danger:         #DC2626;
-    --ds-danger-light:   #FEF2F2;
-    --ds-danger-border:  #FECACA;
-    --ds-danger-text:    #7F1D1D;
-
-    --ds-info:           #2563EB;
-    --ds-info-light:     #EFF6FF;
-    --ds-info-border:    #BFDBFE;
-    --ds-info-text:      #1E3A8A;
-
-    --ds-neutral-light:  #F4F4F5;
-    --ds-neutral-border: #E4E4E7;
-    --ds-neutral-text:   #3F3F46;
-
-    /* ── Surface & Background ────────────────── */
-    --ds-bg-page:        #FAFAFA;
-    --ds-bg-surface:     #FFFFFF;
-    --ds-bg-subtle:      #F7F7F8;
-    --ds-bg-hover:       #F5F5F6;
-
-    /* ── Border — extra-light ────────────────── */
-    --ds-border:         #EFEFEF;
-    --ds-border-strong:  #E4E4E7;
-
-    /* ── Text (Zinc) ─────────────────────────── */
-    --ds-text-heading:   #09090B;
-    --ds-text-body:      #3F3F46;
-    --ds-text-secondary: #71717A;
-    --ds-text-muted:     #A1A1AA;
-    --ds-text-disabled:  #D4D4D8;
-    --ds-text-on-accent: #FFFFFF;
-
-    /* ── Shadow — none (Vercel principle) ────── */
-    --ds-shadow-xs:  none;
-    --ds-shadow-sm:  none;
-    --ds-shadow-md:  none;
-    --ds-shadow-lg:  none;
-    --ds-shadow-xl:  none;
-    --ds-shadow-focus: 0 0 0 3px rgba(79,70,229,.18);
-
-    /* ── Border Radius — Vercel tight ────────── */
-    --ds-radius-xs:   2px;
-    --ds-radius-sm:   4px;
-    --ds-radius-md:   6px;
-    --ds-radius-lg:   6px;
-    --ds-radius-xl:   8px;
-    --ds-radius-full: 9999px;
-
-    /* ── Spacing (4px grid) ──────────────────── */
-    --ds-space-1:    4px;
-    --ds-space-2:    8px;
-    --ds-space-3:    12px;
-    --ds-space-4:    16px;
-    --ds-space-5:    20px;
-    --ds-space-6:    24px;
-    --ds-space-8:    32px;
-    --ds-space-10:   40px;
-    --ds-space-12:   48px;
-
-    /* ── Typography ──────────────────────────── */
-    --ds-font-sans:    'Sarabun', -apple-system, sans-serif;
-    --ds-font-display: 'Sarabun', sans-serif;
-    --ds-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
-
-    --ds-text-xs:    .72rem;
-    --ds-text-sm:    .8rem;
-    --ds-text-base:  .875rem;
-    --ds-text-md:    .95rem;
-    --ds-text-lg:    1.05rem;
-    --ds-text-xl:    1.2rem;
-    --ds-text-2xl:   1.5rem;
-    --ds-text-3xl:   2rem;
-
-    /* ── Z-index Scale ───────────────────────── */
-    --ds-z-base:      0;
-    --ds-z-raised:    10;
-    --ds-z-dropdown:  100;
-    --ds-z-sticky:    200;
-    --ds-z-sidebar:   300;
-    --ds-z-overlay:   400;
-    --ds-z-modal:     500;
-    --ds-z-toast:     600;
-
-    /* ── Layout ──────────────────────────────── */
-    --ds-sidebar-width:  256px;
-    --ds-header-height:  64px;
-    --ds-transition:     .12s ease;
-}
-
-
-/* ─────────────────────────────────────────────
-   PART B — --vc-* (current, Vercel-Black + Indigo accent)
-───────────────────────────────────────────── */
 :root {
 
     /* ── Surface (Vercel "accents") ──────────── */
@@ -197,6 +74,8 @@
 
     /* ── Optional violet accent ──────────────── */
     --vc-purple:         #7928CA;
+    --vc-purple-bg:      rgba(121,40,202,.10);
+    --vc-purple-border:  rgba(121,40,202,.25);
 
     /* ── Radius ──────────────────────────────── */
     --vc-radius-xs:      4px;
@@ -247,4 +126,18 @@
 
     /* ── Focus ring (2px outline, offset 2px) ── */
     --vc-focus-ring:     0 0 0 2px var(--vc-bg), 0 0 0 4px var(--vc-fg);
+
+    /* ── Z-index scale ───────────────────────── */
+    --vc-z-base:         0;
+    --vc-z-raised:       10;
+    --vc-z-dropdown:     100;
+    --vc-z-sticky:       200;
+    --vc-z-sidebar:      300;
+    --vc-z-overlay:      400;
+    --vc-z-modal:        500;
+    --vc-z-toast:        600;
+
+    /* ── Layout ──────────────────────────────── */
+    --vc-sidebar-width:  256px;
+    --vc-header-height:  64px;
 }

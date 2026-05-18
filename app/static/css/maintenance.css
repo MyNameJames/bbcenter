@@ -1,0 +1,42 @@
+/* maintenance.css — BBCenter V2 */
+
+.maintenance-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+    margin-bottom: var(--vc-space-5);
+}
+
+.maintenance-title {
+    font-size: var(--vc-text-xl);
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    color: var(--vc-fg);
+}
+
+.maintenance-subtitle {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-subtle);
+    margin: 4px 0 0;
+}
+
+.maintenance-header-actions {
+    display: flex;
+    gap: var(--vc-space-2);
+    flex-shrink: 0;
+}
+
+.maintenance-resolved-note {
+    display: block;
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-sm);
+    cursor: default;
+}

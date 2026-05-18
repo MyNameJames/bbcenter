@@ -17,6 +17,9 @@
 | 2026-05-03 | [2026-05-03_add-ot-tables.sql](2026-05-03_add-ot-tables.sql) | `ot_rate_config`, `driver_ot`, `driver_ot_slot` (3 new) | [v2.6](../../docs/notes/database/schema.md#v26--driver-ot-tables-2026-05-03) |
 | 2026-05-04 | [2026-05-04_add-fuel-management.sql](2026-05-04_add-fuel-management.sql) | `fuel_bill`, `fuel_reimbursement`, `fuel_price`, `fuel_reserve_config`, `fuel_reserve_log` (5 new) | [v2.7](../../docs/notes/database/schema.md#v27--fuel-management-tables-2026-05-04) |
 | 2026-05-06 | [2026-05-06_add-vehicle-budget-log.sql](2026-05-06_add-vehicle-budget-log.sql) | `vehicle_budget_log` (new ledger), `vehicle_mileage` (+budget_deducted_at, +last_budget_log_id), backfill opening balance | [v2.8](../../docs/notes/database/schema.md#v28--vehiclebudget-ledger-pattern-2026-05-06) |
+| 2026-05-18 | [2026-05-18_vehicle-budget-is-active.sql](2026-05-18_vehicle-budget-is-active.sql) | `vehicle_budget` (+is_active) | [v2.9](../../docs/notes/database/schema.md#v29--vehiclebudget-isactive-2026-05-18) |
+| 2026-05-18 | [2026-05-18_ot-rate-config-day-of-week.sql](2026-05-18_ot-rate-config-day-of-week.sql) | `ot_rate_config` (+day_of_week) | [v2.10](../../docs/notes/database/schema.md#v210--otrateconfig-dayofweek-2026-05-18) |
+| 2026-05-18 | [2026-05-18_vehicle-booking-ad-hoc.sql](2026-05-18_vehicle-booking-ad-hoc.sql) | `vehicle_booking` (+is_ad_hoc, +contact_name) | [v2.11](../../docs/notes/database/schema.md#v211--vehiclebooking-ad-hoc-trip-2026-05-18) |
 
 ---
 

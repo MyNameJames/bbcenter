@@ -44,6 +44,12 @@
             <span class="sb-label">ปฏิทินการจองรถ</span>
         </a>
 
+        <a class="sb-item {% if active_menu == 'room' %}active{% endif %}"
+            href="{{ url_for('room.index') }}">
+            <span class="sb-icon"><i data-lucide="users"></i></span>
+            <span class="sb-label">ปฏิทินการจองห้องประชุม</span>
+        </a>
+
         <a class="sb-item {% if active_menu == 'repair' %}active{% endif %}"
             href="{{ url_for('repair.index') }}">
             <span class="sb-icon"><i data-lucide="wrench"></i></span>
@@ -56,19 +62,13 @@
             <span class="sb-label">แจ้งซ่อมทั่วไป</span>
         </a>
 
-        <a class="sb-item {% if active_menu == 'room' %}active{% endif %}"
-            href="{{ url_for('room.index') }}">
-            <span class="sb-icon"><i data-lucide="message-square"></i></span>
-            <span class="sb-label">จองห้องประชุม</span>
-        </a>
-
         {# ─ ผู้ดูแลระบบ ─────────────────────────────── #}
         {% if current_user.role_vehicle == 'admin' or current_user.is_superadmin %}
         <div class="sb-section-label">ผู้ดูแลระบบ</div>
 
         <a class="sb-item {% if active_menu == 'admin' %}active{% endif %}"
             href="{{ url_for('vehicle.admin_trips') }}">
-            <span class="sb-icon"><i data-lucide="inbox"></i></span>
+            <span class="sb-icon"><i data-lucide="blocks"></i></span>
             <span class="sb-label">อนุมัติการจอง</span>
             {% if pending_count is defined and pending_count > 0 %}
             <span class="sb-badge">{{ pending_count }}</span>

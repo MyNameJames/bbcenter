@@ -1,322 +1,161 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจองห้องประชุม - BB-Center</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>จองห้องประชุม - BBCenter</title>
     <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet"
-        href="{{ url_for('static', filename='vendor/datatables/css/dataTables.bootstrap5.min.css') }}">
-    <link href="{{ url_for('static', filename='vendor/datatables/css/responsive.bootstrap5.min.css') }}"
-        rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <style>
-        .fc-event {
-            cursor: pointer;
-            border-radius: 4px;
-            border: none;
-            padding: 2px 4px;
-        }
-
-        .fc-event:hover {
-            opacity: 0.9;
-        }
-
-        @media (max-width: 768px) {
-            .fc .fc-toolbar {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .fc .fc-toolbar-title {
-                font-size: 1.2rem !important;
-                text-align: center;
-            }
-
-            .fc .fc-button {
-                padding: 0.3rem 0.6rem !important;
-                font-size: 0.85rem !important;
-            }
-        }
-
-        .room-badge-เล็ก {
-            background: #DBEAFE;
-            color: #1D4ED8;
-        }
-
-        .room-badge-ใหญ่ {
-            background: #FEF3C7;
-            color: #B45309;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/room.css') }}">
 </head>
+<body>
 
-<body class="bg-light">
+<div class="container-fluid container-p-y">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    {% include 'navbar.html' %}
+    {% set active_menu = 'room' %}
+    {% include '_sidebar.html' %}
 
-    <div class="container mt-5 mb-5">
+    <main class="main-content vc-scope">
+        {% set page_title = 'ปฏิทินการจองห้องประชุม' %}
+        {% include '_header.html' %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
+        <div id="calendarView" class="container-xxl px-3 pt-2">
 
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="fw-bold mb-0">
-                    <i class="fa-solid fa-people-roof text-primary me-2"></i> ระบบจองห้องประชุม
-                </h4>
-                <!-- Legend สีห้อง -->
-                <div class="d-flex gap-3 mt-2">
-                    {% for room in room_choices %}
-                    <span
-                        class="badge rounded-pill px-3 py-1 {% if 'เล็ก' in room %}room-badge-เล็ก{% else %}room-badge-ใหญ่{% endif %}">
-                        <i class="fa-solid fa-circle fa-xs me-1"></i>{{ room }}
-                    </span>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="vc-stack px-3 pt-2" style="margin-bottom: var(--vc-space-4);">
+                    {% for category, message in messages %}
+                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
                     {% endfor %}
                 </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="va-page-header">
+                <div>
+                    <h1 class="va-page-title">ปฏิทินการจองห้องประชุม</h1>
+                    <p class="va-page-subtitle">ห้องประชุมมีทั้งหมด 2 ห้อง · อยู่ที่อาคารเรียน 1 ชั้น 2</p>
+                </div>
+                <div class="va-page-header-actions"></div>
             </div>
-            <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
-                data-bs-target="#createModal">
-                <i class="fa-solid fa-plus me-1"></i> จองห้องประชุม
-            </button>
-        </div>
 
-        <!-- ปฏิทิน -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4 p-3">
-            <div id="room-calendar"></div>
-        </div>
+            {# Toolbar #}
+            <div class="flex-grow-1 pt-2 pb-3">
+                <div class="toolbar">
+                    <div class="row w-100 gx-0 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2 col-auto">
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" id="prevMonthBtn" title="เดือนก่อนหน้า">
+                                <i data-lucide="chevron-left" class="vc-icon-sm"></i>
+                            </button>
+                            <h5 class="d-flex align-items-center mx-2 mb-0 fw-bold" id="currentMonthLabel" style="text-align:center;min-width:120px;"></h5>
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" id="nextMonthBtn" title="เดือนถัดไป">
+                                <i data-lucide="chevron-right" class="vc-icon-sm"></i>
+                            </button>
+                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="todayBtn" title="กระโดดไปวันนี้">วันนี้</button>
+                        </div>
 
-        <!-- ตารางรายการ -->
-        <div class="card border-0 shadow-sm rounded-4 p-2 overflow-hidden">
-            <div class="table-responsive">
-                <table id="roomTable" class="table table-hover align-middle mb-0">
-                    <thead class="table-info text-secondary">
-                        <tr>
-                            <th class="ps-4">ห้องประชุม</th>
-                            <th>หัวข้อการประชุม</th>
-                            <th>ผู้จอง</th>
-                            <th>เวลาเริ่ม</th>
-                            <th>เวลาสิ้นสุด</th>
-                            <th class="text-center pe-4">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for b in bookings %}
-                        <tr>
-                            <td class="ps-4 fw-bold text-dark">
-                                <span
-                                    class="badge rounded-pill {% if 'เล็ก' in b.room_name %}room-badge-เล็ก{% else %}room-badge-ใหญ่{% endif %}">
-                                    {{ b.room_name }}
-                                </span>
-                            </td>
-                            <td>{{ b.title }}</td>
-                            <td>{{ b.user.full_name or b.user.username }}</td>
-                            <td>{{ b.start_time.strftime('%d/%m/%Y %H:%M') }}</td>
-                            <td>{{ b.end_time.strftime('%d/%m/%Y %H:%M') }}</td>
-                            <td class="text-center pe-4">
-                                {% if b.user_id == current_user.id %}
-                                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal"
-                                    data-bs-target="#editModal" data-id="{{ b.id }}" data-room="{{ b.room_name }}"
-                                    data-title="{{ b.title }}"
-                                    data-start="{{ b.start_time.strftime('%Y-%m-%dT%H:%M') }}"
-                                    data-end="{{ b.end_time.strftime('%Y-%m-%dT%H:%M') }}">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
-                                <form action="{{ url_for('room.delete_room', id=b.id) }}" method="POST"
-                                    class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?');">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                </form>
-                                {% else %}
-                                <i class="fa-solid fa-lock text-muted"></i> <span class="text-muted" style="font-size: 0.8rem;">NOT YOUR RECORD</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===================== MODALS (อยู่นอก table) ===================== -->
-
-    <!-- Modal: จองใหม่ -->
-    <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content border-0 shadow">
-                <form action="{{ url_for('room.book_room') }}" method="POST">
-                    <div class="modal-header bg-primary text-white border-0">
-                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus me-2"></i>จองห้องประชุม</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        {# Room legend #}
+                        <div class="d-none d-md-flex align-items-center gap-2 col-auto room-legend">
+                            {% for room in room_choices %}
+                            <span class="vc-badge room-badge room-badge--{{ 'small' if 'เล็ก' in room else 'large' }}">
+                                <span class="room-dot"></span>{{ room }}
+                            </span>
+                            {% endfor %}
+                        </div>
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label text-secondary small fw-bold">เลือกห้องประชุม</label>
-                            <select name="room_name" class="form-select" required>
-                                <option value="">-- เลือกห้องประชุม --</option>
-                                {% for room in room_choices %}
-                                <option value="{{ room }}">{{ room }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-secondary small fw-bold">หัวข้อการประชุม</label>
-                            <input type="text" name="title" class="form-control" placeholder="เช่น ประชุมแผนกประจำเดือน"
-                                required>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-secondary small fw-bold">เวลาเริ่มต้น</label>
-                                <input type="text" name="start_time" class="form-control datetimepicker" required>
+                </div>
+            </div>
+
+            <div class="flex-grow-1">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="vc-card p-3" role="grid" aria-label="ปฏิทินจองห้องประชุม">
+                            <div class="card-header bg-white">
+                                <div class="calendar-grid" role="row">
+                                    <div class="calendar-header-cell text-danger" role="columnheader" aria-label="อาทิตย์">อา</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="จันทร์">จ</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="อังคาร">อ</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="พุธ">พ</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="พฤหัสบดี">พฤ</div>
+                                    <div class="calendar-header-cell" role="columnheader" aria-label="ศุกร์">ศ</div>
+                                    <div class="calendar-header-cell text-primary" role="columnheader" aria-label="เสาร์">ส</div>
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-secondary small fw-bold">เวลาสิ้นสุด</label>
-                                <input type="text" name="end_time" class="form-control datetimepicker" required>
+                            <div class="card-body pt-2">
+                                <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer border-0">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="submit" class="btn btn-primary px-4">ยืนยันการจอง</button>
+                </div>
+
+                {# Mobile list #}
+                <div class="row d-md-none mb-3">
+                    <div class="col-12">
+                        <div class="mobile-list-header mb-2">
+                            <span id="mobileListDateLabel" class="pt-2 px-0">รายการจอง</span>
+                            <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="mobileDateCountBtn"
+                                data-bs-toggle="modal" data-bs-target="#bookingModal" title="จองห้องประชุม">
+                                <i data-lucide="plus" class="vc-icon-sm"></i>
+                                จองห้อง
+                            </button>
+                        </div>
+                        <div class="mobile-list-section" id="mobileListSection">
+                            <div id="mobileListContent"></div>
+                        </div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
+</div>
 
-    <!-- Modal: แก้ไข (อันเดียว ใช้ JS inject ข้อมูล) -->
-    <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content border-0 shadow">
-                <form id="editForm" method="POST">
-                    <div class="modal-header bg-warning text-dark border-0">
-                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i>แก้ไขการจอง</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label text-secondary small fw-bold">เลือกห้องประชุม</label>
-                            <select name="room_name" id="edit_room_name" class="form-select" required>
-                                {% for room in room_choices %}
-                                <option value="{{ room }}">{{ room }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-secondary small fw-bold">หัวข้อการประชุม</label>
-                            <input type="text" name="title" id="edit_title" class="form-control" required>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-secondary small fw-bold">เวลาเริ่มต้น</label>
-                                <input type="datetime-local" name="start_time" id="edit_start" class="form-control"
-                                    required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-secondary small fw-bold">เวลาสิ้นสุด</label>
-                                <input type="datetime-local" name="end_time" id="edit_end" class="form-control"
-                                    required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="submit" class="btn btn-warning px-4">บันทึกการแก้ไข</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/datatables/js/dataTables.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/datatables/js/dataTables.bootstrap5.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/datatables/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/datatables/js/responsive.bootstrap5.min.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/bootstrap5@6.1.11/index.global.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
+{# ══════════════════════════════════════════════════════════
+   DATA INJECTION — Jinja2 → JavaScript
+══════════════════════════════════════════════════════════ #}
+<script>
+window.ROOM_CHOICES = {{ room_choices | tojson }};
+window.BOOKINGS = [
+{% for b in bookings %}
+{
+    id:         {{ b.id }},
+    date:       "{{ b.start_time.strftime('%Y-%m-%d') }}",
+    time:       "{{ b.start_time.strftime('%H:%M') }}",
+    timeEnd:    "{{ b.end_time.strftime('%H:%M') }}",
+    room:       {{ b.room_name | tojson }},
+    title:      {{ b.title | tojson }},
+    booker:     {{ (b.user.full_name or b.user.username) | tojson }},
+    dept:       {{ (b.user.department or '') | tojson }},
+    isOwner:    {{ 'true' if b.user_id == current_user.id else 'false' }},
+    editUrl:    "{{ url_for('room.edit_room', id=b.id) }}",
+    deleteUrl:  "{{ url_for('room.delete_room', id=b.id) }}"
+}{% if not loop.last %},{% endif %}
+{% endfor %}
+];
+</script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
 
-            // Flatpickr สำหรับ create modal
-            flatpickr(".datetimepicker", {
-                enableTime: true,
-                time_24hr: true,
-                minuteIncrement: 5,
-                locale: "th",
-                dateFormat: "Y-m-d\\TH:i",
-                minDate: "today"
-            });
+{# ── Modals (แยกไฟล์ room-modal-*.html) ── #}
+{% include 'room/room-modal-book.html' %}
+{% include 'room/room-modal-edit.html' %}
+{% include 'room/room-modal-detail.html' %}
 
-            // DataTable
-            $('#roomTable').DataTable({
-                responsive: true,
-                language: {
-                    lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
-                    zeroRecords: "ไม่พบข้อมูลการจอง",
-                    info: "แสดงหน้า _PAGE_ จาก _PAGES_",
-                    infoEmpty: "ไม่มีข้อมูล",
-                    infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)",
-                    search: "ค้นหา:",
-                    emptyTable: "ยังไม่มีข้อมูลในตาราง",
-                    paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
-                },
-                order: [[3, "asc"]]
-            });
 
-            // FullCalendar
-            var calendarEl = document.getElementById('room-calendar');
-            var isMobile = window.innerWidth <= 768;
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                themeSystem: 'bootstrap5',
-                initialView: isMobile ? 'timeGridDay' : 'timeGridWeek',
-                locale: 'th',
-                height: 550,
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'timeGridWeek,timeGridDay'
-                },
-                slotMinTime: '08:00:00',
-                slotMaxTime: '22:00:00',
-                allDaySlot: false,
-                events: '/api/room/bookings'
-            });
-            calendar.render();
+<!-- Scripts -->
+<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
+<script type="module" src="{{ url_for('static', filename='js/pages/room.js') }}"></script>
 
-            // 🆕 Edit Modal: inject ข้อมูลจาก data-* attributes
-            document.getElementById('editModal').addEventListener('show.bs.modal', function (e) {
-                var btn = e.relatedTarget;
-                document.getElementById('editForm').action = '/room/edit/' + btn.dataset.id;
-                document.getElementById('edit_room_name').value = btn.dataset.room;
-                document.getElementById('edit_title').value = btn.dataset.title;
-                document.getElementById('edit_start').value = btn.dataset.start;
-                document.getElementById('edit_end').value = btn.dataset.end;
-            });
-
-        });
-    </script>
 </body>
-
 </html>

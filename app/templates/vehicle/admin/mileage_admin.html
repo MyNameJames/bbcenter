@@ -123,105 +123,175 @@
             </div>
 
             {# ── Filter Bar ─────────────────────────────── #}
-            <form method="get" action="{{ url_for('vehicle.mileage_log') }}" class="vc-filter-bar" id="filterForm">
+            <form method="get" action="{{ url_for('vehicle.mileage_log') }}" class="vc-filter-bar mlg-filter-bar" id="filterForm">
 
-                {% if f.show_all %}
-                <span class="vc-badge vc-badge-neutral">ดูทั้งหมด</span>
-                {% else %}
-                <span class="vc-badge vc-badge-neutral">
-                    <i data-lucide="calendar-days" class="vc-icon-sm"></i>
-                    กรองตามช่วงวันที่
-                </span>
-                {% endif %}
+                {# Section 1: ช่วงเวลา #}
+                <section class="mlg-filter-section">
+                    <h4 class="mlg-filter-section-title">
+                        <i data-lucide="calendar" class="vc-icon-sm"></i>
+                        ช่วงเวลา
+                    </h4>
+                    <div class="mlg-filter-section-body">
+                        <div class="vc-filter-group">
+                            <span class="vc-filter-label">จากวันที่</span>
+                            <input type="date" name="date_start" value="{{ f.date_start }}" class="vc-filter-select mlg-filter-date">
+                        </div>
+                        <div class="vc-filter-group">
+                            <span class="vc-filter-label">ถึงวันที่</span>
+                            <input type="date" name="date_end" value="{{ f.date_end }}" class="vc-filter-select mlg-filter-date">
+                        </div>
+                    </div>
+                </section>
 
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">จากวันที่</span>
-                    <input type="date" name="date_start" value="{{ f.date_start }}" class="vc-filter-select" style="min-width:130px; background-image:none;">
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">ถึงวันที่</span>
-                    <input type="date" name="date_end" value="{{ f.date_end }}" class="vc-filter-select" style="min-width:130px; background-image:none;">
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">รถ</span>
-                    <select name="vehicle_id" class="vc-filter-select" style="min-width:160px;">
-                        <option value="">ทั้งหมด</option>
-                        {% for v in vehicles_all %}
-                        <option value="{{ v.id }}" {% if f.vehicle_id == v.id %}selected{% endif %}>
-                            {{ v.license_plate }} · {{ v.brand }} {{ v.model }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">คนขับ</span>
-                    <select name="driver_id" class="vc-filter-select" style="min-width:120px;">
-                        <option value="">ทั้งหมด</option>
-                        {% for d in drivers_all %}
-                        <option value="{{ d.id }}" {% if f.driver_id == d.id %}selected{% endif %}>{{ d.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">สถานะ</span>
-                    <select name="status_filter" class="vc-filter-select">
-                        <option value="">ทั้งหมด</option>
-                        <option value="complete" {% if f.status_filter=='complete' %}selected{% endif %}>ครบ</option>
-                        <option value="partial"  {% if f.status_filter=='partial'  %}selected{% endif %}>รอกลับ</option>
-                        <option value="none"     {% if f.status_filter=='none'     %}selected{% endif %}>รอกรอก</option>
-                    </select>
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">ค่าน้ำมันต่ำสุด (฿)</span>
-                    <input type="number" name="cost_min" value="{{ f.cost_min }}" min="0" step="10"
-                           class="vc-filter-select" placeholder="0" style="min-width:80px; background-image:none;">
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">ค่าน้ำมันสูงสุด (฿)</span>
-                    <input type="number" name="cost_max" value="{{ f.cost_max }}" min="0" step="10"
-                           class="vc-filter-select" placeholder="∞" style="min-width:80px; background-image:none;">
-                </div>
+                {# Section 2: ค้นหา #}
+                <section class="mlg-filter-section">
+                    <h4 class="mlg-filter-section-title">
+                        <i data-lucide="search" class="vc-icon-sm"></i>
+                        ค้นหา
+                    </h4>
+                    <div class="mlg-filter-section-body">
+                        <div class="vc-filter-group flex-grow-1">
+                            <span class="vc-filter-label">รถ</span>
+                            <select name="vehicle_id" class="vc-filter-select" style="min-width:130px;">
+                                <option value="">ทั้งหมด</option>
+                                {% for v in vehicles_all %}
+                                <option value="{{ v.id }}" {% if f.vehicle_id == v.id %}selected{% endif %}>
+                                    {{ v.license_plate }} · {{ v.brand }} {{ v.model }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="vc-filter-group flex-grow-1">
+                            <span class="vc-filter-label">คนขับ</span>
+                            <select name="driver_id" class="vc-filter-select" style="min-width:130px;">
+                                <option value="">ทั้งหมด</option>
+                                {% for d in drivers_all %}
+                                <option value="{{ d.id }}" {% if f.driver_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="vc-filter-group flex-grow-1">
+                            <span class="vc-filter-label">ผู้จอง</span>
+                            <input type="text" name="booker_q" value="{{ f.booker_q }}" list="bookersList"
+                                   class="vc-filter-select mlg-filter-booker" placeholder="ค้นหาชื่อ…">
+                            <datalist id="bookersList">
+                                {% for u in bookers_all %}
+                                <option value="{{ u.full_name or u.username }}"></option>
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                    </div>
+                </section>
 
-                <div class="vc-filter-actions">
-                    <button type="submit" class="vc-btn vc-btn-secondary vc-btn-sm">
-                        <i data-lucide="filter" class="vc-icon-sm"></i>
-                        กรอง
-                    </button>
+                {# Section 3: งบประมาณ #}
+                <section class="mlg-filter-section">
+                    <h4 class="mlg-filter-section-title">
+                        <i data-lucide="wallet" class="vc-icon-sm"></i>
+                        งบประมาณ
+                    </h4>
+                    <div class="mlg-filter-section-body">
+                        <div class="vc-filter-group">
+                            <span class="vc-filter-label">งบ</span>
+                            <select name="budget_type" id="filterBudgetType" class="vc-filter-select" style="min-width:120px;">
+                                <option value="">ทั้งหมด</option>
+                                <option value="central"    {% if f.budget_type=='central'    %}selected{% endif %}>ส่วนกลาง</option>
+                                <option value="department" {% if f.budget_type=='department' %}selected{% endif %}>ส่วนกอง</option>
+                                <option value="personal"   {% if f.budget_type=='personal'   %}selected{% endif %}>ส่วนตัว</option>
+                            </select>
+                        </div>
+                        <div class="vc-filter-group" id="filterBudgetSubWrap">
+                            <span class="vc-filter-label">หมวด/กอง</span>
+                            <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select" style="min-width:160px;">
+                                <option value="">ทั้งหมด</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                {# Section 4: สถานะ + ค่าใช้จ่าย #}
+                <section class="mlg-filter-section">
+                    <h4 class="mlg-filter-section-title">
+                        <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i>
+                        สถานะ + ค่าใช้จ่าย
+                    </h4>
+                    <div class="mlg-filter-section-body">
+                        <div class="vc-filter-group">
+                            <span class="vc-filter-label">สถานะ</span>
+                            <select name="status_filter" class="vc-filter-select">
+                                <option value="">ทั้งหมด</option>
+                                <option value="complete" {% if f.status_filter=='complete' %}selected{% endif %}>ครบ</option>
+                                <option value="partial"  {% if f.status_filter=='partial'  %}selected{% endif %}>รอกลับ</option>
+                                <option value="none"     {% if f.status_filter=='none'     %}selected{% endif %}>รอกรอก</option>
+                            </select>
+                        </div>
+                        <div class="vc-filter-group">
+                            <span class="vc-filter-label">ค่าน้ำมันต่ำสุด (฿)</span>
+                            <input type="number" name="cost_min" value="{{ f.cost_min }}" min="0" step="10"
+                                   class="vc-filter-select mlg-filter-num" placeholder="0">
+                        </div>
+                        <div class="vc-filter-group">
+                            <span class="vc-filter-label">ค่าน้ำมันสูงสุด (฿)</span>
+                            <input type="number" name="cost_max" value="{{ f.cost_max }}" min="0" step="10"
+                                   class="vc-filter-select mlg-filter-num" placeholder="∞">
+                        </div>
+                    </div>
+                </section>
+
+                {# Actions row #}
+                <div class="mlg-filter-actions-row">
                     <a href="{{ url_for('vehicle.mileage_log') }}" class="vc-btn vc-btn-ghost vc-btn-sm" title="รีเซต (เดือนนี้)">
-                        <i data-lucide="rotate-ccw" class="vc-icon-sm"></i>
+                        เฉพาะเดือนนี้
                     </a>
                     <a href="{{ url_for('vehicle.mileage_log') }}?show_all=1"
                        class="vc-btn vc-btn-ghost vc-btn-sm {% if f.show_all %}active{% endif %}" title="ดูทุกรายการ">
-                        <i data-lucide="list" class="vc-icon-sm"></i>
                         ทั้งหมด
                     </a>
+                    <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm" title="กรอง">
+                        <i data-lucide="filter" class="vc-icon-sm"></i>
+                        กรอง
+                    </button>
                 </div>
 
             </form>
 
             {# ── Summary Strip ──────────────────────────── #}
-            <div class="vc-card" id="summaryStrip"
-                 style="margin-bottom: var(--vc-space-3); padding: var(--vc-space-3) var(--vc-space-5);">
+            <div class="vc-card mlg-summary-strip" id="summaryStrip">
 
-                <div class="d-flex align-items-center gap-2" id="modeAll"
-                     style="font-size: var(--vc-text-sm); color: var(--vc-fg-muted);">
-                    <i data-lucide="list" class="vc-icon-sm"></i>
-                    <span>ทั้งหมด <strong style="color:var(--vc-fg);">{{ rows|length }}</strong> รายการ</span>
+                <div class="mlg-summary-mode" id="modeAll">
+                    <i data-lucide="list" class="vc-icon-sm mlg-summary-icon"></i>
+                    <span class="mlg-summary-item">
+                        <span class="mlg-summary-label">ทั้งหมด</span>
+                        <strong>{{ display_rows|length }} รายการ</strong>
+                    </span>
                     <span class="vc-dot-sep">·</span>
-                    <span>ระยะรวม <strong id="sumAllDistance" style="color:var(--vc-fg);">—</strong> กม.</span>
+                    <span class="mlg-summary-item">
+                        <span class="mlg-summary-label">ระยะรวม</span>
+                        <strong><span id="sumAllDistance">—</span> กม.</strong>
+                    </span>
                     <span class="vc-dot-sep">·</span>
-                    <span>ค่าน้ำมันรวม <strong id="sumAllCost" style="color:var(--vc-fg);">—</strong> ฿</span>
+                    <span class="mlg-summary-item">
+                        <span class="mlg-summary-label">ค่าน้ำมันรวม</span>
+                        <strong><span id="sumAllCost">—</span> ฿</strong>
+                    </span>
                 </div>
 
-                <div class="d-flex align-items-center gap-2" id="modeSelected"
-                     style="display:none; font-size: var(--vc-text-sm); color: var(--vc-fg-muted);">
-                    <i data-lucide="square-check" class="vc-icon-sm"></i>
-                    <span>เลือก <strong id="selCount" style="color:var(--vc-fg);">0</strong> รายการ</span>
+                <div class="mlg-summary-mode mlg-summary-mode--hidden" id="modeSelected">
+                    <i data-lucide="square-check" class="vc-icon-sm mlg-summary-icon"></i>
+                    <span class="mlg-summary-item">
+                        <span class="mlg-summary-label">เลือก</span>
+                        <strong><span id="selCount">0</span> รายการ</strong>
+                    </span>
                     <span class="vc-dot-sep">·</span>
-                    <span>ระยะรวม <strong id="selDistance" style="color:var(--vc-fg);">0</strong> กม.</span>
+                    <span class="mlg-summary-item">
+                        <span class="mlg-summary-label">ระยะรวม</span>
+                        <strong><span id="selDistance">0</span> กม.</strong>
+                    </span>
                     <span class="vc-dot-sep">·</span>
-                    <span>ค่าน้ำมันรวม <strong id="selCost" style="color:var(--vc-fg);">0</strong> ฿</span>
-                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm ms-auto" onclick="clearSelection()">
+                    <span class="mlg-summary-item">
+                        <span class="mlg-summary-label">ค่าน้ำมันรวม</span>
+                        <strong><span id="selCost">0</span> ฿</strong>
+                    </span>
+                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm mlg-summary-clear" onclick="clearSelection()" title="ล้างการเลือก">
                         <i data-lucide="x" class="vc-icon-sm"></i> ล้างการเลือก
                     </button>
                 </div>
@@ -235,11 +305,11 @@
                     <h3 class="vc-card-head-title">
                         <i data-lucide="list" class="vc-icon-sm"></i>
                         รายการ Booking
-                        <span class="vc-card-head-meta">{{ rows|length }} รายการ</span>
+                        <span class="vc-card-head-meta">{{ display_rows|length }} รายการ</span>
                     </h3>
                 </div>
 
-                {% if rows %}
+                {% if display_rows %}
                 <div class="table-responsive">
                     <table class="vc-table mb-0">
                         <thead>
@@ -248,9 +318,11 @@
                                     <input type="checkbox" id="checkAll" class="vc-checkbox">
                                 </th>
                                 <th>Booking</th>
+                                <th>งบ</th>
                                 <th>ผู้จอง</th>
-                                <th>รถ</th>
+                                <th>ทะเบียน</th>
                                 <th>คนขับ</th>
+                                <th class="text-center">เติมน้ำมัน</th>
                                 <th>ปลายทาง</th>
                                 <th class="text-end">ไมล์ออก</th>
                                 <th class="text-end">ไมล์กลับ</th>
@@ -262,23 +334,22 @@
                         </thead>
                         <tbody>
                         {% set ns = namespace(prev_date=None) %}
-                        {% for r in rows %}
+                        {% for dr in display_rows %}
+                        {% set r = dr.row %}
                         {% set b = r.b %}
                         {% set m = r.m %}
+                        {% set is_group = dr.kind == 'group' %}
+                        {% set driver_first = (b.driver.name.split(' ')[0] if b.driver and b.driver.name else '') %}
                         {% set row_date = b.start_datetime.strftime('%Y-%m-%d') %}
                         {% if row_date != ns.prev_date %}
                         <tr class="mlg-date-group">
-                            <td colspan="12" style="background:var(--vc-bg-subtle); color:var(--vc-fg-muted);
-                                                    font-size:var(--vc-text-xs); font-weight:500;
-                                                    padding:var(--vc-space-2) var(--vc-space-4);
-                                                    border-bottom:1px solid var(--vc-border);">
-                                <i data-lucide="calendar-days" class="vc-icon-sm"></i>
+                            <td colspan="14" class="mlg-date-cell">
                                 {{ b.start_datetime.day }} {{ TH_MONTH_FULL[b.start_datetime.month-1] }} {{ b.start_datetime.year + 543 }}
                             </td>
                         </tr>
                         {% set ns.prev_date = row_date %}
                         {% endif %}
-                        <tr class="mlg-row"
+                        <tr class="mlg-row{% if is_group %} mlg-row--group{% endif %}"
                             data-booking="{{ b.id }}"
                             data-distance="{{ r.distance or 0 }}"
                             data-cost="{{ r.fuel_cost or 0 }}"
@@ -286,7 +357,7 @@
                             data-odo-start="{{ m.odometer_start if m and m.odometer_start else '' }}"
                             data-odo-end="{{ m.odometer_end if m and m.odometer_end else '' }}"
                             data-destination="{{ b.destination or '' }}"
-                            data-user="{{ b.user.full_name or b.user.username }}"
+                            data-user="{% if is_group %}งานร่วม {{ dr.count }} รายการ{% else %}{{ b.user.full_name or b.user.username }}{% endif %}"
                             data-time="{{ b.start_datetime.strftime('%H:%M') }} – {{ b.end_datetime.strftime('%H:%M') }}"
                             data-vehicle="{{ (b.assigned_vehicle.brand ~ ' ' ~ b.assigned_vehicle.model ~ ' (' ~ b.assigned_vehicle.license_plate ~ ')') if b.assigned_vehicle else '-' }}"
                             data-fuel-rate="{{ b.assigned_vehicle.fuel_rate if b.assigned_vehicle and b.assigned_vehicle.fuel_rate else 10 }}"
@@ -296,32 +367,50 @@
                                 <input type="checkbox" class="vc-checkbox mlg-row-check"
                                        {% if r.status_key != 'complete' %}disabled title="เลือกได้เฉพาะที่ครบแล้ว"{% endif %}>
                             </td>
-                            <td style="font-family:var(--vc-font-mono); font-size:var(--vc-text-xs); color:var(--vc-fg-muted);">
+                            <td class="mlg-col-bk">
                                 BK-{{ b.id }}
+                                {% if is_group %}
+                                <span class="vc-badge vc-badge-blue vc-badge-dot mlg-group-badge" title="trip รวม {{ dr.count }} booking">+{{ dr.count - 1 }}</span>
+                                {% endif %}
                             </td>
-                            <td>{{ b.user.full_name or b.user.username }}</td>
                             <td>
-                                {% if b.assigned_vehicle %}
-                                <div class="vc-td-strong" style="font-size:var(--vc-text-xs);">{{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}</div>
-                                <div class="vc-td-muted" style="font-size:var(--vc-text-xs);">{{ b.assigned_vehicle.license_plate }}</div>
-                                {% else %}<span class="vc-td-muted">—</span>{% endif %}
+                                <div class="vc-td-strong mlg-budget-label">{{ r.budget_label }}</div>
+                                {% if r.budget_sub %}
+                                <div class="vc-td-muted mlg-budget-sub">{{ r.budget_sub }}</div>
+                                {% endif %}
                             </td>
-                            <td class="vc-td-muted">{{ b.driver.name if b.driver else '—' }}</td>
+                            <td>
+                                {% if is_group %}
+                                <span class="vc-td-strong mlg-group-label">
+                                    <i data-lucide="users" class="vc-icon-sm"></i>
+                                    งานร่วม {{ dr.count }} รายการ
+                                </span>
+                                {% else %}
+                                {{ b.user.full_name or b.user.username }}
+                                {% endif %}
+                            </td>
+                            <td class="vc-td-strong">
+                                {% if b.assigned_vehicle %}{{ b.assigned_vehicle.license_plate }}{% else %}<span class="vc-td-muted">—</span>{% endif %}
+                            </td>
+                            <td class="vc-td-muted">{{ driver_first or '—' }}</td>
+                            <td class="text-center">
+                                {% if r.has_refuel %}
+                                <a href="{{ url_for('fuel.admin_fuel', vehicle_id=b.assigned_vehicle_id) }}"
+                                   class="mlg-refuel-link" title="มีการเติมน้ำมันใน trip นี้ — คลิกเพื่อดู">
+                                    <span class="vc-badge vc-badge-blue vc-badge-dot">
+                                        <i data-lucide="fuel" class="vc-icon-sm"></i> เติมน้ำมัน
+                                    </span>
+                                </a>
+                                {% else %}
+                                <span class="vc-td-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td class="mlg-col-dest vc-td-muted" title="{{ b.destination or '' }}">{{ b.destination or '—' }}</td>
                             <td class="vc-td-num vc-td-muted">
                                 {% if m and m.odometer_start %}{{ '{:,}'.format(m.odometer_start) }}{% else %}—{% endif %}
                             </td>
                             <td class="vc-td-num vc-td-muted">
                                 {% if m and m.odometer_end %}{{ '{:,}'.format(m.odometer_end) }}{% else %}—{% endif %}
-                                {% if m and m.odometer_end and refuel_keys and (b.assigned_vehicle_id, m.odometer_end) in refuel_keys %}
-                                <a href="{{ url_for('fuel.admin_fuel', vehicle_id=b.assigned_vehicle_id) }}"
-                                   class="ms-1" style="text-decoration:none;"
-                                   title="มีบิลค่าน้ำมันที่ไมล์นี้ — คลิกเพื่อดู">
-                                    <span class="vc-badge vc-badge-blue" style="font-size:.65rem;">
-                                        <i data-lucide="fuel" style="width:10px;height:10px;"></i> เติมน้ำมัน
-                                    </span>
-                                </a>
-                                {% endif %}
                             </td>
                             <td class="vc-td-num vc-td-muted">
                                 {% if r.distance %}{{ '{:,}'.format(r.distance) }} กม.{% else %}—{% endif %}
@@ -672,9 +761,14 @@
 
 <script>
     window.MLG_FUEL_PRICE = {{ fuel_price }};
+    window.EXPENSE_CATS = {
+        central:    {{ budget_subs.central    | tojson }},
+        department: {{ budget_subs.department | tojson }}
+    };
+    window.MLG_FILTER_SUB = {{ f.budget_sub | tojson }};
 </script>
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/mileage_admin.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/pages/mileage-admin.js') }}"></script>
 </body>
 </html>

@@ -1,0 +1,67 @@
+{# room-modal-edit.html — Modal แก้ไขการจองห้อง
+   วิธีใช้: {% include 'room/room-modal-edit.html' %}
+   JS: openEditBookingModal() + flatpickr อยู่ใน room.js
+#}
+<div class="modal fade" id="editBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered bk-modal-dialog">
+        <div class="card modal-content border-0 bk-modal-content">
+            <form id="editBookingForm" method="POST" novalidate>
+
+                <div class="card-header bg-white d-flex align-items-start">
+                    <div class="d-flex align-items-start gap-3 flex-grow-1">
+                        <span class="ps-1 pt-1"><i data-lucide="pencil" style="width:22px;height:22px;color:var(--vc-fg-muted);"></i></span>
+                        <div>
+                            <div class="bk-row-main">แก้ไขการจองห้องประชุม</div>
+                            <div class="bk-row-sub">แก้ไขได้เฉพาะรายการของคุณเอง</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="card-body">
+                    <hr class="bk-divider">
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>เลือกห้องประชุม :</small></label>
+                        <select name="room_name" id="editRoomName" class="form-select" required>
+                            {% for room in room_choices %}
+                            <option value="{{ room }}">{{ room }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">กรุณาเลือกห้องประชุม</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>หัวข้อการประชุม :</small></label>
+                        <input type="text" name="title" id="editTitle" class="form-control" required>
+                        <div class="invalid-feedback">กรุณาระบุหัวข้อการประชุม</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>วันและเวลาเริ่ม :</small></label>
+                        <input type="text" name="start_time" id="editStartDatetime"
+                            class="form-control" placeholder="เลือกวันและเวลา" required>
+                        <div class="invalid-feedback">กรุณาเลือกวัน-เวลาเริ่ม</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1"><small>วันและเวลาสิ้นสุด :</small></label>
+                        <input type="text" name="end_time" id="editEndDatetime"
+                            class="form-control" placeholder="เลือกวันและเวลา" required>
+                        <div class="invalid-feedback">กรุณาเลือกวัน-เวลาสิ้นสุด</div>
+                    </div>
+
+                </div>
+
+                <div class="card-footer bg-white d-flex justify-content-end gap-2 pt-2 pb-3">
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary" title="บันทึกการแก้ไข">
+                        บันทึก
+                        <i data-lucide="check" class="vc-icon-sm"></i>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

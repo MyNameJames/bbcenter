@@ -1,7 +1,12 @@
 /* ============================================================
-   Approver Inbox — BBCenter design system
+   Approver Inbox — BBCenter design system (mobile-first)
    Scope: uses --vc-* tokens only.
    ============================================================ */
+
+.approver-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+}
 
 /* ── Flash alert ─────────────────────── */
 .approver-flash {
@@ -17,69 +22,85 @@
     padding: 14px 16px;
     margin-bottom: 12px;
 }
+.budget-card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.budget-card-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.budget-card-icon { color: var(--vc-fg-subtle); }
+.budget-card-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--vc-fg);
+}
+.budget-card-amount {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--vc-fg);
+}
+.budget-card-total {
+    color: var(--vc-fg-subtle);
+    font-weight: 400;
+}
 .budget-progress {
     height: 4px;
     background: var(--vc-border);
     border-radius: 4px;
     overflow: hidden;
-    margin: 8px 0 5px;
+    margin: 10px 0 6px;
 }
 .budget-bar {
     height: 100%;
     background: var(--vc-fg);
     border-radius: 4px;
+    transition: width .25s;
 }
-.ac-budget-icon   { font-size: .78rem; color: var(--vc-fg-subtle); }
-.ac-budget-name   { font-size: .875rem; font-weight: 600; color: var(--vc-fg); }
-.ac-budget-amount { font-size: .875rem; font-weight: 600; color: var(--vc-fg); }
-.ac-budget-total  { color: var(--vc-fg-subtle); font-weight: 400; }
-.ac-budget-used   { font-size: .74rem; color: var(--vc-fg-subtle); }
+.budget-card-used {
+    font-size: 0.74rem;
+    color: var(--vc-fg-subtle);
+}
+.budget-card-sep {
+    margin: 0 4px;
+}
 
-/* ── Tabs ─────────────────────────────── */
+/* ── Tabs (pill style) ────────────────── */
 .inbox-tabs {
     display: flex;
-    border-bottom: 1.5px solid var(--vc-border);
-    margin-bottom: 14px;
+    gap: 4px;
+    padding: 4px;
+    background: var(--vc-bg-hover);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    margin: 14px 0;
 }
 .inbox-tab {
     flex: 1;
-    padding: 10px 4px;
+    padding: 8px 10px;
     text-align: center;
     font-size: 0.82rem;
     font-weight: 500;
     color: var(--vc-fg-subtle);
     cursor: pointer;
-    border: none;
-    background: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1.5px;
-    transition: color .15s, border-color .15s;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: var(--vc-radius-xs);
+    transition: background .15s, color .15s, border-color .15s;
 }
+.inbox-tab:hover { color: var(--vc-fg); }
 .inbox-tab.active {
+    background: var(--vc-bg);
     color: var(--vc-fg);
     font-weight: 600;
-    border-bottom-color: var(--vc-fg);
-}
-.tab-count-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--vc-bg-hover);
-    color: var(--vc-fg-subtle);
-    border-radius: 99px;
-    padding: 0 6px;
-    height: 18px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    margin-left: 4px;
-    vertical-align: middle;
-}
-.inbox-tab.active .tab-count-badge {
-    background: var(--vc-fg);
-    color: var(--vc-fg-inverted);
+    border-color: var(--vc-border);
 }
 
-/* ── Booking Card ─────────────────────── */
+/* ── Approver Card ─────────────────────── */
 .approver-card {
     background: var(--vc-bg);
     border: 1px solid var(--vc-border);
@@ -100,18 +121,28 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
+}
+.ac-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
 .ac-ref {
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 700;
     color: var(--vc-fg);
+    letter-spacing: 0.02em;
 }
 .ac-meta {
     font-size: 0.78rem;
     color: var(--vc-fg-subtle);
 }
+.ac-meta-sep {
+    margin: 0 4px;
+}
 .ac-chevron {
-    font-size: 0.68rem;
     color: var(--vc-fg-muted);
     transition: transform .2s;
     flex-shrink: 0;
@@ -119,57 +150,131 @@
 .ac-chevron.rotated { transform: rotate(180deg); }
 .ac-body {
     border-top: 1px solid var(--vc-border);
-    padding: 14px 16px 16px;
+    padding: 16px;
 }
+
+/* ── Field grid ─────────────────────────── */
+.ac-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 14px;
+    margin-bottom: 16px;
+}
+.ac-field-full { grid-column: 1 / -1; }
 .ac-field-label {
-    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
     font-weight: 500;
     color: var(--vc-fg-subtle);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
+}
+.ac-field-label .vc-icon-sm {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 .ac-field-value {
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: 0.9rem;
+    font-weight: 600;
     color: var(--vc-fg);
+    line-height: 1.35;
+    word-break: break-word;
 }
 .ac-reject-reason { color: var(--vc-red); }
 
-/* ── Reject inline form ──────────────── */
-.ac-reject-input  { border-radius: var(--vc-radius-sm) !important; font-size: .85rem !important; }
-.ac-reject-cancel { border: 1px solid var(--vc-border) !important; border-radius: var(--vc-radius-sm) !important; }
+/* ── Action row (2 buttons side-by-side) ── */
+.ac-action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.ac-action-form { width: 100%; }
 
-/* ── Action Buttons ───────────────────── */
-.btn-approve-action {
+.btn-approve-action,
+.btn-reject-action {
     width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--vc-radius-sm);
+    cursor: pointer;
+    transition: opacity .15s, background .15s, border-color .15s;
+}
+.btn-approve-action {
     background: var(--vc-primary);
     color: var(--vc-on-primary);
     border: 1.5px solid var(--vc-primary);
-    border-radius: var(--vc-radius-sm);
-    padding: 10px 16px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity .15s;
 }
-.btn-approve-action:hover { opacity: 0.85; }
+.btn-approve-action:hover { background: var(--vc-primary-hover); border-color: var(--vc-primary-hover); }
 .btn-reject-action {
-    width: 100%;
     background: var(--vc-bg);
     color: var(--vc-red);
     border: 1.5px solid var(--vc-red-border);
-    border-radius: var(--vc-radius-sm);
-    padding: 10px 16px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background .15s, border-color .15s;
 }
 .btn-reject-action:hover {
     background: var(--vc-red-bg);
     border-color: var(--vc-red);
 }
 
-/* ── Empty state (FA icon inside vc-empty) ── */
-.approver-empty-icon { font-size: 1.1rem; }
+/* ── Reject inline form ──────────────── */
+.ac-reject-wrap { margin-top: 10px; }
+.ac-reject-input {
+    border-radius: var(--vc-radius-sm) !important;
+    font-size: .875rem !important;
+    margin-bottom: 8px;
+}
+.ac-reject-cancel {
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--vc-radius-sm);
+    border: 1.5px solid var(--vc-border);
+    background: var(--vc-bg);
+    color: var(--vc-fg);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+.ac-reject-cancel:hover {
+    border-color: var(--vc-border-hover);
+    background: var(--vc-bg-hover);
+}
+.btn-reject-confirm {
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--vc-radius-sm);
+    border: 1.5px solid var(--vc-red);
+    background: var(--vc-red);
+    color: var(--vc-on-primary);
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.btn-reject-confirm:hover {
+    background: var(--vc-red-hover);
+    border-color: var(--vc-red-hover);
+}
+
+/* ── Empty state (lucide icon inside vc-empty) ── */
+.vc-empty .vc-icon-sm {
+    width: 20px;
+    height: 20px;
+}
+
+/* ── Responsive tweaks ────────────────── */
+@media (max-width: 380px) {
+    .ac-fields { gap: 14px 10px; }
+    .ac-field-value { font-size: 0.875rem; }
+    .btn-approve-action,
+    .btn-reject-action {
+        font-size: 0.82rem;
+        padding: 10px 12px;
+    }
+}

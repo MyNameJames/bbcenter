@@ -1,0 +1,52 @@
+{# room-modal-detail.html — Modal รายละเอียดการจองห้อง
+   JS: openEventDetail() อยู่ใน room.js
+#}
+<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable bk-modal-dialog">
+        <div class="modal-content bk-modal-content">
+
+            <div class="card-header bg-white border-0 pt-4 pb-3 px-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div id="detailHeaderDot" class="room-detail-dot flex-shrink-0">
+                        <i id="detailHeaderIcon" data-lucide="people-roof" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="bk-detail-title">รายละเอียดการจองห้อง</div>
+                        <div id="detailDateLine" class="bk-detail-date"></div>
+                    </div>
+                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="bk-detail-divider"></div>
+
+            <div class="bk-detail-info">
+                <div class="bk-detail-row">
+                    <i data-lucide="clock" class="bk-detail-icon"></i>
+                    <span id="detailTime" class="bk-detail-text"></span>
+                </div>
+                <div class="bk-detail-row">
+                    <i data-lucide="door-open" class="bk-detail-icon"></i>
+                    <span id="detailRoom" class="bk-detail-text"></span>
+                </div>
+                <div class="bk-detail-row">
+                    <i data-lucide="file-text" class="bk-detail-icon"></i>
+                    <span id="detailTitle" class="bk-detail-text"></span>
+                </div>
+            </div>
+
+            <div class="bk-detail-divider"></div>
+
+            <div class="px-4 pt-4 pb-2">
+                <span class="bk-detail-section-label">ผู้จอง</span>
+            </div>
+
+            <div id="detailBookerBlock" class="px-4 pb-2"></div>
+
+            <div class="card-footer border-0 bg-white pb-3 pt-2">
+                <div id="detailActions" class="d-flex justify-content-end gap-2"></div>
+            </div>
+
+        </div>
+    </div>
+</div>

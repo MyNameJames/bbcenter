@@ -14,6 +14,7 @@
    </div>
 
    Modifiers:
+     .vc-kpi-group--4           grid 4-col (collapses 2 / 1)
      .vc-kpi-group--6           grid 6-col (collapses 3 / 2 / 1)
      .vc-kpi-value--muted       neutral grey
      .vc-kpi-value--success     green
@@ -102,6 +103,27 @@
 }
 
 
+/* ── 4-cell variant ────────────────────────────── */
+.vc-kpi-group--4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 991.98px) {
+    .vc-kpi-group--4 { grid-template-columns: repeat(2, 1fr); }
+    .vc-kpi-group--4 .vc-kpi-cell:nth-child(2n)  { border-right: none; }
+    .vc-kpi-group--4 .vc-kpi-cell:nth-child(-n+2) { border-bottom: 1px solid var(--vc-border); }
+}
+
+@media (max-width: 575.98px) {
+    .vc-kpi-group--4 { grid-template-columns: 1fr; }
+    .vc-kpi-group--4 .vc-kpi-cell {
+        border-right: none;
+        border-bottom: 1px solid var(--vc-border);
+    }
+    .vc-kpi-group--4 .vc-kpi-cell:last-child { border-bottom: none; }
+}
+
+
 /* ── 6-cell variant (budget_admin) ─────────────── */
 .vc-kpi-group--6 {
     grid-template-columns: repeat(6, 1fr);
@@ -123,10 +145,10 @@
 
 /* ── Responsive: default 3-col stack on tablet ── */
 @media (max-width: 991.98px) {
-    .vc-kpi-group:not(.vc-kpi-group--6) { grid-template-columns: 1fr; }
-    .vc-kpi-group:not(.vc-kpi-group--6) .vc-kpi-cell {
+    .vc-kpi-group:not(.vc-kpi-group--6):not(.vc-kpi-group--4) { grid-template-columns: 1fr; }
+    .vc-kpi-group:not(.vc-kpi-group--6):not(.vc-kpi-group--4) .vc-kpi-cell {
         border-right: none;
         border-bottom: 1px solid var(--vc-border);
     }
-    .vc-kpi-group:not(.vc-kpi-group--6) .vc-kpi-cell:last-child { border-bottom: none; }
+    .vc-kpi-group:not(.vc-kpi-group--6):not(.vc-kpi-group--4) .vc-kpi-cell:last-child { border-bottom: none; }
 }

@@ -1,0 +1,103 @@
+/* ══════════════════════════════════════════════════════════
+   room.css — page-specific styles for ปฏิทินการจองห้องประชุม
+   reuse vehicle.css calendar grid + override room-specific bits
+══════════════════════════════════════════════════════════ */
+
+/* Room legend badges in toolbar */
+.room-legend {
+    flex-wrap: wrap;
+}
+.room-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--vc-radius-xs);
+    border: 1px solid var(--vc-border);
+}
+.room-badge .room-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.room-badge--small {
+    background: var(--vc-blue-bg);
+    color: var(--vc-blue);
+    border-color: var(--vc-blue-border);
+}
+.room-badge--small .room-dot { background: var(--vc-blue); }
+
+.room-badge--large {
+    background: var(--vc-amber-bg);
+    color: var(--vc-amber);
+    border-color: var(--vc-amber-border);
+}
+.room-badge--large .room-dot { background: var(--vc-amber); }
+
+/* Event card colors per room (overrides on top of vehicle.css .event-card) */
+.event-card.room-small {
+    background: var(--vc-blue-bg);
+    border-color: var(--vc-blue-border);
+    color: var(--vc-blue);
+}
+.event-card.room-large {
+    background: var(--vc-amber-bg);
+    border-color: var(--vc-amber-border);
+    color: var(--vc-amber);
+}
+
+/* Mobile list card — small room indicator dot */
+.room-list-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.room-list-dot--small {
+    background: var(--vc-blue-bg);
+    color: var(--vc-blue);
+}
+.room-list-dot--large {
+    background: var(--vc-amber-bg);
+    color: var(--vc-amber);
+}
+
+/* Detail modal header dot */
+.room-detail-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg);
+}
+.room-detail-dot.room-detail-dot--small {
+    background: var(--vc-blue-bg);
+    color: var(--vc-blue);
+}
+.room-detail-dot.room-detail-dot--large {
+    background: var(--vc-amber-bg);
+    color: var(--vc-amber);
+}
+
+/* Empty state inside mobile list */
+.room-mobile-empty {
+    text-align: center;
+    padding: var(--vc-space-6) var(--vc-space-3);
+    color: var(--vc-fg-subtle);
+}
+.room-mobile-empty i {
+    width: 32px;
+    height: 32px;
+    opacity: .6;
+    display: block;
+    margin: 0 auto var(--vc-space-2);
+}

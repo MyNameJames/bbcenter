@@ -1,0 +1,352 @@
+/* ============================================================
+   dashboard.css — landing page after login
+   - Vercel shell (vc-* tokens, no shadow, sharp borders)
+   - Entrance: stagger fade-up (Emil-style)
+   - Hover: border-hover only — no shadow / no translateY
+   ============================================================ */
+
+/* ── Page header ──────────────────────────────────────────── */
+.dash-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+    margin-bottom: var(--vc-space-5);
+    flex-wrap: wrap;
+}
+.dash-title {
+    font-size: var(--vc-text-xl);
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: var(--vc-tracking-tight);
+}
+.dash-subtitle {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-subtle);
+    margin: 4px 0 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Section label (eyebrow) ──────────────────────────────── */
+.dash-section-label {
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    color: var(--vc-fg-subtle);
+    letter-spacing: var(--vc-tracking-wide);
+    text-transform: uppercase;
+    margin: 0 0 var(--vc-space-3);
+}
+
+/* ── Section spacing ──────────────────────────────────────── */
+.dash-section {
+    margin-bottom: var(--vc-space-6);
+}
+
+/* ── Grid layouts ─────────────────────────────────────────── */
+.dash-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--vc-space-3);
+}
+.dash-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--vc-space-3);
+}
+.dash-grid-2 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--vc-space-4);
+}
+@media (max-width: 991px) {
+    .dash-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .dash-grid-3 { grid-template-columns: 1fr; }
+    .dash-grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 575px) {
+    .dash-grid-4 { grid-template-columns: 1fr; }
+}
+
+/* ── My-tickets card (linkable row) ──────────────────────── */
+.dash-mine {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--vc-transition), background var(--vc-transition);
+}
+.dash-mine:hover {
+    border-color: var(--vc-border-hover);
+    background: var(--vc-bg-subtle);
+    color: inherit;
+}
+.dash-mine:active { transform: scale(0.99); }
+.dash-mine-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--vc-radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    color: var(--vc-fg);
+    flex-shrink: 0;
+}
+.dash-mine-body {
+    flex: 1;
+    min-width: 0;
+}
+.dash-mine-title {
+    font-size: var(--vc-text-sm);
+    font-weight: 600;
+    margin: 0;
+    color: var(--vc-fg);
+}
+.dash-mine-desc {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    margin: 2px 0 0;
+}
+.dash-mine-desc strong {
+    font-weight: 600;
+    color: var(--vc-fg);
+    font-variant-numeric: tabular-nums;
+}
+.dash-mine-chev {
+    color: var(--vc-fg-disabled);
+    transition: transform var(--vc-transition), color var(--vc-transition);
+    flex-shrink: 0;
+}
+.dash-mine:hover .dash-mine-chev {
+    transform: translateX(2px);
+    color: var(--vc-fg-muted);
+}
+
+/* ── Service card (4 services) ───────────────────────────── */
+.dash-svc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-4);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--vc-transition), background var(--vc-transition);
+    height: 100%;
+}
+.dash-svc:hover {
+    border-color: var(--vc-border-hover);
+    color: inherit;
+}
+.dash-svc:active { transform: scale(0.99); }
+.dash-svc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vc-space-2);
+}
+.dash-svc-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--vc-radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    color: var(--vc-fg);
+    flex-shrink: 0;
+}
+.dash-svc-title {
+    font-size: var(--vc-text-base);
+    font-weight: 600;
+    margin: 0;
+    color: var(--vc-fg);
+    letter-spacing: var(--vc-tracking-tight);
+}
+.dash-svc-desc {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    margin: 0;
+    line-height: 1.55;
+    min-height: 2.6em;
+}
+.dash-svc-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vc-space-2);
+    margin-top: auto;
+    padding-top: var(--vc-space-2);
+}
+.dash-svc-cta {
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    color: var(--vc-fg-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color var(--vc-transition), transform var(--vc-transition);
+}
+.dash-svc:hover .dash-svc-cta {
+    color: var(--vc-fg);
+}
+.dash-svc:hover .dash-svc-cta i { transform: translateX(2px); }
+.dash-svc-cta i { transition: transform var(--vc-transition); }
+
+/* ── KPI strip (admin overview) ──────────────────────────── */
+.dash-kpi {
+    padding: var(--vc-space-4);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-2);
+}
+.dash-kpi-label {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-subtle);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+.dash-kpi-value {
+    font-size: var(--vc-text-2xl);
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
+    letter-spacing: var(--vc-tracking-tight);
+    font-variant-numeric: tabular-nums;
+}
+.dash-kpi-value--muted { color: var(--vc-fg-subtle); }
+.dash-kpi-meta {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    margin: 0;
+}
+
+/* ── Alert banner (pending work) ──────────────────────────── */
+.dash-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    background: var(--vc-amber-bg);
+    border: 1px solid var(--vc-amber-border);
+    border-radius: var(--vc-radius-sm);
+    color: var(--vc-fg);
+    font-size: var(--vc-text-sm);
+    margin-bottom: var(--vc-space-5);
+}
+.dash-alert i { color: var(--vc-amber); flex-shrink: 0; margin-top: 2px; }
+.dash-alert strong { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ── Superadmin banner ────────────────────────────────────── */
+.dash-superadmin {
+    margin-top: var(--vc-space-6);
+    padding: var(--vc-space-4) var(--vc-space-5);
+    background: var(--vc-bg-inverted);
+    border: 1px solid var(--vc-bg-inverted);
+    border-radius: var(--vc-radius-sm);
+    color: var(--vc-fg-inverted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+}
+.dash-superadmin-info { display: flex; align-items: center; gap: var(--vc-space-3); }
+.dash-superadmin-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--vc-radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+}
+.dash-superadmin-title {
+    font-size: var(--vc-text-base);
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: var(--vc-tracking-tight);
+}
+.dash-superadmin-desc {
+    font-size: var(--vc-text-xs);
+    color: rgba(255,255,255,0.65);
+    margin: 2px 0 0;
+}
+.dash-superadmin .vc-btn {
+    background: var(--vc-fg-inverted);
+    color: var(--vc-fg);
+    border-color: var(--vc-fg-inverted);
+}
+.dash-superadmin .vc-btn:hover {
+    background: rgba(255,255,255,0.85);
+    border-color: rgba(255,255,255,0.85);
+}
+
+/* ── Recent table small touches ──────────────────────────── */
+.dash-recent-card .vc-table th {
+    font-size: var(--vc-text-xs);
+}
+.dash-recent-card .vc-table td {
+    font-size: var(--vc-text-sm);
+    vertical-align: middle;
+}
+.dash-recent-card .dash-recent-sub {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-subtle);
+    display: block;
+    margin-top: 2px;
+}
+.dash-recent-card .dash-recent-time {
+    font-variant-numeric: tabular-nums;
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-xs);
+}
+
+/* ── Mobile compaction ───────────────────────────────────── */
+@media (max-width: 575px) {
+    .dash-superadmin { flex-direction: column; align-items: stretch; }
+    .dash-superadmin .vc-btn { width: 100%; justify-content: center; }
+    .dash-kpi-value { font-size: var(--vc-text-xl); }
+}
+
+/* ============================================================
+   Entrance animation — Emil-style
+   - scale(0.98) + opacity (never scale(0))
+   - custom ease-out curve (not built-in)
+   - stagger 60ms between sections
+   - <300ms duration
+   - prefers-reduced-motion: opacity-only
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+    .dash-fade {
+        opacity: 0;
+        transform: translateY(6px) scale(0.995);
+        animation: dashEnter 280ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    }
+    .dash-fade.d-1 { animation-delay: 0ms; }
+    .dash-fade.d-2 { animation-delay: 60ms; }
+    .dash-fade.d-3 { animation-delay: 120ms; }
+    .dash-fade.d-4 { animation-delay: 180ms; }
+    .dash-fade.d-5 { animation-delay: 240ms; }
+}
+@keyframes dashEnter {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dash-fade { opacity: 1; }
+}

@@ -1,12 +1,13 @@
 /* ══════════════════════════════════════════════════
-   vehicle_admin.js — Fleet Admin Redesign
+   pages/vehicle-admin.js — Fleet Admin Redesign (ES module)
    Depends on: BOOKINGS_DATA, VEHICLES_DATA, DRIVERS_DATA,
                BUDGETS_DATA, PURPOSES_DATA, FUEL_PRICE, SERVER_NOW
 ══════════════════════════════════════════════════ */
+import { initIcons } from '../core/icons.js';
 
 /* ── Constants ────────────────────────────────── */
 const EN_DAYS   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-const TH_DAYS_S = ['อา','จ','อ','พ','พฤ','ศ','ส'];   // short Thai day names
+const TH_DAYS_S = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 const TH_DAYS_F = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const TH_MON_F  = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -38,7 +39,7 @@ const serverNow = window.SERVER_NOW ? new Date(window.SERVER_NOW) : new Date();
 const today     = new Date(serverNow.getFullYear(), serverNow.getMonth(), serverNow.getDate());
 
 let weekStart = new Date(today);
-weekStart.setDate(today.getDate() - (today.getDay() + 6) % 7); // Mon-based, handles Sunday correctly
+weekStart.setDate(today.getDate() - (today.getDay() + 6) % 7);
 
 let selDate    = new Date(today);
 let curFilter  = 'all';
@@ -48,10 +49,9 @@ let notifyMode = false;
 let notifySel  = new Set();
 let beforeExpanded = true;
 
-// Modal state
 let activeBookingId  = null;
 let activeGroupName  = null;
-let modalAction      = 'approve'; // 'approve' | 'reject'
+let modalAction      = 'approve';
 let modalExpType     = 'central';
 let swapBookingId    = null;
 let swapVehicleId    = null;
@@ -76,7 +76,6 @@ function isPastOrToday(d) {
 function fmtBaht(n) { return '฿' + Number(n).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:0}); }
 function fmtNum(n)  { return Number(n).toLocaleString('th-TH'); }
 
-/* patch local arrays → no page reload needed */
 function patchBooking(id, changes) {
     const idx = bookings.findIndex(b => b.id === id);
     if (idx >= 0) Object.assign(bookings[idx], changes);
@@ -84,6 +83,30 @@ function patchBooking(id, changes) {
 function patchVehicle(id, changes) {
     const idx = vehicles.findIndex(v => v.id === id);
     if (idx >= 0) Object.assign(vehicles[idx], changes);
+}
+
+/* ── Resource usage helpers ───────────────────── */
+const ACTIVE_STATUSES = new Set(['approved', 'waiting_approver', 'forwarded']);
+
+function driverDayCount(driverId, dateStr, excludeBookingId) {
+    return bookings.filter(x =>
+        x.driverId === driverId &&
+        x.startIso && x.startIso.startsWith(dateStr) &&
+        ACTIVE_STATUSES.has(x.status) &&
+        x.id !== excludeBookingId
+    ).length;
+}
+
+function findConflict(b, resourceKey, resourceId) {
+    if (!b || !resourceId) return null;
+    const rid = parseInt(resourceId);
+    return bookings.find(x =>
+        x.id !== b.id &&
+        x[resourceKey] === rid &&
+        ACTIVE_STATUSES.has(x.status) &&
+        x.startIso < b.endIso &&
+        x.endIso > b.startIso
+    ) || null;
 }
 
 /* ══════════════════════════════════════════════════
@@ -96,16 +119,21 @@ function renderWeekNav() {
     for (let i = 0; i < 7; i++) {
         const d     = new Date(weekStart); d.setDate(weekStart.getDate() + i);
         const ds    = toDateStr(d);
-        const hasBk = bookings.some(b => b.startIso.startsWith(ds));
+        const cnt   = bookings.filter(b => b.startIso.startsWith(ds)).length;
         const isTd  = isToday(d);
         const isSel = d.toDateString() === selDate.toDateString();
+
+        let dotCls = 'va-week-day-dot';
+        if (cnt >= 4)      dotCls += ' va-week-day-dot--lg';
+        else if (cnt >= 2) dotCls += ' va-week-day-dot--md';
+        else if (cnt === 1) dotCls += ' va-week-day-dot--sm';
 
         const el = document.createElement('div');
         el.className = `va-week-day${isTd?' va-week-day-today':''}${isSel?' va-week-day-active':''}`;
         el.innerHTML = `
             <span class="va-week-day-name">${TH_DAYS_S[d.getDay()]}</span>
             <span class="va-week-day-num">${d.getDate()}</span>
-            <div class="va-week-day-dot"${hasBk && !isSel?' style="background:var(--vc-fg)"':''}></div>`;
+            <div class="${dotCls}"${cnt>0?` title="${cnt} รายการ"`:''}></div>`;
         el.addEventListener('click', () => {
             selDate = new Date(d);
             renderAll();
@@ -126,7 +154,6 @@ function renderBefore() {
     const ds     = toDateStr(selDate);
     const allDay = bookings.filter(b => b.startIso.startsWith(ds));
 
-    // Counts
     const cnt = {
         all:              allDay.length,
         pending:          allDay.filter(b => b.status==='pending').length,
@@ -140,16 +167,13 @@ function renderBefore() {
     document.getElementById('cnt-approver').textContent = cnt.waiting_approver;
     document.getElementById('cnt-approved').textContent = cnt.approved;
     document.getElementById('cnt-rejected').textContent = cnt.rejected;
-    // document.getElementById('beforeCount').textContent  = `${cnt.all} รายการ`;
 
-    // KPI strip (top of page) — mirror same counts for selected day
     const setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setKpi('kpiPending',  cnt.pending);
     setKpi('kpiApprover', cnt.waiting_approver);
     setKpi('kpiApproved', cnt.approved);
     setKpi('kpiRejected', cnt.rejected);
 
-    // Collapse logic: today and past → collapsed by default (unless user expanded)
     const shouldCollapse = isPastOrToday(selDate);
     const collapsedEl  = document.getElementById('beforeCollapsed');
     const expandedEl   = document.getElementById('beforeExpanded');
@@ -165,7 +189,6 @@ function renderBefore() {
         expandedEl.style.display  = 'block';
     }
 
-    // Filter
     let filtered = [...allDay];
     if (curFilter !== 'all') {
         filtered = filtered.filter(b => {
@@ -181,11 +204,10 @@ function renderBefore() {
             <div class="vc-empty-icon"><i data-lucide="car" style="width:20px;height:20px;"></i></div>
             <p class="vc-empty-title">ไม่มีรายการจองรถ</p>
         </div>`;
-        if (window.lucide) window.lucide.createIcons();
+        initIcons();
         return;
     }
 
-    // Group rendering
     const rendered = new Set();
     const items    = [];
 
@@ -204,90 +226,82 @@ function renderBefore() {
             ? renderGroupRow(item.name, item.members)
             : renderSingleRow(item.booking)
     ).join('');
+    initIcons();
 }
 
+const STATUS_LICON = {
+    pending:          { icon:'clock',        cls:'bl-licon--pending'  },
+    waiting_approver: { icon:'send',         cls:'bl-licon--approver' },
+    forwarded:        { icon:'send',         cls:'bl-licon--approver' },
+    approved:         { icon:'circle-check', cls:'bl-licon--approved' },
+    rejected:         { icon:'circle-x',     cls:'bl-licon--rejected' },
+};
+
 function renderSingleRow(b) {
-    const si = STATUS_ICON[b.status]  || STATUS_ICON.pending;
     const sb = STATUS_BADGE[b.status] || STATUS_BADGE.pending;
+    const li = STATUS_LICON[b.status]  || STATUS_LICON.pending;
 
     const isSelectable       = groupMode  && b.status === 'pending';
     const isNotifySelectable = notifyMode && b.status === 'approved';
     const isSel       = groupSel.has(b.id);
     const isNotifySel = notifySel.has(b.id);
 
-    const leftEl = isSelectable
-        ? `<input class="form-check-input bl-sel-check" type="checkbox"
-               id="chk-${b.id}"
-               ${isSel ? 'checked' : ''}
-               onclick="event.stopPropagation();toggleGroupSel(${b.id})">`
-        : isNotifySelectable
-        ? `<input class="form-check-input bl-sel-check bl-sel-check--notify" type="checkbox"
-               id="chk-n-${b.id}"
-               ${isNotifySel ? 'checked' : ''}
-               onclick="event.stopPropagation();toggleNotifySel(${b.id})">`
-        : `<span class="vc-badge ${sb.cls}">${sb.label}</span>`;
+    const badgeEl = (!isSelectable && !isNotifySelectable)
+        ? `<span class="vc-badge ${sb.cls}">${sb.label}</span>` : '';
 
     const actions = buildRowActions(b);
-
     const defaultClick = !groupMode && !notifyMode
         ? `onclick="openAdminBookingDetail(${b.id})" style="cursor:pointer"` : '';
+
+    const titleText = esc(b.booker || '—');
+    const metaParts = [
+        `<i data-lucide="users" class="vc-icon-sm bl-meta-ico"></i>${b.pax}`,
+        b.start,
+        esc(b.dest),
+    ];
+
     return `
-    <div class="card mb-2${isSel?' bl-selected':''}${isNotifySel?' bl-notify-selected':''}${isSelectable?' bl-group-mode':''}${isNotifySelectable?' bl-notify-mode':''}"
+    <div class="bl-card${isSel?' bl-selected':''}${isNotifySel?' bl-notify-selected':''}${isSelectable?' bl-group-mode':''}${isNotifySelectable?' bl-notify-mode':''}"
          id="blrow-${b.id}"
          ${isSelectable ? `onclick="toggleGroupSel(${b.id})"` : isNotifySelectable ? `onclick="toggleNotifySel(${b.id})"` : defaultClick}>
-        <div class="card-body py-2 px-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="flex-grow-1 overflow-hidden">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--ds-text-heading);">${esc(b.booker)}</span>
-                        ${!isSelectable && !isNotifySelectable ? leftEl : ''}
-                    </div>
-                    <div class="text-muted d-inline-block" style="font-size:.75rem;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" 
-                        stroke-linejoin="round" class="lucide lucide-user-icon lucide-user mb-1 me-1">
-                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${b.pax}
-                        <span class="mx-1">·</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" 
-                        stroke-linejoin="round" class="lucide lucide-clock4-icon lucide-clock-4 mb-1 me-1"><circle cx="12" cy="12" r="10"/>
-                        <path d="M12 6v6l4 2"/></svg>${b.start}
-                        <span class="mx-1">·</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" 
-                        stroke-linejoin="round" class="lucide lucide-map-pin-icon lucide-map-pin mb-1 me-1">
-                        <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>${esc(b.dest)}
-                    </div>
-                </div>
-                <div class="bl-actions">${actions}</div>
+        <div class="bl-licon ${li.cls}">
+            <i data-lucide="${li.icon}" class="vc-icon-sm"></i>
+        </div>
+        <div class="bl-content">
+            <div class="bl-title-row">
+                <span class="bl-title">${titleText}</span>
+
+            </div>
+            <div class="bl-meta">
+                ${metaParts.join('<span class="bl-meta-dot">·</span>')}
             </div>
         </div>
+        ${actions ? `<div class="bl-actions" onclick="event.stopPropagation()">${actions}</div>` : ''}
     </div>`;
 }
 
 function buildRowActions(b) {
-    if (groupMode) return '';
+    if (groupMode || notifyMode) return '';
+    const stop = 'event.stopPropagation();';
     switch (b.status) {
         case 'pending':
-            return `<button class="ds-btn-icon rounded-3 bg-white text-success" title="อนุมัติ" onclick="event.stopPropagation();openAssignModal(${b.id},'approve')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
-                    </button>
-                    <button class="ds-btn-icon rounded-3 bg-white text-danger" title="ปฏิเสธ" onclick="event.stopPropagation();openAssignModal(${b.id},'reject')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>`;
+            return `
+                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" title="อนุมัติ" onclick="${stop}openAssignModal(${b.id},'approve')">
+                    อนุมัติ
+                </button>`;
         case 'waiting_approver':
         case 'forwarded':
-            return `<button class="ds-btn-icon rounded-3 bg-white" title="แก้ไข" onclick="event.stopPropagation();openAssignModal(${b.id},'edit')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-                    </button>`;
+            return `<span class="bl-status-text">รอ Approver</span>`;
         case 'approved':
-            return `<button class="ds-btn-icon rounded-3 bg-white" title="แก้ไข" onclick="event.stopPropagation();openAssignModal(${b.id},'edit')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-icon lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-                    </button>
-                    <button class="ds-btn-icon rounded-3 bg-white text-danger" title="ย้อนสถานะ" onclick="event.stopPropagation();openRevertModal(${b.id})">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-cw-icon lucide-rotate-cw"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-                    </button>`;
+            return `
+                <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="แก้ไข" onclick="${stop}openAssignModal(${b.id},'edit')">
+                    <i data-lucide="pencil" class="vc-icon-sm"></i>
+                </button>
+                <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="ย้อนสถานะ" onclick="${stop}openRevertModal(${b.id})">
+                    <i data-lucide="rotate-cw" class="vc-icon-sm"></i>
+                </button>`;
         case 'rejected':
-            return `<button class="bl-ico-btn" title="แก้ไข" onclick="event.stopPropagation();openAssignModal(${b.id},'edit')">
-                        <i data-lucide="pencil"></i>
-                    </button>`;
+            return '';
         default:
             return '';
     }
@@ -297,79 +311,78 @@ function renderGroupRow(grpName, members) {
     const totalPax = members.reduce((s,b)=>s+b.pax,0);
     const times    = [...new Set(members.map(b=>b.start))].join(', ');
     const rep      = members[0];
-    const vLabel   = rep.vehicleLabel || 'ยังไม่กำหนดรถ';
+    const vLabel   = rep.vehicleLabel ? rep.vehicleLabel.split(' · ').pop() : 'ยังไม่กำหนดรถ';
     const colId    = `grpbody-${grpName.replace(/[^a-z0-9]/gi,'')}`;
 
     const approvedMembers    = members.filter(b => b.status === 'approved');
     const isGrpNotifySelectable = notifyMode && approvedMembers.length > 0;
     const isGrpNotifySel        = isGrpNotifySelectable && approvedMembers.every(b => notifySel.has(b.id));
 
-    const leftEl = isGrpNotifySelectable
+    const titleBadge = isGrpNotifySelectable
         ? `<input type="checkbox" class="bl-sel-check bl-sel-check--notify form-check-input"
                ${isGrpNotifySel ? 'checked' : ''}
                onclick="event.stopPropagation();toggleGroupNotifySel('${grpName}')">`
-        : `<span class="vc-badge vc-badge-solid vc-badge-dot flex-shrink-0">${members.length} งานรวม</span>`;
+        : `<span class="vc-badge vc-badge-success vc-badge-dot">${members.length} งานรวม</span>`;
 
     const subItems = members.map(b => {
-        const si = STATUS_ICON[b.status] || STATUS_ICON.pending;
         const sb = STATUS_BADGE[b.status] || STATUS_BADGE.pending;
         return `
-        <div class="bl-group-sub d-flex align-items-center gap-3 px-3 py-2">
-            <div class="flex-grow-1 overflow-hidden">
-                <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="fw-semibold text-truncate" style="font-size:.82rem;color:var(--ds-text-heading);">${esc(b.booker)}</span>
-                    <span class="vc-badge vc-badge-xs ${sb.cls}">${sb.label}</span>
+        <div class="bl-group-sub">
+            <div class="bl-group-sub-info">
+                <div class="bl-group-sub-head">
+                    <span class="bl-group-sub-name">${esc(b.booker)}</span>
+                    <span class="vc-badge ${sb.cls}">${sb.label}</span>
                 </div>
-                <div class="text-muted d-inline-block text-truncate" style="font-size:.72rem;">
-                    <i data-lucide="users" class="vc-icon-sm me-1" style="width:11px;height:11px;"></i>${b.pax}
-                    <span class="mx-1">·</span>
-                    <i data-lucide="clock" class="vc-icon-sm me-1" style="width:11px;height:11px;"></i>${b.start}
-                    <span class="mx-1">·</span>
-                    <i data-lucide="map-pin" class="vc-icon-sm me-1" style="width:11px;height:11px;"></i>${esc(b.dest)}
+                <div class="bl-group-sub-meta">
+                    <i data-lucide="users" class="vc-icon-sm bl-meta-ico"></i>${b.pax}
+                    <span class="bl-meta-dot">·</span>
+                    <i data-lucide="clock" class="vc-icon-sm bl-meta-ico"></i>${b.start}
+                    <span class="bl-meta-dot">·</span>
+                    <span class="bl-group-sub-dest">${esc(b.dest)}</span>
                 </div>
             </div>
-            <button class="bl-ico-btn bl-ico-split" title="แยกออกจากกลุ่ม" onclick="splitBooking(${b.id},'${grpName}')">
-                <i data-lucide="shuffle"></i>
+            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="แยกออกจากกลุ่ม" onclick="splitBooking(${b.id},'${grpName}')">
+                <i data-lucide="shuffle" class="vc-icon-sm"></i>
             </button>
         </div>`;
     }).join('');
 
     return `
-    <div class="card mb-2${isGrpNotifySel?' bl-notify-selected':''}${isGrpNotifySelectable?' bl-notify-mode':''}"
+    <div class="bl-card bl-card--group${isGrpNotifySel?' bl-notify-selected':''}${isGrpNotifySelectable?' bl-notify-mode':''}"
          id="blgrp-${grpName}"
          ${isGrpNotifySelectable ? `onclick="toggleGroupNotifySel('${grpName}')" style="cursor:pointer"` : ''}>
-        <div class="card-body py-2 px-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="flex-grow-1 overflow-hidden">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--ds-text-heading);">${esc(vLabel)}</span>
-                        ${leftEl}
-                    </div>
-                    <div class="text-muted d-inline-block text-truncate" style="font-size:.75rem;">
-                        <i data-lucide="users" class="vc-icon-sm me-1" style="width:12px;height:12px;"></i>${totalPax}
-                        <span class="mx-1">·</span>
-                        <i data-lucide="clock" class="vc-icon-sm me-1" style="width:12px;height:12px;"></i>${times}
-                    </div>
-                </div>
-                <div class="bl-actions" onclick="event.stopPropagation()">
-                    <button class="bl-txt-btn bl-txt-split" onclick="ungroupAll('${grpName}')" title="แยกงานทั้งหมด">
-                        <i data-lucide="shuffle"></i>
-                    </button>
-                    <button class="bl-txt-btn" onclick="openAssignModal(null,'group','${grpName}')" title="แก้ไขกลุ่ม">
-                        <i data-lucide="pencil"></i>
-                    </button>
-                    <button class="bl-ico-btn"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#${colId}"
-                            aria-expanded="false"
-                            onclick="event.stopPropagation()">
-                        <i data-lucide="chevron-down"></i>
-                    </button>
-                </div>
+        <div class="bl-licon bl-licon--group">
+            <i data-lucide="merge" class="vc-icon-sm"></i>
+        </div>
+        <div class="bl-content">
+            <div class="bl-title-row">
+                <span class="bl-title">${esc(vLabel)}</span>
+                ${titleBadge}
+            </div>
+            <div class="bl-meta">
+                <i data-lucide="users" class="vc-icon-sm bl-meta-ico"></i>${totalPax} คน
+                <span class="bl-meta-dot">·</span>
+                <i data-lucide="clock" class="vc-icon-sm bl-meta-ico"></i>${times}
             </div>
         </div>
-        <div class="collapse" id="${colId}">
-            <div class="border-top">${subItems}</div>
+        <div class="bl-actions" onclick="event.stopPropagation()">
+            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" onclick="ungroupAll('${grpName}')" title="แยกงานทั้งหมด">
+                <i data-lucide="shuffle" class="vc-icon-sm"></i>
+            </button>
+            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" onclick="openAssignModal(null,'group','${grpName}')" title="แก้ไขกลุ่ม">
+                <i data-lucide="pencil" class="vc-icon-sm"></i>
+            </button>
+            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm bl-grp-chev"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#${colId}"
+                    aria-expanded="false"
+                    onclick="event.stopPropagation()"
+                    title="ขยาย/ย่อ">
+                <i data-lucide="chevron-down" class="vc-icon-sm"></i>
+            </button>
+        </div>
+        <div class="collapse bl-grp-collapse" id="${colId}">
+            ${subItems}
         </div>
     </div>`;
 }
@@ -495,7 +508,6 @@ function getVehicleStatus(v, approvedToday) {
     if (v.dbStatus === 'maintenance') return 'maintenance';
     const bk = approvedToday.find(b => b.vehicleId === v.id || b.vehicleId === v.id);
     if (!bk) return 'available';
-    // Check if trip already started (only meaningful for today)
     if (isToday(selDate)) {
         const now = serverNow;
         const start = new Date(bk.startIso);
@@ -509,40 +521,49 @@ function renderVehicleRow(v, approvedToday) {
     const status = getVehicleStatus(v, approvedToday);
     const bk = approvedToday.find(b => b.vehicleId === v.id);
 
-    const iconCls = (status==='inuse' || status==='reserved') ? 'vs-icon-active'
-                  : status==='maintenance' ? 'vs-icon-maintenance' : '';
+    const iconName = status === 'maintenance' ? 'wrench' : 'car';
+    const iconCls  = (status === 'inuse' || status === 'reserved') ? 'vs-icon-active'
+                   : status === 'maintenance' ? 'vs-icon-maintenance' : '';
 
+    const xs = 'width:11px;height:11px;';
     let detail = '';
-    if (bk && (status==='inuse' || status==='reserved')) {
-        const driver = bk.driverLabel ? `${esc(bk.driverLabel)} → ` : '';
+    if (bk && (status === 'inuse' || status === 'reserved')) {
+        const driver = bk.driverLabel ? `${esc(bk.driverLabel)} · ` : '';
         detail = `<div class="vs-detail"><span>${driver}${esc(bk.dest)}</span></div>`;
-    } else if (status==='available') {
-        detail = `<div class="vs-detail vs-detail-available"><i class="fa-regular fa-circle-check"></i><span>Available</span></div>`;
-    } else if (status==='maintenance') {
+    } else if (status === 'available') {
+        detail = `<div class="vs-detail vs-detail-available">
+            <i data-lucide="circle-check" style="${xs}"></i><span>ว่าง</span>
+        </div>`;
+    } else if (status === 'maintenance') {
         const note = v.repairNote ? esc(v.repairNote) : 'ส่งซ่อม';
-        detail = `<div class="vs-detail vs-detail-maintenance"><i class="fa-solid fa-wrench"></i><span>${note}</span></div>`;
+        detail = `<div class="vs-detail vs-detail-maintenance">
+            <i data-lucide="wrench" style="${xs}"></i><span>${note}</span>
+        </div>`;
     }
 
     let actions = '';
-    if ((status==='reserved' || status==='inuse') && bk) {
+    if ((status === 'reserved' || status === 'inuse') && bk) {
         actions = `<button class="vs-btn" onclick="openSwapModal(${bk.id})">
-            <i class="fa-solid fa-shuffle"></i> Swap
+            <i data-lucide="shuffle" style="${xs}"></i> Swap
         </button>`;
-    } else if (status==='maintenance') {
+    } else if (status === 'maintenance') {
         actions = `<button class="vs-btn vs-btn-fix" onclick="fixDone(${v.id})">
-            <i class="fa-solid fa-circle-check"></i> เสร็จซ่อม
+            <i data-lucide="circle-check" style="${xs}"></i> เสร็จซ่อม
         </button>`;
-    } else if (status==='available') {
-        actions = `<button class="vs-btn vs-btn-repair" onclick="openRepairModal(${v.id})">
-            <i class="fa-solid fa-wrench"></i>
+    } else if (status === 'available') {
+        actions = `<button class="vs-btn vs-btn-repair" title="ส่งซ่อม" onclick="openRepairModal(${v.id})">
+            <i data-lucide="wrench" style="width:12px;height:12px;"></i>
         </button>`;
     }
 
     return `
     <div class="vs-row">
-        <div class="vs-icon ${iconCls}"><i class="fa-solid fa-truck"></i></div>
+        <div class="vs-icon ${iconCls}">
+            <i data-lucide="${iconName}" style="width:16px;height:16px;"></i>
+        </div>
         <div class="vs-info">
-            <div class="vs-name">${esc(v.plate)}<span class="vs-name-sub"> · ${esc(v.brand+' '+v.model)}</span></div>
+            <div class="vs-name">${esc(v.plate)}</div>
+            <div class="vs-brand">${esc(v.brand)} ${esc(v.model)}</div>
             ${detail}
         </div>
         <div class="vs-actions">${actions}</div>
@@ -566,11 +587,10 @@ function renderAfter() {
             <div class="vc-empty-icon"><i data-lucide="route" style="width:20px;height:20px;"></i></div>
             <p class="vc-empty-title">ไม่มีทริปที่เสร็จแล้ว</p>
         </div>`;
-        if (window.lucide) window.lucide.createIcons();
+        initIcons();
         return;
     }
 
-    // Group bookings by tripGroup; ungrouped → individual
     const groups = [];
     const seen = new Set();
     for (const b of done) {
@@ -593,9 +613,6 @@ function renderTripRow(group) {
     const hasOdo = bm.odoStart !== null && bm.odoEnd !== null;
     const dist   = hasOdo ? (bm.odoEnd - bm.odoStart) : 0;
 
-    // Mirror server-side formula (vehicle_view.py L1149-1151 / L1265-1270):
-    //   trip_cost = m.fuel_cost (override) > 0 ? m.fuel_cost
-    //             : round((distance / vehicle.fuel_rate) * fuel_price, 2)
     const veh        = vehicles.find(v => v.id === bm.vehicleId);
     const fuelRate   = veh ? Number(veh.fuelRate) : 0;
     const override   = Number(bm.fuelCost) || 0;
@@ -607,58 +624,88 @@ function renderTripRow(group) {
 
     const plate    = b.vehicleLabel ? b.vehicleLabel.split(' · ').pop() : '—';
     const nameText = isGroup ? `งานร่วม ${group.length} รายการ` : esc(b.booker);
+    const destText = isGroup ? '' : esc(b.dest || '');
 
-    const expBadgeCls = b.expType==='central' ? 'pts-exp-central'
-                      : b.expType==='department' ? 'pts-exp-department' : 'pts-exp-personal';
+    const expBadgeCls = b.expType==='central' ? 'va-trip-exp--central'
+                      : b.expType==='department' ? 'va-trip-exp--department' : 'va-trip-exp--personal';
     const expLabel = b.expType==='central' ? 'ส่วนกลาง'
-                   : b.expType==='department' ? `ส่วนกอง · ${esc(b.deptName)}` : 'ส่วนตัว';
+                   : b.expType==='department' ? esc(b.deptName) : 'ส่วนตัว';
 
-    const dotCls = hasOdo ? 'ds-status-dot--approved' : 'ds-status-dot--pending';
-    const dotFa  = hasOdo ? 'fa-regular fa-circle-check' : 'fa-regular fa-clock';
+    const tripBadgeCls   = hasOdo ? 'vc-badge-success vc-badge-dot' : 'vc-badge-warning vc-badge-dot';
+    const tripBadgeLabel = hasOdo ? 'บันทึกไมล์แล้ว' : 'รอบันทึกไมล์';
 
-    // Breakdown line: show real formula, mark override
-    const subText = isOverride
-        ? `··· ${fmtNum(dist)} กม. · ค่าน้ำมัน (กำหนดเอง) ฿${fmtNum(override)}`
-        : (fuelRate > 0
-            ? `·· ${fmtNum(dist)} กม. ÷ ${fmtNum(fuelRate)} กม. × ฿${fmtNum(fuelPrice)}`
-            : `·· ${fmtNum(dist)} กม. · ไม่ได้ตั้งอัตราสิ้นเปลือง`);
-    const detailHtml = hasOdo ? `
-        <div class="pts-detail mt-1">
-            <span class="pts-detail-main">ไมล์: ${fmtNum(bm.odoStart)} → ${fmtNum(bm.odoEnd)}</span>
-            <span class="pts-detail-sub">${subText}</span>
+    const mileageHtml = hasOdo ? `
+        <div class="va-trip-mileage">
+            <span class="va-trip-mileage-label">MILEAGE</span>
+            <span class="va-trip-mileage-range vc-mono">${fmtNum(bm.odoStart)} → ${fmtNum(bm.odoEnd)}</span>
+            <span class="va-trip-mileage-dot">·</span>
+            <span class="va-trip-mileage-dist vc-mono">${fmtNum(dist)} กม.</span>
+            ${fuelRate > 0
+                ? `<span class="va-trip-mileage-dot">·</span>
+                   <span class="va-trip-mileage-rate">อัตรา ${fmtNum(fuelRate)} กม./ลิตร</span>`
+                : ''}
+            ${isOverride
+                ? `<span class="va-trip-mileage-dot">·</span>
+                   <span class="va-trip-mileage-rate">กำหนดเอง</span>`
+                : ''}
         </div>` : '';
 
-    let actionHtml = '';
-    if (b.expType === 'personal') {
+    let metaIcon = 'clock';
+    let metaText = 'ยังไม่เริ่ม / กำลังเดินทาง · รอออกเลขไมล์';
+    let metaCls  = 'va-trip-meta--pending';
+    let leftActionHtml = '';
+
+    if (!hasOdo) {
+        metaIcon = 'clock';
+        metaText = 'ยังไม่เริ่ม / กำลังเดินทาง · รอออกเลขไมล์';
+        metaCls  = 'va-trip-meta--pending';
+    } else if (b.expType === 'personal') {
         if (bm.personalStatus === 1) {
-            actionHtml = `<span class="pts-paid-stamp"><i class="fa-solid fa-circle-check" style="color:var(--ds-success)"></i> จ่ายเมื่อ ${bm.personalPaidAt}</span>`;
-        } else if (hasOdo) {
-            actionHtml = `<button class="pts-btn-paid" onclick="markPaid(${bm.mileageId}, ${bm.id})"><i class="fa-solid fa-check"></i> รับเงินแล้ว</button>`;
+            metaIcon = 'circle-check';
+            metaText = `จ่ายแล้ว · ${esc(bm.personalPaidAt)}`;
+            metaCls  = 'va-trip-meta--ok';
+        } else {
+            metaIcon = 'wallet';
+            metaText = 'รอรับเงินจากผู้จอง';
+            metaCls  = 'va-trip-meta--pending';
+            leftActionHtml = `
+                <button type="button" class="va-trip-btn va-trip-btn--paid" onclick="markPaid(${bm.mileageId}, ${bm.id})" title="ยืนยันได้รับเงินแล้ว">
+                    <i data-lucide="check" class="vc-icon-sm"></i>
+                    รับเงินแล้ว
+                </button>`;
         }
-    } else if (b.expType === 'department') {
-        actionHtml = `<button class="pts-btn-telegram" onclick="notifyDept(${b.id})"><i class="fa-brands fa-telegram"></i> แจ้ง Telegram</button>`;
+    } else {
+        metaIcon = 'circle-check';
+        const tag = b.expType === 'department' ? '(ตัดงบกอง)' : '(ตัดงบกลาง)';
+        metaText = `บันทึกไมล์แล้ว ${tag}`;
+        metaCls  = 'va-trip-meta--ok';
     }
 
-    const rightHtml = (hasOdo || actionHtml) ? `
-        <div class="pts-right flex-shrink-0 ms-auto text-end">
-            ${actionHtml ? `<div>${actionHtml}</div>` : ''}
-            ${hasOdo ? `<span class="pts-amount">${fmtBaht(total)}</span>` : ''}
-        </div>` : '';
-
     return `
-    <div class="card mb-2 pts-row${!hasOdo ? ' pts-no-mileage' : ''}">
-        <div class="card-body py-2 px-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="ds-status-dot ${dotCls}"><i class="${dotFa}"></i></div>
-                <div class="flex-grow-1 overflow-hidden">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="pts-plate">${esc(plate)}</span>
-                        <span class="pts-exp-badge ${expBadgeCls}">${expLabel}</span>
-                    </div>
-                    <div class="pts-name mb-0">${nameText}</div>
-                    ${detailHtml}
-                </div>
-                ${rightHtml}
+    <div class="va-trip${!hasOdo ? ' va-trip--no-mileage' : ''}">
+        <div class="va-trip-head">
+            <span class="va-trip-plate">${esc(plate)}</span>
+            <span class="va-trip-exp ${expBadgeCls}">${expLabel}</span>
+            <span class="vc-badge ${tripBadgeCls} va-trip-status">${tripBadgeLabel}</span>
+            ${hasOdo ? `<span class="va-trip-amount vc-mono">${fmtBaht(total)}</span>` : ''}
+        </div>
+        <div class="va-trip-person">
+            <span class="va-trip-avatar"><i data-lucide="user" class="vc-icon-sm"></i></span>
+            <span class="va-trip-name">${nameText}</span>
+            ${destText ? `<span class="va-trip-dest">${destText}</span>` : ''}
+        </div>
+        ${mileageHtml}
+        <div class="va-trip-foot">
+            <span class="va-trip-meta ${metaCls}">
+                <i data-lucide="${metaIcon}" class="vc-icon-sm"></i>
+                ${metaText}
+            </span>
+            <div class="va-trip-foot-actions">
+                ${leftActionHtml}
+                <button type="button" class="va-trip-btn va-trip-btn--tg" onclick="notifyDept(${b.id})" title="แจ้งผ่าน Telegram">
+                    <i data-lucide="send" class="vc-icon-sm"></i>
+                    แจ้ง Telegram
+                </button>
             </div>
         </div>
     </div>`;
@@ -676,7 +723,6 @@ function openAssignModal(bookingId, action, groupName) {
 
     const b = bookingId ? bookings.find(x=>x.id===bookingId) : null;
 
-    // Title
     let title = 'Approve & Assign Resources';
     let sub   = '';
     if (action==='reject')    title = 'Reject Booking';
@@ -693,21 +739,21 @@ function openAssignModal(bookingId, action, groupName) {
     document.getElementById('assignModalTitle').textContent = title;
     document.getElementById('assignModalSub').textContent   = sub;
 
-    // Populate vehicle dropdown
     const vSel = document.getElementById('modalVehSel');
     vSel.innerHTML = '<option value="">Choose vehicle</option>' +
         vehicles.filter(v=>v.dbStatus==='active').map(v =>
             `<option value="${v.id}" ${b&&b.vehicleId===v.id?'selected':''}>${v.brand} ${v.model} · ${v.plate}</option>`
         ).join('');
 
-    // Populate driver dropdown
     const dSel = document.getElementById('modalDrvSel');
-    dSel.innerHTML = '<option value="">Choose driver</option>' +
-        drivers.map(d =>
-            `<option value="${d.id}" ${b&&b.driverId===d.id?'selected':''}>${d.label}</option>`
-        ).join('');
+    const dayStr = b ? b.startIso.slice(0,10) : toDateStr(selDate);
+    dSel.innerHTML = '<option value="">— เลือกคนขับ —</option>' +
+        drivers.map(d => {
+            const n = driverDayCount(d.id, dayStr, b?.id);
+            const suffix = n > 0 ? `  •  ${n} งานวันนี้` : '';
+            return `<option value="${d.id}" ${b&&b.driverId===d.id?'selected':''}>${d.label}${suffix}</option>`;
+        }).join('');
 
-    // Expense type
     modalExpType = (b?.expType) || 'central';
     document.querySelectorAll('.adm-exp-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.type === modalExpType);
@@ -746,7 +792,6 @@ function updateExpSubDropdown(b) {
     sub.innerHTML = '<option value="">— เลือกหมวด —</option>' +
         list.map(x => `<option value="${x.key}" ${x.key===prevKey?'selected':''}>${x.label}</option>`).join('');
 
-    // approver (department only)
     const selKey = sub.value;
     if (modalExpType === 'department' && selKey) {
         const entry = list.find(x => x.key === selKey);
@@ -766,16 +811,37 @@ function updateExpSubDropdown(b) {
 function updateModalBudget() {
     const sub  = document.getElementById('modalExpSubSel');
     const bar  = document.getElementById('modalBudgetBar');
+    const warn = document.getElementById('modalBudgetWarn');
     if (!sub.value || modalExpType==='personal') { bar.style.display='none'; return; }
     const list = budgets[modalExpType]||[];
     const entry= list.find(x=>x.key===sub.value);
     if (!entry||!entry.total) { bar.style.display='none'; return; }
-    const rem  = entry.total - entry.used;
-    const pct  = Math.min(entry.total>0?(entry.used/entry.total)*100:0, 100);
-    const color= pct<70?'var(--ds-success)':pct<90?'var(--ds-warning)':'var(--ds-danger)';
+    const rem    = entry.total - entry.used;
+    const usedPct= Math.min(entry.total>0?(entry.used/entry.total)*100:0, 100);
+    const remPct = entry.total>0 ? (Math.max(rem,0)/entry.total)*100 : 0;
+
+    let tone = 'ok';
+    if (rem <= 0)        tone = 'danger';
+    else if (remPct < 10) tone = 'danger';
+    else if (remPct < 20) tone = 'warn';
+
+    bar.classList.remove('va-budget--ok','va-budget--warn','va-budget--danger');
+    bar.classList.add(`va-budget--${tone}`);
+
     document.getElementById('modalBudgetLabel').textContent = 'งบคงเหลือ';
     document.getElementById('modalBudgetValue').textContent = `${fmtNum(rem)} / ${fmtNum(entry.total)} บ.`;
-    document.getElementById('modalBudgetFill').style.cssText= `width:${pct}%;background:${color}`;
+    document.getElementById('modalBudgetFill').style.width = `${usedPct}%`;
+
+    if (warn) {
+        if (tone === 'ok') {
+            warn.hidden = true;
+        } else {
+            warn.hidden = false;
+            warn.textContent = rem <= 0
+                ? `งบหมดแล้ว (${fmtNum(rem)} บ.) — อาจติดลบหลังบันทึก`
+                : `งบเหลือน้อย (${remPct.toFixed(0)}% · ${fmtNum(rem)} บ.)`;
+        }
+    }
     bar.style.display = 'block';
 }
 
@@ -783,6 +849,31 @@ function checkAssignReady() {
     const veh   = document.getElementById('modalVehSel').value;
     const ready = (modalAction==='reject') || !!veh;
     document.getElementById('assignConfirmBtn').disabled = !ready;
+    updateConflictWarnings();
+}
+
+function updateConflictWarnings() {
+    const vWarn = document.getElementById('vehConflictWarn');
+    const dWarn = document.getElementById('drvConflictWarn');
+    if (!vWarn || !dWarn) return;
+    const b = activeBookingId ? bookings.find(x => x.id === activeBookingId) : null;
+    if (!b || modalAction === 'reject') {
+        vWarn.hidden = true; dWarn.hidden = true; return;
+    }
+    const vehId = document.getElementById('modalVehSel').value;
+    const drvId = document.getElementById('modalDrvSel').value;
+    const vc = findConflict(b, 'vehicleId', vehId);
+    const dc = findConflict(b, 'driverId',  drvId);
+    if (vc) {
+        vWarn.hidden = false;
+        vWarn.querySelector('[data-conflict-text]').textContent =
+            `ซ้อนเวลากับ #${vc.id} (${vc.start}–${vc.end} · ${vc.booker})`;
+    } else { vWarn.hidden = true; }
+    if (dc) {
+        dWarn.hidden = false;
+        dWarn.querySelector('[data-conflict-text]').textContent =
+            `ซ้อนเวลากับ #${dc.id} (${dc.start}–${dc.end} · ${dc.dest})`;
+    } else { dWarn.hidden = true; }
 }
 
 async function submitAssign() {
@@ -796,14 +887,12 @@ async function submitAssign() {
     const expSub = (document.getElementById('modalExpSubSel').style.display!=='none')
                    ? document.getElementById('modalExpSubSel').value : '';
 
-    // Pre-compute vehicle label for local patch
     const newVeh     = vehId ? vehicles.find(v => v.id === parseInt(vehId)) : null;
     const newVehLabel = newVeh ? `${newVeh.brand} ${newVeh.model} · ${newVeh.plate}` : '';
     const drvIdNum   = drvId ? parseInt(drvId) : null;
 
     try {
         if (activeGroupName) {
-            // Edit existing group
             const members  = bookings.filter(b=>b.tripGroup===activeGroupName);
             const mergeUrl = members[0].mergeUrl;
             const fd = new FormData();
@@ -817,7 +906,6 @@ async function submitAssign() {
             if (expSub && modalExpType==='department') fd.append('trip_department', expSub);
             const res0 = await fetch(mergeUrl, { method:'POST', body:fd });
             if (!res0.ok) { const d=await res0.json().catch(()=>({})); throw new Error(d.msg||'server error'); }
-            // patch local
             members.forEach(b => patchBooking(b.id, {
                 status: modalExpType === 'department' ? 'waiting_approver' : 'approved',
                 ...(newVeh && { vehicleId: parseInt(vehId), vehicleLabel: newVehLabel }),
@@ -827,7 +915,6 @@ async function submitAssign() {
             showToast('✓ บันทึกกลุ่มเรียบร้อย');
 
         } else if (groupSel.size > 0 && modalAction==='group_new') {
-            // New group merge
             const ids   = [...groupSel];
             const first = bookings.find(x=>x.id===ids[0]);
             const fd    = new FormData();
@@ -840,7 +927,6 @@ async function submitAssign() {
             if (expSub && modalExpType==='department') fd.append('trip_department', expSub);
             const res = await fetch(first.mergeUrl, { method:'POST', body:fd });
             if (!res.ok) { const d=await res.json().catch(()=>({})); throw new Error(d.msg||'server error'); }
-            // patch local — generate a temporary group name (server assigned on reload)
             const tmpGroup = `TRP-${Date.now()}`;
             ids.forEach(id => patchBooking(id, {
                 status: modalExpType === 'department' ? 'waiting_approver' : 'approved',
@@ -863,7 +949,6 @@ async function submitAssign() {
             if (expSub && modalExpType==='department') fd.append('trip_department', expSub);
             const res1 = await fetch(b.assignUrl, { method:'POST', body:fd });
             if (!res1.ok) { const d=await res1.json().catch(()=>({})); throw new Error(d.msg||'server error'); }
-            // patch local
             patchBooking(activeBookingId, act === 'reject'
                 ? { status: 'rejected' }
                 : {
@@ -884,7 +969,8 @@ async function submitAssign() {
         showToast(e.message && e.message !== 'server error' ? e.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         isSaving = false;
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-brands fa-telegram"></i> Confirm & Notify via Telegram';
+        btn.innerHTML = '<i data-lucide="send" class="vc-icon-sm"></i> Confirm & Notify via Telegram';
+        initIcons(btn);
     }
 }
 
@@ -950,13 +1036,16 @@ function openSwapModal(bookingId) {
     );
 
     if (!swappable.length) {
-        listEl.innerHTML = '<p style="color:var(--ds-text-muted);font-size:.85rem;text-align:center;padding:16px">ไม่มีรถที่สามารถ Swap ได้</p>';
+        listEl.innerHTML = `<div class="vc-empty">
+            <div class="vc-empty-icon"><i data-lucide="car-off" style="width:20px;height:20px;"></i></div>
+            <p class="vc-empty-title">ไม่มีรถที่สามารถ Swap ได้</p>
+        </div>`;
     } else {
         listEl.innerHTML = swappable.map(v => {
             const isCurrent = v.id === b?.vehicleId;
-            const statusLabel = isCurrent ? '<span class="swap-veh-status" style="background:#DCFCE7;color:#16A34A">ปัจจุบัน</span>'
-                              : usedIds.has(v.id) ? '<span class="swap-veh-status" style="background:#EDE9FE;color:#4338CA">จองแล้ว</span>'
-                              : '<span class="swap-veh-status" style="background:#DCFCE7;color:#16A34A">ว่าง</span>';
+            const statusLabel = isCurrent ? '<span class="swap-veh-status vc-badge vc-badge-blue vc-badge-dot">ปัจจุบัน</span>'
+                              : usedIds.has(v.id) ? '<span class="swap-veh-status vc-badge vc-badge-neutral vc-badge-dot">จองแล้ว</span>'
+                              : '<span class="swap-veh-status vc-badge vc-badge-success vc-badge-dot">ว่าง</span>';
             return `<div class="swap-veh-item" onclick="selectSwapVehicle(${v.id},this)">
                 <div class="swap-veh-radio"></div>
                 <div>
@@ -1038,7 +1127,6 @@ function openAdminBookingDetail(id) {
     const b = bookings.find(x => x.id === id);
     if (!b) return;
 
-    // Status badge
     const sb   = STATUS_BADGE[b.status] || STATUS_BADGE.pending;
     const si   = STATUS_ICON[b.status]  || STATUS_ICON.pending;
     const badge = document.getElementById('singleStatusBadge');
@@ -1046,17 +1134,14 @@ function openAdminBookingDetail(id) {
     document.getElementById('singleStatusIcon').className  = `${si.fa} pe-2`;
     document.getElementById('singleStatusLabel').textContent = sb.label;
 
-    // Date
     const [y, m, d] = b.startIso.split('T')[0].split('-').map(Number);
     const dow = new Date(y, m - 1, d).getDay();
     document.getElementById('singleDateLine').textContent =
         `วัน${TH_DAYS_F[dow]} ที่ ${d} ${TH_MON_F[m]}`;
 
-    // Time + vehicle
     document.getElementById('singleTime').textContent  = `${b.start} – ${b.end}`;
     document.getElementById('singlePlate').textContent = b.vehicleLabel || 'รอ Admin กำหนด';
 
-    // Driver
     const driverLine = document.getElementById('singleDriverLine');
     if (b.needDriver) {
         document.getElementById('singleDriver').textContent = b.driverLabel || 'รอ Admin มอบหมาย';
@@ -1065,16 +1150,13 @@ function openAdminBookingDetail(id) {
         driverLine.style.display = 'none';
     }
 
-    // Booking info
     document.getElementById('singleBooker').textContent  = b.booker || '–';
     document.getElementById('singlePurpose').textContent = b.purpose || '–';
     document.getElementById('singleDest').textContent    = b.dest    || '–';
     document.getElementById('singlePax').textContent     = b.pax     || '–';
 
-    // Pickup (ไม่มีใน admin data)
     document.getElementById('singlePickupLine').setAttribute('hidden', '');
 
-    // ซ่อน action buttons (admin ไม่ใช้ปุ่มจากหน้านี้)
     document.getElementById('singleActions').innerHTML = '';
 
     adminDetailModal = adminDetailModal || new bootstrap.Modal(document.getElementById('eventDetailModal'));
@@ -1117,25 +1199,29 @@ function esc(s) {
 ══════════════════════════════════════════════════ */
 function renderAll() {
     renderWeekNav();
-    // Update selected date heading
     const dow = selDate.getDay();
     const isTd = isToday(selDate);
     document.getElementById('selDateHeading').textContent =
         `วัน${TH_DAYS_F[dow]}ที่ ${selDate.getDate()} ${TH_MON_F[selDate.getMonth()+1]} ${selDate.getFullYear()+543}${isTd ? '  (วันนี้)' : ''}`;
-    // Reset collapse when date changes
     beforeExpanded = !isPastOrToday(selDate);
     renderBefore();
     renderDuring();
     renderAfter();
-
-    // Re-initialize Lucide Icons
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
+    initIcons();
 }
 
-renderAll();
-
-window.addEventListener('resize', () => {
-    // re-render if needed
+/* ── Expose to window for legacy onclick handlers ── */
+Object.assign(window, {
+    shiftWeek, toggleGroupMode, cancelGroupMode, confirmMerge,
+    toggleNotifyMode, cancelNotifyMode, confirmNotify,
+    toggleBeforeExpand, setFilter,
+    toggleGroupSel, toggleNotifySel, toggleGroupNotifySel,
+    openAssignModal, openRevertModal, openAdminBookingDetail,
+    openSwapModal, openRepairModal,
+    splitBooking, ungroupAll, fixDone,
+    setModalExpType, updateExpSubDropdown, checkAssignReady,
+    submitAssign, submitRevert, submitSwap, submitRepair,
+    selectSwapVehicle, markPaid, notifyDept,
 });
+
+renderAll();

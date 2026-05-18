@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>งานของฉัน</title>
     <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
@@ -19,10 +19,10 @@
 {% include '_sidebar.html' %}
 
 <main class="main-content">
-    {% set page_title = 'รายการรออนุมัติ' %}
+    {% set page_title = 'งานของฉัน' %}
     {% include '_header.html' %}
 
-    <div class="container-xxl px-3 py-4">
+    <div class="container-xxl driver-shell">
 
         {# ── Flash ── #}
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -35,15 +35,21 @@
 
         {# ── Page header ── #}
         <div class="driver-header">
-            <div>
-                <h1 class="driver-title">งานของฉัน</h1>
-                <p class="driver-subtitle">{{ today_start.strftime('%d/%m/%Y') }} · บันทึกเลขไมล์ออก/กลับ</p>
+            <div class="driver-header__main">
+                <h1 class="driver-title">{{ driver.name }}</h1>
+                <p class="driver-subtitle">บันทึกเลขไมล์ · {{ today_start.strftime('%d/%m/%Y') }}</p>
             </div>
-            <div class="driver-header-meta">
+            <span class="driver-id-chip" title="รหัสคนขับ">
                 <i data-lucide="user" class="vc-icon-sm"></i>
-                <span>{{ driver.name }}</span>
-            </div>
+                D-{{ '%03d' % driver.id }}
+            </span>
         </div>
+
+        {# ── Ad-hoc CTA ── #}
+        <button type="button" class="driver-adhoc-btn" data-open-adhoc title="สร้างงานนอกระบบ">
+            <i data-lucide="plus" class="vc-icon-sm"></i>
+            งานนอกระบบ
+        </button>
 
         {# ── Filter trips ── #}
         {% set today_trips    = bookings | selectattr('start_datetime', 'ge', today_start)    | selectattr('start_datetime', 'le', today_end)    | list %}
@@ -51,11 +57,11 @@
 
         {# ── Tabs ── #}
         <div class="driver-tabs" role="tablist">
-            <button type="button" class="driver-tabs__btn is-active" data-tab="today" role="tab">
+            <button type="button" class="driver-tabs__btn is-active" data-tab="today" role="tab" title="งานวันนี้">
                 วันนี้
                 <span class="driver-tabs__count">{{ today_trips|length }}</span>
             </button>
-            <button type="button" class="driver-tabs__btn" data-tab="tomorrow" role="tab">
+            <button type="button" class="driver-tabs__btn" data-tab="tomorrow" role="tab" title="งานพรุ่งนี้">
                 พรุ่งนี้
                 <span class="driver-tabs__count">{{ tomorrow_trips|length }}</span>
             </button>
@@ -75,9 +81,10 @@
                     {% else %}
                         {% set trip_status = 'waiting' %}
                     {% endif %}
+                    {% set requester_label = b.contact_name or (b.user.full_name if b.user else '-') %}
 
                     <div class="driver-card" data-card>
-                        <button type="button" class="driver-card__head" data-card-toggle>
+                        <button type="button" class="driver-card__head" data-card-toggle title="ขยาย/ย่อ">
                             <span class="driver-card__id">BK-{{ '%04d' % b.id }}</span>
                             <span class="driver-card__summary">
                                 {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
@@ -139,7 +146,7 @@
                                     <i data-lucide="user" class="vc-icon-sm driver-meta__icon"></i>
                                     <div>
                                         <div class="driver-meta__label">ผู้จอง</div>
-                                        <div class="driver-meta__value">{{ b.user.name if b.user else '-' }}</div>
+                                        <div class="driver-meta__value">{{ requester_label }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -196,7 +203,7 @@
                                         <div class="driver-upload__hint">แตะเพื่ออัปโหลด</div>
                                     </label>
 
-                                    <button type="submit" class="driver-cta">
+                                    <button type="submit" class="driver-cta" title="บันทึกเลขไมล์กลับ">
                                         <i data-lucide="check" class="vc-icon-sm"></i> บันทึกเลขไมล์กลับ
                                     </button>
                                 </form>
@@ -220,7 +227,7 @@
                                         <div class="driver-upload__hint">แตะเพื่ออัปโหลด</div>
                                     </label>
 
-                                    <button type="submit" class="driver-cta">
+                                    <button type="submit" class="driver-cta" title="บันทึกเลขไมล์ออก">
                                         <i data-lucide="play" class="vc-icon-sm"></i> บันทึกเลขไมล์ออก
                                     </button>
                                 </form>
@@ -229,7 +236,7 @@
                     </div>
                 {% endfor %}
             {% else %}
-                {{ empty_state(title='ไม่มีงานวันนี้', desc='พักผ่อนได้เลย', icon='calendar-check') }}
+                {{ empty_state(title='ไม่มีงานวันนี้', desc='พักผ่อนได้เลย หรือกดสร้างงานนอกระบบด้านบน', icon='calendar-check') }}
             {% endif %}
         </div>
 
@@ -239,8 +246,9 @@
         <div class="driver-panel" data-panel="tomorrow">
             {% if tomorrow_trips %}
                 {% for b in tomorrow_trips %}
+                    {% set requester_label = b.contact_name or (b.user.full_name if b.user else '-') %}
                     <div class="driver-card driver-card--readonly" data-card>
-                        <button type="button" class="driver-card__head" data-card-toggle>
+                        <button type="button" class="driver-card__head" data-card-toggle title="ขยาย/ย่อ">
                             <span class="driver-card__id">BK-{{ '%04d' % b.id }}</span>
                             <span class="driver-card__summary">
                                 {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
@@ -291,7 +299,7 @@
                                     <i data-lucide="user" class="vc-icon-sm driver-meta__icon"></i>
                                     <div>
                                         <div class="driver-meta__label">ผู้จอง</div>
-                                        <div class="driver-meta__value">{{ b.user.name if b.user else '-' }}</div>
+                                        <div class="driver-meta__value">{{ requester_label }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -311,77 +319,85 @@
     </div>
 </main>
 
+{# ====================================================
+   Modal: งานนอกระบบ (ad-hoc trip)
+   ==================================================== #}
+<div class="driver-modal" id="adhocModal" hidden aria-hidden="true" role="dialog" aria-labelledby="adhocModalTitle">
+    <div class="driver-modal__backdrop" data-close-adhoc></div>
+    <div class="driver-modal__dialog" role="document">
+        <form method="POST" action="{{ url_for('driver.driver_ad_hoc_trip') }}" class="driver-modal__form">
+            <header class="driver-modal__head">
+                <h2 class="driver-modal__title" id="adhocModalTitle">
+                    <i data-lucide="sparkles" class="vc-icon-sm"></i>
+                    งานนอกระบบ
+                </h2>
+                <button type="button" class="driver-modal__close" data-close-adhoc title="ปิด">
+                    <i data-lucide="x" class="vc-icon-sm"></i>
+                </button>
+            </header>
+
+            <div class="driver-modal__body">
+                {# ── Contact: search dropdown + free text ── #}
+                <div class="driver-field">
+                    <label class="driver-field__label" for="adhocContactSearch">ชื่อผู้จอง / ผู้ติดต่อ</label>
+                    <div class="driver-combo" data-combo>
+                        <input type="hidden" name="contact_user_id" data-combo-user-id>
+                        <input type="text" id="adhocContactSearch" name="contact_name"
+                               class="driver-combo__input" placeholder="ค้นหา หรือพิมพ์ชื่อใหม่..."
+                               autocomplete="off" data-combo-input>
+                        <i data-lucide="chevron-down" class="vc-icon-sm driver-combo__chevron"></i>
+                        <ul class="driver-combo__list" data-combo-list hidden>
+                            {% for u in users %}
+                            <li class="driver-combo__item"
+                                data-combo-option
+                                data-user-id="{{ u.id }}"
+                                data-user-name="{{ u.full_name or u.username }}">
+                                <span class="driver-combo__name">{{ u.full_name or u.username }}</span>
+                                <span class="driver-combo__role">{{ u.department or '—' }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                {# ── Vehicle ── #}
+                <div class="driver-field">
+                    <label class="driver-field__label" for="adhocVehicle">รถที่ใช้</label>
+                    <select class="driver-field__select" id="adhocVehicle" name="vehicle_id" required>
+                        <option value="" disabled selected>เลือกรถ...</option>
+                        {% for v in vehicles %}
+                        <option value="{{ v.id }}">{{ v.brand }} {{ v.model }} · {{ v.license_plate }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# ── Destination ── #}
+                <div class="driver-field">
+                    <label class="driver-field__label" for="adhocDestination">ปลายทาง</label>
+                    <input type="text" id="adhocDestination" name="destination"
+                           class="driver-field__input" placeholder="เช่น ธนาคาร / ตลาด / สาขา..."
+                           maxlength="200" required>
+                </div>
+
+                <p class="driver-modal__note">
+                    เวลาออกจะถูกบันทึกอัตโนมัติตอนกดสร้าง · บันทึกเลขไมล์/รูปหน้าปัด ในการ์ดงานเหมือนงานปกติ
+                </p>
+            </div>
+
+            <footer class="driver-modal__foot">
+                <button type="button" class="driver-modal__btn driver-modal__btn--ghost" data-close-adhoc title="ยกเลิก">
+                    ยกเลิก
+                </button>
+                <button type="submit" class="driver-modal__btn driver-modal__btn--primary" title="สร้างงาน">
+                    <i data-lucide="plus" class="vc-icon-sm"></i> สร้างงาน
+                </button>
+            </footer>
+        </form>
+    </div>
+</div>
+
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<script>
-(function () {
-    // ── Lucide ───────────────────────────────────────────────
-    const renderIcons = () => {
-        if (window.lucide && typeof window.lucide.createIcons === 'function') {
-            window.lucide.createIcons();
-        }
-    };
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', renderIcons);
-    } else {
-        renderIcons();
-    }
-
-    // ── Tab switching ────────────────────────────────────────
-    const tabBtns = document.querySelectorAll('.driver-tabs__btn');
-    const panels  = document.querySelectorAll('.driver-panel');
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const target = btn.dataset.tab;
-            tabBtns.forEach(b => b.classList.toggle('is-active', b === btn));
-            panels.forEach(p => p.classList.toggle('is-active', p.dataset.panel === target));
-        });
-    });
-
-    // ── Accordion: open one card → close others within active panel ─
-    document.querySelectorAll('[data-card-toggle]').forEach(head => {
-        head.addEventListener('click', () => {
-            const card  = head.closest('[data-card]');
-            const panel = card.closest('.driver-panel');
-            const wasOpen = card.classList.contains('is-open');
-
-            panel.querySelectorAll('[data-card]').forEach(c => c.classList.remove('is-open'));
-
-            if (!wasOpen) card.classList.add('is-open');
-        });
-    });
-
-    // ── Stamp actual_start / actual_end on submit ────────────
-    const pad = n => String(n).padStart(2, '0');
-    const nowStamp = () => {
-        const d = new Date();
-        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
-    document.querySelectorAll('[data-driver-form]').forEach(form => {
-        form.addEventListener('submit', () => {
-            const stamp = form.querySelector('[data-actual-now]');
-            if (stamp) stamp.value = nowStamp();
-        });
-    });
-
-    // ── Upload zone: visual feedback when file picked ────────
-    document.querySelectorAll('[data-upload-input]').forEach(input => {
-        input.addEventListener('change', () => {
-            const zone  = input.closest('.driver-upload');
-            const label = zone.querySelector('.driver-upload__label');
-            const hint  = zone.querySelector('.driver-upload__hint');
-            if (input.files && input.files.length) {
-                zone.classList.add('has-file');
-                label.textContent = input.files[0].name;
-                hint.textContent  = 'แตะเพื่อเปลี่ยนรูป';
-            } else {
-                zone.classList.remove('has-file');
-            }
-        });
-    });
-})();
-</script>
+<script type="module" src="{{ url_for('static', filename='js/pages/driver-home.js') }}"></script>
 </body>
 </html>

@@ -23,7 +23,7 @@
     {% set page_title = 'รายการรออนุมัติ' %}
     {% include '_header.html' %}
 
-    <div class="container-xxl px-3 py-4">
+    <div class="container-xxl px-3 py-4 approver-wrap">
 
         {# ── Flash messages ──────────────────── #}
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -38,42 +38,40 @@
         {# ── Budget Cards ────────────────────── #}
         {% for budget in budgets %}
         <div class="budget-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-credit-card ac-budget-icon"></i>
-                    <span class="ac-budget-name">งบ {{ budget.department.name }}</span>
+            <div class="budget-card-row">
+                <div class="budget-card-left">
+                    <i data-lucide="credit-card" class="vc-icon-sm budget-card-icon"></i>
+                    <span class="budget-card-name">งบ {{ budget.department.name }}</span>
                 </div>
-                <span class="ac-budget-amount">
+                <div class="budget-card-amount">
                     ฿{{ '{:,.0f}'.format(budget.used_amount | float) }}
-                    <span class="ac-budget-total">/ {{ '{:,.0f}'.format(budget.budget_amount | float) }}</span>
-                </span>
+                    <span class="budget-card-total">/ {{ '{:,.0f}'.format(budget.budget_amount | float) }}</span>
+                </div>
             </div>
             <div class="budget-progress">
                 <div class="budget-bar" style="width:{{ budget.percent_used }}%;"></div>
             </div>
-            <div class="ac-budget-used">
+            <div class="budget-card-used">
                 ใช้แล้ว ฿{{ '{:,.0f}'.format(budget.used_amount | float) }}
-                &nbsp;·&nbsp;{{ budget.percent_used }}%
+                <span class="budget-card-sep">·</span>
+                {{ budget.percent_used }}%
             </div>
         </div>
         {% endfor %}
 
-        {# ── Split history into approved / rejected ── #}
+        {# ── Split history ───────────────────── #}
         {% set approved_list = history | selectattr('status', 'equalto', 'approved') | list %}
         {% set rejected_list = history | selectattr('status', 'equalto', 'rejected') | list %}
 
-        {# ── Tabs ────────────────────────────── #}
+        {# ── Tabs (pill style) ───────────────── #}
         <div class="inbox-tabs">
-            <button class="inbox-tab active" onclick="switchTab('pending', this)">
-                รออนุมัติ
-                {% if pending %}
-                <span class="tab-count-badge">{{ pending | length }}</span>
-                {% endif %}
+            <button type="button" class="inbox-tab active" onclick="switchTab('pending', this)" title="รออนุมัติ">
+                รออนุมัติ{% if pending %} ({{ pending | length }}){% endif %}
             </button>
-            <button class="inbox-tab" onclick="switchTab('approved', this)">
+            <button type="button" class="inbox-tab" onclick="switchTab('approved', this)" title="อนุมัติแล้ว">
                 อนุมัติแล้ว
             </button>
-            <button class="inbox-tab" onclick="switchTab('rejected', this)">
+            <button type="button" class="inbox-tab" onclick="switchTab('rejected', this)" title="ปฏิเสธ">
                 ปฏิเสธ
             </button>
         </div>
@@ -90,94 +88,102 @@
                      data-bs-target="#card-{{ b.id }}"
                      aria-expanded="false">
                     <div class="ac-header-row">
-                        <span class="ac-ref">{{ b.snap_department_name or b.trip_department or '-' }}</span>
-                        <div class="d-flex align-items-center gap-2">
+                        <span class="ac-ref">BK-{{ '%04d' % b.id }}</span>
+                        <div class="ac-header-right">
                             <span class="vc-badge vc-badge-warning vc-badge-dot">รออนุมัติ</span>
-                            <i class="fa-solid fa-chevron-down ac-chevron" id="chev-{{ b.id }}"></i>
+                            <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-{{ b.id }}"></i>
                         </div>
                     </div>
                     <div class="ac-meta">
                         {{ b.user.full_name or b.user.username }}
-                        &nbsp;·&nbsp;
+                        <span class="ac-meta-sep">·</span>
                         {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
                     </div>
                 </div>
+
                 <div class="collapse" id="card-{{ b.id }}">
                     <div class="ac-body">
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <div class="ac-field-label">ผู้จอง</div>
+                        <div class="ac-fields">
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="user" class="vc-icon-sm"></i> ผู้จอง
+                                </div>
                                 <div class="ac-field-value">{{ b.user.full_name or b.user.username }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">แผนก</div>
-                                <div class="ac-field-value">{{ b.snap_department_name or b.trip_department or '-' }}</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">วันที่</div>
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="calendar" class="vc-icon-sm"></i> วันที่
+                                </div>
                                 <div class="ac-field-value">{{ b.start_datetime.strftime('%Y-%m-%d') }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">เวลา</div>
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="clock" class="vc-icon-sm"></i> เวลา
+                                </div>
                                 <div class="ac-field-value">
                                     {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
                                 </div>
                             </div>
-                            <div class="col-12">
-                                <div class="ac-field-label">ปลายทาง</div>
+                            <div class="ac-field ac-field-full">
+                                <div class="ac-field-label">
+                                    <i data-lucide="map-pin" class="vc-icon-sm"></i> ปลายทาง
+                                </div>
                                 <div class="ac-field-value">{{ b.destination }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">วัตถุประสงค์</div>
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="target" class="vc-icon-sm"></i> วัตถุประสงค์
+                                </div>
                                 <div class="ac-field-value">{{ b.purpose }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">ผู้โดยสาร</div>
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="users" class="vc-icon-sm"></i> ผู้โดยสาร
+                                </div>
                                 <div class="ac-field-value">{{ b.passenger_count }} คน</div>
                             </div>
                         </div>
 
                         {# Action buttons #}
-                        <div id="action-btns-{{ b.id }}" class="row g-2">
-                            <div class="col-6">
-                                <button class="btn-reject-action"
-                                        onclick="showRejectForm({{ b.id }})">
-                                    <i class="fa-regular fa-circle-xmark me-1"></i> ปฏิเสธ
+                        <div id="action-btns-{{ b.id }}" class="ac-action-row">
+                            <button type="button"
+                                    class="btn-reject-action"
+                                    onclick="showRejectForm({{ b.id }})"
+                                    title="ปฏิเสธ">
+                                <i data-lucide="circle-x" class="vc-icon-sm"></i>
+                                ปฏิเสธ
+                            </button>
+                            <form method="post"
+                                  action="{{ url_for('vehicle.approve_booking', booking_id=b.id) }}"
+                                  class="ac-action-form">
+                                <input type="hidden" name="action" value="approve">
+                                <button type="submit" class="btn-approve-action" title="อนุมัติ">
+                                    <i data-lucide="circle-check" class="vc-icon-sm"></i>
+                                    อนุมัติ
                                 </button>
-                            </div>
-                            <div class="col-6">
-                                <form method="post"
-                                      action="{{ url_for('vehicle.approve_booking', booking_id=b.id) }}">
-                                    <input type="hidden" name="action" value="approve">
-                                    <button type="submit" class="btn-approve-action">
-                                        <i class="fa-regular fa-circle-check me-1"></i> อนุมัติ
-                                    </button>
-                                </form>
-                            </div>
+                            </form>
                         </div>
 
                         {# Reject inline form (hidden by default) #}
-                        <div id="reject-form-{{ b.id }}" class="d-none mt-2">
+                        <div id="reject-form-{{ b.id }}" class="d-none ac-reject-wrap">
                             <form method="post"
                                   action="{{ url_for('vehicle.approve_booking', booking_id=b.id) }}">
                                 <input type="hidden" name="action" value="reject">
                                 <input type="text" name="reject_reason"
-                                       class="form-control form-control-sm mb-2 ac-reject-input"
+                                       class="form-control form-control-sm ac-reject-input"
                                        placeholder="ระบุเหตุผลที่ปฏิเสธ..." required>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <button type="button"
-                                                class="btn btn-sm w-100 ac-reject-cancel"
-                                                onclick="hideRejectForm({{ b.id }})">
-                                            ยกเลิก
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button type="submit"
-                                                class="btn btn-sm btn-danger w-100">
-                                            ยืนยันปฏิเสธ
-                                        </button>
-                                    </div>
+                                <div class="ac-action-row">
+                                    <button type="button"
+                                            class="ac-reject-cancel"
+                                            onclick="hideRejectForm({{ b.id }})"
+                                            title="ยกเลิก">
+                                        ยกเลิก
+                                    </button>
+                                    <button type="submit"
+                                            class="btn-reject-confirm"
+                                            title="ยืนยันปฏิเสธ">
+                                        ยืนยันปฏิเสธ
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -189,7 +195,7 @@
             <div class="approver-card">
                 <div class="vc-empty">
                     <div class="vc-empty-icon">
-                        <i class="fa-solid fa-circle-check approver-empty-icon"></i>
+                        <i data-lucide="circle-check" class="vc-icon-sm"></i>
                     </div>
                     <p class="vc-empty-title">ยังไม่มีรายการที่รออนุมัติ</p>
                 </div>
@@ -209,41 +215,45 @@
                      data-bs-target="#hist-{{ b.id }}"
                      aria-expanded="false">
                     <div class="ac-header-row">
-                        <span class="ac-ref">{{ 'BK-%04d' % b.id }}</span>
-                        <div class="d-flex align-items-center gap-2">
+                        <span class="ac-ref">BK-{{ '%04d' % b.id }}</span>
+                        <div class="ac-header-right">
                             <span class="vc-badge vc-badge-success vc-badge-dot">อนุมัติแล้ว</span>
-                            <i class="fa-solid fa-chevron-down ac-chevron" id="chev-hist-{{ b.id }}"></i>
+                            <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-hist-{{ b.id }}"></i>
                         </div>
                     </div>
                     <div class="ac-meta">
                         {{ b.user.full_name or b.user.username }}
-                        &nbsp;·&nbsp;
+                        <span class="ac-meta-sep">·</span>
                         {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
                     </div>
                 </div>
                 <div class="collapse" id="hist-{{ b.id }}">
                     <div class="ac-body">
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <div class="ac-field-label">ผู้จอง</div>
+                        <div class="ac-fields">
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="user" class="vc-icon-sm"></i> ผู้จอง
+                                </div>
                                 <div class="ac-field-value">{{ b.user.full_name or b.user.username }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">แผนก</div>
-                                <div class="ac-field-value">{{ b.snap_department_name or b.trip_department or '-' }}</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">วันที่</div>
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="calendar" class="vc-icon-sm"></i> วันที่
+                                </div>
                                 <div class="ac-field-value">{{ b.start_datetime.strftime('%Y-%m-%d') }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">เวลา</div>
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="clock" class="vc-icon-sm"></i> เวลา
+                                </div>
                                 <div class="ac-field-value">
                                     {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
                                 </div>
                             </div>
-                            <div class="col-12">
-                                <div class="ac-field-label">ปลายทาง</div>
+                            <div class="ac-field ac-field-full">
+                                <div class="ac-field-label">
+                                    <i data-lucide="map-pin" class="vc-icon-sm"></i> ปลายทาง
+                                </div>
                                 <div class="ac-field-value">{{ b.destination }}</div>
                             </div>
                         </div>
@@ -255,7 +265,7 @@
             <div class="approver-card">
                 <div class="vc-empty">
                     <div class="vc-empty-icon">
-                        <i class="fa-solid fa-circle-check approver-empty-icon"></i>
+                        <i data-lucide="circle-check" class="vc-icon-sm"></i>
                     </div>
                     <p class="vc-empty-title">ยังไม่มีรายการที่อนุมัติ</p>
                 </div>
@@ -275,46 +285,52 @@
                      data-bs-target="#rej-{{ b.id }}"
                      aria-expanded="false">
                     <div class="ac-header-row">
-                        <span class="ac-ref">{{ 'BK-%04d' % b.id }}</span>
-                        <div class="d-flex align-items-center gap-2">
+                        <span class="ac-ref">BK-{{ '%04d' % b.id }}</span>
+                        <div class="ac-header-right">
                             <span class="vc-badge vc-badge-danger vc-badge-dot">ปฏิเสธ</span>
-                            <i class="fa-solid fa-chevron-down ac-chevron" id="chev-rej-{{ b.id }}"></i>
+                            <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-rej-{{ b.id }}"></i>
                         </div>
                     </div>
                     <div class="ac-meta">
                         {{ b.user.full_name or b.user.username }}
-                        &nbsp;·&nbsp;
+                        <span class="ac-meta-sep">·</span>
                         {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
                     </div>
                 </div>
                 <div class="collapse" id="rej-{{ b.id }}">
                     <div class="ac-body">
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <div class="ac-field-label">ผู้จอง</div>
+                        <div class="ac-fields">
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="user" class="vc-icon-sm"></i> ผู้จอง
+                                </div>
                                 <div class="ac-field-value">{{ b.user.full_name or b.user.username }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">แผนก</div>
-                                <div class="ac-field-value">{{ b.snap_department_name or b.trip_department or '-' }}</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">วันที่</div>
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="calendar" class="vc-icon-sm"></i> วันที่
+                                </div>
                                 <div class="ac-field-value">{{ b.start_datetime.strftime('%Y-%m-%d') }}</div>
                             </div>
-                            <div class="col-6">
-                                <div class="ac-field-label">เวลา</div>
+                            <div class="ac-field">
+                                <div class="ac-field-label">
+                                    <i data-lucide="clock" class="vc-icon-sm"></i> เวลา
+                                </div>
                                 <div class="ac-field-value">
                                     {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
                                 </div>
                             </div>
-                            <div class="col-12">
-                                <div class="ac-field-label">ปลายทาง</div>
+                            <div class="ac-field ac-field-full">
+                                <div class="ac-field-label">
+                                    <i data-lucide="map-pin" class="vc-icon-sm"></i> ปลายทาง
+                                </div>
                                 <div class="ac-field-value">{{ b.destination }}</div>
                             </div>
                             {% if b.reject_reason %}
-                            <div class="col-12">
-                                <div class="ac-field-label">เหตุผลที่ปฏิเสธ</div>
+                            <div class="ac-field ac-field-full">
+                                <div class="ac-field-label">
+                                    <i data-lucide="message-square-x" class="vc-icon-sm"></i> เหตุผลที่ปฏิเสธ
+                                </div>
                                 <div class="ac-field-value ac-reject-reason">{{ b.reject_reason }}</div>
                             </div>
                             {% endif %}
@@ -327,7 +343,7 @@
             <div class="approver-card">
                 <div class="vc-empty">
                     <div class="vc-empty-icon">
-                        <i class="fa-solid fa-circle-xmark approver-empty-icon"></i>
+                        <i data-lucide="circle-x" class="vc-icon-sm"></i>
                     </div>
                     <p class="vc-empty-title">ยังไม่มีรายการที่ปฏิเสธ</p>
                 </div>

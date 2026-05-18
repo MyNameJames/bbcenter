@@ -1,0 +1,422 @@
+/* ============================================================
+   Manage Fleet — Vercel UI + Emil-flavored micro-interactions
+   ─────────────────────────────────────────────────────────────
+   Scope: .vc-scope .mf-* on this page only.
+   Tokens จาก design-system.css (--vc-*)
+   ============================================================ */
+
+/* ─────────────────────────────────────────────
+   Custom easings (Emil)
+───────────────────────────────────────────── */
+.vc-scope {
+    --mf-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --mf-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ─────────────────────────────────────────────
+   1. PAGE HEADER
+───────────────────────────────────────────── */
+.mf-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+    flex-wrap: wrap;
+    padding-bottom: var(--vc-space-5);
+    margin-bottom: var(--vc-space-5);
+    border-bottom: 1px solid var(--vc-border);
+}
+
+.mf-title {
+    font-size: var(--vc-text-xl);
+    font-weight: 600;
+    letter-spacing: var(--vc-tracking-tight);
+    color: var(--vc-fg);
+    line-height: 1.2;
+    margin: 0;
+}
+
+.mf-subtitle {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    margin: 6px 0 0 0;
+    line-height: 1.4;
+}
+
+/* ─────────────────────────────────────────────
+   2. GRID — col-8 / col-4
+───────────────────────────────────────────── */
+.mf-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--vc-space-4);
+    align-items: start;
+}
+
+.mf-col-right {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-4);
+}
+
+@media (max-width: 1199.98px) {
+    .mf-grid { grid-template-columns: 1fr; }
+}
+
+/* ─────────────────────────────────────────────
+   3. PLATE / NAME cell helpers (table content)
+───────────────────────────────────────────── */
+.mf-plate {
+    font-weight: 600;
+    letter-spacing: .01em;
+    color: var(--vc-fg);
+}
+
+.mf-name-line {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+.mf-name-primary { font-weight: 500; color: var(--vc-fg); }
+.mf-name-sub     { font-size: var(--vc-text-xs); color: var(--vc-fg-muted); }
+
+.mf-cap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--vc-fg-muted);
+}
+
+.mf-cap .vc-icon-sm { color: var(--vc-fg-subtle); }
+
+.mf-odo-unit {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-subtle);
+    margin-left: 2px;
+    letter-spacing: 0;
+}
+
+.mf-username-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--vc-font-mono);
+    font-size: 11px;
+    color: var(--vc-fg-muted);
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    padding: 1px 6px;
+    border-radius: var(--vc-radius-xs);
+    line-height: 1.4;
+}
+
+.mf-dept-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    padding: 1px 8px;
+    border-radius: var(--vc-radius-xs);
+}
+
+/* ─────────────────────────────────────────────
+   4. ACTION BUTTONS (row icons)
+   Emil: scale(0.97) on :active, 160ms ease-out
+───────────────────────────────────────────── */
+.mf-actions {
+    display: inline-flex;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+.mf-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--vc-border);
+    background: var(--vc-bg);
+    color: var(--vc-fg-muted);
+    border-radius: var(--vc-radius-xs);
+    cursor: pointer;
+    transition:
+        background 140ms var(--mf-ease-out),
+        border-color 140ms var(--mf-ease-out),
+        color 140ms var(--mf-ease-out),
+        transform 140ms var(--mf-ease-out);
+}
+
+.mf-icon-btn:hover {
+    background: var(--vc-bg-subtle);
+    border-color: var(--vc-border-hover);
+    color: var(--vc-fg);
+}
+
+.mf-icon-btn:active {
+    transform: scale(0.94);
+    transition-duration: 80ms;
+}
+
+.mf-icon-btn:focus-visible {
+    outline: 2px solid var(--vc-fg);
+    outline-offset: 1px;
+}
+
+.mf-icon-btn--danger:hover {
+    color: var(--vc-red);
+    border-color: var(--vc-red-border);
+    background: var(--vc-bg);
+}
+
+/* primary buttons inherit vc-btn scale-press */
+.vc-btn { transition:
+    background 140ms var(--mf-ease-out),
+    border-color 140ms var(--mf-ease-out),
+    color 140ms var(--mf-ease-out),
+    transform 140ms var(--mf-ease-out);
+}
+.vc-btn:active { transform: scale(0.97); transition-duration: 80ms; }
+
+/* ─────────────────────────────────────────────
+   5. ROW STAGGER (Emil: 40ms between rows, ease-out)
+   - Only first paint; never blocks interaction
+───────────────────────────────────────────── */
+@keyframes mfRowIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.mf-stagger tbody tr,
+.mf-stagger > .vc-list-item {
+    opacity: 0;
+    animation: mfRowIn 280ms var(--mf-ease-out) forwards;
+}
+
+.mf-stagger tbody tr:nth-child(1),
+.mf-stagger > .vc-list-item:nth-child(1) { animation-delay: 0ms; }
+.mf-stagger tbody tr:nth-child(2),
+.mf-stagger > .vc-list-item:nth-child(2) { animation-delay: 40ms; }
+.mf-stagger tbody tr:nth-child(3),
+.mf-stagger > .vc-list-item:nth-child(3) { animation-delay: 80ms; }
+.mf-stagger tbody tr:nth-child(4),
+.mf-stagger > .vc-list-item:nth-child(4) { animation-delay: 120ms; }
+.mf-stagger tbody tr:nth-child(5),
+.mf-stagger > .vc-list-item:nth-child(5) { animation-delay: 160ms; }
+.mf-stagger tbody tr:nth-child(6),
+.mf-stagger > .vc-list-item:nth-child(6) { animation-delay: 200ms; }
+.mf-stagger tbody tr:nth-child(7),
+.mf-stagger > .vc-list-item:nth-child(7) { animation-delay: 240ms; }
+.mf-stagger tbody tr:nth-child(n+8),
+.mf-stagger > .vc-list-item:nth-child(n+8) { animation-delay: 280ms; }
+
+/* ─────────────────────────────────────────────
+   6. RIGHT-COLUMN DRIVER LIST
+───────────────────────────────────────────── */
+.mf-driver-row {
+    padding: var(--vc-space-3) var(--vc-space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    transition: background 140ms var(--mf-ease-out);
+}
+.mf-driver-row:hover { background: var(--vc-bg-subtle); }
+
+.mf-driver-main { flex: 1; min-width: 0; }
+
+.mf-driver-name {
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg);
+    line-height: 1.3;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mf-driver-meta {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    line-height: 1.3;
+}
+
+.mf-driver-jobs {
+    flex-shrink: 0;
+    font-size: var(--vc-text-xs);
+    font-family: var(--vc-font-mono);
+    color: var(--vc-fg-muted);
+    text-align: right;
+    min-width: 56px;
+}
+.mf-driver-jobs strong {
+    display: block;
+    font-family: inherit;
+    color: var(--vc-fg);
+    font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────
+   7. APPROVER LIST (compact)
+───────────────────────────────────────────── */
+.mf-approver-row {
+    padding: var(--vc-space-3) var(--vc-space-4);
+    border-bottom: 1px solid var(--vc-border);
+}
+.mf-approver-row:last-child { border-bottom: none; }
+
+.mf-approver-name {
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg);
+    line-height: 1.3;
+    margin: 0 0 4px 0;
+}
+
+.mf-approver-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+}
+
+/* ─────────────────────────────────────────────
+   8. READ-ONLY NOTE (approver section)
+───────────────────────────────────────────── */
+.mf-readonly-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-xs);
+    padding: 2px 8px;
+}
+.mf-readonly-note .vc-icon-sm { color: var(--vc-fg-subtle); }
+
+/* ─────────────────────────────────────────────
+   9. MODAL ENTRY (Emil: never scale(0), origin = center for modals)
+───────────────────────────────────────────── */
+.vc-modal .modal-dialog {
+    transition:
+        transform 200ms var(--mf-ease-out),
+        opacity 200ms var(--mf-ease-out);
+    transform-origin: center;
+}
+.vc-modal.fade .modal-dialog {
+    transform: translateY(8px) scale(0.97);
+    opacity: 0;
+}
+.vc-modal.show .modal-dialog {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+/* close button — scale press */
+.vc-modal .btn-close { transition: opacity 140ms var(--mf-ease-out), background 140ms var(--mf-ease-out), transform 140ms var(--mf-ease-out); }
+.vc-modal .btn-close:active { transform: scale(0.92); transition-duration: 80ms; }
+
+/* form switch (driver active toggle) */
+.mf-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--vc-space-3);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-bg);
+}
+.mf-switch-row .form-check-input {
+    width: 2.4em;
+    height: 1.3em;
+    cursor: pointer;
+}
+.mf-switch-row .form-check-input:checked {
+    background-color: var(--vc-fg);
+    border-color: var(--vc-fg);
+}
+
+/* ─────────────────────────────────────────────
+   10. HISTORY MODAL — total card + spinner
+───────────────────────────────────────────── */
+.mf-hist-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--vc-space-2);
+    padding: var(--vc-space-4);
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    margin-bottom: var(--vc-space-4);
+}
+.mf-hist-total-label {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    margin: 0;
+}
+.mf-hist-total-value {
+    font-size: var(--vc-text-lg);
+    font-weight: 600;
+    color: var(--vc-fg);
+    font-family: var(--vc-font-mono);
+    margin: 0;
+}
+.mf-hist-total-unit {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    margin-left: 2px;
+}
+
+@keyframes mfSpin { to { transform: rotate(360deg); } }
+.mf-spin {
+    display: inline-block;
+    animation: mfSpin 800ms linear infinite;
+}
+
+.mf-hist-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--vc-space-2);
+    padding: var(--vc-space-6);
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-sm);
+}
+
+.mf-distance-pos {
+    color: var(--vc-fg);
+    font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────
+   11. REDUCED MOTION (a11y)
+───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .mf-stagger tbody tr,
+    .mf-stagger > .vc-list-item {
+        animation: none;
+        opacity: 1;
+    }
+    .vc-modal .modal-dialog,
+    .vc-modal.fade .modal-dialog,
+    .vc-modal.show .modal-dialog {
+        transition: opacity 120ms ease;
+        transform: none;
+    }
+    .vc-btn:active,
+    .mf-icon-btn:active { transform: none; }
+}

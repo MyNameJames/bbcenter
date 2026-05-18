@@ -41,8 +41,8 @@ def _guard():
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
-PAYMENT_METHODS = ('transfer', 'card', 'self')   # เงินโอน / ตัดบัตร / จ่ายเอง
-PAYMENT_LABEL_TH = {'transfer': 'เงินโอน', 'card': 'ตัดบัตร', 'self': 'จ่ายเอง'}
+PAYMENT_METHODS = ('transfer', 'card', 'self')   # เงินสด / ตัดบัตร / จ่ายเอง
+PAYMENT_LABEL_TH = {'transfer': 'เงินสด', 'card': 'ตัดบัตร', 'self': 'จ่ายเอง'}
 MONTH_LABEL_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
                   'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
@@ -57,8 +57,9 @@ def _bill_status(bill):
 
 
 def _depletes_reserve(method):
-    """transfer/self → admin pays driver from reserve; card = company card, no reserve impact."""
-    return method in ('transfer', 'self')
+    """Only `transfer` (เงินสด — เบิกจากกองกลาง) depletes reserve.
+    `card` = company card (no reserve impact). `self` = ผู้โดยสารจ่ายเอง (เก็บประวัติเฉย ๆ)."""
+    return method == 'transfer'
 
 
 def _parse_date(s, default=None):
@@ -143,6 +144,11 @@ def admin_fuel():
     reserve_used        = sum((float(b.amount) for b in pending_bills if _depletes_reserve(b.payment_method)), 0.0)
     reserve_balance     = float(reserve_amount) - reserve_used
 
+    # "จ่ายเอง" tracker — ผู้โดยสารจ่ายเอง ไม่หัก reserve · pending scope
+    self_paid_bills  = [b for b in pending_bills if b.payment_method == 'self']
+    self_paid_total  = sum((float(b.amount) for b in self_paid_bills), 0.0)
+    self_paid_count  = len(self_paid_bills)
+
     # ── KPI: annual budget side (sum across all bills in f_year, no other filter) ──
     year_bills = FuelBill.query.filter(extract('year', FuelBill.bill_date) == f_year).all()
     year_used  = sum((float(b.amount) for b in year_bills), 0.0)
@@ -154,9 +160,11 @@ def admin_fuel():
     for b in bills:
         by_method[b.payment_method] = by_method.get(b.payment_method, 0.0) + float(b.amount)
 
-    # Pending breakdown for status chips
+    # Pending breakdown for status chips — only bills that deplete reserve (transfer)
     pending_by_status = {'รอเบิก': 0.0, 'อนุมัติ': 0.0}
     for b in pending_bills:
+        if not _depletes_reserve(b.payment_method):
+            continue
         pending_by_status[_bill_status(b)] = pending_by_status.get(_bill_status(b), 0.0) + float(b.amount)
 
     # ── Pivot: vehicle × month for f_year ──────────────────────────
@@ -198,6 +206,12 @@ def admin_fuel():
     reserve_logs = FuelReserveLog.query.order_by(FuelReserveLog.created_at.desc()).limit(20).all()
     fuel_prices  = FuelPrice.query.order_by(FuelPrice.effective_date.desc()).limit(20).all()
 
+    # Distinct years that actually have bills (desc) — always include f_year
+    year_rows = (db.session.query(extract('year', FuelBill.bill_date))
+                 .filter(FuelBill.bill_date.isnot(None))
+                 .distinct().all())
+    available_years = sorted({int(y[0]) for y in year_rows if y[0]} | {f_year}, reverse=True)
+
     return render_template(
         'vehicle/admin/admin_fuel.html',
         # data
@@ -218,6 +232,8 @@ def admin_fuel():
         reserve_balance=reserve_balance,
         pending_total=pending_total,
         pending_by_status=pending_by_status,
+        self_paid_total=self_paid_total,
+        self_paid_count=self_paid_count,
         annual_budget=annual_budget,
         year_used=year_used,
         year_remaining=year_remaining,
@@ -227,6 +243,7 @@ def admin_fuel():
         f_month=f_month,
         f_veh=f_veh,
         f_drv=f_drv,
+        available_years=available_years,
     )
 
 

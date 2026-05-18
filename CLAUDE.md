@@ -1,6 +1,6 @@
 # BBCenter V2 — Project Rules
 
-> **อัปเดตล่าสุด:** 2026-05-14 (namespace alignment — `--vc-*` canonical, `--ds-*` frozen-legacy)
+> **อัปเดตล่าสุด:** 2026-05-18 (admin_fuel: KPI group A → 4 cells (+`จ่ายเอง` tracker); `_depletes_reserve` → `transfer` only (`self` ไม่หัก reserve); year dropdown ดึงจาก DB; label "เงินโอน" → "เงินสด"; เพิ่ม `vc-kpi-group--4` modifier)
 
 ## 📖 Reading Strategy
 
@@ -65,7 +65,7 @@
 
 ## Stack (Quick Ref)
 
-Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + in-app + APScheduler notify · `--vc-*` design tokens (canonical) — `--ds-*` = legacy, ห้ามใช้ใน code ใหม่, รอ retire ตอน Phase 5 cleanup
+Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + in-app + APScheduler notify · `--vc-*` design tokens (canonical) — `--ds-*` **retired** (Phase 5.1, 2026-05-16): ลบครบแล้ว ห้ามเพิ่มใหม่เด็ดขาด
 
 รายละเอียด → [architecture.md](docs/notes/architecture.md)
 
@@ -74,10 +74,12 @@ Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + 
 ## Gotchas — สิ่งที่ลืมบ่อย
 
 **Business logic**
-- Budget mutation: ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` ตรงๆ — ทุก mutation ต้องผ่าน `app/services/budget_service.py` (เพื่อ ledger + idempotency)
+- Budget mutation: ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` / `is_active` ตรงๆ — ทุก mutation ต้องผ่าน `app/services/budget_service.py` (เพื่อ ledger + idempotency)
   - **Deduct/override** 4 call sites: `mileage_log()`, `driver_mileage()`, `override_fuel()`, `budget_manage()` POST
   - **Refund** (`refund_for_booking()`) 4 call sites: `delete_booking()` (ก่อน cascade), `approve_booking()` admin reject + approver reject, `admin_assign()` reject
+  - **`set_active(budget, active)`** (2026-05-18) — toggle ปิด/เปิดใช้งาน → log `set_active`/`set_inactive`; `is_active=False` block `approve_booking` (admin + approver paths ผ่าน `_lookup_budget_for_booking()`) + `top_up` + `manual_adjust`; ไม่ block mileage deduct/refund (booking เก่าปิดทริปได้); KPI sum filter `is_active=True`
 - Mileage formula: `fuel_cost = (distance / vehicle.fuel_rate) * fuel_price` (override ถ้า `mileage.fuel_cost` มีค่า)
+- Fuel reserve depletion (2026-05-18): `_depletes_reserve(method)` = `method == 'transfer'` (เงินสด เบิกจากกองกลาง) **เท่านั้น** — `card`=บัตรส่วนกลาง, `self`=ผู้โดยสารจ่ายเอง (เก็บประวัติ ไม่หัก reserve). กระทบ `reserve_used` + `balance_after` ใน admin_fuel.html
 - `is_vehicle_admin()` = `role_vehicle=='admin' OR is_superadmin`; approver เห็นเฉพาะแผนกตัวเอง
 - ห้ามจองข้ามวัน — validate ใน `book_vehicle_simple()` ([vehicle_view.py:83](app/views/vehicle_view.py#L83))
 - Thai time: `get_bkk_time()` = UTC+7 ([models.py:8](app/models.py#L8))

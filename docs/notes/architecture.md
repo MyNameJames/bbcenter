@@ -208,7 +208,9 @@ bbcenter/
 │   └── static/
 │       ├── css/design-system.css    ← --ds-* tokens
 │       ├── css/vehicle.css, vehicle_admin.css, notification.css
-│       ├── js/vehicle.js, vehicle_admin.js, notification.js
+│       ├── js/vehicle.js, notification.js
+│       ├── js/core/{icons,format,http}.js         ← shared ES modules (Phase 4.0)
+│       ├── js/pages/{vehicle-admin,repair,approver-inbox}.js  ← per-page ES modules
 │       ├── images/icons/calendar-add.png
 │       ├── uploads/{repair,maintenance,mileage}/
 │       └── vendor/

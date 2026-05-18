@@ -207,6 +207,12 @@ class VehicleBooking(db.Model):
     snap_driver_name     = db.Column(db.String(100), nullable=True)  # ชื่อคนขับ
     snap_department_name = db.Column(db.String(100), nullable=True)  # ชื่อแผนก
 
+    # ── Ad-hoc trip (2026-05-18) ─────────────────────────────
+    # is_ad_hoc=True → driver สร้างเอง (งานนอกระบบ), ซ่อนจากปฏิทิน /vehicle
+    is_ad_hoc    = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    # contact_name → free-text ผู้ติดต่อ เมื่อ user_id ไม่ใช่ผู้ติดต่อจริง (driver_id ตั้งเป็นตัวเอง)
+    contact_name = db.Column(db.String(100), nullable=True)
+
 
 
 
@@ -316,6 +322,10 @@ class VehicleBudget(db.Model):
 
     start_date     = db.Column(db.Date, nullable=True)   # วันเริ่มใช้งบ (ถ้า null = ทั้งเดือน)
     end_date       = db.Column(db.Date, nullable=True)   # วันสิ้นสุดงบ
+
+    # is_active = False → block approve_booking ใหม่ + block top_up/manual_adjust
+    # ประวัติ used_amount + ledger ยังอยู่ครบ; KPI total/remaining ไม่นับ inactive
+    is_active      = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
 
     # 1 แผนก + 1 ประเภทงบ + 1 เดือน = 1 row เท่านั้น
     __table_args__ = (db.UniqueConstraint('budget_type_id', 'department_id', 'year', 'month'),)
@@ -458,6 +468,7 @@ class OTRateConfig(db.Model):
     end_time   = db.Column(db.String(5),  nullable=False)   # "08:00" หรือ "24:00"
     rate       = db.Column(db.Numeric(8, 2), nullable=False)
     is_active  = db.Column(db.Boolean, default=True)
+    day_of_week = db.Column(db.Integer, nullable=True)  # NULL=any day, 0=Mon ... 6=Sun (Python weekday()); used by auto_generate_ot() override
     sort_order = db.Column(db.Integer, default=0)
 
 

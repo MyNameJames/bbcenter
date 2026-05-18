@@ -64,7 +64,10 @@ def is_vehicle_admin():
 @vehicle_bp.route('/vehicle')
 @login_required
 def index():
-    bookings  = VehicleBooking.query.order_by(VehicleBooking.created_at.desc()).all()
+    # ad-hoc (driver-created off-the-books) ซ่อนจากปฏิทินผู้ใช้
+    bookings  = (VehicleBooking.query
+                 .filter(VehicleBooking.is_ad_hoc == False)
+                 .order_by(VehicleBooking.created_at.desc()).all())
     vehicles  = Vehicle.query.filter_by(status='active').order_by(Vehicle.id).all()
     drivers   = Driver.query.filter_by(is_active=True).order_by(Driver.id).all()
     return render_template(
@@ -295,7 +298,8 @@ def approver_inbox():
 @login_required
 def api_bookings():
     bookings = VehicleBooking.query.filter(
-        VehicleBooking.status.in_(['pending', 'waiting_approver', 'approved'])
+        VehicleBooking.status.in_(['pending', 'waiting_approver', 'approved']),
+        VehicleBooking.is_ad_hoc == False
     ).all()
 
     events = []
@@ -317,7 +321,8 @@ def api_bookings():
 @login_required
 def custom_bookings():
     bookings = VehicleBooking.query.filter(
-        VehicleBooking.status.in_(['pending', 'waiting_approver', 'approved'])
+        VehicleBooking.status.in_(['pending', 'waiting_approver', 'approved']),
+        VehicleBooking.is_ad_hoc == False
     ).all()
 
     events = []
@@ -338,6 +343,43 @@ def custom_bookings():
         })
     return jsonify(events)
 # ─────────────────────────────────────────────
+# Budget lookup helper — ใช้ใน approve_booking เพื่อ check is_active
+# ─────────────────────────────────────────────
+def _lookup_budget_for_booking(booking):
+    """หา VehicleBudget row ที่ booking นี้จะหักงบจริง (ใช้ start_datetime month).
+    คืน (budget, key_label) — budget=None ถ้าไม่พบ"""
+    if booking.expense_type not in ('central', 'department'):
+        return None, None
+    if not booking.start_datetime:
+        return None, None
+    bt = BudgetType.query.filter_by(name=booking.expense_type).first()
+    if not bt:
+        return None, booking.expense_type
+
+    if booking.expense_type == 'central':
+        key_label = booking.central_category
+        dept_obj = VehicleDepartment.query.filter_by(name=key_label).first() if key_label else None
+    else:
+        key_label = booking.trip_department or (booking.user.department if booking.user else None)
+        if booking.trip_department_id:
+            dept_obj = VehicleDepartment.query.get(booking.trip_department_id)
+        elif key_label:
+            dept_obj = VehicleDepartment.query.filter_by(name=key_label).first()
+        else:
+            dept_obj = None
+    if not dept_obj:
+        return None, key_label
+
+    budget = VehicleBudget.query.filter_by(
+        department_id=dept_obj.id,
+        year=booking.start_datetime.year,
+        month=booking.start_datetime.month,
+        budget_type_id=bt.id,
+    ).first()
+    return budget, key_label
+
+
+# ─────────────────────────────────────────────
 # อนุมัติ / ปฏิเสธ
 # ─────────────────────────────────────────────
 @vehicle_bp.route('/vehicle/approve/<int:booking_id>', methods=['POST'])
@@ -351,6 +393,15 @@ def approve_booking(booking_id):
     try:
         if is_vehicle_admin() and booking.status == 'pending':
             if action == 'approve':
+                # Block ถ้า target budget ถูกปิดใช้งาน
+                _bgt, _kl = _lookup_budget_for_booking(booking)
+                if _bgt and not _bgt.is_active:
+                    flash(
+                        f'อนุมัติไม่ได้ — งบ "{_bgt.department.name}" '
+                        f'เดือน {_bgt.month}/{_bgt.year + 543} ถูกปิดใช้งานอยู่',
+                        'danger'
+                    )
+                    return redirect(url_for('vehicle.detail_booking', booking_id=booking.id))
                 if driver_id: booking.driver_id = driver_id
                 if booking.expense_type == 'department':
                     if booking.trip_department_id is None:
@@ -398,6 +449,15 @@ def approve_booking(booking_id):
                 return redirect(url_for('vehicle.approver_inbox'))
 
             if action == 'approve':
+                # Block ถ้า target budget ถูกปิดใช้งาน (approver path)
+                _bgt, _kl = _lookup_budget_for_booking(booking)
+                if _bgt and not _bgt.is_active:
+                    flash(
+                        f'อนุมัติไม่ได้ — งบ "{_bgt.department.name}" '
+                        f'เดือน {_bgt.month}/{_bgt.year + 543} ถูกปิดใช้งานอยู่',
+                        'danger'
+                    )
+                    return redirect(url_for('vehicle.approver_inbox'))
                 booking.status = 'approved'
                 booking.updated_by = current_user.id
                 db.session.flush()
@@ -1221,6 +1281,9 @@ def mileage_log():
     f_status     = request.args.get('status_filter', '').strip()   # complete|partial|none
     f_cost_min   = request.args.get('cost_min', type=float)
     f_cost_max   = request.args.get('cost_max', type=float)
+    f_budget_type = request.args.get('budget_type', '').strip()   # central|department|personal
+    f_budget_sub  = request.args.get('budget_sub', '').strip()    # central_category or trip_department
+    f_booker      = request.args.get('booker_q', '').strip()
 
     # Default to current month when no dates given and not show_all
     if not show_all and not f_date_start and not f_date_end:
@@ -1248,6 +1311,17 @@ def mileage_log():
         q = q.filter(VehicleBooking.assigned_vehicle_id == f_vehicle)
     if f_driver:
         q = q.filter(VehicleBooking.driver_id == f_driver)
+    if f_budget_type in ('central', 'department', 'personal'):
+        q = q.filter(VehicleBooking.expense_type == f_budget_type)
+    if f_budget_sub and f_budget_type == 'central':
+        q = q.filter(VehicleBooking.central_category == f_budget_sub)
+    elif f_budget_sub and f_budget_type == 'department':
+        q = q.filter(VehicleBooking.trip_department == f_budget_sub)
+    if f_booker:
+        like = f'%{f_booker}%'
+        q = q.join(User, VehicleBooking.user_id == User.id).filter(
+            or_(User.full_name.ilike(like), User.username.ilike(like))
+        )
 
     bookings = q.order_by(VehicleBooking.start_datetime.desc()).all()
 
@@ -1270,6 +1344,30 @@ def mileage_log():
             return (None, None, 'partial')
         return (None, None, 'none')
 
+    # Pre-fetch all FuelBill mileages grouped by vehicle (for in-trip refuel detection)
+    fuel_by_vehicle = {}
+    for vid, mileage in (db.session.query(FuelBill.vehicle_id, FuelBill.mileage)
+                                   .filter(FuelBill.mileage.isnot(None)).all()):
+        fuel_by_vehicle.setdefault(vid, []).append(mileage)
+
+    def _budget_info(b):
+        et = (b.expense_type or '').strip()
+        if et == 'central':
+            return ('central', 'งบส่วนกลาง', (b.central_category or '').strip() or None)
+        if et == 'department':
+            sub = (b.trip_department or (b.user.department if b.user else '') or '').strip()
+            return ('department', 'งบส่วนกอง', sub or None)
+        if et == 'personal':
+            return ('personal', 'งบส่วนตัว', None)
+        return ('', '—', None)
+
+    def _has_refuel_in_trip(b, m):
+        if not (b.assigned_vehicle_id and m and m.odometer_start and m.odometer_end):
+            return False
+        bills = fuel_by_vehicle.get(b.assigned_vehicle_id, [])
+        lo, hi = m.odometer_start, m.odometer_end
+        return any(lo <= km <= hi for km in bills)
+
     rows = []
     for b in bookings:
         m = b.mileage[0] if b.mileage else None
@@ -1283,12 +1381,31 @@ def mileage_log():
         if f_cost_max is not None and (fuel_cost or 0) > f_cost_max:
             continue
 
+        budget_type, budget_label, budget_sub = _budget_info(b)
         rows.append({
             'b': b, 'm': m,
             'distance': distance,
             'fuel_cost': fuel_cost,
             'status_key': status_key,
+            'budget_type': budget_type,
+            'budget_label': budget_label,
+            'budget_sub': budget_sub,
+            'has_refuel': _has_refuel_in_trip(b, m),
         })
+
+    # ── Group rows by trip_group (representative = first row) ────
+    display_rows = []
+    seen_groups = set()
+    for r in rows:
+        tg = r['b'].trip_group
+        if tg is None:
+            display_rows.append({'kind': 'single', 'row': r, 'count': 1, 'members': [r]})
+            continue
+        if tg in seen_groups:
+            continue
+        seen_groups.add(tg)
+        members = [x for x in rows if x['b'].trip_group == tg]
+        display_rows.append({'kind': 'group', 'row': members[0], 'count': len(members), 'members': members})
 
     # ── Dashboard KPIs (year/month) ─────────────────────────────
     year_budgets = VehicleBudget.query.filter_by(year=now.year).all()
@@ -1331,6 +1448,16 @@ def mileage_log():
     # ── Per-vehicle × month breakdown (current year) ────────────
     vehicles_all = Vehicle.query.order_by(Vehicle.license_plate).all()
     drivers_all  = Driver.query.filter_by(is_active=True).order_by(Driver.name).all()
+    booker_ids   = [uid for (uid,) in db.session.query(VehicleBooking.user_id).distinct().all()]
+    bookers_all  = User.query.filter(User.id.in_(booker_ids)).order_by(User.full_name).all() if booker_ids else []
+
+    # Budget sub-list: ดึงเฉพาะค่าที่ปรากฎจริงใน bookings ของหน้านี้
+    seen_central = {b.central_category for b in bookings if b.expense_type == 'central' and b.central_category}
+    seen_dept    = {b.trip_department  for b in bookings if b.expense_type == 'department' and b.trip_department}
+    budget_subs = {
+        'central':    [c for c in EXPENSE_CATEGORIES['central']    if c['key'] in seen_central],
+        'department': [c for c in EXPENSE_CATEGORIES['department'] if c['key'] in seen_dept],
+    }
 
     breakdown        = {v.id: [0.0]*12 for v in vehicles_all}
     breakdown_totals = [0.0]*12
@@ -1350,15 +1477,10 @@ def mileage_log():
             breakdown[b.assigned_vehicle_id][mo_idx] += c
             breakdown_totals[mo_idx] += c
 
-    # Refuel badge lookup — Phase 3: link mileage rows to FuelBill records
-    refuel_keys = {(vid, mil) for vid, mil in
-                   db.session.query(FuelBill.vehicle_id, FuelBill.mileage)
-                             .filter(FuelBill.mileage.isnot(None)).all()}
-
     return render_template('vehicle/admin/mileage_admin.html',
         rows=rows,
+        display_rows=display_rows,
         fuel_price=fuel_price,
-        refuel_keys=refuel_keys,
         today=today,
         curr_year=now.year,
         curr_month=now.month,
@@ -1372,6 +1494,8 @@ def mileage_log():
         # Breakdown
         vehicles_all=vehicles_all,
         drivers_all=drivers_all,
+        bookers_all=bookers_all,
+        budget_subs=budget_subs,
         breakdown=breakdown,
         breakdown_totals=breakdown_totals,
         # Filter echo
@@ -1380,6 +1504,9 @@ def mileage_log():
            'status_filter': f_status,
            'cost_min': f_cost_min if f_cost_min is not None else '',
            'cost_max': f_cost_max if f_cost_max is not None else '',
+           'budget_type': f_budget_type,
+           'budget_sub': f_budget_sub,
+           'booker_q': f_booker,
            'show_all': show_all},
     )
 
@@ -1530,6 +1657,14 @@ def auto_generate_ot(booking, mileage):
         return  # already generated — idempotent
 
     rate_configs = OTRateConfig.query.filter_by(is_active=True).order_by(OTRateConfig.sort_order).all()
+    if not rate_configs:
+        return
+
+    # Per-weekday override: if any rate row targets booking's weekday → use only those.
+    # Otherwise fall back to weekday-agnostic rows (day_of_week IS NULL).
+    booking_dow = mileage.actual_end.weekday()  # 0=Mon ... 6=Sun
+    day_rows = [c for c in rate_configs if c.day_of_week == booking_dow]
+    rate_configs = day_rows if day_rows else [c for c in rate_configs if c.day_of_week is None]
     if not rate_configs:
         return
 
@@ -1792,17 +1927,40 @@ def ot_rate_config_update():
     if not is_vehicle_admin():
         flash('คุณไม่มีสิทธิ์', 'danger')
         return redirect(url_for('vehicle.index'))
-    for cfg_id, label, start, end, rate in zip(
+
+    # Soft-delete existing rows the user removed in the modal
+    for did in request.form.getlist('cfg_delete[]'):
+        if did:
+            cfg = OTRateConfig.query.get(int(did))
+            if cfg:
+                cfg.is_active = False
+
+    # Update existing (cfg_id present) or create new (cfg_id == '')
+    max_order = db.session.query(db.func.coalesce(db.func.max(OTRateConfig.sort_order), 0)).scalar()
+    for cfg_id, label, start, end, rate, day in zip(
         request.form.getlist('cfg_id[]'),
         request.form.getlist('cfg_label[]'),
         request.form.getlist('cfg_start[]'),
         request.form.getlist('cfg_end[]'),
         request.form.getlist('cfg_rate[]'),
+        request.form.getlist('cfg_day[]'),
     ):
-        cfg = OTRateConfig.query.get(int(cfg_id))
-        if cfg:
-            cfg.label = label; cfg.start_time = start
-            cfg.end_time = end; cfg.rate = float(rate)
+        if not label or not start or not end or rate == '':
+            continue
+        day_val = int(day) if day not in ('', None) else None
+        if cfg_id:
+            cfg = OTRateConfig.query.get(int(cfg_id))
+            if cfg:
+                cfg.label = label; cfg.start_time = start
+                cfg.end_time = end; cfg.rate = float(rate)
+                cfg.day_of_week = day_val
+        else:
+            max_order += 10
+            db.session.add(OTRateConfig(
+                label=label, start_time=start, end_time=end,
+                rate=float(rate), is_active=True, sort_order=max_order,
+                day_of_week=day_val,
+            ))
     db.session.commit()
     flash('อัปเดตอัตรา OT เรียบร้อย', 'success')
     return redirect(request.referrer or url_for('admincost.cost_summary'))
@@ -1830,13 +1988,88 @@ def driver_home():
     tomorrow_start = today_start + timedelta(days=1)
     tomorrow_end   = today_end   + timedelta(days=1)
 
+    # สำหรับ modal "งานนอกระบบ"
+    vehicles = Vehicle.query.filter_by(status='active').order_by(Vehicle.id).all()
+    users    = User.query.order_by(User.full_name).all()
+
     return render_template('vehicle/driver_home.html',
                            driver=driver,
                            bookings=bookings,
                            today_start=today_start,
                            today_end=today_end,
                            tomorrow_start=tomorrow_start,
-                           tomorrow_end=tomorrow_end)
+                           tomorrow_end=tomorrow_end,
+                           vehicles=vehicles,
+                           users=users)
+
+
+# ─────────────────────────────────────────────
+# งานนอกระบบ — driver สร้าง booking เอง (ad-hoc)
+# auto-status=approved, driver_id=self, start=now
+# end ตอนหลัง driver กรอกไมล์ขากลับ → จบงาน
+# expense_type=NULL → admin มาเลือกที่หลัง
+# is_ad_hoc=True → ซ่อนจากหน้าปฏิทิน /vehicle
+# ─────────────────────────────────────────────
+@driver_bp.route('/driver/ad-hoc-trip', methods=['POST'])
+@login_required
+def driver_ad_hoc_trip():
+    driver = Driver.query.filter_by(user_id=current_user.id).first()
+    if not driver:
+        flash('ไม่พบข้อมูลคนขับ', 'danger')
+        return redirect(url_for('driver.driver_home'))
+
+    contact_user_id_raw = request.form.get('contact_user_id', '').strip()
+    contact_name_raw    = request.form.get('contact_name', '').strip()
+    vehicle_id_raw      = request.form.get('vehicle_id', '').strip()
+    destination         = request.form.get('destination', '').strip()
+
+    if not vehicle_id_raw or not destination:
+        flash('กรุณาเลือกรถและกรอกปลายทาง', 'warning')
+        return redirect(url_for('driver.driver_home'))
+
+    if not contact_user_id_raw and not contact_name_raw:
+        flash('กรุณาเลือกผู้จองหรือพิมพ์ชื่อผู้ติดต่อ', 'warning')
+        return redirect(url_for('driver.driver_home'))
+
+    vehicle = Vehicle.query.get(int(vehicle_id_raw))
+    if not vehicle:
+        flash('ไม่พบรถที่เลือก', 'danger')
+        return redirect(url_for('driver.driver_home'))
+
+    # contact_user_id ถ้ามี → ใช้ user คนนั้น; ถ้าไม่มี → driver เป็นเจ้าของ + เก็บชื่อ free-text
+    if contact_user_id_raw:
+        user_id      = int(contact_user_id_raw)
+        contact_name = contact_name_raw or None
+    else:
+        user_id      = current_user.id
+        contact_name = contact_name_raw
+
+    now = get_bkk_time()
+    end_placeholder = now.replace(hour=23, minute=59, second=0, microsecond=0)
+
+    booking = VehicleBooking(
+        user_id             = user_id,
+        contact_name        = contact_name,
+        start_datetime      = now,
+        end_datetime        = end_placeholder,
+        destination         = destination,
+        purpose             = 'งานนอกระบบ',
+        passenger_count     = 1,
+        need_driver         = True,
+        driver_id           = driver.id,
+        assigned_vehicle_id = vehicle.id,
+        status              = 'approved',
+        is_ad_hoc           = True,
+        snap_vehicle_plate  = vehicle.license_plate,
+        snap_driver_name    = driver.name,
+    )
+    db.session.add(booking)
+    db.session.flush()
+    _n_booking_created(booking)   # แจ้ง admin ให้รู้ว่ามี ad-hoc มาใหม่ → admin มาเลือก expense_type ที่หลัง
+    db.session.commit()
+
+    flash(f'สร้างงานนอกระบบเรียบร้อย (BK-{booking.id:04d}) ไปบันทึกเลขไมล์ออกได้เลย', 'success')
+    return redirect(url_for('driver.driver_home'))
 
 
 @driver_bp.route('/driver/mileage', methods=['POST'])
@@ -2081,6 +2314,8 @@ def budget_manage():
                 if delta <= 0:
                     raise ValueError('top-up ต้องเป็นจำนวนบวก')
                 budget = VehicleBudget.query.get_or_404(bid)
+                if not budget.is_active:
+                    raise ValueError(f'งบ "{budget.department.name}" ถูกปิดใช้งานอยู่ — เปิดใช้งานก่อน')
                 new_total = float(budget.budget_amount or 0) + delta
                 budget_svc.set_budget_amount(
                     budget, new_total,
@@ -2103,6 +2338,8 @@ def budget_manage():
                 if not ntext:
                     raise ValueError('ต้องระบุเหตุผล (note) สำหรับ manual adjust')
                 budget = VehicleBudget.query.get_or_404(bid)
+                if not budget.is_active:
+                    raise ValueError(f'งบ "{budget.department.name}" ถูกปิดใช้งานอยู่ — เปิดใช้งานก่อน')
                 budget_svc.manual_adjust(
                     budget, delta,
                     note=f'manual_adjust by {current_user.username}: {ntext}')
@@ -2115,6 +2352,26 @@ def budget_manage():
             except Exception as e:
                 db.session.rollback()
                 flash(f'เกิดข้อผิดพลาด: {e}', 'danger')
+
+        elif action == 'toggle_active':
+            try:
+                bid    = int(request.form.get('budget_id'))
+                target = request.form.get('to_active') == '1'
+                budget = VehicleBudget.query.get_or_404(bid)
+                log = budget_svc.set_active(
+                    budget, target,
+                    note=f'{"เปิด" if target else "ปิด"}ใช้งานโดย {current_user.username}',
+                )
+                db.session.commit()
+                if log is None:
+                    flash(f'งบ "{budget.department.name}" อยู่ในสถานะที่ต้องการอยู่แล้ว', 'info')
+                elif target:
+                    flash(f'เปิดใช้งานงบ "{budget.department.name}" เรียบร้อย', 'success')
+                else:
+                    flash(f'ปิดใช้งานงบ "{budget.department.name}" — booking ใหม่จะถูกบล็อก', 'warning')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'เปลี่ยนสถานะไม่สำเร็จ: {e}', 'danger')
 
         elif action == 'refund_booking':
             try:
@@ -2184,18 +2441,21 @@ def budget_manage():
             'start_date_th': _fmt_date_th(b.start_date) if b.start_date else '',
             'end_date_th':   _fmt_date_th(b.end_date)   if b.end_date   else '',
             'pending_count': pending_count_map.get(pkey, 0),
+            'is_active':     b.is_active,
         })
 
     central_budgets = [b for b in budgets if b['budget_type'] == 'central']
     dept_budgets    = [b for b in budgets if b['budget_type'] == 'department']
 
-    # KPI summary stats
-    total_central_budget = sum(float(b['budget_amount']) for b in central_budgets)
-    total_dept_budget    = sum(float(b['budget_amount']) for b in dept_budgets)
-    total_central_used   = sum(float(b['used_amount'])   for b in central_budgets)
-    total_dept_used      = sum(float(b['used_amount'])   for b in dept_budgets)
-    total_central_pending = sum(b['pending_count']       for b in central_budgets)
-    total_dept_pending    = sum(b['pending_count']       for b in dept_budgets)
+    # KPI summary stats — รวมเฉพาะ active เท่านั้น (inactive ยังแสดงในการ์ดแต่ไม่นับ KPI)
+    _active_central = [b for b in central_budgets if b['is_active']]
+    _active_dept    = [b for b in dept_budgets    if b['is_active']]
+    total_central_budget  = sum(float(b['budget_amount']) for b in _active_central)
+    total_dept_budget     = sum(float(b['budget_amount']) for b in _active_dept)
+    total_central_used    = sum(float(b['used_amount'])   for b in _active_central)
+    total_dept_used       = sum(float(b['used_amount'])   for b in _active_dept)
+    total_central_pending = sum(b['pending_count']        for b in _active_central)
+    total_dept_pending    = sum(b['pending_count']        for b in _active_dept)
 
     # งบส่วนตัวที่ได้รับจริง (personal_status=1 ในเดือนที่เลือก)
     personal_mileages = VehicleMileage.query.join(VehicleBooking).filter(

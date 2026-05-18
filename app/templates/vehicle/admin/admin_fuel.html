@@ -69,7 +69,7 @@
                (raw HTML — canonical reference for /bbcenter-design)
             ──────────────────────────────────────────────── #}
             <div class="vc-card" style="margin-bottom: var(--vc-space-4);">
-                <div class="vc-kpi-group">
+                <div class="vc-kpi-group vc-kpi-group--4">
 
                     <div class="vc-kpi-cell" data-fuel-kpi="reserve-amount" data-value="{{ reserve_amount }}">
                         <p class="vc-kpi-label">
@@ -96,7 +96,7 @@
                         <p class="vc-kpi-value {% if reserve_balance < 0 %}vc-kpi-value--danger{% elif reserve_balance == 0 %}vc-kpi-value--muted{% endif %}">
                             {{ '{:,.0f}'.format(reserve_balance) }}<span class="vc-kpi-unit">บาท</span>
                         </p>
-                        <p class="vc-kpi-meta">หลังหักบิลค้างเบิก (transfer + จ่ายเอง)</p>
+                        <p class="vc-kpi-meta">หลังหักบิลค้างเบิก (เฉพาะเงินสด)</p>
                     </div>
 
                     <div class="vc-kpi-cell">
@@ -110,6 +110,19 @@
                         <p class="vc-kpi-meta">
                             รอเบิก {{ '{:,.0f}'.format(pending_by_status.get('รอเบิก', 0)) }}
                             · อนุมัติ {{ '{:,.0f}'.format(pending_by_status.get('อนุมัติ', 0)) }}
+                        </p>
+                    </div>
+
+                    <div class="vc-kpi-cell">
+                        <p class="vc-kpi-label">
+                            <i data-lucide="hand-coins" class="vc-icon-sm"></i>
+                            จ่ายเอง
+                        </p>
+                        <p class="vc-kpi-value {% if self_paid_total == 0 %}vc-kpi-value--muted{% endif %}">
+                            {{ '{:,.0f}'.format(self_paid_total) }}<span class="vc-kpi-unit">บาท</span>
+                        </p>
+                        <p class="vc-kpi-meta">
+                            ผู้โดยสารจ่ายเอง · {{ self_paid_count }} บิลค้างประวัติ
                         </p>
                     </div>
 
@@ -180,7 +193,7 @@
                 <div class="vc-filter-group">
                     <span class="vc-filter-label">ปี</span>
                     <select name="year" class="vc-filter-select">
-                        {% for y in range(f_year, f_year - 5, -1) %}
+                        {% for y in available_years %}
                         <option value="{{ y }}" {% if y == f_year %}selected{% endif %}>{{ y + 543 }}</option>
                         {% endfor %}
                     </select>
@@ -394,11 +407,11 @@
                                     <td class="vc-td-num vc-td-strong">{{ '{:,.2f}'.format(b.amount) }}</td>
                                     <td>
                                         {% if b.payment_method == 'transfer' %}
-                                            <span class="vc-badge vc-badge-neutral">เงินโอน</span>
+                                            <span class="vc-badge vc-badge-neutral" title="เบิกจากกองกลางมาจ่าย · ต้องเอาบิลมาคืน">เงินสด</span>
                                         {% elif b.payment_method == 'card' %}
-                                            <span class="vc-badge vc-badge-neutral">ตัดบัตร</span>
+                                            <span class="vc-badge vc-badge-neutral" title="บัตรส่วนกลาง · เก็บประวัติการใช้งาน">ตัดบัตร</span>
                                         {% elif b.payment_method == 'self' %}
-                                            <span class="vc-badge vc-badge-neutral">จ่ายเอง</span>
+                                            <span class="vc-badge vc-badge-neutral" title="ผู้โดยสารจ่ายเอง · เก็บประวัติ">จ่ายเอง</span>
                                         {% else %}
                                             <span class="vc-td-muted">—</span>
                                         {% endif %}
@@ -410,7 +423,9 @@
                                         {{ '{:,.2f}'.format(bill_meta[b.id].balance_after) }}
                                     </td>
                                     <td>
-                                        {% if st == 'รอเบิก' %}
+                                        {% if b.payment_method == 'self' %}
+                                            <span class="vc-td-muted">—</span>
+                                        {% elif st == 'รอเบิก' %}
                                             <span class="vc-badge vc-badge-warning vc-badge-dot">รอเบิก</span>
                                         {% elif st == 'อนุมัติ' %}
                                             <span class="vc-badge vc-badge-blue vc-badge-dot">อนุมัติ</span>
@@ -597,6 +612,6 @@
 {% include 'vehicle/admin/fuel-modal-budget.html' %}
 
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/fuel_admin.js') }}" defer></script>
+<script type="module" src="{{ url_for('static', filename='js/pages/fuel-admin.js') }}"></script>
 </body>
 </html>

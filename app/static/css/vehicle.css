@@ -1,27 +1,24 @@
 /* ============================================================
    BBCenter V2 — vehicle.css
-   Design System: Noviq-inspired (Indigo + Teal)
-   Tokens defined in design-system.css (--ds-* variables)
    ============================================================ */
 @import url('./design-system.css');
 
 :root {
-    /* ── Legacy aliases → mapped to --ds-* tokens ── */
-    --primary:       var(--ds-accent);
-    --primary-lt:    var(--ds-primary-light);
-    --primary-dark:  var(--ds-primary-hover);
+    --primary:       var(--vc-accent);
+    --primary-lt:    var(--vc-accent-light);
+    --primary-dark:  var(--vc-accent-hover);
     --accent:        #14B8A6;   /* teal-500 (kept as-is) */
-    --today-color:   var(--ds-warning);
+    --today-color:   var(--vc-amber);
 
-    --text-main:     var(--ds-text-heading);
-    --text-muted:    var(--ds-text-muted);
-    --border-color:  var(--ds-border);
-    --bg-light:      var(--ds-bg-subtle);
-    --bg-page:       var(--ds-bg-surface);
-    --bg-focus:      var(--ds-bg-subtle);
+    --text-main:     var(--vc-fg);
+    --text-muted:    var(--vc-fg-subtle);
+    --border-color:  var(--vc-border);
+    --bg-light:      var(--vc-bg-subtle);
+    --bg-page:       var(--vc-bg);
+    --bg-focus:      var(--vc-bg-subtle);
 
-    --radius-card:   var(--ds-radius-lg);
-    --radius-btn:    var(--ds-radius-md);
+    --radius-card:   var(--vc-radius-sm);
+    --radius-btn:    var(--vc-radius-sm);
 }
 
 /* ── Reset / Base ──────────────────────────────────────────── */
@@ -284,11 +281,11 @@ body {
         align-items: center; justify-content: center;
         background: none; border: none;
         font-size: 1.4rem; padding: 4px 6px;
-        color: var(--ds-text-body);
+        color: var(--vc-fg-muted);
         cursor: pointer;
         border-radius: 8px;
     }
-    .mobile-toggle:active { background: var(--ds-bg-subtle); }
+    .mobile-toggle:active { background: var(--vc-bg-subtle); }
 
     /* Overlay คลุมหน้าจอ */
     .sidebar-overlay {
@@ -411,7 +408,31 @@ body {
 }
 
 /* Dialog sizing */
-.bk-modal-dialog  { max-width: 440px; }
+.bk-modal-dialog     { max-width: 440px; }
+.bk-modal-dialog-sm  { max-width: 380px; }
+
+/* Detail modal — info rows / section label / divider */
+.bk-detail-header-dot   { width: 44px; height: 44px; font-size: 1rem; }
+.bk-detail-title        { font-size: .95rem; font-weight: 700; color: var(--vc-fg); }
+.bk-detail-date         { font-size: .82rem; color: var(--vc-fg-muted); margin-top: 4px; }
+.bk-detail-divider      { margin: 0 24px; border-top: 1.5px dashed var(--vc-border); }
+.bk-detail-info         { padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+.bk-detail-row          { display: flex; align-items: center; gap: 12px; }
+.bk-detail-icon         { width: 16px; height: 16px; color: var(--vc-fg-subtle); flex-shrink: 0; }
+.bk-detail-text         { font-size: .88rem; color: var(--vc-fg-muted); }
+.bk-detail-section-label{ font-size: .7rem; font-weight: 700; color: var(--vc-fg-subtle); }
+
+/* Book modal — duration preview ใต้ช่วงเวลา */
+.bk-duration-preview {
+    font-size: .76rem;
+    color: var(--vc-fg-subtle);
+    margin-top: 4px;
+    min-height: 1em;
+}
+.bk-duration-preview:not(:empty)::before {
+    content: '· ';
+    color: var(--vc-fg-subtle);
+}
 .bk-modal-content {
     border-radius: 16px;
     overflow: hidden;

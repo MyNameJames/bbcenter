@@ -74,6 +74,23 @@
     color: var(--vc-fg);
     font-weight: 600;
 }
+.cost-rate-pill--day {
+    background: var(--vc-amber-bg);
+    border-color: var(--vc-amber-border);
+    color: var(--vc-amber);
+}
+.cost-rate-pill--day strong { color: var(--vc-amber); }
+.cost-rate-pill-day {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: var(--vc-radius-xs);
+    background: var(--vc-amber);
+    color: var(--vc-bg);
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    margin-right: 2px;
+}
 
 /* ── Tabs (status filter) ────────────────────────── */
 .vc-tabs {
@@ -217,6 +234,37 @@
 @media (max-width: 575px) {
     .cost-slot-row { grid-template-columns: 1fr 1fr auto; }
     .cost-slot-row > [data-col-full] { grid-column: 1 / -1; }
+}
+
+/* ── Rate config modal — rate row (label/day/start/end/rate + remove) ─── */
+.cost-rate-row {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1fr 1fr .9fr auto;
+    gap: var(--vc-space-2);
+    align-items: end;
+    padding: var(--vc-space-3);
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+}
+.cost-rate-row-day .vc-select { min-width: 0; }
+.cost-rate-row.is-removed {
+    opacity: .4;
+    pointer-events: none;
+}
+.cost-rate-row-field { min-width: 0; }
+.cost-rate-row-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin-bottom: 1px;
+}
+@media (max-width: 575px) {
+    .cost-rate-row { grid-template-columns: 1fr 1fr auto; }
+    .cost-rate-row > [data-col-full] { grid-column: 1 / -1; }
 }
 
 /* ── Edit modal — total summary box ──────────────── */

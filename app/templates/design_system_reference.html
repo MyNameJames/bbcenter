@@ -11,70 +11,70 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
 <style>
 /* ── Reference page overrides ── */
-body { background: var(--ds-bg-page); padding: 40px 0 80px; }
+body { background: var(--vc-bg-subtle); padding: 40px 0 80px; }
 .ref-container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
 
 /* Section wrapper */
 .ref-section {
-    background: var(--ds-bg-surface);
-    border-radius: var(--ds-radius-lg);
-    border: 1.5px solid var(--ds-border);
-    box-shadow: var(--ds-shadow-sm);
+    background: var(--vc-bg);
+    border-radius: var(--vc-radius-sm);
+    border: 1.5px solid var(--vc-border);
+    box-shadow: var(none);
     margin-bottom: 32px;
     overflow: hidden;
 }
 .ref-section-header {
     padding: 14px 20px;
-    border-bottom: 1px solid var(--ds-border);
-    background: var(--ds-bg-subtle);
+    border-bottom: 1px solid var(--vc-border);
+    background: var(--vc-bg-subtle);
     display: flex; align-items: baseline; gap: 10px;
 }
 .ref-section-name {
-    font-family: var(--ds-font-display);
-    font-size: var(--ds-text-base);
+    font-family: inherit;
+    font-size: var(--vc-text-base);
     font-weight: 700;
-    color: var(--ds-text-heading);
+    color: var(--vc-fg);
 }
 .ref-section-code {
-    font-size: var(--ds-text-xs);
-    color: var(--ds-text-muted);
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-subtle);
     font-family: monospace;
 }
 .ref-section-body { padding: 20px; }
 
 /* Token swatch */
 .token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-.token-item { border-radius: var(--ds-radius-md); overflow: hidden; border: 1px solid var(--ds-border); }
+.token-item { border-radius: var(--vc-radius-sm); overflow: hidden; border: 1px solid var(--vc-border); }
 .token-swatch { height: 48px; }
 .token-meta { padding: 8px 10px; }
-.token-name  { font-size: .65rem; font-family: monospace; color: var(--ds-text-muted); }
-.token-value { font-size: .72rem; font-weight: 600; color: var(--ds-text-body); margin-top: 1px; }
+.token-name  { font-size: .65rem; font-family: monospace; color: var(--vc-fg-subtle); }
+.token-value { font-size: .72rem; font-weight: 600; color: var(--vc-fg-muted); margin-top: 1px; }
 
 /* Spacing ruler */
 .space-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.space-bar  { height: 24px; background: var(--ds-primary-light); border-radius: 4px; border: 1px solid var(--ds-primary-border); }
-.space-label{ font-size: .72rem; color: var(--ds-text-muted); font-family: monospace; white-space: nowrap; min-width: 80px; }
+.space-bar  { height: 24px; background: var(--vc-accent-light); border-radius: 4px; border: 1px solid var(--vc-accent-border); }
+.space-label{ font-size: .72rem; color: var(--vc-fg-subtle); font-family: monospace; white-space: nowrap; min-width: 80px; }
 
 /* Shadow demo */
 .shadow-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-.shadow-demo { height: 60px; background: #fff; border-radius: var(--ds-radius-md); display: flex; align-items: center; justify-content: center; font-size: .72rem; color: var(--ds-text-muted); font-family: monospace; }
+.shadow-demo { height: 60px; background: #fff; border-radius: var(--vc-radius-sm); display: flex; align-items: center; justify-content: center; font-size: .72rem; color: var(--vc-fg-subtle); font-family: monospace; }
 
 /* Sticky TOC */
 .ref-toc {
     position: fixed; top: 24px; right: 24px;
-    background: var(--ds-bg-surface);
-    border: 1.5px solid var(--ds-border);
-    border-radius: var(--ds-radius-lg);
-    box-shadow: var(--ds-shadow-md);
+    background: var(--vc-bg);
+    border: 1.5px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    box-shadow: var(none);
     padding: 16px;
     min-width: 190px;
     z-index: 100;
     max-height: calc(100vh - 48px);
     overflow-y: auto;
 }
-.ref-toc-title { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ds-text-muted); margin-bottom: 8px; }
-.ref-toc a { display: block; font-size: .75rem; color: var(--ds-text-secondary); text-decoration: none; padding: 3px 0; }
-.ref-toc a:hover { color: var(--ds-purple); }
+.ref-toc-title { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--vc-fg-subtle); margin-bottom: 8px; }
+.ref-toc a { display: block; font-size: .75rem; color: var(--vc-fg-subtle); text-decoration: none; padding: 3px 0; }
+.ref-toc a:hover { color: var(--vc-purple); }
 
 @media (max-width: 1300px) { .ref-toc { display: none; } }
 </style>
@@ -123,75 +123,75 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
     <div class="ref-section" id="tokens-color">
         <div class="ref-section-header">
             <span class="ref-section-name">1. Color Tokens</span>
-            <span class="ref-section-code">var(--ds-*)</span>
+            <span class="ref-section-code">var(--vc-*)</span>
         </div>
         <div class="ref-section-body">
 
             <p class="ds-overline mb-3">Brand</p>
             <div class="token-grid mb-4">
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-primary);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-primary</div><div class="token-value">#4F46E5</div></div>
+                    <div class="token-swatch" style="background:var(--vc-accent);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-accent</div><div class="token-value">#4F46E5</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-primary-hover);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-primary-hover</div><div class="token-value">#4338CA</div></div>
+                    <div class="token-swatch" style="background:var(--vc-accent-hover);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-accent-hover</div><div class="token-value">#4338CA</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-primary-light);border:1px solid var(--ds-primary-border);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-primary-light</div><div class="token-value">#EEF2FF</div></div>
+                    <div class="token-swatch" style="background:var(--vc-accent-light);border:1px solid var(--vc-accent-border);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-accent-light</div><div class="token-value">#EEF2FF</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-purple);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-purple</div><div class="token-value">#8B5CF6</div></div>
+                    <div class="token-swatch" style="background:var(--vc-purple);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-purple</div><div class="token-value">#8B5CF6</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-purple-light);border:1px solid var(--ds-purple-border);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-purple-light</div><div class="token-value">#F5F3FF</div></div>
+                    <div class="token-swatch" style="background:var(--vc-purple-light);border:1px solid var(--vc-purple-border);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-purple-light</div><div class="token-value">#F5F3FF</div></div>
                 </div>
             </div>
 
             <p class="ds-overline mb-3">Semantic Status</p>
             <div class="token-grid mb-4">
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-success);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-success</div><div class="token-value">#10B981</div></div>
+                    <div class="token-swatch" style="background:var(--vc-green);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-green</div><div class="token-value">#10B981</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-warning);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-warning</div><div class="token-value">#F59E0B</div></div>
+                    <div class="token-swatch" style="background:var(--vc-amber);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-amber</div><div class="token-value">#F59E0B</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-danger);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-danger</div><div class="token-value">#EF4444</div></div>
+                    <div class="token-swatch" style="background:var(--vc-red);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-red</div><div class="token-value">#EF4444</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-info);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-info</div><div class="token-value">#3B82F6</div></div>
+                    <div class="token-swatch" style="background:var(--vc-blue);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-blue</div><div class="token-value">#3B82F6</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-live);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-live</div><div class="token-value">#22C55E</div></div>
+                    <div class="token-swatch" style="background:var(--vc-green);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-green</div><div class="token-value">#0F9D58</div></div>
                 </div>
             </div>
 
             <p class="ds-overline mb-3">Surface &amp; Neutral</p>
             <div class="token-grid">
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-bg-page);border-bottom:1px solid var(--ds-border);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-bg-page</div><div class="token-value">#F0F2F8 (Lavender)</div></div>
+                    <div class="token-swatch" style="background:var(--vc-bg-subtle);border-bottom:1px solid var(--vc-border);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-bg-subtle</div><div class="token-value">#F0F2F8 (Lavender)</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-bg-surface);border-bottom:1px solid var(--ds-border);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-bg-surface</div><div class="token-value">#FFFFFF</div></div>
+                    <div class="token-swatch" style="background:var(--vc-bg);border-bottom:1px solid var(--vc-border);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-bg</div><div class="token-value">#FFFFFF</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-bg-subtle);border-bottom:1px solid var(--ds-border);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-bg-subtle</div><div class="token-value">#F9FAFB</div></div>
+                    <div class="token-swatch" style="background:var(--vc-bg-subtle);border-bottom:1px solid var(--vc-border);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-bg-subtle</div><div class="token-value">#F9FAFB</div></div>
                 </div>
                 <div class="token-item">
-                    <div class="token-swatch" style="background:var(--ds-bg-hover);border-bottom:1px solid var(--ds-border);"></div>
-                    <div class="token-meta"><div class="token-name">--ds-bg-hover</div><div class="token-value">#F5F3FF</div></div>
+                    <div class="token-swatch" style="background:var(--vc-bg-hover);border-bottom:1px solid var(--vc-border);"></div>
+                    <div class="token-meta"><div class="token-name">--vc-bg-hover</div><div class="token-value">#F5F3FF</div></div>
                 </div>
             </div>
         </div>
@@ -222,12 +222,12 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
     <div class="ref-section" id="tokens-spacing">
         <div class="ref-section-header">
             <span class="ref-section-name">3. Spacing (4px Grid)</span>
-            <span class="ref-section-code">var(--ds-space-*)</span>
+            <span class="ref-section-code">var(--vc-space-*)</span>
         </div>
         <div class="ref-section-body">
             {% for n, px in [('1','4px'),('2','8px'),('3','12px'),('4','16px'),('5','20px'),('6','24px'),('8','32px'),('10','40px'),('12','48px')] %}
             <div class="space-row">
-                <span class="space-label">--ds-space-{{ n }}</span>
+                <span class="space-label">--vc-space-{{ n }}</span>
                 <div class="space-bar" style="width:{{ px }};"></div>
                 <span class="ds-caption">{{ px }}</span>
             </div>
@@ -239,14 +239,14 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
     <div class="ref-section" id="tokens-radius">
         <div class="ref-section-header">
             <span class="ref-section-name">4. Border Radius</span>
-            <span class="ref-section-code">var(--ds-radius-*)</span>
+            <span class="ref-section-code">var(--vc-radius-*)</span>
         </div>
         <div class="ref-section-body">
             <div style="display:flex;flex-wrap:wrap;gap:16px;">
                 {% for name, r in [('xs','4px'),('sm','6px'),('md','10px'),('lg','14px'),('xl','20px'),('full','9999px')] %}
                 <div style="text-align:center;">
-                    <div style="width:60px;height:60px;background:var(--ds-primary-light);border:1.5px solid var(--ds-primary-border);border-radius:{{ r }};margin:0 auto 6px;"></div>
-                    <div class="token-name">--ds-radius-{{ name }}</div>
+                    <div style="width:60px;height:60px;background:var(--vc-accent-light);border:1.5px solid var(--vc-accent-border);border-radius:{{ r }};margin:0 auto 6px;"></div>
+                    <div class="token-name">--vc-radius-{{ name }}</div>
                     <div class="token-value">{{ r }}</div>
                 </div>
                 {% endfor %}
@@ -258,12 +258,12 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
     <div class="ref-section" id="tokens-shadow">
         <div class="ref-section-header">
             <span class="ref-section-name">5. Shadow Scale</span>
-            <span class="ref-section-code">var(--ds-shadow-*)</span>
+            <span class="ref-section-code">none (Vercel — border only)</span>
         </div>
         <div class="ref-section-body">
             <div class="shadow-grid">
                 {% for name in ['xs','sm','md','lg','xl'] %}
-                <div class="shadow-demo" style="box-shadow:var(--ds-shadow-{{ name }});">--ds-shadow-{{ name }}</div>
+                <div class="shadow-demo" style="box-shadow:none;">shadow-{{ name }}: none</div>
                 {% endfor %}
             </div>
         </div>
@@ -302,10 +302,10 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
                     </div>
                 </div>
                 <div class="ds-caption" style="margin-top:8px;">
-                    <code style="font-size:.75rem;color:var(--ds-purple);">.ds-sidebar</code> → White bg, border-right<br>
-                    <code style="font-size:.75rem;color:var(--ds-purple);">.ds-nav-item.active</code> → Purple bg + text<br>
-                    <code style="font-size:.75rem;color:var(--ds-purple);">.ds-nav-badge</code> → Red count pill<br>
-                    <code style="font-size:.75rem;color:var(--ds-purple);">.ds-sidebar-user</code> → Bottom user area
+                    <code style="font-size:.75rem;color:var(--vc-purple);">.ds-sidebar</code> → White bg, border-right<br>
+                    <code style="font-size:.75rem;color:var(--vc-purple);">.ds-nav-item.active</code> → Purple bg + text<br>
+                    <code style="font-size:.75rem;color:var(--vc-purple);">.ds-nav-badge</code> → Red count pill<br>
+                    <code style="font-size:.75rem;color:var(--vc-purple);">.ds-sidebar-user</code> → Bottom user area
                 </div>
             </div>
         </div>
@@ -469,7 +469,7 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
                         <div class="d-flex align-items-start gap-3">
                             <div class="ds-stat-icon purple flex-shrink-0"><i class="fa-solid fa-van-shuttle"></i></div>
                             <div>
-                                <div class="fw-bold" style="font-size:var(--ds-text-base);color:var(--ds-text-heading);">Toyota Commuter</div>
+                                <div class="fw-bold" style="font-size:var(--vc-text-base);color:var(--vc-fg);">Toyota Commuter</div>
                                 <div class="ds-caption">กบ-1234 · 12 ที่นั่ง</div>
                                 <div style="margin-top:8px;"><span class="ds-pill ds-pill-success">พร้อมใช้งาน</span></div>
                             </div>
@@ -479,8 +479,8 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
                 <div class="col-md-4">
                     <div class="ds-group-card">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                            <i class="fa-solid fa-people-group" style="color:var(--ds-purple);"></i>
-                            <span style="font-weight:700;color:var(--ds-purple-hover);">TRP-001</span>
+                            <i class="fa-solid fa-people-group" style="color:var(--vc-purple);"></i>
+                            <span style="font-weight:700;color:var(--vc-purple-hover);">TRP-001</span>
                             <span class="ds-pill ds-pill-purple">3 ราย</span>
                         </div>
                         <div class="ds-caption">กลุ่มทริปร่วม — ใช้รถร่วมกัน</div>
@@ -490,7 +490,7 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
                 <div class="col-md-4">
                     <div class="ds-card">
                         <div class="ds-card-header">
-                            <i class="bi bi-calendar3" style="color:var(--ds-primary);"></i>
+                            <i class="bi bi-calendar3" style="color:var(--vc-accent);"></i>
                             <span class="ds-card-title">รายการวันนี้</span>
                         </div>
                         <div class="ds-card-body ds-caption">
@@ -549,35 +549,35 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
             <p class="ds-overline mb-2">Transaction List (FinPay-style)</p>
             <div class="ds-table-wrap">
                 <div class="ds-list-row">
-                    <div class="ds-stat-icon success flex-shrink-0" style="width:36px;height:36px;border-radius:var(--ds-radius-sm);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
+                    <div class="ds-stat-icon success flex-shrink-0" style="width:36px;height:36px;border-radius:var(--vc-radius-xs);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
                     <div style="flex:1;min-width:0;">
-                        <div style="font-weight:600;font-size:var(--ds-text-base);">ทริปไปชลบุรี</div>
+                        <div style="font-weight:600;font-size:var(--vc-text-base);">ทริปไปชลบุรี</div>
                         <div class="ds-caption">25 มิ.ย. 2568 · กองบริหาร</div>
                     </div>
                     <div class="text-end">
-                        <div style="font-weight:700;font-size:var(--ds-text-md);">฿1,200</div>
+                        <div style="font-weight:700;font-size:var(--vc-text-md);">฿1,200</div>
                         <span class="ds-tx-status completed"><i class="bi bi-check-circle-fill" style="font-size:.75rem;"></i> Completed</span>
                     </div>
                 </div>
                 <div class="ds-list-row">
-                    <div class="ds-stat-icon danger flex-shrink-0" style="width:36px;height:36px;border-radius:var(--ds-radius-sm);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
+                    <div class="ds-stat-icon danger flex-shrink-0" style="width:36px;height:36px;border-radius:var(--vc-radius-xs);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
                     <div style="flex:1;min-width:0;">
-                        <div style="font-weight:600;font-size:var(--ds-text-base);">คำขอไปกรุงเทพฯ</div>
+                        <div style="font-weight:600;font-size:var(--vc-text-base);">คำขอไปกรุงเทพฯ</div>
                         <div class="ds-caption">26 มิ.ย. 2568 · กองวิชาการ</div>
                     </div>
                     <div class="text-end">
-                        <div style="font-weight:700;font-size:var(--ds-text-md);">—</div>
+                        <div style="font-weight:700;font-size:var(--vc-text-md);">—</div>
                         <span class="ds-tx-status cancelled"><i class="bi bi-x-circle-fill" style="font-size:.75rem;"></i> Cancelled</span>
                     </div>
                 </div>
                 <div class="ds-list-row">
-                    <div class="ds-stat-icon warning flex-shrink-0" style="width:36px;height:36px;border-radius:var(--ds-radius-sm);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
+                    <div class="ds-stat-icon warning flex-shrink-0" style="width:36px;height:36px;border-radius:var(--vc-radius-xs);font-size:.9rem;"><i class="bi bi-car-front-fill"></i></div>
                     <div style="flex:1;min-width:0;">
-                        <div style="font-weight:600;font-size:var(--ds-text-base);">ทริปไประยอง</div>
+                        <div style="font-weight:600;font-size:var(--vc-text-base);">ทริปไประยอง</div>
                         <div class="ds-caption">27 มิ.ย. 2568 · กองDOU</div>
                     </div>
                     <div class="text-end">
-                        <div style="font-weight:700;font-size:var(--ds-text-md);">รอ</div>
+                        <div style="font-weight:700;font-size:var(--vc-text-md);">รอ</div>
                         <span class="ds-tx-status pending"><i class="bi bi-hourglass-split" style="font-size:.75rem;"></i> Pending</span>
                     </div>
                 </div>
@@ -681,7 +681,7 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
             <span class="ref-section-name">15. Weekly Calendar Strip (Admin)</span>
         </div>
         <div class="ref-section-body">
-            <div class="ds-week-strip" style="border-radius:var(--ds-radius-md);border:1.5px solid var(--ds-border);">
+            <div class="ds-week-strip" style="border-radius:var(--vc-radius-sm);border:1.5px solid var(--vc-border);">
                 <div class="ds-week-strip-header">
                     <button class="ds-btn ds-btn-secondary ds-btn-icon" style="width:28px;height:28px;font-size:.75rem;"><i class="bi bi-chevron-left"></i></button>
                     <span class="ds-week-strip-month">มิ.ย. 2568</span>
@@ -699,7 +699,7 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
                         ('29','อา',0,False,False)
                     ] %}
                     <button class="ds-day-cell {% if is_active %}active{% elif is_today %}today-ring{% endif %}"
-                        style="color:{% if d in ('28','29') and not is_active %}var(--ds-danger){% elif is_active %}#fff{% else %}var(--ds-text-body){% endif %};">
+                        style="color:{% if d in ('28','29') and not is_active %}var(--vc-red){% elif is_active %}#fff{% else %}var(--vc-fg-muted){% endif %};">
                         <span class="ds-day-name">{{ name }}</span>
                         <span class="ds-day-num">{{ d }}</span>
                         <span class="ds-day-count" style="{% if cnt == 0 %}visibility:hidden;{% endif %}">{{ cnt }}</span>
@@ -716,7 +716,7 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
             <span class="ref-section-name">16. Empty State</span>
         </div>
         <div class="ref-section-body">
-            <div class="ds-empty" style="border:1.5px dashed var(--ds-border);border-radius:var(--ds-radius-lg);">
+            <div class="ds-empty" style="border:1.5px dashed var(--vc-border);border-radius:var(--vc-radius-sm);">
                 <div class="ds-empty-icon"><i class="bi bi-journal-x"></i></div>
                 <p class="ds-empty-title">ไม่มีรายการจองในวันนี้</p>
                 <p class="ds-empty-desc">ยังไม่มีคำขอจองรถในวันที่เลือก ลองเลือกวันอื่น หรือส่งคำขอใหม่</p>
@@ -732,9 +732,9 @@ body { background: var(--ds-bg-page); padding: 40px 0 80px; }
         </div>
         <div class="ref-section-body">
             {% for label in ['live Sport','Summer Concert','Top Europe Leagues','Mas'] %}
-            <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--ds-bg-surface);border:1.5px solid var(--ds-border);border-radius:var(--ds-radius-md);margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--vc-bg);border:1.5px solid var(--vc-border);border-radius:var(--vc-radius-sm);margin-bottom:6px;">
                 <div class="ds-drag-handle"><i class="bi bi-grip-vertical" style="font-size:1rem;"></i></div>
-                <span style="flex:1;font-weight:500;font-size:var(--ds-text-base);">{{ label }}</span>
+                <span style="flex:1;font-weight:500;font-size:var(--vc-text-base);">{{ label }}</span>
                 <label class="ds-toggle">
                     <input type="checkbox" {% if loop.first or loop.index == 2 %}checked{% endif %}>
                     <div class="ds-toggle-track"></div>

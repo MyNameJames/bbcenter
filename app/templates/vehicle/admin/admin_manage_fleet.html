@@ -1,685 +1,371 @@
+{# Manage Fleet — Admin
+   Layout: col-8 left (Vehicles) · col-4 right (Drivers + Approvers stacked)
+   Design: vc-scope Vercel UI · Emil-flavored micro-interactions
+#}
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>จัดการกองยานพาหนะ - BBCenter</title>
     <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
-    <style>
-        :root {
-            --accent: #4F46E5;
-            --border: #E4E4E7;
-            --radius-card: 8px;
-            --radius-badge: 20px;
-            --text-muted: #71717A;
-            --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-
-        /* Page header */
-        .fleet-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            margin-bottom: 24px;
-        }
-        .fleet-header h4 {
-            font-weight: 700;
-            font-size: 1.15rem;
-            margin: 0 0 2px 0;
-            color: #18181B;
-        }
-        .fleet-header p {
-            margin: 0;
-            font-size: .85rem;
-            color: var(--text-muted);
-        }
-        .btn-budget {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 14px;
-            font-size: .82rem;
-            font-weight: 600;
-            color: #3F3F46;
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            text-decoration: none;
-            transition: background 150ms var(--ease-out), border-color 150ms var(--ease-out);
-            white-space: nowrap;
-        }
-        .btn-budget:hover { background: #F4F4F5; color: #18181B; }
-        .btn-budget:active { transform: scale(0.97); }
-
-        /* Section card */
-        .section-card {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-card);
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-        .section-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--border);
-        }
-        .section-head-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 700;
-            font-size: .92rem;
-            color: #18181B;
-        }
-        .count-pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 22px;
-            height: 22px;
-            padding: 0 7px;
-            background: #F4F4F5;
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            font-size: .75rem;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-        .btn-add {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 14px;
-            font-size: .82rem;
-            font-weight: 600;
-            color: #fff;
-            background: #18181B;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 150ms var(--ease-out), transform 150ms var(--ease-out);
-        }
-        .btn-add:hover { background: #3F3F46; }
-        .btn-add:active { transform: scale(0.97); }
-
-        /* Add form */
-        .add-form-wrap {
-            background: #FAFAFA;
-            border-bottom: 1px solid var(--border);
-            padding: 18px 20px;
-        }
-        .add-form-wrap h6 {
-            font-size: .82rem;
-            font-weight: 700;
-            margin-bottom: 14px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: .04em;
-        }
-
-        /* Table */
-        .fleet-table { width: 100%; border-collapse: collapse; min-width: max-content; }
-        .fleet-table thead th {
-            padding: 10px 16px;
-            font-size: .72rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: .06em;
-            background: #FAFAFA;
-            border-bottom: 1px solid var(--border);
-            white-space: nowrap;
-        }
-        .fleet-table tbody tr {
-            border-bottom: 1px solid #F4F4F5;
-            transition: background 120ms ease;
-        }
-        .fleet-table tbody tr:last-child { border-bottom: none; }
-        .fleet-table tbody tr:hover { background: #FAFAFA; }
-        .fleet-table tbody td {
-            padding: 13px 16px;
-            font-size: .88rem;
-            color: #27272A;
-            vertical-align: middle;
-            white-space: nowrap;
-        }
-
-        /* Status badges */
-        .badge-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 3px 10px;
-            border-radius: var(--radius-badge);
-            font-size: .76rem;
-            font-weight: 600;
-        }
-        .badge-status .dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        .badge-active    { background: #D1FAE5; color: #065F46; }
-        .badge-active .dot    { background: #10B981; }
-        .badge-maint     { background: #FEF3C7; color: #92400E; }
-        .badge-maint .dot     { background: #F59E0B; }
-        .badge-driver-on { background: #D1FAE5; color: #065F46; }
-        .badge-driver-on .dot { background: #10B981; }
-        .badge-driver-off{ background: #F4F4F5; color: #71717A; }
-        .badge-driver-off .dot{ background: #A1A1AA; }
-
-        /* Action buttons (Emil: scale on active) */
-        .btn-action {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px; height: 32px;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            background: #fff;
-            color: #71717A;
-            cursor: pointer;
-            transition: background 120ms ease, color 120ms ease, transform 150ms var(--ease-out);
-            font-size: .82rem;
-        }
-        .btn-action:hover { background: #F4F4F5; color: #18181B; }
-        .btn-action:active { transform: scale(0.93); }
-        .btn-action-danger { color: #DC2626; }
-        .btn-action-danger:hover { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
-        .btn-action-edit:hover   { background: #FFFBEB; color: #D97706; border-color: #FDE68A; }
-        .btn-action-hist:hover   { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
-        .actions-cell { display: flex; gap: 6px; align-items: center; }
-
-        /* Odometer display */
-        .odo-val { font-variant-numeric: tabular-nums; color: #52525B; font-size: .85rem; }
-        .odo-none { color: #A1A1AA; font-size: .82rem; }
-
-        /* Approver read-only note */
-        .readonly-note {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: .78rem;
-            color: var(--text-muted);
-            background: #F4F4F5;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 4px 10px;
-        }
-
-        /* Spinner */
-        @keyframes bi-spin { to { transform: rotate(360deg); } }
-        .bi-spin { animation: bi-spin .8s linear infinite; display:inline-block; }
-
-        /* Modal tweaks */
-        .modal-content { border: 1px solid var(--border); border-radius: 10px; box-shadow: none; }
-        .modal-section-divider {
-            font-size: .72rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            padding: 10px 0 6px 0;
-            border-top: 1px solid var(--border);
-            margin-top: 8px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/manage_fleet.css') }}">
 </head>
 <body>
+{% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
+
 <div class="container-fluid container-p-y">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% set active_menu = 'fleet' %}
     {% include '_sidebar.html' %}
 
-    <main class="main-content">
+    <main class="main-content vc-scope">
         {% set page_title = 'จัดการกองยานพาหนะ' %}
         {% include '_header.html' %}
 
-        <div class="view-section active mt-3" style="overflow-y:auto;">
-        <div class="container-xxl py-4">
+        <div class="container-xxl px-3 pt-2">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show mb-3" style="border-radius:6px;font-size:.88rem;">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            {# ── Flash messages ─────────────────────────── #}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="vc-stack" style="margin-bottom: var(--vc-space-4);">
+                    {% for category, message in messages %}
+                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
                 </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+                {% endif %}
+            {% endwith %}
 
-    <!-- ===== VEHICLES ===== -->
-    <div class="section-card">
-        <div class="section-head">
-            <div class="section-head-title">
-                <i class="bi bi-car-front-fill" style="color:var(--accent);"></i>
-                รถในระบบ
-                <span class="count-pill">{{ vehicles|length }}</span>
+            {# ── Page Header ────────────────────────────── #}
+            <div class="mf-header">
+                <div>
+                    <h1 class="mf-title">จัดการกองยานพาหนะ</h1>
+                    <p class="mf-subtitle">รถ · คนขับ · ผู้อนุมัติประจำกอง</p>
+                </div>
             </div>
-            <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addVehicleModal">
-                <i class="bi bi-plus-lg"></i> เพิ่มรถ
-            </button>
-        </div>
 
-        <div class="table-responsive">
-            <table class="fleet-table">
-                <thead>
-                    <tr>
-                        <th>ทะเบียน</th>
-                        <th>ชื่อ / รุ่น</th>
-                        <th>ที่นั่ง</th>
-                        <th>สถานะ</th>
-                        <th>ไมล์</th>
-                        <th style="text-align:right;padding-right:20px;">จัดการ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for v in vehicles %}
-                    <tr>
-                        <td>
-                            <span style="font-weight:600;letter-spacing:.01em;">{{ v.license_plate }}</span>
-                        </td>
-                        <td>
-                            <div style="font-weight:700;">{{ v.brand }}</div>
-                            <div style="font-size:.78rem;color:var(--text-muted);">{{ v.model }}</div>
-                        </td>
-                        <td>
-                            <i class="bi bi-people-fill" style="color:#A1A1AA;font-size:.78rem;margin-right:4px;"></i>
-                            <span style="color:#52525B;">{{ v.capacity }}</span>
-                        </td>
-                        <td>
-                            {% if v.status == 'active' %}
-                                <span class="badge-status badge-active">
-                                    <span class="dot"></span>ว่าง
-                                </span>
-                            {% else %}
-                                <span class="badge-status badge-maint">
-                                    <span class="dot"></span>ซ่อมบำรุง
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% set odo = vehicle_odometers.get(v.id) %}
-                            {% if odo %}
-                                <span class="odo-val">{{ "{:,}".format(odo) }}</span>
-                                <span style="font-size:.75rem;color:#A1A1AA;margin-left:2px;">กม.</span>
-                            {% else %}
-                                <span class="odo-none">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="actions-cell" style="justify-content:flex-end;">
-                                <button class="btn-action btn-action-hist"
-                                        data-bs-toggle="modal" data-bs-target="#vehicleHistoryModal"
-                                        data-id="{{ v.id }}"
-                                        data-name="{{ v.brand }} {{ v.model }} ({{ v.license_plate }})"
-                                        title="ประวัติการใช้งาน">
-                                    <i class="bi bi-clock-history"></i>
-                                </button>
-                                <button class="btn-action btn-action-edit"
-                                        data-bs-toggle="modal" data-bs-target="#editVehicleModal"
-                                        data-id="{{ v.id }}"
-                                        data-brand="{{ v.brand }}"
-                                        data-model="{{ v.model }}"
-                                        data-plate="{{ v.license_plate }}"
-                                        data-capacity="{{ v.capacity }}"
-                                        data-fuel-rate="{{ v.fuel_rate or 10 }}"
-                                        data-status="{{ v.status }}"
-                                        data-svc-date="{{ v.next_service_date.strftime('%Y-%m-%d') if v.next_service_date else '' }}"
-                                        data-svc-km="{{ v.next_service_km or '' }}"
-                                        data-tax-date="{{ v.tax_due_date.strftime('%Y-%m-%d') if v.tax_due_date else '' }}"
-                                        title="แก้ไข">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn-action btn-action-danger"
-                                        data-bs-toggle="modal" data-bs-target="#deleteVehicleModal"
-                                        data-id="{{ v.id }}"
-                                        data-name="{{ v.brand }} {{ v.model }} ({{ v.license_plate }})"
-                                        title="ลบ">
-                                    <i class="bi bi-trash3"></i>
+            {# ── Grid (col-8 / col-4) ────────────────────── #}
+            <div class="mf-grid">
+
+                {# ═══════════════════ LEFT — VEHICLES ═══════════════════ #}
+                <div class="vc-card">
+                    <div class="vc-card-head">
+                        <h3 class="vc-card-head-title">
+                            <i data-lucide="car" class="vc-icon-sm"></i>
+                            รถในระบบ
+                            <span class="vc-card-head-meta">{{ vehicles|length }} คัน</span>
+                        </h3>
+                        <div class="vc-card-head-actions">
+                            <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#addVehicleModal"
+                                    title="เพิ่มรถใหม่">
+                                <i data-lucide="plus" class="vc-icon-sm"></i>
+                                เพิ่มรถ
+                            </button>
+                        </div>
+                    </div>
+
+                    {% if vehicles %}
+                    <div class="table-responsive">
+                        <table class="vc-table mb-0 mf-stagger">
+                            <thead>
+                                <tr>
+                                    <th>ทะเบียน</th>
+                                    <th>ชื่อ / รุ่น</th>
+                                    <th>ที่นั่ง</th>
+                                    <th>สถานะ</th>
+                                    <th class="text-end">ไมล์</th>
+                                    <th class="vc-table-actions"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for v in vehicles %}
+                                <tr>
+                                    <td><span class="mf-plate">{{ v.license_plate }}</span></td>
+                                    <td>
+                                        <div class="mf-name-line">
+                                            <span class="mf-name-primary">{{ v.brand }}</span>
+                                            <span class="mf-name-sub">{{ v.model }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="mf-cap">
+                                            <i data-lucide="users" class="vc-icon-sm"></i>
+                                            {{ v.capacity }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if v.status == 'active' %}
+                                            <span class="vc-badge vc-badge-success vc-badge-dot">ว่าง</span>
+                                        {% else %}
+                                            <span class="vc-badge vc-badge-warning vc-badge-dot">ซ่อมบำรุง</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="vc-td-num">
+                                        {% set odo = vehicle_odometers.get(v.id) %}
+                                        {% if odo %}
+                                            <span class="vc-mono">{{ '{:,}'.format(odo) }}</span><span class="mf-odo-unit">กม.</span>
+                                        {% else %}
+                                            <span class="vc-td-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="vc-table-actions">
+                                        <div class="mf-actions">
+                                            <button type="button" class="mf-icon-btn"
+                                                    data-bs-toggle="modal" data-bs-target="#vehicleHistoryModal"
+                                                    data-id="{{ v.id }}"
+                                                    data-name="{{ v.brand }} {{ v.model }} ({{ v.license_plate }})"
+                                                    title="ประวัติการใช้งาน">
+                                                <i data-lucide="clock" class="vc-icon-sm"></i>
+                                            </button>
+                                            <button type="button" class="mf-icon-btn"
+                                                    data-bs-toggle="modal" data-bs-target="#editVehicleModal"
+                                                    data-id="{{ v.id }}"
+                                                    data-brand="{{ v.brand }}"
+                                                    data-model="{{ v.model }}"
+                                                    data-plate="{{ v.license_plate }}"
+                                                    data-capacity="{{ v.capacity }}"
+                                                    data-fuel-rate="{{ v.fuel_rate or 10 }}"
+                                                    data-status="{{ v.status }}"
+                                                    data-svc-date="{{ v.next_service_date.strftime('%Y-%m-%d') if v.next_service_date else '' }}"
+                                                    data-svc-km="{{ v.next_service_km or '' }}"
+                                                    data-tax-date="{{ v.tax_due_date.strftime('%Y-%m-%d') if v.tax_due_date else '' }}"
+                                                    title="แก้ไข">
+                                                <i data-lucide="pencil" class="vc-icon-sm"></i>
+                                            </button>
+                                            <button type="button" class="mf-icon-btn mf-icon-btn--danger"
+                                                    data-bs-toggle="modal" data-bs-target="#deleteVehicleModal"
+                                                    data-id="{{ v.id }}"
+                                                    data-name="{{ v.brand }} {{ v.model }} ({{ v.license_plate }})"
+                                                    title="ลบ">
+                                                <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="vc-empty">
+                        <div class="vc-empty-icon">
+                            <i data-lucide="car" style="width:20px;height:20px;"></i>
+                        </div>
+                        <p class="vc-empty-title">ยังไม่มีรถในระบบ</p>
+                        <p class="vc-empty-desc">เพิ่มรถคันแรกเพื่อเริ่มจัดการกองยานพาหนะ</p>
+                        <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#addVehicleModal"
+                                title="เพิ่มรถใหม่">
+                            <i data-lucide="plus" class="vc-icon-sm"></i>
+                            เพิ่มรถคันแรก
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# ═══════════════════ RIGHT — DRIVERS + APPROVERS ═══════════════════ #}
+                <div class="mf-col-right">
+
+                    {# ── Drivers ── #}
+                    <div class="vc-card">
+                        <div class="vc-card-head">
+                            <h3 class="vc-card-head-title">
+                                <i data-lucide="user-round" class="vc-icon-sm"></i>
+                                คนขับ
+                                <span class="vc-card-head-meta">{{ drivers|length }} คน</span>
+                            </h3>
+                            <div class="vc-card-head-actions">
+                                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
+                                        data-bs-toggle="modal" data-bs-target="#addDriverModal"
+                                        title="เพิ่มคนขับใหม่">
+                                    <i data-lucide="plus" class="vc-icon-sm"></i>
+                                    เพิ่ม
                                 </button>
                             </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5 text-muted" style="font-size:.88rem;">
-                            <i class="bi bi-car-front me-2" style="opacity:.4;"></i>ยังไม่มีรถในระบบ
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+                        </div>
 
-    <!-- ===== DRIVERS ===== -->
-    <div class="section-card">
-        <div class="section-head">
-            <div class="section-head-title">
-                <i class="bi bi-person-badge-fill" style="color:#10B981;"></i>
-                คนขับ
-                <span class="count-pill">{{ drivers|length }}</span>
-            </div>
-            <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addDriverModal">
-                <i class="bi bi-plus-lg"></i> เพิ่มคนขับ
-            </button>
-        </div>
-
-        <div class="table-responsive">
-            <table class="fleet-table">
-                <thead>
-                    <tr>
-                        <th>ชื่อ</th>
-                        <th>เบอร์โทร</th>
-                        <th>สถานะ</th>
-                        <th>งานเดือนนี้</th>
-                        <th style="text-align:right;padding-right:20px;">จัดการ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for d in drivers %}
-                    <tr>
-                        <td>
-                            <div style="font-weight:700;">{{ d.name }}</div>
-                            {% if d.linked_user %}
-                            <div style="font-size:.76rem;color:#A1A1AA;">@{{ d.linked_user.username }}</div>
-                            {% endif %}
-                        </td>
-                        <td style="color:#52525B;">{{ d.phone }}</td>
-                        <td>
-                            {% if d.is_active %}
-                                <span class="badge-status badge-driver-on">
-                                    <span class="dot"></span>ใช้งาน
-                                </span>
-                            {% else %}
-                                <span class="badge-status badge-driver-off">
-                                    <span class="dot"></span>ปิดใช้งาน
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span style="font-weight:600;color:#18181B;">{{ driver_jobs.get(d.id, 0) }}</span>
-                            <span style="font-size:.8rem;color:#A1A1AA;margin-left:2px;">งาน</span>
-                        </td>
-                        <td>
-                            <div class="actions-cell" style="justify-content:flex-end;">
-                                <button class="btn-action btn-action-edit"
-                                        data-bs-toggle="modal" data-bs-target="#editDriverModal"
-                                        data-id="{{ d.id }}"
-                                        data-name="{{ d.name }}"
-                                        data-phone="{{ d.phone }}"
-                                        data-active="{{ 'true' if d.is_active else 'false' }}"
-                                        data-user-id="{{ d.user_id or '' }}"
-                                        title="แก้ไข">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn-action btn-action-danger"
-                                        data-bs-toggle="modal" data-bs-target="#deleteDriverModal"
-                                        data-id="{{ d.id }}"
-                                        data-name="{{ d.name }}"
-                                        title="ลบ">
-                                    <i class="bi bi-trash3"></i>
-                                </button>
+                        {% if drivers %}
+                        <ul class="vc-list mf-stagger">
+                            {% for d in drivers %}
+                            <li class="vc-list-item">
+                                <div class="mf-driver-row">
+                                    <div class="mf-driver-main">
+                                        <p class="mf-driver-name">{{ d.name }}</p>
+                                        <div class="mf-driver-meta">
+                                            {% if d.is_active %}
+                                                <span class="vc-badge vc-badge-success vc-badge-dot">ใช้งาน</span>
+                                            {% else %}
+                                                <span class="vc-badge vc-badge-neutral vc-badge-dot">ปิด</span>
+                                            {% endif %}
+                                            {% if d.phone %}
+                                            <span class="vc-dot-sep">·</span>
+                                            <span class="vc-mono">{{ d.phone }}</span>
+                                            {% endif %}
+                                            {% if d.linked_user %}
+                                            <span class="vc-dot-sep">·</span>
+                                            <span class="mf-username-chip">@{{ d.linked_user.username }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="mf-driver-jobs" title="งานเดือนนี้">
+                                        <strong>{{ driver_jobs.get(d.id, 0) }}</strong>
+                                        <span>งาน</span>
+                                    </div>
+                                    <div class="mf-actions">
+                                        <button type="button" class="mf-icon-btn"
+                                                data-bs-toggle="modal" data-bs-target="#editDriverModal"
+                                                data-id="{{ d.id }}"
+                                                data-name="{{ d.name }}"
+                                                data-phone="{{ d.phone }}"
+                                                data-active="{{ 'true' if d.is_active else 'false' }}"
+                                                data-user-id="{{ d.user_id or '' }}"
+                                                title="แก้ไข">
+                                            <i data-lucide="pencil" class="vc-icon-sm"></i>
+                                        </button>
+                                        <button type="button" class="mf-icon-btn mf-icon-btn--danger"
+                                                data-bs-toggle="modal" data-bs-target="#deleteDriverModal"
+                                                data-id="{{ d.id }}"
+                                                data-name="{{ d.name }}"
+                                                title="ลบ">
+                                            <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <div class="vc-empty">
+                            <div class="vc-empty-icon">
+                                <i data-lucide="user-round" style="width:20px;height:20px;"></i>
                             </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted" style="font-size:.88rem;">
-                            <i class="bi bi-person-x-fill me-2" style="opacity:.4;"></i>ยังไม่มีพนักงานขับรถ
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+                            <p class="vc-empty-title">ยังไม่มีคนขับ</p>
+                            <p class="vc-empty-desc">เพิ่มคนขับเพื่อให้สามารถมอบหมายงานได้</p>
+                            <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#addDriverModal"
+                                    title="เพิ่มคนขับใหม่">
+                                <i data-lucide="plus" class="vc-icon-sm"></i>
+                                เพิ่มคนขับ
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
 
-    <!-- ===== APPROVERS (view-only) ===== -->
-    <div class="section-card">
-        <div class="section-head">
-            <div class="section-head-title">
-                <i class="bi bi-shield-check" style="color:#8B5CF6;"></i>
-                ผู้อนุมัติประจำกอง
-                <span class="count-pill">{{ approvers|length }}</span>
+                    {# ── Approvers (read-only) ── #}
+                    <div class="vc-card">
+                        <div class="vc-card-head">
+                            <h3 class="vc-card-head-title">
+                                <i data-lucide="shield-check" class="vc-icon-sm"></i>
+                                ผู้อนุมัติประจำกอง
+                                <span class="vc-card-head-meta">{{ approvers|length }} คน</span>
+                            </h3>
+                            <div class="vc-card-head-actions">
+                                <span class="mf-readonly-note">
+                                    <i data-lucide="lock" class="vc-icon-sm"></i>
+                                    ดูได้อย่างเดียว
+                                </span>
+                            </div>
+                        </div>
+
+                        {% if approvers %}
+                        <div class="mf-stagger">
+                            {% for row in approvers %}
+                            <div class="mf-approver-row vc-list-item">
+                                <p class="mf-approver-name">{{ row.user.full_name or row.user.username }}</p>
+                                <div class="mf-approver-meta">
+                                    <span class="mf-username-chip">@{{ row.user.username }}</span>
+                                    <span class="mf-dept-chip">{{ row.dept.name }}</span>
+                                    {% if row.user.email %}
+                                    <span class="vc-dot-sep">·</span>
+                                    <span>{{ row.user.email }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="vc-empty">
+                            <div class="vc-empty-icon">
+                                <i data-lucide="shield-check" style="width:20px;height:20px;"></i>
+                            </div>
+                            <p class="vc-empty-title">ยังไม่มีผู้อนุมัติในระบบ</p>
+                            <p class="vc-empty-desc">ติดต่อ superadmin เพื่อกำหนดผู้อนุมัติ</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+
             </div>
-            <span class="readonly-note">
-                <i class="bi bi-lock-fill" style="font-size:.7rem;"></i> ดูได้อย่างเดียว
-            </span>
         </div>
-
-        <div class="table-responsive">
-            <table class="fleet-table">
-                <thead>
-                    <tr>
-                        <th>ชื่อ</th>
-                        <th>@username</th>
-                        <th>กอง</th>
-                        <th>อีเมล</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in approvers %}
-                    <tr>
-                        <td style="font-weight:700;">{{ row.user.full_name or row.user.username }}</td>
-                        <td>
-                            <span style="font-size:.82rem;color:#6366F1;background:#EEF2FF;padding:2px 8px;border-radius:4px;font-family:monospace;">
-                                @{{ row.user.username }}
-                            </span>
-                        </td>
-                        <td>
-                            <span style="font-size:.82rem;color:#52525B;background:#F4F4F5;padding:2px 8px;border-radius:4px;">
-                                {{ row.dept.name }}
-                            </span>
-                        </td>
-                        <td style="color:#71717A;font-size:.85rem;">{{ row.user.email or '—' }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4" class="text-center py-5 text-muted" style="font-size:.88rem;">
-                            <i class="bi bi-person-x-fill me-2" style="opacity:.4;"></i>ยังไม่มีผู้อนุมัติในระบบ
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-</div><!-- /container -->
-        </div><!-- /view-section -->
     </main>
-</div><!-- /app-container -->
+</div>
 
 
-<!-- ===== MODALS ===== -->
+{# ════════════════════════ MODALS ════════════════════════ #}
 
-<!-- Add Vehicle -->
-<div class="modal fade" id="addVehicleModal" tabindex="-1" aria-hidden="true">
+{# ── Add Vehicle ── #}
+<div class="modal fade vc-modal" id="addVehicleModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form action="/admin/manage-fleet" method="POST">
                 <input type="hidden" name="action" value="add_vehicle">
-                <div class="modal-header" style="border-bottom:1px solid var(--border);padding:14px 20px;">
-                    <h5 class="modal-title fw-bold" style="font-size:.95rem;">
-                        <i class="bi bi-plus-circle me-2" style="color:var(--accent);"></i>เพิ่มรถใหม่
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i data-lucide="plus" class="vc-icon-sm"></i>
+                        เพิ่มรถใหม่
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">ยี่ห้อ</label>
-                            <input type="text" class="form-control" name="brand" placeholder="Toyota" required>
+                <div class="modal-body">
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">ยี่ห้อ <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-input" name="brand" placeholder="Toyota" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">รุ่น</label>
-                            <input type="text" class="form-control" name="model" placeholder="Commuter" required>
+                        <div class="vc-form-group">
+                            <label class="vc-label">รุ่น <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-input" name="model" placeholder="Commuter" required>
                         </div>
-                        <div class="col-md-7">
-                            <label class="form-label small fw-bold">ทะเบียน</label>
-                            <input type="text" class="form-control" name="license_plate" placeholder="1กข 1234 กทม" required>
+                    </div>
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">ทะเบียน <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-input" name="license_plate" placeholder="1กข 1234 กทม" required>
                         </div>
-                        <div class="col-md-5">
-                            <label class="form-label small fw-bold">ที่นั่ง</label>
-                            <input type="number" class="form-control" name="capacity" min="1" value="8" required>
+                        <div class="vc-form-group">
+                            <label class="vc-label">ที่นั่ง <span class="vc-required">*</span></label>
+                            <input type="number" class="vc-input" name="capacity" min="1" value="8" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">สถานะ</label>
-                            <select class="form-select" name="status">
+                    </div>
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">สถานะ</label>
+                            <select class="vc-select" name="status">
                                 <option value="active">ว่าง</option>
                                 <option value="maintenance">ซ่อมบำรุง</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">อัตราสิ้นเปลือง (กม./ลิตร)</label>
-                            <input type="number" step="0.1" class="form-control" name="fuel_rate" min="1" value="10" required>
+                        <div class="vc-form-group">
+                            <label class="vc-label">อัตราสิ้นเปลือง <span class="vc-label-meta">กม./ลิตร</span></label>
+                            <input type="number" step="0.1" class="vc-input" name="fuel_rate" min="1" value="10" required>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top:1px solid var(--border);">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn fw-bold px-4" style="background:#18181B;color:#fff;border-radius:6px;">บันทึก</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Add Driver -->
-<div class="modal fade" id="addDriverModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form action="/admin/manage-fleet" method="POST">
-                <input type="hidden" name="action" value="add_driver">
-                <div class="modal-header" style="border-bottom:1px solid var(--border);padding:14px 20px;">
-                    <h5 class="modal-title fw-bold" style="font-size:.95rem;">
-                        <i class="bi bi-plus-circle me-2" style="color:var(--accent);"></i>เพิ่มคนขับใหม่
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">ชื่อ-นามสกุล</label>
-                            <input type="text" class="form-control" name="name" placeholder="สมชาย ใจดี" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">เบอร์โทร</label>
-                            <input type="text" class="form-control" name="phone" placeholder="081-234-5678">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">ผูก User Account</label>
-                            <select class="form-select" name="user_id">
-                                <option value="">— ไม่ผูก —</option>
-                                {% for u in users %}
-                                <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <div class="d-flex align-items-center justify-content-between p-3" style="border:1px solid var(--border);border-radius:6px;">
-                                <span class="small fw-bold">สถานะใช้งาน</span>
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" name="is_active" value="1" checked style="width:2.5em;height:1.4em;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer" style="border-top:1px solid var(--border);">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn fw-bold px-4" style="background:#18181B;color:#fff;border-radius:6px;">บันทึก</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Vehicle -->
-<div class="modal fade" id="editVehicleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form id="editVehicleForm" action="/admin/manage-fleet" method="POST">
-                <input type="hidden" name="action" value="edit_vehicle">
-                <input type="hidden" name="vehicle_id" id="ev_id">
-                <div class="modal-header" style="border-bottom:1px solid var(--border);padding:14px 20px;">
-                    <h5 class="modal-title fw-bold" style="font-size:.95rem;">
-                        <i class="bi bi-pencil me-2" style="color:#D97706;"></i>แก้ไขข้อมูลรถ
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">ยี่ห้อ</label>
-                            <input type="text" class="form-control" name="brand" id="ev_brand" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">รุ่น</label>
-                            <input type="text" class="form-control" name="model" id="ev_model" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">ทะเบียน</label>
-                            <input type="text" class="form-control" name="license_plate" id="ev_plate" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">ที่นั่ง</label>
-                            <input type="number" class="form-control" name="capacity" id="ev_capacity" min="1" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">สถานะ</label>
-                            <select class="form-select" name="status" id="ev_status">
-                                <option value="active">ว่าง</option>
-                                <option value="maintenance">ซ่อมบำรุง</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">
-                                <i class="bi bi-fuel-pump-fill me-1 text-warning"></i>สิ้นเปลือง (กม./ล.)
-                            </label>
-                            <input type="number" step="0.1" class="form-control" name="fuel_rate" id="ev_fuel_rate" min="1" required>
-                        </div>
-                    </div>
-
-                    <div class="modal-section-divider">
-                        <i class="bi bi-wrench-adjustable me-1"></i> นัดซ่อม / ต่อภาษี
-                    </div>
-                    <div class="row g-3 mt-0">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">
-                                <i class="bi bi-tools me-1 text-warning"></i>วันนัดเข้าศูนย์
-                            </label>
-                            <input type="date" class="form-control" name="next_service_date" id="ev_svc_date">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">
-                                <i class="bi bi-speedometer2 me-1 text-info"></i>เข้าศูนย์เมื่อถึง (กม.)
-                            </label>
-                            <input type="number" class="form-control" name="next_service_km" id="ev_svc_km" min="0" placeholder="เช่น 130000">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">
-                                <i class="bi bi-receipt me-1 text-primary"></i>วันต่อภาษีรถ
-                            </label>
-                            <input type="date" class="form-control" name="tax_due_date" id="ev_tax_date">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer" style="border-top:1px solid var(--border);">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn fw-bold px-4" style="background:#18181B;color:#fff;border-radius:6px;">
-                        <i class="bi bi-floppy-fill me-1"></i> บันทึก
+                <div class="modal-footer">
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary">
+                        <i data-lucide="check" class="vc-icon-sm"></i>
+                        บันทึก
                     </button>
                 </div>
             </form>
@@ -687,141 +373,286 @@
     </div>
 </div>
 
-<!-- Delete Vehicle -->
-<div class="modal fade" id="deleteVehicleModal" tabindex="-1" aria-hidden="true">
+{# ── Add Driver ── #}
+<div class="modal fade vc-modal" id="addDriverModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="/admin/manage-fleet" method="POST">
+                <input type="hidden" name="action" value="add_driver">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i data-lucide="plus" class="vc-icon-sm"></i>
+                        เพิ่มคนขับใหม่
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="vc-form-group">
+                        <label class="vc-label">ชื่อ-นามสกุล <span class="vc-required">*</span></label>
+                        <input type="text" class="vc-input" name="name" placeholder="สมชาย ใจดี" required>
+                    </div>
+                    <div class="vc-form-group">
+                        <label class="vc-label">เบอร์โทร</label>
+                        <input type="text" class="vc-input" name="phone" placeholder="081-234-5678">
+                    </div>
+                    <div class="vc-form-group">
+                        <label class="vc-label">ผูก User Account</label>
+                        <select class="vc-select" name="user_id">
+                            <option value="">— ไม่ผูก —</option>
+                            {% for u in users %}
+                            <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="vc-form-group">
+                        <div class="mf-switch-row">
+                            <span class="vc-label" style="margin:0;">สถานะใช้งาน</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" checked>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary">
+                        <i data-lucide="check" class="vc-icon-sm"></i>
+                        บันทึก
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Edit Vehicle ── #}
+<div class="modal fade vc-modal" id="editVehicleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form id="editVehicleForm" action="/admin/manage-fleet" method="POST">
+                <input type="hidden" name="action" value="edit_vehicle">
+                <input type="hidden" name="vehicle_id" id="ev_id">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i data-lucide="pencil" class="vc-icon-sm"></i>
+                        แก้ไขข้อมูลรถ
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">ยี่ห้อ <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-input" name="brand" id="ev_brand" required>
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">รุ่น <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-input" name="model" id="ev_model" required>
+                        </div>
+                    </div>
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">ทะเบียน <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-input" name="license_plate" id="ev_plate" required>
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">ที่นั่ง <span class="vc-required">*</span></label>
+                            <input type="number" class="vc-input" name="capacity" id="ev_capacity" min="1" required>
+                        </div>
+                    </div>
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">สถานะ</label>
+                            <select class="vc-select" name="status" id="ev_status">
+                                <option value="active">ว่าง</option>
+                                <option value="maintenance">ซ่อมบำรุง</option>
+                            </select>
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">สิ้นเปลือง <span class="vc-label-meta">กม./ลิตร</span></label>
+                            <input type="number" step="0.1" class="vc-input" name="fuel_rate" id="ev_fuel_rate" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="vc-form-group" style="margin-top: var(--vc-space-4); padding-top: var(--vc-space-4); border-top: 1px solid var(--vc-border);">
+                        <p class="vc-label" style="color: var(--vc-fg-muted); text-transform: uppercase; letter-spacing: var(--vc-tracking-wide); font-size: var(--vc-text-xs); margin-bottom: var(--vc-space-3);">
+                            <i data-lucide="wrench" class="vc-icon-sm" style="vertical-align:-2px;"></i>
+                            นัดซ่อม / ต่อภาษี
+                        </p>
+                        <div class="vc-form-row vc-form-row-3">
+                            <div>
+                                <label class="vc-label">วันนัดเข้าศูนย์</label>
+                                <input type="date" class="vc-input" name="next_service_date" id="ev_svc_date">
+                            </div>
+                            <div>
+                                <label class="vc-label">เข้าศูนย์เมื่อถึง <span class="vc-label-meta">กม.</span></label>
+                                <input type="number" class="vc-input" name="next_service_km" id="ev_svc_km" min="0" placeholder="130000">
+                            </div>
+                            <div>
+                                <label class="vc-label">วันต่อภาษีรถ</label>
+                                <input type="date" class="vc-input" name="tax_due_date" id="ev_tax_date">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary">
+                        <i data-lucide="check" class="vc-icon-sm"></i>
+                        บันทึก
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Delete Vehicle ── #}
+<div class="modal fade vc-modal" id="deleteVehicleModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <form id="deleteVehicleForm" action="/admin/manage-fleet" method="POST">
                 <input type="hidden" name="action" value="delete_vehicle">
                 <input type="hidden" name="vehicle_id" id="dv_id">
-                <div class="modal-header" style="border-bottom:1px solid var(--border);padding:14px 20px;">
-                    <h5 class="modal-title fw-bold" style="font-size:.95rem;color:#DC2626;">
-                        <i class="bi bi-trash3 me-2"></i>ลบรถ
+                <div class="modal-header">
+                    <h5 class="modal-title" style="color: var(--vc-red);">
+                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                        ลบรถ
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
                 </div>
-                <div class="modal-body text-center p-4">
-                    <p class="mb-1 text-muted small">ต้องการลบรถ</p>
-                    <p class="fw-bold mb-1" id="dv_name"></p>
-                    <p class="text-muted" style="font-size:.8rem;">ข้อมูลจะถูกลบถาวร ไม่สามารถกู้คืนได้</p>
+                <div class="modal-body" style="text-align: center;">
+                    <p class="vc-td-muted" style="margin-bottom: 4px;">ต้องการลบรถ</p>
+                    <p style="font-weight: 600; color: var(--vc-fg); margin-bottom: var(--vc-space-2);" id="dv_name"></p>
+                    <p class="vc-td-muted" style="font-size: var(--vc-text-xs); margin: 0;">ข้อมูลจะถูกลบถาวร ไม่สามารถกู้คืนได้</p>
                 </div>
-                <div class="modal-footer justify-content-center" style="border-top:1px solid var(--border);">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-danger fw-bold px-4">ลบเลย</button>
+                <div class="modal-footer" style="justify-content: center;">
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-danger">
+                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                        ลบเลย
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Edit Driver -->
-<div class="modal fade" id="editDriverModal" tabindex="-1" aria-hidden="true">
+{# ── Edit Driver ── #}
+<div class="modal fade vc-modal" id="editDriverModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form action="/admin/manage-fleet" method="POST">
                 <input type="hidden" name="action" value="edit_driver">
                 <input type="hidden" name="driver_id" id="ed_id">
-                <div class="modal-header" style="border-bottom:1px solid var(--border);padding:14px 20px;">
-                    <h5 class="modal-title fw-bold" style="font-size:.95rem;">
-                        <i class="bi bi-pencil me-2" style="color:#D97706;"></i>แก้ไขข้อมูลคนขับ
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i data-lucide="pencil" class="vc-icon-sm"></i>
+                        แก้ไขข้อมูลคนขับ
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">ชื่อ-นามสกุล</label>
-                            <input type="text" class="form-control" name="name" id="ed_name" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">เบอร์โทร</label>
-                            <input type="text" class="form-control" name="phone" id="ed_phone">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">ผูก User Account</label>
-                            <select class="form-select" name="user_id" id="ed_user_id">
-                                <option value="">— ไม่ผูก —</option>
-                                {% for u in users %}
-                                <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <div class="d-flex align-items-center justify-content-between p-3" style="border:1px solid var(--border);border-radius:6px;">
-                                <span class="small fw-bold">สถานะใช้งาน</span>
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" name="is_active" id="ed_active" value="1" style="width:2.5em;height:1.4em;">
-                                </div>
+                <div class="modal-body">
+                    <div class="vc-form-group">
+                        <label class="vc-label">ชื่อ-นามสกุล <span class="vc-required">*</span></label>
+                        <input type="text" class="vc-input" name="name" id="ed_name" required>
+                    </div>
+                    <div class="vc-form-group">
+                        <label class="vc-label">เบอร์โทร</label>
+                        <input type="text" class="vc-input" name="phone" id="ed_phone">
+                    </div>
+                    <div class="vc-form-group">
+                        <label class="vc-label">ผูก User Account</label>
+                        <select class="vc-select" name="user_id" id="ed_user_id">
+                            <option value="">— ไม่ผูก —</option>
+                            {% for u in users %}
+                            <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="vc-form-group">
+                        <div class="mf-switch-row">
+                            <span class="vc-label" style="margin:0;">สถานะใช้งาน</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="ed_active" value="1">
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top:1px solid var(--border);">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn fw-bold px-4" style="background:#18181B;color:#fff;border-radius:6px;">บันทึก</button>
+                <div class="modal-footer">
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary">
+                        <i data-lucide="check" class="vc-icon-sm"></i>
+                        บันทึก
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Delete Driver -->
-<div class="modal fade" id="deleteDriverModal" tabindex="-1" aria-hidden="true">
+{# ── Delete Driver ── #}
+<div class="modal fade vc-modal" id="deleteDriverModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <form action="/admin/manage-fleet" method="POST">
                 <input type="hidden" name="action" value="delete_driver">
                 <input type="hidden" name="driver_id" id="dd_id">
-                <div class="modal-header" style="border-bottom:1px solid var(--border);padding:14px 20px;">
-                    <h5 class="modal-title fw-bold" style="font-size:.95rem;color:#DC2626;">
-                        <i class="bi bi-trash3 me-2"></i>ลบคนขับ
+                <div class="modal-header">
+                    <h5 class="modal-title" style="color: var(--vc-red);">
+                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                        ลบคนขับ
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
                 </div>
-                <div class="modal-body text-center p-4">
-                    <p class="mb-1 text-muted small">ต้องการลบพนักงานขับรถ</p>
-                    <p class="fw-bold mb-1" id="dd_name"></p>
-                    <p class="text-muted" style="font-size:.8rem;">ออกจากระบบหรือไม่?</p>
+                <div class="modal-body" style="text-align: center;">
+                    <p class="vc-td-muted" style="margin-bottom: 4px;">ต้องการลบพนักงานขับรถ</p>
+                    <p style="font-weight: 600; color: var(--vc-fg); margin-bottom: var(--vc-space-2);" id="dd_name"></p>
+                    <p class="vc-td-muted" style="font-size: var(--vc-text-xs); margin: 0;">ออกจากระบบหรือไม่?</p>
                 </div>
-                <div class="modal-footer justify-content-center" style="border-top:1px solid var(--border);">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-danger fw-bold px-4">ลบเลย</button>
+                <div class="modal-footer" style="justify-content: center;">
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-danger">
+                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                        ลบเลย
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Vehicle History -->
-<div class="modal fade" id="vehicleHistoryModal" tabindex="-1" aria-hidden="true">
+{# ── Vehicle History ── #}
+<div class="modal fade vc-modal" id="vehicleHistoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header" style="border-bottom:1px solid var(--border);padding:14px 20px;">
-                <h5 class="modal-title fw-bold" style="font-size:.95rem;color:#2563EB;">
-                    <i class="bi bi-clock-history me-2"></i>
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i data-lucide="clock" class="vc-icon-sm"></i>
                     ประวัติการใช้งาน — <span id="histVehicleName"></span>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
             </div>
-            <div class="modal-body p-4">
-                <div id="histLoading" class="text-center py-4 text-muted">
-                    <i class="bi bi-arrow-clockwise bi-spin me-2"></i> กำลังโหลด...
+            <div class="modal-body">
+                <div id="histLoading" class="mf-hist-loading">
+                    <i data-lucide="loader" class="vc-icon-sm mf-spin"></i>
+                    กำลังโหลด...
                 </div>
                 <div id="histContent" style="display:none;">
-                    <div class="p-3 rounded-3 mb-3 text-center" style="background:#EFF6FF;border:1px solid #BFDBFE;">
-                        <div class="text-muted small">รวมระยะทางทั้งหมด</div>
-                        <div class="fw-bold fs-4 text-primary"><span id="histTotalKm">0</span> <small class="fs-6">กม.</small></div>
+                    <div class="mf-hist-total">
+                        <p class="mf-hist-total-label">รวมระยะทาง</p>
+                        <p class="mf-hist-total-value"><span id="histTotalKm">0</span><span class="mf-hist-total-unit">กม.</span></p>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-sm align-middle mb-0" style="font-size:.85rem;">
-                            <thead class="table-light">
+                    <div class="vc-history">
+                        <table>
+                            <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>วันที่</th>
                                     <th>ปลายทาง</th>
                                     <th>คนขับ</th>
-                                    <th>ระยะทาง</th>
-                                    <th>ไมล์สุดท้าย</th>
+                                    <th class="text-end">ระยะทาง</th>
+                                    <th class="text-end">ไมล์สุดท้าย</th>
                                 </tr>
                             </thead>
                             <tbody id="histTableBody"></tbody>
@@ -833,78 +664,9 @@
     </div>
 </div>
 
-<!-- Scripts -->
-<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
+
+{# ── Scripts ── #}
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script>
-(function () {
-    // Edit Vehicle
-    document.getElementById('editVehicleModal').addEventListener('show.bs.modal', function (e) {
-        const b = e.relatedTarget;
-        document.getElementById('ev_id').value        = b.dataset.id;
-        document.getElementById('ev_brand').value     = b.dataset.brand;
-        document.getElementById('ev_model').value     = b.dataset.model;
-        document.getElementById('ev_plate').value     = b.dataset.plate;
-        document.getElementById('ev_capacity').value  = b.dataset.capacity;
-        document.getElementById('ev_fuel_rate').value = b.dataset.fuelRate || 10;
-        document.getElementById('ev_status').value    = b.dataset.status;
-        document.getElementById('ev_svc_date').value  = b.dataset.svcDate || '';
-        document.getElementById('ev_svc_km').value    = b.dataset.svcKm  || '';
-        document.getElementById('ev_tax_date').value  = b.dataset.taxDate || '';
-    });
-
-    // Delete Vehicle
-    document.getElementById('deleteVehicleModal').addEventListener('show.bs.modal', function (e) {
-        const b = e.relatedTarget;
-        document.getElementById('dv_id').value          = b.dataset.id;
-        document.getElementById('dv_name').textContent  = b.dataset.name;
-    });
-
-    // Edit Driver
-    document.getElementById('editDriverModal').addEventListener('show.bs.modal', function (e) {
-        const b = e.relatedTarget;
-        document.getElementById('ed_id').value      = b.dataset.id;
-        document.getElementById('ed_name').value    = b.dataset.name;
-        document.getElementById('ed_phone').value   = b.dataset.phone;
-        document.getElementById('ed_active').checked = (b.dataset.active === 'true');
-        document.getElementById('ed_user_id').value = b.dataset.userId || '';
-    });
-
-    // Delete Driver
-    document.getElementById('deleteDriverModal').addEventListener('show.bs.modal', function (e) {
-        const b = e.relatedTarget;
-        document.getElementById('dd_id').value         = b.dataset.id;
-        document.getElementById('dd_name').textContent = b.dataset.name;
-    });
-
-    // Vehicle History
-    document.getElementById('vehicleHistoryModal').addEventListener('show.bs.modal', function (e) {
-        const b = e.relatedTarget;
-        document.getElementById('histVehicleName').textContent = b.dataset.name;
-        document.getElementById('histLoading').style.display  = 'block';
-        document.getElementById('histContent').style.display  = 'none';
-
-        fetch(`/api/vehicle/${b.dataset.id}/history`)
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('histTotalKm').textContent = data.total_km.toLocaleString();
-                const tbody = document.getElementById('histTableBody');
-                tbody.innerHTML = '';
-                data.rows.forEach(r => {
-                    tbody.innerHTML += `<tr>
-                        <td class="text-muted">#${r.id}</td>
-                        <td>${r.date}</td>
-                        <td>${r.destination}</td>
-                        <td>${r.driver}</td>
-                        <td>${r.distance ? '<span class="fw-bold text-success">+' + r.distance.toLocaleString() + ' กม.</span>' : '<span class="text-muted">—</span>'}</td>
-                        <td>${r.odometer_end ? r.odometer_end.toLocaleString() : '—'}</td>
-                    </tr>`;
-                });
-                document.getElementById('histLoading').style.display = 'none';
-                document.getElementById('histContent').style.display = 'block';
-            });
-    });
-})();
-</script>
+<script src="{{ url_for('static', filename='js/pages/manage-fleet.js') }}" defer></script>
 </body>
 </html>

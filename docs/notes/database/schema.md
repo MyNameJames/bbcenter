@@ -1,6 +1,6 @@
 # Database Schema
 
-> **Snapshot ของ [models.py](../../../app/models.py) ณ 2026-05-06** — 27 tables
+> **Snapshot ของ [models.py](../../../app/models.py) ณ 2026-05-18** — 27 tables
 > ส่วนบน = ตารางปัจจุบัน · ส่วนล่าง = ประวัติ + เหตุผลทุก version
 > Migration files → [app/migrations/migrations-index.md](../../../app/migrations/migrations-index.md)
 
@@ -157,6 +157,8 @@
 | `snap_vehicle_plate` | String(20) | **snapshot** เมื่อ assign |
 | `snap_driver_name` | String(100) | **snapshot** |
 | `snap_department_name` | String(100) | **snapshot** |
+| `is_ad_hoc` | Boolean NOT NULL default False | True = driver สร้างเองจาก /driver (งานนอกระบบ) — filter ออกจาก /vehicle calendar; ยังแสดงในหน้า admin (v2.11) |
+| `contact_name` | String(100) nullable | free-text ผู้ติดต่อ/ผู้จองสำหรับ external visitors นอก LDAP; display layer prefer ค่านี้แทน `user.full_name` เมื่อ not null (v2.11) |
 
 **Relationships:** `passengers` (→ TripPassenger CASCADE), `extra_expenses` (→ TripExpenseItem CASCADE), `mileage` (→ VehicleMileage)
 
@@ -183,20 +185,23 @@
 | `budget_deducted_at` | DateTime nullable | null = ยังไม่เคยหักงบ (idempotency, v2.8) |
 | `last_budget_log_id` | FK → vehicle_budget_log nullable | tx ที่ active ใช้สำหรับ refund/rededuct (v2.8) |
 
-### `vehicle_budget` — [models.py:261](../../../app/models.py#L261)
+### `vehicle_budget` — [models.py:297](../../../app/models.py#L297)
 | Field | Type | Note |
 |-------|------|------|
 | `id` | Integer PK | |
-| `name` | String(100) | ชื่องบ เช่น "งบ กอง ก" |
-| `department` | String(100) | ชื่อแผนก (plain string) |
+| `budget_type_id` | FK → budget_type | central / department |
+| `department_id` | FK → vehicle_department | central → ชี้ไป row budget_type_id=1 |
 | `year` | Integer | ปีงบประมาณ |
 | `month` | Integer | เดือน |
-| `budget_amount` | Float | งบที่ตั้งไว้ default 0 |
-| `used_amount` | Float | ใช้ไปแล้ว default 0 |
-| `approver_id` | FK → user nullable | ผู้อนุมัติรถประจำ budget record นี้ |
+| `budget_amount` | Numeric(12,2) | งบที่ตั้งไว้ default 0 |
+| `used_amount` | Numeric(12,2) | ใช้ไปแล้ว default 0 (cache ของ SUM(log.change_amount)) |
+| `approver_id` | FK → user nullable | สำหรับ department budget เท่านั้น |
+| `start_date` | Date nullable | วันเริ่มใช้งบ (null = ทั้งเดือน) |
+| `end_date` | Date nullable | วันสิ้นสุดงบ |
+| `is_active` | Boolean NOT NULL default True | False → block approve_booking + top_up/manual_adjust; KPI ไม่นับ; mileage deduct/refund ไม่ block (v2.9) |
 
+**Constraint:** `UNIQUE(budget_type_id, department_id, year, month)`
 **Props:** `.remaining`, `.percent_used`
-**Indexes:** `idx_vehicle_budget_dept_year_month`, `idx_vehicle_budget_approver`
 
 > ตั้งแต่ v2.8: `used_amount` เป็น **cache** ของ `SUM(vehicle_budget_log.change_amount)` — ทุก mutation ต้องผ่าน `BudgetService` ที่ append row ใน `vehicle_budget_log` (ห้าม mutate `used_amount` ตรง)
 
@@ -286,6 +291,7 @@
 | `end_time` | String(5) | เช่น "08:00" หรือ "24:00" |
 | `rate` | Numeric(8,2) | อัตรา OT ต่อชั่วโมง |
 | `is_active` | Boolean | default True |
+| `day_of_week` | Integer nullable | NULL=ใช้ทุกวัน (default), 0=Mon ... 6=Sun (Python `weekday()`) — `auto_generate_ot()` override per-วัน (v2.10) |
 | `sort_order` | Integer | default 0 — ลำดับแสดงผล |
 
 **Seed rows:** เช้ามืด (06:00–08:00, ฿20), หัวค่ำ (17:00–19:00, ฿20), วิกาล >19:00 (19:00–24:00, ฿40), วิกาล <06:00 (00:00–06:00, ฿40)
@@ -516,6 +522,9 @@ INSERT INTO expense_type (id, name) VALUES (1, 'central'), (2, 'department'), (3
 | v2.6 | 2026-05-03 | 21 | `ot_rate_config` + `driver_ot` + `driver_ot_slot` — ระบบ OT คนขับ |
 | v2.7 | 2026-05-04 | 26 | 5 fuel tables — fuel_bill / fuel_reimbursement / fuel_price / fuel_reserve_config / fuel_reserve_log |
 | v2.8 | 2026-05-06 | 27 | `vehicle_budget_log` (ledger) + `vehicle_mileage.budget_deducted_at`/`last_budget_log_id` |
+| v2.9 | 2026-05-18 | 27 | `vehicle_budget` + `is_active` — toggle ปิดงบโดยรักษา audit/refund flow |
+| v2.10 | 2026-05-18 | 27 | `ot_rate_config` + `day_of_week` — per-weekday OT rate override (NULL=ทุกวัน) |
+| v2.11 | 2026-05-18 | 27 | `vehicle_booking` + `is_ad_hoc` + `contact_name` — ad-hoc trip (งานนอกระบบ) driver-created off-the-books |
 
 ---
 
@@ -813,6 +822,47 @@ Migration สร้าง row `event_type='adjust'` 1 row ต่อ vehicle_budg
 - ตาราง + ALTER + backfill — Phase 1 (this migration)
 - เขียน `BudgetService.deduct()/refund()/override()/set_budget()` + เปลี่ยน `mileage_log()` + `driver_mileage()` ให้เรียกผ่าน service — Phase 2 (separate task)
 - ห้าม mutate `used_amount` ตรงในโค้ดใหม่อีก — ทุกการเปลี่ยนต้องผ่าน `BudgetService`
+
+---
+
+## v2.9 — VehicleBudget is_active (2026-05-18)
+
+*Migration: [2026-05-18_vehicle-budget-is-active.sql](../../../app/migrations/2026-05-18_vehicle-budget-is-active.sql)*
+
+### `vehicle_budget` + 1 field
+
+| Field | เหตุผล |
+|-------|--------|
+| `is_active` Boolean NOT NULL default True | Admin toggle ปิดงบรายแถวจาก Budget Manage page — `is_active=False` block `approve_booking()` (target budget นั้น) + block `budget_manage()` POST `top_up`/`manual_adjust` + ทำให้ KPI strip (`total_budget`/`total_used`/`total_remaining`/`pending_count`) ไม่นับ; **mileage deduct + refund flows ไม่ block** เพื่อให้ booking ที่ approved ไปแล้วยังปิดทริป + refund ได้ถูกต้อง การ toggle เองถูกบันทึกเป็น `vehicle_budget_log` row ด้วย `event_type='set_active'`/`'set_inactive'` (ไม่ต้องแก้ schema log table — `event_type` เป็น String(20) อยู่แล้ว) Default True + server_default `'1'` เพื่อให้ ALTER ADD COLUMN backfill row เดิมเป็น active โดยไม่ต้อง UPDATE แยก |
+
+---
+
+## v2.10 — OTRateConfig day_of_week (2026-05-18)
+
+*Migration: [2026-05-18_ot-rate-config-day-of-week.sql](../../../app/migrations/2026-05-18_ot-rate-config-day-of-week.sql)*
+
+### `ot_rate_config` + 1 field
+
+| Field | เหตุผล |
+|-------|--------|
+| `day_of_week` Integer nullable | รองรับให้ admin config อัตรา OT แบบ override รายวัน (เช่น วันอาทิตย์เหมา 300 ฿/hr) โดยไม่ต้องแตะ code; semantics: `NULL`=applies to any day (พฤติกรรมเดิม weekday-agnostic), `0`=Monday ... `6`=Sunday (match Python `datetime.weekday()`); `auto_generate_ot()` ([vehicle_view.py:1644](../../../app/views/vehicle_view.py#L1644)) lookup rule: ถ้ามี row ที่ `day_of_week` ตรงกับ booking weekday → ใช้เฉพาะ override rows นั้น, ไม่ match → fallback ใช้ rows ที่ `day_of_week IS NULL`; nullable=True ทำให้ existing rows (เช้ามืด/หัวค่ำ/วิกาล) เป็น NULL อัตโนมัติ — ไม่ต้อง backfill UPDATE แยก |
+
+---
+
+## v2.11 — VehicleBooking Ad-hoc Trip (2026-05-18)
+
+*Migration: [2026-05-18_vehicle-booking-ad-hoc.sql](../../../app/migrations/2026-05-18_vehicle-booking-ad-hoc.sql)*
+
+### Feature codename: "ad-hoc trips" (งานนอกระบบ)
+
+**บริบทธุรกิจ:** คนขับต้องการบันทึกทริปที่ไม่ได้จองล่วงหน้า — กดปุ่ม "+ งานนอกระบบ" จาก `/driver` page เพื่อสร้าง `VehicleBooking` ทันที (after-the-fact recording) ทริปประพฤติตัวเหมือน approved booking ปกติ ยกเว้นถูกซ่อนจาก calendar ที่ `/vehicle` (ซึ่งเป็น UI ของ upcoming booking requests) แต่ยังแสดงในหน้า admin (`vehicle_admin.html`, `approver_inbox.html`) เพื่อให้ admin assign expense_type / budget ภายหลังได้
+
+### `vehicle_booking` + 2 fields
+
+| Field | เหตุผล |
+|-------|--------|
+| `is_ad_hoc` Boolean NOT NULL default False | แยก driver-created on-the-fly trips ออกจาก pre-booked ปกติ; `vehicle.html` calendar filter `is_ad_hoc=False` (เพราะ calendar คือ upcoming booking requests ไม่ใช่ trip log), ส่วนหน้า admin (`vehicle_admin.html`, `approver_inbox.html`) ยังแสดงทั้งหมดเพื่อจัดการ expense_type/budget ทีหลัง; default False + server_default `'0'` เพื่อให้ ALTER ADD COLUMN backfill row เดิมเป็น booking ปกติโดยไม่ต้อง UPDATE แยก |
+| `contact_name` String(100) nullable | ใน modal "+ งานนอกระบบ" dropdown "ผู้จอง/ผู้ติดต่อ" รองรับ 2 mode: (a) เลือกจาก existing users → `user_id` set ปกติ + `contact_name=NULL`; (b) พิมพ์ free-text ชื่อ (สำหรับ external visitor ที่ไม่อยู่ใน LDAP) → `user_id=current driver's user.id` (เพื่อ ownership/audit) + `contact_name='ชื่อที่พิมพ์'`; display layer ทุกที่ที่แสดง "ผู้จอง" prefer `contact_name` ก่อน fallback ไป `user.full_name` ถ้า NULL; nullable เพราะ booking ปกติไม่ใช้ field นี้ |
 
 ---
 

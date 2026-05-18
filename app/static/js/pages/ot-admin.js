@@ -1,19 +1,23 @@
-/* ot_admin.js — OT Cost Management page
+/* pages/ot-admin.js — OT Cost Management page (ES module)
    Depends on:
      - #otCostData (JSON script tag injected by template)
-     - Bootstrap 5 modal
-     - Lucide (loaded via _header.html)
+     - Bootstrap 5 modal (global)
+     - core/icons.js (lucide wrapper)
 */
-'use strict';
+import { initIcons } from '../core/icons.js';
 
-(function () {
-    const dataEl = document.getElementById('otCostData');
-    if (!dataEl) return;
-
+const dataEl = document.getElementById('otCostData');
+if (!dataEl) {
+    // No data injected → nothing to wire
+} else {
     let DATA;
     try { DATA = JSON.parse(dataEl.textContent); }
-    catch (e) { console.error('ot_admin: bad JSON', e); return; }
+    catch (e) { console.error('ot-admin: bad JSON', e); }
 
+    if (DATA) bootPage(DATA);
+}
+
+function bootPage(DATA) {
     const OTS            = DATA.ots || {};
     const RATE_CONFIGS   = DATA.rateConfigs || [];
     const EDIT_URL_TPL   = DATA.editUrlTemplate || '';
@@ -83,7 +87,7 @@
     function addSlotRow(slot) {
         const container = document.getElementById('editSlotsContainer');
         container.appendChild(buildSlotRow(slot));
-        if (window.lucide) window.lucide.createIcons();
+        initIcons(container);
         recomputeTotal();
     }
 
@@ -102,7 +106,7 @@
         const container = document.getElementById('editSlotsContainer');
         container.innerHTML = '';
         (ot.slots || []).forEach(s => container.appendChild(buildSlotRow(s)));
-        if (window.lucide) window.lucide.createIcons();
+        initIcons(container);
         recomputeTotal();
 
         new bootstrap.Modal(document.getElementById('editOtModal')).show();
@@ -172,42 +176,111 @@
     }
 
     /* ── Event wiring ──────────────────────────────── */
-    document.addEventListener('DOMContentLoaded', () => {
-        // Row actions (edit / print) — event delegation
-        document.addEventListener('click', e => {
-            const btn = e.target.closest('[data-cost-action]');
-            if (!btn) return;
-            const action = btn.dataset.costAction;
-            const otId   = btn.dataset.otId;
-            if (action === 'edit')  openEditModal(otId);
-            if (action === 'print') printSingle(otId);
-        });
-
-        // Add-slot button in modal
-        const addBtn = document.getElementById('addSlotBtn');
-        if (addBtn) addBtn.addEventListener('click', () => addSlotRow(null));
-
-        // Slot remove + recompute (delegated)
-        const slotsContainer = document.getElementById('editSlotsContainer');
-        if (slotsContainer) {
-            slotsContainer.addEventListener('click', e => {
-                const rm = e.target.closest('.js-slot-remove');
-                if (rm) { rm.closest('.cost-slot-row').remove(); recomputeTotal(); }
-            });
-            slotsContainer.addEventListener('input',  recomputeTotal);
-            slotsContainer.addEventListener('change', recomputeTotal);
-        }
-
-        // Print all (visible tab)
-        const printAllBtn = document.getElementById('printAllBtn');
-        if (printAllBtn) printAllBtn.addEventListener('click', printAll);
-
-        // Auto-submit filter on change
-        const filterForm = document.getElementById('filterForm');
-        if (filterForm) {
-            filterForm.querySelectorAll('select').forEach(sel => {
-                sel.addEventListener('change', () => filterForm.submit());
-            });
-        }
+    // Row actions (edit / print) — event delegation
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('[data-cost-action]');
+        if (!btn) return;
+        const action = btn.dataset.costAction;
+        const otId   = btn.dataset.otId;
+        if (action === 'edit')  openEditModal(otId);
+        if (action === 'print') printSingle(otId);
     });
-})();
+
+    // Add-slot button in modal
+    const addBtn = document.getElementById('addSlotBtn');
+    if (addBtn) addBtn.addEventListener('click', () => addSlotRow(null));
+
+    // Slot remove + recompute (delegated)
+    const slotsContainer = document.getElementById('editSlotsContainer');
+    if (slotsContainer) {
+        slotsContainer.addEventListener('click', e => {
+            const rm = e.target.closest('.js-slot-remove');
+            if (rm) { rm.closest('.cost-slot-row').remove(); recomputeTotal(); }
+        });
+        slotsContainer.addEventListener('input',  recomputeTotal);
+        slotsContainer.addEventListener('change', recomputeTotal);
+    }
+
+    // Print all (visible tab)
+    const printAllBtn = document.getElementById('printAllBtn');
+    if (printAllBtn) printAllBtn.addEventListener('click', printAll);
+
+    /* ── Rate config modal — add/remove rows ────────── */
+    const TH_DAYS = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+    function buildRateRow() {
+        const dayOpts = ['<option value="" selected>ทุกวัน</option>']
+            .concat(TH_DAYS.map((d, i) => `<option value="${i}">${d}</option>`))
+            .join('');
+        const row = document.createElement('div');
+        row.className = 'cost-rate-row';
+        row.innerHTML = `
+            <input type="hidden" name="cfg_id[]" value="">
+            <div class="cost-rate-row-field" data-col-full>
+                <label class="vc-label">ชื่อ Band</label>
+                <input type="text" name="cfg_label[]" class="vc-input" placeholder="เช่น หัวค่ำ" required>
+            </div>
+            <div class="cost-rate-row-field cost-rate-row-day">
+                <label class="vc-label">เฉพาะวัน</label>
+                <select name="cfg_day[]" class="vc-select">${dayOpts}</select>
+            </div>
+            <div class="cost-rate-row-field">
+                <label class="vc-label">เริ่ม</label>
+                <input type="time" name="cfg_start[]" class="vc-input" required>
+            </div>
+            <div class="cost-rate-row-field">
+                <label class="vc-label">สิ้นสุด</label>
+                <input type="time" name="cfg_end[]" class="vc-input" required>
+            </div>
+            <div class="cost-rate-row-field">
+                <label class="vc-label">฿/ชม.</label>
+                <input type="number" name="cfg_rate[]" class="vc-input" min="0" step="1" required>
+            </div>
+            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm cost-rate-row-remove js-rate-remove" title="ลบช่วงนี้">
+                <i data-lucide="x" class="vc-icon-sm"></i>
+            </button>
+        `;
+        return row;
+    }
+
+    const addRateBtn  = document.getElementById('addRateBtn');
+    const rateBox     = document.getElementById('rateConfigContainer');
+    const rateForm    = document.getElementById('rateConfigForm');
+
+    if (addRateBtn && rateBox) {
+        addRateBtn.addEventListener('click', () => {
+            const row = buildRateRow();
+            rateBox.appendChild(row);
+            initIcons(rateBox);
+        });
+    }
+
+    if (rateBox) {
+        rateBox.addEventListener('click', e => {
+            const rm = e.target.closest('.js-rate-remove');
+            if (!rm) return;
+            const row   = rm.closest('.cost-rate-row');
+            const cfgId = row.dataset.cfgId;
+            if (cfgId) {
+                // Existing row — soft delete: mark + append cfg_delete[] hidden, disable inputs
+                if (!confirm('ลบช่วงอัตรานี้ใช่ไหม? OT ที่สร้างใหม่จะไม่ใช้อัตรานี้อีก')) return;
+                row.classList.add('is-removed');
+                row.querySelectorAll('input').forEach(i => i.disabled = true);
+                const del = document.createElement('input');
+                del.type = 'hidden'; del.name = 'cfg_delete[]'; del.value = cfgId;
+                rateForm.appendChild(del);
+                rm.remove();
+            } else {
+                // New row — just drop from DOM
+                row.remove();
+            }
+        });
+    }
+
+    // Auto-submit filter on change
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.querySelectorAll('select').forEach(sel => {
+            sel.addEventListener('change', () => filterForm.submit());
+        });
+    }
+}

@@ -13,11 +13,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_cost.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
 </head>
 <body>
 {% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
+{% set TH_DAYS   = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'] %}
 
 <div class="container-fluid container-p-y">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -117,7 +118,10 @@
                 </span>
                 <div class="cost-rate-pills">
                     {% for cfg in rate_configs %}
-                    <span class="cost-rate-pill">
+                    <span class="cost-rate-pill {% if cfg.day_of_week is not none %}cost-rate-pill--day{% endif %}">
+                        {% if cfg.day_of_week is not none %}
+                        <span class="cost-rate-pill-day">{{ TH_DAYS[cfg.day_of_week] }}</span>
+                        {% endif %}
                         {{ cfg.label }} ({{ cfg.start_time }}–{{ cfg.end_time }})
                         <strong>฿{{ cfg.rate|int }}/ชม.</strong>
                     </span>
@@ -235,7 +239,6 @@
                                 <div class="vc-td-strong">
                                     {{ '%02d'|format(ot.date.day) }} {{ TH_MONTHS[ot.date.month - 1] }} {{ ot.date.year + 543 }}
                                 </div>
-                                <div class="vc-td-muted vc-mono" style="font-size: var(--vc-text-xs);">{{ ot.ot_number }}</div>
                             </td>
                             <td>
                                 <div class="vc-td-strong">{{ ot.driver.name if ot.driver else '—' }}</div>
@@ -309,14 +312,7 @@
                     </table>
                 </div>
 
-                <div class="cost-table-footer">
-                    <span class="cost-table-footer-meta">
-                        ชั่วโมงรวม: <strong>{{ '{:,.2f}'.format(ots | sum(attribute='total_hours')) }} ชม.</strong>
-                    </span>
-                    <span class="cost-table-footer-total">
-                        รวมทั้งหมด: ฿{{ '{:,.0f}'.format(ots | sum(attribute='total_amount')) }}
-                    </span>
-                </div>
+
                 {% else %}
                 <div class="vc-empty">
                     <div class="vc-empty-icon">
@@ -414,51 +410,58 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
             </div>
-            <form method="POST" action="{{ url_for('admincost.ot_rate_config_update') }}">
+            <form method="POST" action="{{ url_for('admincost.ot_rate_config_update') }}" id="rateConfigForm">
                 <div class="modal-body">
-                    <p class="vc-form-hint" style="margin-bottom: var(--vc-space-4);">
+                    <p class="vc-form-hint" style="margin-bottom: var(--vc-space-3);">
                         <i data-lucide="info" class="vc-icon-sm"></i>
-                        การเปลี่ยนอัตรา มีผลกับ OT ที่สร้างใหม่เท่านั้น — OT ที่มีอยู่แล้วใช้อัตราที่ snapshot ไว้
+                        การเปลี่ยนอัตรา มีผลกับ OT ที่สร้างใหม่เท่านั้น — OT ที่มีอยู่แล้วใช้อัตราที่ snapshot ไว้.
+                        <br>
+                        <strong>เฉพาะวัน:</strong> ถ้าระบุวัน (เช่น อาทิตย์) → วันนั้น override ทับ "ทุกวัน" ทันที (ใช้เฉพาะ row ที่ตรงวันเท่านั้น)
                     </p>
 
-                            <div class="cost-slot-row-field" data-col-full>
-                                <label class="vc-label">ช่วง OT</label>
-                                <select name="slot_cfg[]" class="vc-select js-slot-cfg">${opts}</select>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--vc-space-2);">
+                        <label class="vc-label" style="margin:0;">ช่วงอัตรา OT</label>
+                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="addRateBtn" title="เพิ่มช่วงอัตรา">
+                            <i data-lucide="plus" class="vc-icon-sm"></i>
+                            เพิ่มช่วง
+                        </button>
+                    </div>
+
+                    <div id="rateConfigContainer" style="display:flex; flex-direction:column; gap: var(--vc-space-2);">
+                        {% for cfg in rate_configs %}
+                        <div class="cost-rate-row" data-cfg-id="{{ cfg.id }}">
+                            <input type="hidden" name="cfg_id[]" value="{{ cfg.id }}">
+                            <div class="cost-rate-row-field" data-col-full>
+                                <label class="vc-label">ชื่อ Band</label>
+                                <input type="text" name="cfg_label[]" class="vc-input" value="{{ cfg.label }}" required>
                             </div>
-                            <div class="cost-slot-row-field">
+                            <div class="cost-rate-row-field cost-rate-row-day">
+                                <label class="vc-label">เฉพาะวัน</label>
+                                <select name="cfg_day[]" class="vc-select">
+                                    <option value="" {% if cfg.day_of_week is none %}selected{% endif %}>ทุกวัน</option>
+                                    {% for i in range(7) %}
+                                    <option value="{{ i }}" {% if cfg.day_of_week == i %}selected{% endif %}>{{ TH_DAYS[i] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="cost-rate-row-field">
                                 <label class="vc-label">เริ่ม</label>
-                                <input type="time" name="slot_start[]" class="vc-input js-slot-start" value="${st}">
+                                <input type="time" name="cfg_start[]" class="vc-input" value="{{ cfg.start_time }}" required>
                             </div>
-                            <div class="cost-slot-row-field">
+                            <div class="cost-rate-row-field">
                                 <label class="vc-label">สิ้นสุด</label>
-                                <input type="time" name="slot_end[]" class="vc-input js-slot-end" value="${en}">
+                                <input type="time" name="cfg_end[]" class="vc-input" value="{{ cfg.end_time }}" required>
                             </div>
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm cost-slot-row-remove js-slot-remove" title="ลบช่วงนี้">
+                            <div class="cost-rate-row-field">
+                                <label class="vc-label">฿/ชม.</label>
+                                <input type="number" name="cfg_rate[]" class="vc-input" value="{{ cfg.rate|int }}" min="0" step="1" required>
+                            </div>
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm cost-rate-row-remove js-rate-remove" title="ลบช่วงนี้">
                                 <i data-lucide="x" class="vc-icon-sm"></i>
                             </button>
-                            <p class="cost-slot-row-hint js-slot-hint"></p>
-
-                    {% for cfg in rate_configs %}
-                    <div class="vc-form-row" style="margin-bottom: var(--vc-space-3);">
-                        <input type="hidden" name="cfg_id[]" value="{{ cfg.id }}">
-                        <div class="vc-form-group" style="flex: 1.4;">
-                            <label class="vc-label">ชื่อ Band</label>
-                            <input type="text" name="cfg_label[]" class="vc-input" value="{{ cfg.label }}" required>
                         </div>
-                        <div class="vc-form-group" style="flex: 1;">
-                            <label class="vc-label">เริ่ม</label>
-                            <input type="text" name="cfg_start[]" class="vc-input" value="{{ cfg.start_time }}" placeholder="06:00" required>
-                        </div>
-                        <div class="vc-form-group" style="flex: 1;">
-                            <label class="vc-label">สิ้นสุด</label>
-                            <input type="text" name="cfg_end[]" class="vc-input" value="{{ cfg.end_time }}" placeholder="08:00" required>
-                        </div>
-                        <div class="vc-form-group" style="flex: .9;">
-                            <label class="vc-label">฿/ชม.</label>
-                            <input type="number" name="cfg_rate[]" class="vc-input" value="{{ cfg.rate|int }}" min="0" step="1" required>
-                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
@@ -552,6 +555,6 @@
 </script>
 
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/ot_admin.js') }}" defer></script>
+<script type="module" src="{{ url_for('static', filename='js/pages/ot-admin.js') }}"></script>
 </body>
 </html>

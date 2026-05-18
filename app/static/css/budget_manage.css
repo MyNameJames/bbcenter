@@ -1,23 +1,16 @@
 /* ============================================================
-   Budget Admin Page — Vercel-flavored UI
+   Budget Manage Page — Vercel polish
    ─────────────────────────────────────────────────────────────
-   ใช้ design language เดียวกับ /admin/fuel:
-   - load fuel_admin.css ก่อน → ได้ .vc-card, .vc-kpi-group/cell,
-     .vc-btn(*), .vc-card-head, .vc-table, .vc-empty, .vc-modal,
-     .vc-filter-bar, .vc-input/select/textarea/label, .vc-badge
-   - ไฟล์นี้ = budget-specific เท่านั้น
+   ใช้ design language เดียวกับ /admin/fuel (vc-* tokens)
+   - load ต่อจาก vehicle_admin.css + vehicle.css
+   - page-specific เท่านั้น (vc-card, vc-kpi-*, vc-btn-*, vc-filter-bar,
+     vc-table, vc-empty, vc-modal, vc-badge มาจาก components/)
    ============================================================ */
 
 
 /* ─────────────────────────────────────────────
-   1. PAGE SHELL  (mirror .fuel-page)
+   1. PAGE HEADER
 ───────────────────────────────────────────── */
-.budget-page {
-    padding: var(--vc-space-6);
-    max-width: 1280px;
-    margin: 0 auto;
-}
-
 .budget-header {
     display: flex;
     align-items: flex-end;
@@ -41,8 +34,9 @@
 .budget-subtitle {
     font-size: var(--vc-text-sm);
     color: var(--vc-fg-muted);
-    margin: 6px 0 0 0;
-    line-height: 1.4;
+    margin: 6px 0 0;
+    line-height: 1.5;
+    max-width: 56ch;
 }
 
 .budget-header-actions {
@@ -52,24 +46,45 @@
 }
 
 
-/* 2. KPI 6-cell variant + value tones — moved to components/kpi.css (Phase 2). */
+/* ─────────────────────────────────────────────
+   2. STACKED BLOCK SPACING
+   ─────────────────────────────────────────────
+   แทน inline style="margin-bottom:..." — semantic class
+───────────────────────────────────────────── */
+.budget-flash-stack    { margin-bottom: var(--vc-space-4); }
+.budget-kpi-strip      { margin-bottom: var(--vc-space-5); }
+.budget-grid           { margin-bottom: var(--vc-space-5); }
+.budget-grid--last     { margin-bottom: var(--vc-space-8); }
+.budget-empty-block    { margin-bottom: var(--vc-space-5); }
 
 
 /* ─────────────────────────────────────────────
-   3. SECTION HEADER
+   3. FILTER BAR — month label chip
+───────────────────────────────────────────── */
+.budget-filter-month {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+}
+
+
+/* ─────────────────────────────────────────────
+   4. SECTION HEADER
    ─────────────────────────────────────────────
    วาง "นอก" card — ทำหน้าที่แบ่งกลุ่ม budget cards
-   มี slot ขวาสำหรับปุ่ม action (เช่น "ตั้งงบส่วนกลาง")
 ───────────────────────────────────────────── */
 .vc-section-hdr {
     display: flex;
     align-items: center;
     gap: var(--vc-space-2);
     padding-bottom: var(--vc-space-3);
-    margin: var(--vc-space-6) 0 var(--vc-space-3);
+    margin: var(--vc-space-8) 0 var(--vc-space-4);
     border-bottom: 1px solid var(--vc-border);
     flex-wrap: wrap;
 }
+.vc-section-hdr:first-of-type { margin-top: var(--vc-space-6); }
 
 .vc-section-hdr-icon {
     width: 28px;
@@ -108,7 +123,7 @@
 
 
 /* ─────────────────────────────────────────────
-   4. BUDGET CARD (vc-bcard)
+   5. BUDGET CARD (vc-bcard)
 ───────────────────────────────────────────── */
 .vc-bcard {
     background: var(--vc-bg);
@@ -122,6 +137,20 @@
     height: 100%;
 }
 .vc-bcard:hover { border-color: var(--vc-border-hover); }
+
+/* Inactive state — แสดงในการ์ดแต่ dim ลง + slight stripe */
+.vc-bcard--inactive {
+    opacity: 0.65;
+    background:
+        repeating-linear-gradient(
+            135deg,
+            var(--vc-bg) 0,
+            var(--vc-bg) 12px,
+            var(--vc-bg-subtle) 12px,
+            var(--vc-bg-subtle) 13px
+        );
+}
+.vc-bcard--inactive:hover { opacity: 0.85; border-color: var(--vc-border-hover); }
 
 .vc-bcard-head {
     display: flex;
@@ -206,9 +235,14 @@
 .vc-bcard-rem.is-warn    { color: var(--vc-amber); }
 .vc-bcard-rem.is-danger  { color: var(--vc-red); }
 
+.vc-bcard-approver {
+    align-self: flex-start;
+    margin-top: var(--vc-space-1);
+}
+
 
 /* ─────────────────────────────────────────────
-   5. PROGRESS BAR
+   6. PROGRESS BAR
 ───────────────────────────────────────────── */
 .vc-progress {
     display: block;
@@ -230,7 +264,7 @@
 
 
 /* ─────────────────────────────────────────────
-   6. PURPLE VARIANTS (button + badge)
+   7. PURPLE VARIANTS (button + badge)
 ───────────────────────────────────────────── */
 .vc-btn-purple {
     background: var(--vc-purple);
@@ -244,14 +278,14 @@
 }
 
 .vc-badge-purple {
-    background: rgba(121,40,202,.10);
+    background: var(--vc-purple-bg);
     color: var(--vc-purple);
-    border-color: rgba(121,40,202,.25);
+    border-color: var(--vc-purple-border);
 }
 
 
 /* ─────────────────────────────────────────────
-   7. DROPDOWN (per-card actions ⋯)
+   8. DROPDOWN (per-card actions ⋯)
 ───────────────────────────────────────────── */
 .vc-dropdown {
     position: relative;
@@ -267,7 +301,6 @@
     background: var(--vc-bg);
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-sm);
-    box-shadow: 0 4px 12px rgba(0,0,0,.06);
     z-index: 5;
     opacity: 0;
     visibility: hidden;
@@ -306,11 +339,42 @@
     color: var(--vc-fg-muted);
     flex-shrink: 0;
 }
+.vc-dropdown-item.is-danger {
+    color: var(--vc-red);
+}
+.vc-dropdown-item.is-danger:hover {
+    background: var(--vc-red-bg);
+}
+.vc-dropdown-item.is-danger .vc-icon-sm {
+    color: var(--vc-red);
+}
+
+.vc-dropdown-divider {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--vc-border);
+}
+
+.vc-dropdown-form {
+    margin: 0;
+}
+.vc-dropdown-form .vc-dropdown-item {
+    /* button inside form — keep same look */
+    width: 100%;
+}
 
 
 /* ─────────────────────────────────────────────
-   8. REFUND PICKER (table row select)
+   9. REFUND PICKER (table row select + scroll wrap)
 ───────────────────────────────────────────── */
+.budget-refund-scroll {
+    max-height: 380px;
+    overflow: auto;
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+}
+.budget-refund-hint { margin-bottom: var(--vc-space-3); }
+
 [data-pick-booking] {
     cursor: pointer;
     transition: background var(--vc-transition);
@@ -328,7 +392,7 @@
 
 
 /* ─────────────────────────────────────────────
-   9. PERSONAL BUDGET ROW (optional strip)
+   10. PERSONAL BUDGET ROW (optional strip)
 ───────────────────────────────────────────── */
 .budget-personal-row {
     display: flex;
@@ -338,11 +402,13 @@
     background: var(--vc-bg);
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-md);
-    margin-bottom: var(--vc-space-4);
+    margin-bottom: var(--vc-space-5);
 }
 .budget-personal-row .icon {
     color: var(--vc-green);
     flex-shrink: 0;
+    width: 20px;
+    height: 20px;
 }
 .budget-personal-row .meta {
     flex: 1;
@@ -367,4 +433,40 @@
 .budget-personal-row .meta-end {
     font-size: var(--vc-text-xs);
     color: var(--vc-fg-muted);
+}
+
+
+/* ─────────────────────────────────────────────
+   11. MODAL — bound-value helpers
+───────────────────────────────────────────── */
+.budget-modal-mono {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+}
+.budget-modal-alert--flush { margin: 0; }
+.budget-modal-alert        { margin-bottom: var(--vc-space-4); }
+
+
+/* ─────────────────────────────────────────────
+   12. EMPTY STATE ICON (override 20px)
+───────────────────────────────────────────── */
+.budget-empty-icon {
+    width: 20px;
+    height: 20px;
+}
+
+
+/* ─────────────────────────────────────────────
+   13. RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 575px) {
+    .budget-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .budget-header-actions { width: 100%; }
+    .budget-header-actions .vc-btn { width: 100%; justify-content: center; }
+    .vc-section-hdr { gap: 6px; }
+    .vc-section-hdr-actions { width: 100%; margin-left: 0; }
+    .vc-section-hdr-actions .vc-btn { flex: 1; justify-content: center; }
 }

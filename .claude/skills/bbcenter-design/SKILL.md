@@ -237,7 +237,7 @@ Example: `<p class="vc-kpi-value {% if x < 0 %}vc-kpi-value--danger{% elif x == 
 </form>
 ```
 
-Filter bar auto-submits on `<select>` change via existing vehicle_admin.js — do not add JS for that.
+Filter bar auto-submits on `<select>` change via existing `pages/vehicle-admin.js` — do not add JS for that.
 
 ### 2.3 Data Table (with card head + empty fallback)
 

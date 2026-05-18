@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, User, RepairTicket, MaintenanceTicket, RoomBooking, VehicleBooking
 from ad_utils import check_ad_login
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -121,10 +121,15 @@ def dashboard():
         user_id=current_user.id, status='pending'
     ).count()
 
-    # recent vehicle bookings สำหรับ admin
-    recent_vehicle = VehicleBooking.query.order_by(
-        VehicleBooking.created_at.desc()
-    ).limit(5).all()
+    # vehicle bookings — รายการอนุมัติแล้วที่ start_datetime อยู่ในวันพรุ่งนี้
+    tomorrow         = today + timedelta(days=1)
+    tomorrow_start   = datetime.combine(tomorrow, datetime.min.time())
+    tomorrow_end     = datetime.combine(tomorrow, datetime.max.time())
+    recent_vehicle = VehicleBooking.query.filter(
+        VehicleBooking.status == 'approved',
+        VehicleBooking.start_datetime >= tomorrow_start,
+        VehicleBooking.start_datetime <= tomorrow_end,
+    ).order_by(VehicleBooking.start_datetime.asc()).all()
 
     # ห้องประชุม — จองวันนี้
     today_start = datetime.combine(today, datetime.min.time())
