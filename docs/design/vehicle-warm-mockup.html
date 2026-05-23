@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehicle Calendar — Vercel Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+/* ════════════════════════════════════════════════════════════
+   Vercel-style mockup tokens (scoped — ไม่กระทบ design-system)
+   ════════════════════════════════════════════════════════════ */
+:root {
+  --bg:           #FFFFFF;
+  --bg-subtle:    #FAFAFA;
+  --bg-hover:     #F5F5F5;
+  --bg-disabled:  #FAFAFA;
+
+  --border:       #EAEAEA;
+  --border-soft:  #F0F0F0;
+
+  --fg:           #171717;
+  --fg-muted:     #666666;
+  --fg-subtle:    #999999;
+
+  --accent:       #171717;
+  --accent-fg:    #FFFFFF;
+
+  /* status tints — neutral & desaturated */
+  --pending-bg:   #FEF3C7;
+  --pending-fg:   #92400E;
+  --pending-dot:  #D97706;
+
+  --approved-bg:  #DCFCE7;
+  --approved-fg:  #166534;
+  --approved-dot: #16A34A;
+
+  --group-bg:     #EDE9FE;
+  --group-fg:     #5B21B6;
+  --group-dot:    #7C3AED;
+
+  --danger:       #DC2626;
+
+  --radius-sm:    6px;
+  --radius-md:    8px;
+  --radius-lg:    12px;
+
+  --shadow-pop:   0 4px 12px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+
+  --sidebar-w:    256px;
+  --topbar-h:     56px;
+
+  /* override Bootstrap variables → ให้ utility border/radius/color ใช้ palette เดียวกัน */
+  --bs-border-color:       #EAEAEA;
+  --bs-border-color-translucent: #EAEAEA;
+  --bs-body-color:         #171717;
+  --bs-body-bg:            #FAFAFA;
+  --bs-border-radius:      8px;
+  --bs-border-radius-sm:   6px;
+  --bs-border-radius-lg:   12px;
+  --bs-border-radius-pill: 999px;
+}
+
+* { box-sizing: border-box; }
+html { scrollbar-gutter: stable; }
+body {
+  margin: 0;
+  font-family: 'Sarabun', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: var(--fg);
+  background: var(--bg-subtle);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+}
+h1, h2, h3 { letter-spacing: -0.02em; }
+button { font-family: inherit; cursor: pointer; }
+[data-lucide] { width: 16px; height: 16px; stroke-width: 1.5; }
+
+/* ════════════════════════════════════════════════════════════
+   App shell — layout ใช้ Bootstrap utility (d-flex, min-vh-100, flex-grow-1)
+   ════════════════════════════════════════════════════════════ */
+.app  { background: var(--bg-subtle); }
+.main { background: var(--bg-subtle); }
+
+/* ════════════════════════════════════════════════════════════
+   SIDEBAR — flex/border/radius ใช้ utility, เก็บ visual props
+   ════════════════════════════════════════════════════════════ */
+.sb {
+  width: var(--sidebar-w);
+  background: var(--bg-subtle);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sb-brand {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+.sb-brand-mark {
+  width: 26px; height: 26px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+.sb-nav-section { margin-top: 8px; }
+.sb-nav-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sb-item {
+  height: 32px;
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 100ms, color 100ms;
+}
+.sb-item:hover     { background: var(--bg-hover); color: var(--fg); }
+.sb-item.active    { background: var(--bg-hover); color: var(--fg); font-weight: 500; }
+.sb-item [data-lucide]         { color: var(--fg-muted); flex-shrink: 0; }
+.sb-item.active [data-lucide]  { color: var(--fg); }
+.sb-item-badge {
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.sb-logout {
+  height: 36px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 100ms, color 100ms;
+}
+.sb-logout:hover         { background: #FEF2F2; color: var(--danger); }
+.sb-logout [data-lucide] { color: var(--danger); flex-shrink: 0; }
+
+/* ════════════════════════════════════════════════════════════
+   TOP BAR — layout/border ใช้ utility
+   ════════════════════════════════════════════════════════════ */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--bg-subtle);
+  z-index: 10;
+}
+.topbar-crumb {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+}
+.topbar-crumb .sep {
+  color: var(--fg-subtle);
+  font-weight: 300;
+  font-size: 18px;
+}
+.topbar-btn {
+  width: 32px; height: 32px;
+  background: transparent;
+  color: var(--fg-muted);
+}
+.topbar-btn:hover { background: var(--bg-hover); color: var(--fg); }
+.topbar-dot {
+  top: 6px; right: 6px;
+  width: 6px; height: 6px;
+  background: var(--danger);
+  border: 1.5px solid var(--bg-subtle);
+}
+
+/* ════════════════════════════════════════════════════════════
+   CONTENT
+   ════════════════════════════════════════════════════════════ */
+.content {
+  flex: 1;
+  padding: 32px;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.page-head h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.page-head p {
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+/* primary button (override Bootstrap .btn-primary) */
+.btn-primary {
+  height: 36px;
+  padding: 0 12px 0 14px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 100ms;
+}
+.btn-primary:hover         { opacity: 0.85; background: var(--accent); color: var(--accent-fg); }
+.btn-primary [data-lucide] { color: var(--accent-fg); }
+
+.btn-ghost {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-ghost:hover { background: var(--bg-hover); }
+
+.btn-icon {
+  width: 32px; height: 32px;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.btn-icon:hover { background: var(--bg-hover); color: var(--fg); }
+
+.legend       { font-size: 12px; color: var(--fg-muted); }
+.legend-dot   { width: 8px; height: 8px; }
+.legend-dot.pending  { background: var(--pending-dot); }
+.legend-dot.approved { background: var(--approved-dot); }
+.legend-dot.group    { background: var(--group-dot); }
+
+.toolbar-month {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  min-width: 160px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   CALENDAR
+   ════════════════════════════════════════════════════════════ */
+.cal {
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+}
+.cal-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--bg-subtle);
+}
+.cal-head-cell {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cal-head-cell.sun { color: var(--fg-muted); }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(112px, auto);
+}
+.cal-cell {
+  position: relative;
+  border-right: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+  padding: 8px;
+  cursor: pointer;
+  transition: background 80ms;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cal-cell:nth-child(7n) { border-right: 0; }
+.cal-cell:hover { background: var(--bg-subtle); }
+.cal-cell:hover .cal-plus { opacity: 1; }
+
+.cal-cell.dim { background: var(--bg-subtle); color: var(--fg-subtle); cursor: default; }
+.cal-cell.dim:hover { background: var(--bg-subtle); }
+.cal-cell.dim .cal-plus { display: none; }
+
+.cal-day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.cal-cell.today .cal-day {
+  border: 1.5px solid var(--fg);
+  border-radius: 50%;
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.cal-plus {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 120ms;
+  color: var(--fg-subtle);
+  pointer-events: none;
+}
+.cal-plus [data-lucide] { width: 20px; height: 20px; }
+
+/* events — Linear/Vercel style chip */
+.evt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  transition: border-color 100ms, transform 100ms, box-shadow 100ms;
+  overflow: hidden;
+}
+.evt:hover {
+  border-color: var(--fg-subtle);
+}
+.evt-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+}
+.evt-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  opacity: 0.18;
+}
+.evt-time {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+.evt-title {
+  flex: 1;
+  color: var(--fg);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.evt.pending  .evt-dot { background: var(--pending-dot); }
+.evt.pending  .evt-dot::after { background: var(--pending-dot); }
+.evt.approved .evt-dot { background: var(--approved-dot); }
+.evt.approved .evt-dot::after { background: var(--approved-dot); }
+.evt.group    .evt-dot { background: var(--group-dot); }
+.evt.group    .evt-dot::after { background: var(--group-dot); }
+
+.evt-more {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  padding: 4px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: fit-content;
+  border-radius: 4px;
+  transition: background 100ms;
+}
+.evt-more:hover { background: var(--bg-hover); color: var(--fg); }
+.evt-more [data-lucide] { width: 12px; height: 12px; }
+
+/* ════════════════════════════════════════════════════════════
+   ANNOTATIONS (callouts ลอย — comparison notes)
+   ════════════════════════════════════════════════════════════ */
+.note {
+  padding: 20px 24px;
+  background: var(--bg);
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+.note h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.note ul { margin: 0; padding-left: 18px; }
+.note li { margin-bottom: 4px; }
+.note kbd {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 11px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOBILE MOCKUP — phone frame 390px
+   ════════════════════════════════════════════════════════════ */
+.mobile-wrap {
+  background: var(--bg-subtle);
+  padding: 48px 24px 64px;
+}
+.mobile-wrap h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.mobile-wrap .sub {
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+.phone {
+  width: 390px;
+  height: 780px;
+  background: var(--bg);
+  border-radius: 32px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.06);
+}
+.phone-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+
+.ph-status {
+  height: 24px;
+  background: var(--bg);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.ph-status [data-lucide] { width: 12px; height: 12px; }
+
+.ph-bar  { height: 52px; }
+.ph-bar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.ph-icon-btn {
+  width: 36px; height: 36px;
+  background: transparent;
+  color: var(--fg-muted);
+}
+.ph-icon-btn:hover { background: var(--bg-hover); color: var(--fg); }
+.ph-icon-btn .dot {
+  top: 8px; right: 8px;
+  width: 6px; height: 6px;
+  background: var(--danger);
+  border: 1.5px solid var(--bg);
+}
+
+.ph-sub    { font-size: 12px; color: var(--fg-muted); }
+.ph-legend { font-size: 11px; color: var(--fg-muted); }
+.ph-legend .legend-dot { width: 7px; height: 7px; }
+
+.ph-month-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.ph-month .ph-icon-btn { width: 32px; height: 32px; }
+
+/* phone calendar grid — compact */
+.ph-cal {
+  padding: 0 12px;
+}
+.ph-cal-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding-bottom: 6px;
+}
+.ph-cal-head > div {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+}
+.ph-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.ph-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  cursor: pointer;
+  position: relative;
+  font-variant-numeric: tabular-nums;
+}
+.ph-day:hover { background: var(--bg-hover); }
+.ph-day.dim { color: var(--fg-subtle); }
+.ph-day.today {
+  background: var(--fg);
+  color: var(--bg);
+}
+.ph-day.selected {
+  border: 1.5px solid var(--fg);
+}
+.ph-day-dots {
+  display: inline-flex;
+  gap: 2px;
+  height: 4px;
+}
+.ph-day-dots > i {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--fg-subtle);
+  display: inline-block;
+}
+.ph-day.today .ph-day-dots > i { background: var(--bg); }
+.ph-day-dots > i.pending  { background: var(--pending-dot); }
+.ph-day-dots > i.approved { background: var(--approved-dot); }
+.ph-day-dots > i.group    { background: var(--group-dot); }
+
+/* selected day list */
+.ph-list-head {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ph-list-head .count {
+  color: var(--fg-subtle);
+  font-weight: 500;
+  margin-left: 4px;
+}
+.ph-evt {
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 100ms;
+}
+.ph-evt:hover { border-color: var(--fg-subtle); }
+.ph-evt-dot { width: 8px; height: 8px; }
+.ph-evt.pending  .ph-evt-dot { background: var(--pending-dot); }
+.ph-evt.approved .ph-evt-dot { background: var(--approved-dot); }
+.ph-evt.group    .ph-evt-dot { background: var(--group-dot); }
+.ph-evt-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  margin-bottom: 2px;
+}
+.ph-evt-meta {
+  font-size: 11.5px;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.ph-evt-meta [data-lucide] { width: 11px; height: 11px; }
+.ph-evt-status {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+}
+.ph-evt-status.pending  { background: var(--pending-bg);  color: var(--pending-fg); }
+.ph-evt-status.approved { background: var(--approved-bg); color: var(--approved-fg); }
+.ph-evt-status.group    { background: var(--group-bg);    color: var(--group-fg); }
+
+/* FAB */
+.ph-fab {
+  right: 16px;
+  bottom: 20px;
+  height: 48px;
+  padding: 0 18px 0 16px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(0,0,0,.18);
+  cursor: pointer;
+}
+.ph-fab [data-lucide] { color: var(--bg); }
+
+/* drawer (sidebar in mobile) */
+.ph-drawer-head      { height: 52px; }
+.ph-drawer-mark {
+  width: 28px; height: 28px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ph-drawer-name { font-size: 15px; font-weight: 700; color: var(--fg); }
+.ph-drawer-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ph-drawer-item {
+  height: 40px;
+  color: var(--fg-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.ph-drawer-item:hover  { background: var(--bg-hover); color: var(--fg); }
+.ph-drawer-item.active { background: var(--bg-hover); color: var(--fg); font-weight: 500; }
+.ph-drawer-item [data-lucide]        { color: var(--fg-muted); width: 18px; height: 18px; }
+.ph-drawer-item.active [data-lucide] { color: var(--fg); }
+.ph-drawer-item-badge {
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 1px 6px;
+}
+.ph-drawer-logout {
+  height: 40px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+.ph-drawer-logout:hover         { background: #FEF2F2; color: var(--danger); }
+.ph-drawer-logout [data-lucide] { color: var(--danger); width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+
+<div class="app d-flex min-vh-100">
+
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside class="sb d-flex flex-column border-end flex-shrink-0">
+    <div class="sb-brand d-flex align-items-center gap-2 px-3 pt-3 pb-2">
+      <span class="sb-brand-mark rounded-2">BB</span>
+      <span>center</span>
+    </div>
+
+    <nav class="sb-nav flex-grow-1 overflow-auto px-2 pb-3">
+      <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+        <i data-lucide="layout-dashboard"></i>
+        <span class="sb-item-label flex-grow-1 text-truncate">Dashboard</span>
+      </div>
+      <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+        <i data-lucide="history"></i>
+        <span class="sb-item-label flex-grow-1 text-truncate">ประวัติการจอง</span>
+      </div>
+
+      <div class="sb-nav-section">
+        <div class="sb-nav-section-label px-2 pt-3 pb-1">บริการ</div>
+        <div class="sb-item active d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="car"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">ปฏิทินการจองรถ</span>
+        </div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="users"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">ปฏิทินการจองห้องประชุม</span>
+        </div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="wrench"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">แจ้งซ่อม IT</span>
+        </div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="building-2"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">แจ้งซ่อมทั่วไป</span>
+        </div>
+      </div>
+
+      <div class="sb-nav-section">
+        <div class="sb-nav-section-label px-2 pt-3 pb-1">ผู้ดูแลระบบ</div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="check-square"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">อนุมัติการจอง</span>
+        </div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="gauge"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">บันทึกเลขไมล์</span>
+        </div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="truck"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">จัดการรถและทีม</span>
+        </div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="wallet"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">จัดการงบประมาณ</span>
+        </div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="clock"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">จัดการค่าล่วงเวลา (OT)</span>
+        </div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="fuel"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">จัดการค่าน้ำมัน</span>
+        </div>
+      </div>
+
+      <div class="sb-nav-section">
+        <div class="sb-nav-section-label px-2 pt-3 pb-1">ผู้อนุมัติ</div>
+        <div class="sb-item d-flex align-items-center gap-2 rounded-2 px-2">
+          <i data-lucide="circle-check"></i>
+          <span class="sb-item-label flex-grow-1 text-truncate">รายการรออนุมัติ</span>
+          <span class="sb-item-badge rounded-pill">1</span>
+        </div>
+      </div>
+    </nav>
+
+    <div class="sb-foot border-top p-2">
+      <button class="sb-logout d-flex align-items-center gap-2 w-100 rounded-2 border-0 px-2">
+        <i data-lucide="log-out"></i>
+        <span>ออกจากระบบ</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══════════════ MAIN ═══════════════ -->
+  <div class="main flex-grow-1 d-flex flex-column" style="min-width:0;">
+
+    <!-- top bar -->
+    <header class="topbar sticky-top d-flex align-items-center gap-2 border-bottom px-4">
+      <div class="topbar-crumb d-flex align-items-center gap-2">
+        <span>บริการ</span>
+        <span class="sep">/</span>
+        <span>ปฏิทินการจองรถ</span>
+      </div>
+      <div class="flex-grow-1"></div>
+      <button class="topbar-btn position-relative rounded-2 border-0 d-inline-flex align-items-center justify-content-center" title="การแจ้งเตือน">
+        <i data-lucide="bell"></i>
+        <span class="topbar-dot position-absolute rounded-circle"></span>
+      </button>
+      <button class="topbar-btn rounded-2 border-0 d-inline-flex align-items-center justify-content-center" title="โปรไฟล์"><i data-lucide="user"></i></button>
+    </header>
+
+    <!-- content -->
+    <main class="content">
+
+      <!-- page head -->
+      <div class="page-head d-flex align-items-start justify-content-between gap-4 mb-4">
+        <div>
+          <h1 class="mb-1">ปฏิทินการจองรถ</h1>
+          <p class="mb-0">ระยะเวลาการใช้รถ 08:00 – 17:00 · วันอาทิตย์ไม่ให้บริการ</p>
+        </div>
+        <button class="btn-primary d-inline-flex align-items-center gap-1 rounded-2 border-0">
+          <i data-lucide="plus"></i>
+          <span>จองรถ</span>
+          <i data-lucide="chevron-down"></i>
+        </button>
+      </div>
+
+      <!-- legend -->
+      <div class="legend d-flex align-items-center gap-3 mb-3">
+        <span class="legend-item d-inline-flex align-items-center gap-1"><span class="legend-dot pending rounded-circle"></span> รออนุมัติ</span>
+        <span class="legend-item d-inline-flex align-items-center gap-1"><span class="legend-dot approved rounded-circle"></span> อนุมัติแล้ว</span>
+        <span class="legend-item d-inline-flex align-items-center gap-1"><span class="legend-dot group rounded-circle"></span> กลุ่ม</span>
+      </div>
+
+      <!-- toolbar -->
+      <div class="toolbar d-flex align-items-center gap-2 mb-3">
+        <button class="btn-icon rounded-2 d-inline-flex align-items-center justify-content-center" title="เดือนก่อนหน้า"><i data-lucide="chevron-left"></i></button>
+        <button class="btn-icon rounded-2 d-inline-flex align-items-center justify-content-center" title="เดือนถัดไป"><i data-lucide="chevron-right"></i></button>
+        <div class="toolbar-month px-2">พฤษภาคม 2569</div>
+        <button class="btn-ghost d-inline-flex align-items-center gap-1 rounded-2"><i data-lucide="calendar"></i> วันนี้</button>
+        <div class="flex-grow-1"></div>
+      </div>
+
+      <!-- calendar -->
+      <div class="cal border overflow-hidden">
+        <div class="cal-head border-bottom">
+          <div class="cal-head-cell sun">อา</div>
+          <div class="cal-head-cell">จ</div>
+          <div class="cal-head-cell">อ</div>
+          <div class="cal-head-cell">พ</div>
+          <div class="cal-head-cell">พฤ</div>
+          <div class="cal-head-cell">ศ</div>
+          <div class="cal-head-cell">ส</div>
+        </div>
+
+        <div class="cal-grid">
+          <!-- week 1 -->
+          <div class="cal-cell dim"><span class="cal-day"></span></div>
+          <div class="cal-cell dim"><span class="cal-day"></span></div>
+          <div class="cal-cell dim"><span class="cal-day"></span></div>
+          <div class="cal-cell dim"><span class="cal-day"></span></div>
+          <div class="cal-cell"><span class="cal-day">1</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">2</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">3</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+
+          <!-- week 2 -->
+          <div class="cal-cell">
+            <span class="cal-day">4</span>
+            <span class="evt pending"><span class="evt-dot"></span><span class="evt-time">08:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+            <span class="evt pending"><span class="evt-dot"></span><span class="evt-time">08:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+          </div>
+          <div class="cal-cell">
+            <span class="cal-day">5</span>
+            <span class="evt approved"><span class="evt-dot"></span><span class="evt-time">08:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+          </div>
+          <div class="cal-cell">
+            <span class="cal-day">6</span>
+            <span class="evt pending"><span class="evt-dot"></span><span class="evt-time">10:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+          </div>
+          <div class="cal-cell">
+            <span class="cal-day">7</span>
+            <span class="evt group"><span class="evt-dot"></span><span class="evt-time">15:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+            <span class="evt pending"><span class="evt-dot"></span><span class="evt-time">15:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+            <span class="evt-more">+3 รายการ <i data-lucide="chevron-down"></i></span>
+          </div>
+          <div class="cal-cell">
+            <span class="cal-day">8</span>
+            <span class="evt approved"><span class="evt-dot"></span><span class="evt-time">09:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+          </div>
+          <div class="cal-cell"><span class="cal-day">9</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">10</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+
+          <!-- week 3 -->
+          <div class="cal-cell"><span class="cal-day">11</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">12</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">13</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">14</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">15</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell">
+            <span class="cal-day">16</span>
+            <span class="evt approved"><span class="evt-dot"></span><span class="evt-time">21:00</span><span class="evt-title">asdfasdf</span></span>
+          </div>
+          <div class="cal-cell"><span class="cal-day">17</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+
+          <!-- week 4 -->
+          <div class="cal-cell"><span class="cal-day">18</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell">
+            <span class="cal-day">19</span>
+            <span class="evt approved"><span class="evt-dot"></span><span class="evt-time">17:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+          </div>
+          <div class="cal-cell today">
+            <span class="cal-day">20</span>
+            <span class="evt approved"><span class="evt-dot"></span><span class="evt-time">08:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+            <span class="evt pending"><span class="evt-dot"></span><span class="evt-time">08:00</span><span class="evt-title">วัดพระธรรมกาย</span></span>
+          </div>
+          <div class="cal-cell"><span class="cal-day">21</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">22</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">23</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">24</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+
+          <!-- week 5 -->
+          <div class="cal-cell"><span class="cal-day">25</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">26</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">27</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">28</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">29</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">30</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+          <div class="cal-cell"><span class="cal-day">31</span><span class="cal-plus"><i data-lucide="plus"></i></span></div>
+        </div>
+      </div>
+
+      <!-- comparison note -->
+      <div class="note border rounded-3 mt-4">
+        <h3>สิ่งที่เปลี่ยนจากปัจจุบัน → Vercel-style</h3>
+        <ul>
+          <li><strong>Sidebar</strong> 220 → 256px · brand <kbd>BB center</kbd> ด้านบน · group label UPPERCASE 11px muted · footer = ปุ่ม <kbd>ออกจากระบบ</kbd> icon แดง hover bg แดงอ่อน</li>
+          <li><strong>Top bar 56px</strong> breadcrumb <kbd>บริการ / ปฏิทินการจองรถ</kbd> ซ้าย · <kbd>🔔 dot</kbd> + avatar ขวา (notification เดิม)</li>
+          <li><strong>Primary CTA</strong> <kbd>+ จองรถ ▾</kbd> ปุ่มดำขวาบน</li>
+          <li><strong>Event chip</strong> redesign: white card + 1px border + colored dot (with halo) + time mono + title fg · hover lift 1px + shadow</li>
+          <li><strong>Today marker (วันที่ 20)</strong> filled ส้ม → outline ring ดำ</li>
+          <li><strong>Sunday cell</strong> ปกติ (คลิกได้เหมือนวันอื่น)</li>
+          <li><strong>Empty cell hover</strong> bg tint + icon <kbd>+</kbd> กลาง cell fade-in 120ms</li>
+          <li><strong>"+N รายการ"</strong> เพิ่ม chevron-down hint</li>
+          <li><strong>Nav arrow</strong> ‹ › → 32×32 ghost button border 1px</li>
+          <li><strong>Radius/spacing</strong> card 12px, cell padding 8px, content padding 32px (consistent)</li>
+          <li><strong>Accent</strong> ลบ <kbd>#4F46E5</kbd> indigo → ใช้ <kbd>#171717</kbd> (monochrome) — สีอยู่ที่ status เท่านั้น</li>
+        </ul>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MOBILE MOCKUP
+     ═══════════════════════════════════════════════════════════ -->
+<section class="mobile-wrap border-top">
+  <h2 class="text-center mb-2">รูปแบบโทรศัพท์ (390 × 780)</h2>
+  <p class="sub text-center mb-4">2 หน้า — Calendar view + Drawer (เมนู)</p>
+
+  <div class="phone-row d-flex gap-4 justify-content-center flex-wrap">
+
+    <!-- Phone 1: Calendar -->
+    <div>
+      <div class="phone d-flex flex-column position-relative overflow-hidden border">
+        <div class="ph-status d-flex align-items-center justify-content-between px-3">
+          <span>9:41</span>
+          <span class="right d-inline-flex align-items-center gap-1">
+            <i data-lucide="signal"></i>
+            <i data-lucide="wifi"></i>
+            <i data-lucide="battery-full"></i>
+          </span>
+        </div>
+
+        <div class="ph-bar d-flex align-items-center gap-2 border-bottom px-2">
+          <button class="ph-icon-btn rounded-2 border-0 d-inline-flex align-items-center justify-content-center" title="เมนู"><i data-lucide="menu"></i></button>
+          <span class="ph-bar-title flex-grow-1">ปฏิทินการจองรถ</span>
+          <button class="ph-icon-btn position-relative rounded-2 border-0 d-inline-flex align-items-center justify-content-center" title="การแจ้งเตือน">
+            <i data-lucide="bell"></i>
+            <span class="dot position-absolute rounded-circle"></span>
+          </button>
+        </div>
+
+        <div class="ph-sub px-3 pt-3">ระยะเวลาการใช้รถ 08:00 – 17:00</div>
+
+        <div class="ph-legend d-flex gap-3 px-3 pt-2 pb-2">
+          <span class="d-inline-flex align-items-center gap-1"><span class="legend-dot pending rounded-circle" style="background:var(--pending-dot)"></span> รออนุมัติ</span>
+          <span class="d-inline-flex align-items-center gap-1"><span class="legend-dot approved rounded-circle" style="background:var(--approved-dot)"></span> อนุมัติ</span>
+          <span class="d-inline-flex align-items-center gap-1"><span class="legend-dot group rounded-circle" style="background:var(--group-dot)"></span> กลุ่ม</span>
+        </div>
+
+        <div class="ph-month d-flex align-items-center gap-2 px-2 pb-2">
+          <button class="ph-icon-btn rounded-2 border-0 d-inline-flex align-items-center justify-content-center"><i data-lucide="chevron-left"></i></button>
+          <span class="ph-month-title flex-grow-1 text-center">พฤษภาคม 2569</span>
+          <button class="ph-icon-btn rounded-2 border-0 d-inline-flex align-items-center justify-content-center"><i data-lucide="chevron-right"></i></button>
+        </div>
+
+        <div class="ph-cal">
+          <div class="ph-cal-head">
+            <div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div>
+          </div>
+          <div class="ph-cal-grid">
+            <!-- week 1 -->
+            <div class="ph-day dim">27</div>
+            <div class="ph-day dim">28</div>
+            <div class="ph-day dim">29</div>
+            <div class="ph-day dim">30</div>
+            <div class="ph-day">1</div>
+            <div class="ph-day">2</div>
+            <div class="ph-day">3</div>
+            <!-- week 2 -->
+            <div class="ph-day">4<span class="ph-day-dots"><i class="pending"></i><i class="pending"></i></span></div>
+            <div class="ph-day">5<span class="ph-day-dots"><i class="approved"></i></span></div>
+            <div class="ph-day">6<span class="ph-day-dots"><i class="pending"></i></span></div>
+            <div class="ph-day">7<span class="ph-day-dots"><i class="group"></i><i class="pending"></i><i></i></span></div>
+            <div class="ph-day">8<span class="ph-day-dots"><i class="approved"></i></span></div>
+            <div class="ph-day">9</div>
+            <div class="ph-day">10</div>
+            <!-- week 3 -->
+            <div class="ph-day">11</div>
+            <div class="ph-day">12</div>
+            <div class="ph-day">13</div>
+            <div class="ph-day">14</div>
+            <div class="ph-day">15</div>
+            <div class="ph-day">16<span class="ph-day-dots"><i class="approved"></i></span></div>
+            <div class="ph-day">17</div>
+            <!-- week 4 -->
+            <div class="ph-day">18</div>
+            <div class="ph-day">19<span class="ph-day-dots"><i class="approved"></i></span></div>
+            <div class="ph-day today">20<span class="ph-day-dots"><i></i><i></i></span></div>
+            <div class="ph-day">21</div>
+            <div class="ph-day">22</div>
+            <div class="ph-day">23</div>
+            <div class="ph-day">24</div>
+            <!-- week 5 -->
+            <div class="ph-day">25</div>
+            <div class="ph-day">26</div>
+            <div class="ph-day">27</div>
+            <div class="ph-day">28</div>
+            <div class="ph-day">29</div>
+            <div class="ph-day">30</div>
+            <div class="ph-day">31</div>
+          </div>
+        </div>
+
+        <div class="ph-list-head border-top px-3 pt-3 pb-2">วันนี้ <span class="count">· 2 รายการ</span></div>
+        <div class="ph-list d-flex flex-column gap-2 px-2 pb-5 flex-grow-1 overflow-auto">
+          <div class="ph-evt approved d-flex align-items-center gap-2 border rounded-3 p-2">
+            <span class="ph-evt-dot rounded-circle flex-shrink-0"></span>
+            <div class="ph-evt-body flex-grow-1" style="min-width:0;">
+              <div class="ph-evt-title text-truncate">วัดพระธรรมกาย</div>
+              <div class="ph-evt-meta d-flex align-items-center gap-1"><i data-lucide="clock"></i>08:00 – 12:00 · Toyota Hilux</div>
+            </div>
+            <span class="ph-evt-status approved rounded-pill">อนุมัติ</span>
+          </div>
+          <div class="ph-evt pending d-flex align-items-center gap-2 border rounded-3 p-2">
+            <span class="ph-evt-dot rounded-circle flex-shrink-0"></span>
+            <div class="ph-evt-body flex-grow-1" style="min-width:0;">
+              <div class="ph-evt-title text-truncate">วัดพระธรรมกาย</div>
+              <div class="ph-evt-meta d-flex align-items-center gap-1"><i data-lucide="clock"></i>13:00 – 17:00 · Isuzu D-Max</div>
+            </div>
+            <span class="ph-evt-status pending rounded-pill">รออนุมัติ</span>
+          </div>
+        </div>
+
+        <button class="ph-fab position-absolute d-inline-flex align-items-center gap-2 rounded-pill border-0"><i data-lucide="plus"></i> จองรถ</button>
+      </div>
+      <div class="phone-label text-center mt-2">Calendar view</div>
+    </div>
+
+    <!-- Phone 2: Drawer -->
+    <div>
+      <div class="phone d-flex flex-column position-relative overflow-hidden border">
+        <div class="ph-status d-flex align-items-center justify-content-between px-3">
+          <span>9:41</span>
+          <span class="right d-inline-flex align-items-center gap-1">
+            <i data-lucide="signal"></i>
+            <i data-lucide="wifi"></i>
+            <i data-lucide="battery-full"></i>
+          </span>
+        </div>
+
+        <div class="ph-drawer d-flex flex-column h-100">
+          <div class="ph-drawer-head d-flex align-items-center gap-2 border-bottom px-2">
+            <span class="ph-drawer-mark rounded-2 d-inline-flex align-items-center justify-content-center">BB</span>
+            <span class="ph-drawer-name flex-grow-1">BB center</span>
+            <button class="ph-icon-btn rounded-2 border-0 d-inline-flex align-items-center justify-content-center" title="ปิด"><i data-lucide="x"></i></button>
+          </div>
+
+          <nav class="ph-drawer-nav flex-grow-1 overflow-auto p-2">
+            <div class="ph-drawer-item d-flex align-items-center gap-2 rounded-2 px-2">
+              <i data-lucide="layout-dashboard"></i>
+              <span>Dashboard</span>
+            </div>
+            <div class="ph-drawer-item d-flex align-items-center gap-2 rounded-2 px-2">
+              <i data-lucide="history"></i>
+              <span>ประวัติการจอง</span>
+            </div>
+
+            <div class="ph-drawer-section-label px-2 pt-3 pb-1">บริการ</div>
+            <div class="ph-drawer-item active d-flex align-items-center gap-2 rounded-2 px-2">
+              <i data-lucide="car"></i>
+              <span>ปฏิทินการจองรถ</span>
+            </div>
+            <div class="ph-drawer-item d-flex align-items-center gap-2 rounded-2 px-2">
+              <i data-lucide="users"></i>
+              <span>ปฏิทินการจองห้องประชุม</span>
+            </div>
+            <div class="ph-drawer-item d-flex align-items-center gap-2 rounded-2 px-2">
+              <i data-lucide="wrench"></i>
+              <span>แจ้งซ่อม IT</span>
+            </div>
+            <div class="ph-drawer-item d-flex align-items-center gap-2 rounded-2 px-2">
+              <i data-lucide="building-2"></i>
+              <span>แจ้งซ่อมทั่วไป</span>
+            </div>
+
+            <div class="ph-drawer-section-label px-2 pt-3 pb-1">ผู้อนุมัติ</div>
+            <div class="ph-drawer-item d-flex align-items-center gap-2 rounded-2 px-2">
+              <i data-lucide="circle-check"></i>
+              <span>รายการรออนุมัติ</span>
+              <span class="ph-drawer-item-badge ms-auto rounded-pill">1</span>
+            </div>
+          </nav>
+
+          <div class="ph-drawer-foot border-top p-2">
+            <button class="ph-drawer-logout d-flex align-items-center gap-2 w-100 rounded-2 border-0 px-2">
+              <i data-lucide="log-out"></i>
+              <span>ออกจากระบบ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label text-center mt-2">Drawer (เมนู)</div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+  lucide.createIcons();
+</script>
+</body>
+</html>

@@ -141,7 +141,7 @@
 | `need_driver` | Boolean | |
 | `passenger_count` | Integer | |
 | `driver_id` | FK → driver | คนขับที่ admin assign |
-| `status` | String(20) | `pending` / `approved` / `waiting_approver` / `rejected` |
+| `status` | String(20) | `pending` / `approved` / `waiting_approver` / `rejected` / `cancelled` (Phase 9, v2.12 — soft cancel via `cancel_booking()`; value used since 2026-05-18 ใน admin refund path) |
 | `reject_reason` | String(500) nullable | เหตุผลที่ Admin/Approver ปฏิเสธ — แสดงใน UI และ Telegram (v2.3) |
 | `created_at`, `updated_at` | DateTime | |
 | `updated_by` | FK → user | ใคร approve/reject/แก้ล่าสุด |
@@ -525,6 +525,7 @@ INSERT INTO expense_type (id, name) VALUES (1, 'central'), (2, 'department'), (3
 | v2.9 | 2026-05-18 | 27 | `vehicle_budget` + `is_active` — toggle ปิดงบโดยรักษา audit/refund flow |
 | v2.10 | 2026-05-18 | 27 | `ot_rate_config` + `day_of_week` — per-weekday OT rate override (NULL=ทุกวัน) |
 | v2.11 | 2026-05-18 | 27 | `vehicle_booking` + `is_ad_hoc` + `contact_name` — ad-hoc trip (งานนอกระบบ) driver-created off-the-books |
+| v2.12 | 2026-05-22 | 27 | `vehicle_booking.status` — doc-only: เพิ่ม `cancelled` ใน enum comment (Phase 9 `cancel_booking()`). ไม่มี schema change — value ถูกใช้ที่ vehicle_view.py:2858 ตั้งแต่ 2026-05-18 แล้ว |
 
 ---
 
@@ -863,6 +864,22 @@ Migration สร้าง row `event_type='adjust'` 1 row ต่อ vehicle_budg
 |-------|--------|
 | `is_ad_hoc` Boolean NOT NULL default False | แยก driver-created on-the-fly trips ออกจาก pre-booked ปกติ; `vehicle.html` calendar filter `is_ad_hoc=False` (เพราะ calendar คือ upcoming booking requests ไม่ใช่ trip log), ส่วนหน้า admin (`vehicle_admin.html`, `approver_inbox.html`) ยังแสดงทั้งหมดเพื่อจัดการ expense_type/budget ทีหลัง; default False + server_default `'0'` เพื่อให้ ALTER ADD COLUMN backfill row เดิมเป็น booking ปกติโดยไม่ต้อง UPDATE แยก |
 | `contact_name` String(100) nullable | ใน modal "+ งานนอกระบบ" dropdown "ผู้จอง/ผู้ติดต่อ" รองรับ 2 mode: (a) เลือกจาก existing users → `user_id` set ปกติ + `contact_name=NULL`; (b) พิมพ์ free-text ชื่อ (สำหรับ external visitor ที่ไม่อยู่ใน LDAP) → `user_id=current driver's user.id` (เพื่อ ownership/audit) + `contact_name='ชื่อที่พิมพ์'`; display layer ทุกที่ที่แสดง "ผู้จอง" prefer `contact_name` ก่อน fallback ไป `user.full_name` ถ้า NULL; nullable เพราะ booking ปกติไม่ใช้ field นี้ |
+
+---
+
+## v2.12 — VehicleBooking status `cancelled` documented (2026-05-22)
+
+*No migration — doc-only change. ไม่มี .sql file.*
+
+### Feature codename: Phase 9 cancel_booking()
+
+**บริบทธุรกิจ:** Phase 9 เพิ่ม route `cancel_booking()` ให้ผู้จอง soft-cancel booking ของตัวเอง โดย set `status='cancelled'` (แทนการ DELETE row) เพื่อรักษา audit trail + refund flow ผ่าน `budget_service.refund_for_booking()` ค่า `'cancelled'` ถูกใช้จริงตั้งแต่ 2026-05-18 ใน admin refund path ([vehicle_view.py:2858](../../../app/views/vehicle_view.py#L2858)) แล้ว — แต่ enum comment ใน models.py ยังไม่ได้สะท้อนค่านี้
+
+### `vehicle_booking.status` enum comment update
+
+| Change | เหตุผล |
+|--------|--------|
+| เพิ่ม `cancelled` ใน inline enum comment (models.py L184) | Schema-level: column เป็น `String(20)` ไม่มี CHECK constraint → ไม่ต้อง ALTER. เป็น documentation sync ล้วน เพื่อให้ comment ตรงกับค่าที่ใช้จริง + บอก reader ว่า Phase 9 `cancel_booking()` คือ writer หลักของค่านี้สำหรับ user-initiated cancel. ไม่กระทบ DB, ไม่ต้อง migrate. |
 
 ---
 

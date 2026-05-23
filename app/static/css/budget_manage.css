@@ -7,6 +7,27 @@
      vc-table, vc-empty, vc-modal, vc-badge มาจาก components/)
    ============================================================ */
 
+/* Phase 4: Premium polish tokens + keyframes (page-scoped, prefix --bm-) */
+.vc-scope {
+    --bm-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --bm-dur-fast: 180ms;
+    --bm-dur-base: 240ms;
+    --bm-dur-slow: 480ms;
+}
+
+@keyframes bm-fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes bm-progress-fill {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+}
+@keyframes bm-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
 
 /* ─────────────────────────────────────────────
    1. PAGE HEADER
@@ -52,10 +73,153 @@
    แทน inline style="margin-bottom:..." — semantic class
 ───────────────────────────────────────────── */
 .budget-flash-stack    { margin-bottom: var(--vc-space-4); }
-.budget-kpi-strip      { margin-bottom: var(--vc-space-5); }
-.budget-grid           { margin-bottom: var(--vc-space-5); }
-.budget-grid--last     { margin-bottom: var(--vc-space-8); }
+.budget-summary        { margin-bottom: var(--vc-space-5); }
 .budget-empty-block    { margin-bottom: var(--vc-space-5); }
+/* .budget-grid / .budget-grid--last retired Phase 2D (2026-05-22) — card grid → vc-table */
+
+
+/* ─────────────────────────────────────────────
+   2B. SUMMARY CARD (Phase 2 redesign, 2026-05-22)
+   ─────────────────────────────────────────────
+   แทน 4-cell KPI strip — minimalist Vercel-inspired
+   layout: title → big amount → progress → meta → signals
+───────────────────────────────────────────── */
+.budget-summary {
+    padding: var(--vc-space-5) var(--vc-space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+}
+.budget-summary-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.budget-summary-title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.01em;
+}
+.budget-summary-title .vc-icon-sm {
+    width: 14px;
+    height: 14px;
+    color: var(--vc-fg-subtle);
+}
+
+.budget-summary-amount {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    line-height: 1;
+    margin: 2px 0 4px;
+}
+.budget-summary-used {
+    font-size: 2.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--vc-fg);
+}
+.budget-summary-sep {
+    font-size: 1.25rem;
+    color: var(--vc-fg-subtle);
+    font-weight: 400;
+}
+.budget-summary-cap {
+    font-size: 1.25rem;
+    color: var(--vc-fg-muted);
+    font-weight: 500;
+}
+
+.budget-summary-bar {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--vc-bg-subtle);
+    overflow: hidden;
+    display: block;
+}
+.budget-summary-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--vc-fg);
+    transition: width 480ms var(--bm-ease-out);
+}
+.budget-summary-bar--warn   > span { background: var(--vc-amber, #d97706); }
+.budget-summary-bar--danger > span { background: var(--vc-red,   #dc2626); }
+
+.budget-summary-meta {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: var(--vc-fg-muted);
+}
+.budget-summary-pct {
+    font-weight: 600;
+    color: var(--vc-fg);
+}
+.budget-summary-pct--warn   { color: var(--vc-amber, #d97706); }
+.budget-summary-pct--danger { color: var(--vc-red,   #dc2626); }
+.budget-summary-meta-sep    { color: var(--vc-fg-subtle); }
+.budget-summary-meta-dot    { color: var(--vc-fg-subtle); padding: 0 2px; }
+.budget-summary-remain      { color: var(--vc-fg-muted); }
+.budget-summary-remain--danger {
+    color: var(--vc-red, #dc2626);
+    font-weight: 500;
+}
+
+.budget-summary-signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--vc-space-2);
+    margin-top: var(--vc-space-2);
+    padding-top: var(--vc-space-3);
+    border-top: 1px solid var(--vc-border);
+}
+.budget-summary-signal {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78125rem;
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    border: 1px solid var(--vc-border);
+}
+.budget-summary-signal .vc-icon-sm {
+    width: 12px;
+    height: 12px;
+}
+.budget-summary-signal--warn {
+    background: var(--vc-bg-warn-subtle, #fffbeb);
+    color: var(--vc-amber, #b45309);
+    border-color: var(--vc-border-warn, #fde68a);
+}
+.budget-summary-signal--danger {
+    background: var(--vc-bg-danger-subtle, #fef2f2);
+    color: var(--vc-red, #b91c1c);
+    border-color: var(--vc-border-danger, #fecaca);
+}
+.budget-summary-signal-amount {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    margin-left: 2px;
+    opacity: 0.85;
+}
+
+@media (max-width: 575.98px) {
+    .budget-summary { padding: var(--vc-space-4) var(--vc-space-5); }
+    .budget-summary-used { font-size: 1.75rem; }
+    .budget-summary-cap  { font-size: 1.0625rem; }
+}
 
 
 /* ─────────────────────────────────────────────
@@ -79,8 +243,8 @@
     display: flex;
     align-items: center;
     gap: var(--vc-space-2);
-    padding-bottom: var(--vc-space-3);
-    margin: var(--vc-space-8) 0 var(--vc-space-4);
+    padding-bottom: var(--vc-space-4);
+    margin: var(--vc-space-10) 0 var(--vc-space-5);
     border-bottom: 1px solid var(--vc-border);
     flex-wrap: wrap;
 }
@@ -98,7 +262,7 @@
     color: var(--vc-fg-muted);
     flex-shrink: 0;
 }
-.vc-section-hdr-icon.is-purple { color: var(--vc-purple); }
+/* Phase 4a: ลบ .is-purple modifier — accent ห้ามใช้บน category identity (Vercel rule) */
 
 .vc-section-hdr-title {
     font-size: var(--vc-text-md);
@@ -121,34 +285,81 @@
     align-items: center;
 }
 
+/* Phase 2: amount badge in section header (replace KPI cells #2 #3)
+   - margin-left:auto pushes amount + actions ทั้งกลุ่มไปขวา (actions ตามมาเลย)
+   - mono + tabular-nums เพื่อให้ตัวเลขเรียงสวย */
+.vc-section-hdr-amount {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+    font-size: var(--vc-text-lg);
+    font-weight: 600;
+    color: var(--vc-fg);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+/* Phase 4c: SMALL CAPS label for premium tag feel */
+.vc-section-hdr-amount-label {
+    font-family: var(--vc-font-sans, inherit);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+}
+/* ถ้ามี amount แล้ว → actions ไม่ต้อง margin-left:auto อีก (amount ทำหน้าที่ไปแล้ว) */
+.vc-section-hdr-amount + .vc-section-hdr-actions {
+    margin-left: 0;
+}
+
+@media (max-width: 575px) {
+    .vc-section-hdr-amount {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
 
 /* ─────────────────────────────────────────────
    5. BUDGET CARD (vc-bcard)
 ───────────────────────────────────────────── */
+/* Phase 4b: premium spacing — ลบ flat gap, ใช้ margin-top แบบมี rhythm
+   Phase 4e: card enter fade-up + stagger via inline --bm-delay
+   Phase 4: hover restraint = bg-subtle (no transform, Vercel/Linear pattern) */
 .vc-bcard {
     background: var(--vc-bg);
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-md);
-    padding: var(--vc-space-4);
+    padding: var(--vc-space-5);
     display: flex;
     flex-direction: column;
-    gap: var(--vc-space-3);
-    transition: border-color var(--vc-transition);
+    transition: border-color var(--vc-transition), background var(--vc-transition);
     height: 100%;
+    animation: bm-fade-up var(--bm-dur-base) var(--bm-ease-out) both;
+    animation-delay: var(--bm-delay, 0ms);
 }
-.vc-bcard:hover { border-color: var(--vc-border-hover); }
+.vc-bcard:hover {
+    border-color: var(--vc-border-hover);
+    background: var(--vc-bg-subtle);
+}
 
-/* Inactive state — แสดงในการ์ดแต่ dim ลง + slight stripe */
+/* Asymmetric rhythm — identity block → metric block → footer */
+.vc-bcard > .vc-bcard-date     { margin-top: var(--vc-space-1); }
+.vc-bcard > .vc-bcard-pct-hero { margin-top: var(--vc-space-5); }
+.vc-bcard > .vc-progress       { margin-top: var(--vc-space-3); }
+.vc-bcard > .vc-bcard-amounts  { margin-top: var(--vc-space-2); }
+.vc-bcard > .vc-bcard-rem      { margin-top: var(--vc-space-4); }
+.vc-bcard > .vc-bcard-approver { margin-top: var(--vc-space-2); }
+
+/* Inactive state — flat dim + dashed border (Phase 1: ลบ stripe gradient ตามรู้สึก Vercel + WCAG) */
 .vc-bcard--inactive {
-    opacity: 0.65;
-    background:
-        repeating-linear-gradient(
-            135deg,
-            var(--vc-bg) 0,
-            var(--vc-bg) 12px,
-            var(--vc-bg-subtle) 12px,
-            var(--vc-bg-subtle) 13px
-        );
+    opacity: 0.6;
+    background: var(--vc-bg-subtle);
+    border-style: dashed;
 }
 .vc-bcard--inactive:hover { opacity: 0.85; border-color: var(--vc-border-hover); }
 
@@ -163,6 +374,7 @@
     font-size: var(--vc-text-base);
     font-weight: 600;
     color: var(--vc-fg);
+    letter-spacing: -0.01em;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -170,7 +382,7 @@
     min-width: 0;
 }
 .vc-bcard-name > .vc-icon-sm { color: var(--vc-fg-muted); flex-shrink: 0; }
-.vc-bcard-name.is-purple > .vc-icon-sm { color: var(--vc-purple); }
+/* Phase 4a: ลบ .vc-bcard-name.is-purple — accent ห้ามใช้บน category identity */
 
 .vc-bcard-actions {
     display: flex;
@@ -188,23 +400,37 @@
     line-height: 1.4;
 }
 
-.vc-bcard-row {
+/* Phase 3 + 4c: pct as TRUE hero (2xl=32px, tracking-tight, line-height 1)
+   label = SMALL CAPS premium tag, baselined with hero ascent (padding-bottom offset) */
+.vc-bcard-pct-hero {
     display: flex;
-    justify-content: space-between;
     align-items: baseline;
-    font-size: var(--vc-text-sm);
-    color: var(--vc-fg-muted);
+    gap: 10px;
+    line-height: 1;
 }
-
-.vc-bcard-row .vc-bcard-pct {
+.vc-bcard-pct {
     font-family: var(--vc-font-mono);
     font-feature-settings: "tnum" 1;
-    font-weight: 500;
+    font-size: var(--vc-text-2xl);
+    font-weight: 600;
     color: var(--vc-fg);
+    letter-spacing: var(--vc-tracking-tight);
+    line-height: 1;
 }
 .vc-bcard-pct.is-warn   { color: var(--vc-amber); }
 .vc-bcard-pct.is-danger { color: var(--vc-red); }
+.vc-bcard-pct-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    padding-bottom: 4px;
+}
 
+/* Phase 3: amounts demoted to secondary (pct-hero is the primary signal).
+   ลบ .used.is-purple — Phase 3 ทำให้ amount เป็น muted แล้ว purple บน data
+   หลุดออกจาก scope (indigo/purple = accent เท่านั้น, ไม่ใช่บน value text) */
 .vc-bcard-amounts {
     display: flex;
     justify-content: space-between;
@@ -214,13 +440,12 @@
 }
 .vc-bcard-amounts .used {
     font-size: var(--vc-text-md);
-    font-weight: 600;
-    color: var(--vc-fg);
+    font-weight: 500;
+    color: var(--vc-fg-muted);
 }
-.vc-bcard-amounts .used.is-purple { color: var(--vc-purple); }
 .vc-bcard-amounts .total {
     font-size: var(--vc-text-sm);
-    color: var(--vc-fg-muted);
+    color: var(--vc-fg-subtle);
 }
 
 .vc-bcard-rem {
@@ -244,6 +469,8 @@
 /* ─────────────────────────────────────────────
    6. PROGRESS BAR
 ───────────────────────────────────────────── */
+/* Phase 4d: baseline color green → fg (Linear/Vercel monochrome pattern)
+   Phase 4e: signature motion — fill scaleX 0→1 after card settles */
 .vc-progress {
     display: block;
     width: 100%;
@@ -255,33 +482,20 @@
 .vc-progress > span {
     display: block;
     height: 100%;
-    background: var(--vc-green);
+    background: var(--vc-fg);
+    transform-origin: left;
     transition: width var(--vc-transition);
+    animation: bm-progress-fill var(--bm-dur-slow) var(--bm-ease-out) both;
+    animation-delay: calc(var(--bm-delay, 0ms) + 200ms);
 }
 .vc-progress.is-warn   > span { background: var(--vc-amber); }
 .vc-progress.is-danger > span { background: var(--vc-red); }
-.vc-progress.is-purple > span { background: var(--vc-purple); }
+/* Phase 4a: ลบ .vc-progress.is-purple — accent ห้ามใช้บน category identity */
 
 
-/* ─────────────────────────────────────────────
-   7. PURPLE VARIANTS (button + badge)
-───────────────────────────────────────────── */
-.vc-btn-purple {
-    background: var(--vc-purple);
-    color: #fff;
-    border-color: var(--vc-purple);
-}
-.vc-btn-purple:hover {
-    background: #6420A8;
-    border-color: #6420A8;
-    color: #fff;
-}
-
-.vc-badge-purple {
-    background: var(--vc-purple-bg);
-    color: var(--vc-purple);
-    border-color: var(--vc-purple-border);
-}
+/* §7 PURPLE VARIANTS retired Phase 8 (2026-05-22) — markup zero usage since Phase 4 purple retirement.
+   `.vc-btn-purple` + `.vc-badge-purple` blocks deleted. Tokens `--vc-purple*` retained in tokens.css
+   for design_system_reference.html swatch demo (no functional CSS uses them anywhere now). */
 
 
 /* ─────────────────────────────────────────────
@@ -292,6 +506,8 @@
     display: inline-block;
 }
 
+/* Phase 4e: smoother dropdown — bigger translate (6px) + custom ease-out
+   Phase 3D (2026-05-22): z-index 5→60 + box-shadow gentle (above table content) */
 .vc-dropdown-menu {
     position: absolute;
     top: calc(100% + 4px);
@@ -301,13 +517,32 @@
     background: var(--vc-bg);
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-sm);
-    z-index: 5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    z-index: 60;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-4px);
-    transition: opacity var(--vc-transition),
-                transform var(--vc-transition),
-                visibility var(--vc-transition);
+    transform: translateY(-6px);
+    transition: opacity var(--bm-dur-fast) var(--bm-ease-out),
+                transform var(--bm-dur-fast) var(--bm-ease-out),
+                visibility var(--bm-dur-fast);
+}
+
+/* Phase 3D (2026-05-22): release overflow clip ตอน dropdown เปิด
+   .budget-table-wrap มี overflow-x: auto → menu โดนตัด. ใช้ :has() (CSS L4)
+   เปิด overflow: visible ชั่วคราว ตอนมี dropdown.is-open ภายใน */
+.budget-table-wrap:has(.vc-dropdown.is-open) {
+    overflow: visible;
+}
+
+/* Stacking context fix (2026-05-22 follow-up): .budget-row มี animation
+   bm-fade-up (transform keyframes) → implicit stacking context per row.
+   Row ด้านล่างใน DOM จะทับ dropdown menu ของ row ด้านบน. แก้ด้วยการ
+   bump z-index ของ row ที่กำลังเปิด dropdown ให้สูงกว่า sibling rows. */
+.budget-table tbody tr {
+    position: relative;
+}
+.budget-table tbody tr:has(.vc-dropdown.is-open) {
+    z-index: 70;
 }
 
 .vc-dropdown.is-open .vc-dropdown-menu {
@@ -321,7 +556,7 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 6px 10px;
+    padding: 8px 10px;
     font-family: inherit;
     font-size: var(--vc-text-sm);
     color: var(--vc-fg);
@@ -391,60 +626,450 @@
 }
 
 
+/* §10 PERSONAL BUDGET LINE — retired Phase 2 redesign (2026-05-22).
+   "งบส่วนตัวที่ได้รับเดือนนี้" ถูกย้ายไป pivot table (ส่วนตัว row) + signal ใน summary card.
+   เก็บคอมเมนต์ไว้กัน regression — ถ้าต้องการกลับมาดู version control. */
+
+
 /* ─────────────────────────────────────────────
-   10. PERSONAL BUDGET ROW (optional strip)
+   12. SECTION HEADER (Phase 3 redesign, 2026-05-22)
+   ─────────────────────────────────────────────
+   3 sections (central / dept / personal) — flat layout (ไม่ใช้ <details>).
+   <section.budget-section> + <header.budget-section-head> + table โดยตรง.
 ───────────────────────────────────────────── */
-.budget-personal-row {
+.budget-section {
+    margin-bottom: var(--vc-space-5);
+}
+.budget-section-head {
+    padding: var(--vc-space-3) var(--vc-space-2);
     display: flex;
     align-items: center;
     gap: var(--vc-space-3);
-    padding: var(--vc-space-3) var(--vc-space-4);
-    background: var(--vc-bg);
-    border: 1px solid var(--vc-border);
-    border-radius: var(--vc-radius-md);
-    margin-bottom: var(--vc-space-5);
+    flex-wrap: wrap;
 }
-.budget-personal-row .icon {
-    color: var(--vc-green);
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-}
-.budget-personal-row .meta {
-    flex: 1;
+.budget-section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     min-width: 0;
 }
-.budget-personal-row .label {
-    font-size: var(--vc-text-xs);
-    color: var(--vc-fg-muted);
-    text-transform: uppercase;
-    letter-spacing: var(--vc-tracking-wide);
-    line-height: 1;
-    margin-bottom: 4px;
+.budget-section-icon {
+    color: var(--vc-fg-subtle);
+    flex-shrink: 0;
 }
-.budget-personal-row .value {
-    font-family: var(--vc-font-mono);
-    font-feature-settings: "tnum" 1;
-    font-size: var(--vc-text-md);
+.budget-section-title {
+    font-size: 0.9375rem;
     font-weight: 600;
-    color: var(--vc-green);
-    line-height: 1.2;
+    color: var(--vc-fg);
+    letter-spacing: -0.005em;
 }
-.budget-personal-row .meta-end {
-    font-size: var(--vc-text-xs);
+.budget-section-count {
+    font-size: 0.78125rem;
+    color: var(--vc-fg-subtle);
+    font-weight: 400;
+    margin-left: 2px;
+}
+
+.budget-section-stats {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--vc-space-3);
+    margin-left: auto;
+}
+.budget-section-amount {
+    font-size: 0.875rem;
     color: var(--vc-fg-muted);
+    font-feature-settings: "tnum" 1;
+}
+.budget-section-amount-dot {
+    color: var(--vc-fg-subtle);
+    padding: 0 4px;
+}
+.budget-section-amount-warn {
+    color: var(--vc-amber, #b45309);
+    font-weight: 500;
+}
+.budget-section-pct {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--vc-fg);
+    font-variant-numeric: tabular-nums;
+    min-width: 44px;
+    text-align: right;
+}
+.budget-section-pct--warn   { color: var(--vc-amber, #d97706); }
+.budget-section-pct--danger { color: var(--vc-red,   #dc2626); }
+
+.budget-section-actions {
+    display: flex;
+    gap: var(--vc-space-2);
+}
+
+@media (max-width: 575.98px) {
+    .budget-section-head {
+        padding: var(--vc-space-2) 0;
+        gap: var(--vc-space-2);
+    }
+    /* mobile: title บรรทัดบน — stats + actions แชร์บรรทัดล่าง
+       (label = 100% บังคับ wrap, stats ซ้าย, actions ขวา) */
+    .budget-section-label {
+        width: 100%;
+    }
+    .budget-section-stats {
+        margin: 0;
+    }
+    .budget-section-actions {
+        margin-left: auto;
+    }
 }
 
 
 /* ─────────────────────────────────────────────
-   11. MODAL — bound-value helpers
+   12B. SUMMARY FILTER (Phase 3A, 2026-05-22)
+   ─────────────────────────────────────────────
+   filter เดือน/ปี ย้ายเข้ามาอยู่ใน .budget-summary-head right side
+───────────────────────────────────────────── */
+.budget-summary-head {
+    align-items: flex-start;
+    gap: var(--vc-space-3);
+}
+.budget-summary-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+.budget-summary-filter-select {
+    height: 32px;
+    padding: 4px 26px 4px 10px;
+    font-size: 0.8125rem;
+    border-radius: 6px;
+    min-width: 88px;
+    background-position: right 8px center;
+}
+@media (max-width: 575.98px) {
+    .budget-summary-head {
+        flex-direction: column;
+    }
+    .budget-summary-filter {
+        align-self: stretch;
+        justify-content: flex-end;
+    }
+}
+
+
+/* ─────────────────────────────────────────────
+   14. PERSONAL SECTION — tab pills + status badge (Phase 3E, 2026-05-22)
+   ─────────────────────────────────────────────
+   Style ลอกจาก .mlg-status-chips/.mlg-chip ของ mileage_admin.css
+   (white container + active = black bg + white text).
+───────────────────────────────────────────── */
+.budget-personal-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid var(--vc-border);
+    border-radius: 8px;
+    background: var(--vc-bg);
+    margin-bottom: var(--vc-space-3);
+}
+.budget-personal-tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.4;
+    transition: background-color 0.15s, color 0.15s;
+}
+.budget-personal-tab:hover {
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg);
+}
+.budget-personal-tab.is-active,
+.budget-personal-tab.is-active:hover {
+    background: var(--vc-fg);
+    color: var(--vc-bg);
+}
+
+/* Status badge ของ personal row — variant ของ vc-badge */
+.budget-personal-status {
+    text-decoration: none;
+    cursor: default;
+}
+button.budget-personal-status {
+    cursor: pointer;
+    border: 0;
+    transition: filter var(--bm-dur-fast) var(--bm-ease-out),
+                transform var(--bm-dur-fast) var(--bm-ease-out);
+}
+button.budget-personal-status:hover {
+    filter: brightness(0.96);
+    transform: translateY(-1px);
+}
+button.budget-personal-status:active {
+    transform: translateY(0);
+}
+button.budget-personal-status:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+
+/* ─────────────────────────────────────────────
+   13. BUDGET TABLE (Phase 2D, 2026-05-22)
+   ─────────────────────────────────────────────
+   แทน .row.g-3.budget-grid + vc-bcard. ใช้ vc-table base + page-local
+   refinements: row name w/ icon + secondary line (date range), inline
+   mini progress bar in % cell, dropdown col, inactive row dim.
+───────────────────────────────────────────── */
+.budget-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;   /* Phase 3 fix (2026-05-22): suppress vertical scrollbar
+                             ที่ browser auto-derive จาก overflow-x: auto */
+    border: 1px solid var(--vc-border);
+    border-radius: 8px;
+    background: var(--vc-bg);
+}
+.budget-table {
+    width: 100%;
+    margin-bottom: 0;
+    border: 0;
+}
+.budget-table thead th {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--vc-fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: var(--vc-bg-subtle);
+    border-bottom: 1px solid var(--vc-border);
+    padding: 10px 12px;
+    white-space: nowrap;
+}
+.budget-table tbody td {
+    padding: 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--vc-border);
+    font-size: 0.875rem;
+}
+.budget-table tbody tr:last-child td { border-bottom: 0; }
+.budget-table tbody tr:hover td      { background: var(--vc-bg-subtle); }
+
+.budget-row {
+    animation: bm-fade-up var(--bm-dur-base) var(--bm-ease-out);
+    animation-delay: var(--bm-delay, 0ms);
+    animation-fill-mode: both;
+}
+.budget-row--inactive {
+    opacity: 0.58;
+    background: repeating-linear-gradient(
+        135deg,
+        transparent 0,
+        transparent 6px,
+        var(--vc-bg-subtle) 6px,
+        var(--vc-bg-subtle) 7px
+    );
+}
+.budget-row--inactive td:first-child {
+    border-left: 2px solid var(--vc-border-strong, #d4d4d4);
+}
+
+.budget-row-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    color: var(--vc-fg);
+}
+.budget-row-name .vc-icon-sm {
+    color: var(--vc-fg-subtle);
+    flex-shrink: 0;
+}
+.budget-row-sub {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--vc-fg-subtle);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+}
+.budget-row-sub .vc-icon-sm {
+    width: 11px;
+    height: 11px;
+}
+
+/* Phase 3C (2026-05-22): % รวมเข้า col "ใช้ไป" — รูปแบบ "฿11,128 (74.2%)"
+   tone color (warn/danger) ใส่ที่ทั้ง amount + pct inline */
+.budget-row-used {
+    color: var(--vc-fg);
+    font-weight: 500;
+}
+.budget-row-used.is-warn,
+.budget-row-pct-inline.is-warn {
+    color: var(--vc-amber, #d97706);
+}
+.budget-row-used.is-danger,
+.budget-row-pct-inline.is-danger {
+    color: var(--vc-red, #dc2626);
+}
+.budget-row-pct-inline {
+    margin-left: 4px;
+    font-size: 0.8125rem;
+    color: var(--vc-fg-subtle);
+    font-variant-numeric: tabular-nums;
+}
+
+.budget-row-rem-over {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--vc-red, #dc2626);
+    font-weight: 500;
+}
+.budget-row-rem-over .vc-icon-sm {
+    width: 12px;
+    height: 12px;
+}
+
+.budget-row-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.budget-row-approver {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8125rem;
+    color: var(--vc-fg-muted);
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    text-decoration: none;
+    line-height: 1.4;
+}
+.budget-row-approver .vc-icon-sm {
+    width: 12px;
+    height: 12px;
+    color: var(--vc-fg-subtle);
+}
+button.budget-row-approver--missing {
+    color: var(--vc-red, #b91c1c);
+    background: var(--vc-bg-danger-subtle, #fef2f2);
+    border-color: var(--vc-border-danger, #fecaca);
+    cursor: pointer;
+    transition: background var(--bm-dur-fast) var(--bm-ease-out);
+}
+button.budget-row-approver--missing:hover {
+    background: var(--vc-bg-danger, #fee2e2);
+}
+button.budget-row-approver--missing .vc-icon-sm { color: currentColor; }
+
+.budget-personal-paid-at {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78125rem;
+    font-variant-numeric: tabular-nums;
+}
+.budget-personal-paid-at .vc-icon-sm {
+    width: 11px;
+    height: 11px;
+    color: var(--vc-green, #16a34a);
+}
+
+/* Personal table — slim first column (date) */
+.budget-table--personal thead th:first-child,
+.budget-table--personal tbody td:first-child {
+    white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    .budget-table thead th,
+    .budget-table tbody td {
+        padding: 10px 8px;
+        font-size: 0.8125rem;
+    }
+    .budget-row-pct-inline {
+        display: block;
+        margin-left: 0;
+        margin-top: 2px;
+    }
+}
+
+
+/* ─────────────────────────────────────────────
+   11. MODAL — meta block + notice line
+   Phase 6 (2026-05-22): retired `.budget-modal-alert(--flush)` (was `ds-alert-*`
+   info/warning box). แทนด้วย:
+   (a) `.budget-modal-meta` — Stripe-style `<dl>` label-value pairs (topUp/adjust)
+   (b) `.budget-modal-notice` — info line ที่ end of modal-body (setBudget)
+   Goal: ลด visual weight box → focus กลับไปที่ form input
 ───────────────────────────────────────────── */
 .budget-modal-mono {
     font-family: var(--vc-font-mono);
     font-feature-settings: "tnum" 1;
 }
-.budget-modal-alert--flush { margin: 0; }
-.budget-modal-alert        { margin-bottom: var(--vc-space-4); }
+
+/* (a) Label-value pairs — Stripe-style stacked rows */
+.budget-modal-meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-2);
+    margin: 0 0 var(--vc-space-5);
+    padding: var(--vc-space-3) 0;
+    border-block: 1px solid var(--vc-border);
+}
+.budget-modal-meta-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--vc-space-3);
+}
+.budget-modal-meta dt {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    line-height: 1;
+    margin: 0;
+}
+.budget-modal-meta dd {
+    font-size: var(--vc-text-sm);
+    font-weight: 600;
+    color: var(--vc-fg);
+    line-height: 1;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+/* (b) Notice line — for setBudget (end of modal-body, before footer) */
+.budget-modal-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--vc-space-2);
+    margin: var(--vc-space-3) 0 0;
+    padding-top: var(--vc-space-3);
+    border-top: 1px solid var(--vc-border);
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    line-height: 1.5;
+}
+.budget-modal-notice i { color: var(--vc-fg-muted); flex-shrink: 0; margin-top: 2px; }
+.budget-modal-notice strong { color: var(--vc-fg); font-weight: 600; }
 
 
 /* ─────────────────────────────────────────────
@@ -453,6 +1078,26 @@
 .budget-empty-icon {
     width: 20px;
     height: 20px;
+}
+
+
+/* ─────────────────────────────────────────────
+   12.5. PIVOT — page-local layout polish (Phase 7, 2026-05-22)
+   Pivot base styles อยู่ใน components/pivot.css (shared with admin_fuel).
+   ที่นี่เก็บแค่ tweak ที่เฉพาะหน้านี้
+───────────────────────────────────────────── */
+.budget-pivot-card {
+    margin-bottom: var(--vc-space-2);
+}
+.budget-pivot-summary-content {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    flex: 1;
+    min-width: 0;
+}
+.budget-pivot-empty {
+    padding: var(--vc-space-5);
 }
 
 
@@ -469,4 +1114,44 @@
     .vc-section-hdr { gap: 6px; }
     .vc-section-hdr-actions { width: 100%; margin-left: 0; }
     .vc-section-hdr-actions .vc-btn { flex: 1; justify-content: center; }
+}
+
+
+/* ─────────────────────────────────────────────
+   14. PHASE 4d — KPI SIGNAL CELL
+   ─────────────────────────────────────────────
+   "คงเหลือ" cell ใช้ bg-subtle ทำหน้าที่เป็น signal cell —
+   ลบ monotony จาก 4 cells ที่เหมือนกันโดยไม่ต้องใช้สี
+───────────────────────────────────────────── */
+.vc-kpi-cell--signal {
+    background: var(--vc-bg-subtle);
+}
+
+
+/* ─────────────────────────────────────────────
+   15. PHASE 4f — MODAL ENTRANCE (page-scoped)
+   ─────────────────────────────────────────────
+   เพิ่ม class `budget-modal-enter` บน <div class="modal">
+   ป้องกัน leak ไป global .vc-modal (shared component)
+───────────────────────────────────────────── */
+.budget-modal-enter.show .modal-dialog {
+    animation: bm-fade-up var(--bm-dur-base) var(--bm-ease-out) both;
+}
+.budget-modal-enter ~ .modal-backdrop.show {
+    animation: bm-fade-in var(--bm-dur-fast) ease-out both;
+}
+
+
+/* ─────────────────────────────────────────────
+   16. PHASE 4e — REDUCED MOTION
+   ─────────────────────────────────────────────
+   Respect user preference — disable enter/stagger/fill animation
+───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .vc-bcard,
+    .vc-progress > span,
+    .budget-modal-enter.show .modal-dialog,
+    .budget-modal-enter ~ .modal-backdrop.show {
+        animation: none;
+    }
 }

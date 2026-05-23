@@ -41,6 +41,12 @@
 @import url('./components/table_shell.css');
 @import url('./components/modal_shell.css');
 @import url('./components/sidebar.css');
+@import url('./components/pivot.css');
+
+/* Reserve scrollbar gutter to prevent layout shift when content height changes */
+html {
+    scrollbar-gutter: stable;
+}
 
 .main-content {
     margin-left: var(--sidebar-width);
@@ -732,7 +738,7 @@
    without leaking to other pages (e.g. <main class="vc-scope">) */
 .vc-scope {
     color: var(--vc-fg);
-    background: var(--vc-bg);
+    background: var(--vc-bg-subtle);
     font-size: var(--vc-text-base);
     padding-bottom: 1.5rem;   /* extra breathing room for mobile */
     line-height: 1.5;

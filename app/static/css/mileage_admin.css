@@ -65,68 +65,134 @@
 .mlg-refuel-link { text-decoration: none; }
 .mlg-refuel-link .vc-badge { font-size: 11px; }
 
-/* ───────────────────────── Filter Bar — sectioned layout ───────────────── */
-.mlg-filter-bar {
+/* ───────────────────────── Filter Toolbar (Arto+ inspired) ─────────────── */
+.mlg-toolbar {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    gap: var(--vc-space-4);
-    flex-wrap: nowrap;
+    gap: var(--vc-space-3);
+    margin-bottom: var(--vc-space-4);
 }
 
-.mlg-filter-section {
+.mlg-toolbar-row {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: var(--vc-space-3);
+    flex-wrap: wrap;
+}
+
+.mlg-toolbar-left {
+    display: flex;
+    align-items: center;
     gap: var(--vc-space-2);
 }
 
-.mlg-filter-section-title {
+.mlg-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    margin-left: auto;
+}
+
+.mlg-date-preset { min-width: 130px; }
+
+.mlg-date-range {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin: 0;
-    padding-bottom: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: var(--vc-tracking-wide);
-    color: var(--vc-fg);
-    border-bottom: 1px solid var(--vc-border);
 }
-.mlg-filter-section-title .vc-icon-sm { color: var(--vc-fg-subtle); }
+.mlg-date-input { min-width: 130px; background-image: none; }
+.mlg-date-sep { color: var(--vc-fg-subtle); font-size: var(--vc-text-sm); }
+.mlg-date-range[hidden] { display: none; }
 
-.mlg-filter-section-body {
-    display: flex;
-    flex-wrap: wrap;
+/* Status chips */
+.mlg-status-chips {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid var(--vc-border);
+    border-radius: 8px;
+    background: var(--vc-bg);
+}
+
+.mlg-chip {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+.mlg-chip:hover { background: var(--vc-bg-subtle); color: var(--vc-fg); }
+.mlg-chip.is-active {
+    background: var(--vc-fg);
+    color: var(--vc-bg);
+}
+.mlg-chip.is-active:hover { background: var(--vc-fg); }
+
+/* Advanced filter button — active dot */
+.mlg-adv-btn { position: relative; }
+.mlg-adv-btn.is-active { border-color: var(--vc-accent, #4F46E5); color: var(--vc-accent, #4F46E5); }
+.mlg-adv-dot {
+    position: absolute;
+    top: 5px;
+    right: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--vc-accent, #4F46E5);
+}
+
+/* Advanced filter sheet */
+.mlg-adv-sheet {
+    border: 1px solid var(--vc-border);
+    border-radius: 8px;
+    padding: var(--vc-space-4);
+    background: var(--vc-bg);
+}
+.mlg-adv-sheet[hidden] { display: none; }
+
+.mlg-adv-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--vc-space-3);
-    align-items: flex-end;
 }
 
-.mlg-filter-date,
-.mlg-filter-num,
-.mlg-filter-booker {
-    background-image: none;
+.mlg-range-pair {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
-.mlg-filter-date { min-width: 130px; }
-.mlg-filter-num  { min-width: 90px; }
-.mlg-filter-booker { min-width: 180px; }
+.mlg-range-pair input { min-width: 0; flex: 1; }
+.mlg-range-sep { color: var(--vc-fg-subtle); font-size: var(--vc-text-sm); }
 
-.mlg-filter-actions-row {
+.mlg-adv-actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--vc-space-2);
+    margin-top: var(--vc-space-3);
     padding-top: var(--vc-space-3);
     border-top: 1px solid var(--vc-border);
 }
 
-@media (max-width: 575.98px) {
-    .mlg-filter-section-body { gap: var(--vc-space-2); }
-    .mlg-filter-section-body .vc-filter-group { flex: 1 1 100%; }
-    .mlg-filter-actions-row {
-        flex-wrap: wrap;
-        justify-content: stretch;
-    }
-    .mlg-filter-actions-row .vc-btn { flex: 1 1 auto; justify-content: center; }
+@media (max-width: 991.98px) {
+    .mlg-adv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 767.98px) {
+    .mlg-toolbar-row { gap: var(--vc-space-2); }
+    .mlg-toolbar-left { flex: 1 1 100%; flex-wrap: wrap; }
+    .mlg-status-chips { flex: 1 1 100%; overflow-x: auto; }
+    .mlg-toolbar-right { flex: 1 1 100%; justify-content: flex-end; }
+    .mlg-adv-grid { grid-template-columns: 1fr; }
+    .mlg-date-input { flex: 1; min-width: 0; }
+    .mlg-date-range { flex: 1 1 100%; }
 }
 
 /* ───────────────────────── Date group separator ────────────────────────── */

@@ -111,8 +111,7 @@
     --vc-tracking-wide:     .02em;
 
     /* ── Font stacks ─────────────────────────── */
-    --vc-font-mono:      'Geist Mono', ui-monospace, 'SF Mono', 'Menlo',
-                         'Cascadia Code', 'Consolas', monospace;
+    --vc-font-mono:      'Poppins-Medium', 'Poppins', sans-serif;
 
     /* ── Component heights ───────────────────── */
     --vc-h-input-sm:     28px;
@@ -123,6 +122,17 @@
     /* ── Motion ──────────────────────────────── */
     --vc-transition:     150ms ease;
     --vc-transition-slow: 250ms ease;
+
+    /* Premium motion scale (Phase 2 polish — 2026-05-22)
+       Pair duration + easing. Default for new code; legacy
+       --vc-transition stays for backward compat. */
+    --vc-dur-instant:    80ms;
+    --vc-dur-fast:      140ms;
+    --vc-dur-base:      220ms;
+    --vc-dur-slow:      400ms;
+    --vc-ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+    --vc-ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+    --vc-ease-snap:     cubic-bezier(0.4, 0, 0.2, 1);
 
     /* ── Focus ring (2px outline, offset 2px) ── */
     --vc-focus-ring:     0 0 0 2px var(--vc-bg), 0 0 0 4px var(--vc-fg);

@@ -181,7 +181,7 @@ class VehicleBooking(db.Model):
     driver_id = db.Column(db.Integer, db.ForeignKey('driver.id'), nullable=True)
     driver    = db.relationship('Driver', foreign_keys=[driver_id], backref='bookings')
 
-    status        = db.Column(db.String(20), default='pending')   # pending | approved | waiting_approver | rejected
+    status        = db.Column(db.String(20), default='pending')   # pending | approved | waiting_approver | rejected | cancelled (Phase 9, 2026-05-22 — soft cancel ผ่าน cancel_booking())
     reject_reason = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime, default=get_bkk_time)
     updated_at = db.Column(db.DateTime, onupdate=get_bkk_time, nullable=True)

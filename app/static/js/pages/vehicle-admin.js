@@ -38,6 +38,33 @@ const fuelPrice = window.FUEL_PRICE     || 0;
 const serverNow = window.SERVER_NOW ? new Date(window.SERVER_NOW) : new Date();
 const today     = new Date(serverNow.getFullYear(), serverNow.getMonth(), serverNow.getDate());
 
+/* ── KPI count-up animation (Phase 2 polish, 2026-05-22)
+   นับ 0→target ด้วย ease-out cubic, 600ms. ใช้แทน .textContent= */
+const _kpiRaf = new Map();
+function setKpi(id, target) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const start = parseInt(el.textContent, 10) || 0;
+    target = Number(target) || 0;
+    if (start === target) { el.textContent = target; return; }
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        el.textContent = target;
+        return;
+    }
+    if (_kpiRaf.has(id)) cancelAnimationFrame(_kpiRaf.get(id));
+    const t0 = performance.now();
+    const dur = 600;
+    const diff = target - start;
+    const tick = (now) => {
+        const t = Math.min(1, (now - t0) / dur);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(start + diff * eased);
+        if (t < 1) _kpiRaf.set(id, requestAnimationFrame(tick));
+        else _kpiRaf.delete(id);
+    };
+    _kpiRaf.set(id, requestAnimationFrame(tick));
+}
+
 let weekStart = new Date(today);
 weekStart.setDate(today.getDate() - (today.getDay() + 6) % 7);
 
@@ -168,7 +195,6 @@ function renderBefore() {
     document.getElementById('cnt-approved').textContent = cnt.approved;
     document.getElementById('cnt-rejected').textContent = cnt.rejected;
 
-    const setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setKpi('kpiPending',  cnt.pending);
     setKpi('kpiApprover', cnt.waiting_approver);
     setKpi('kpiApproved', cnt.approved);

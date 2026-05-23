@@ -545,7 +545,7 @@
 .vc-select:focus,
 .vc-textarea:focus {
     border-color: var(--vc-fg);
-    box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+    box-shadow: var(--vc-accent-ring);
 }
 
 .vc-input::placeholder { color: var(--vc-fg-disabled); }
@@ -634,7 +634,7 @@
 }
 
 .vc-radio input:focus-visible + .vc-radio-label {
-    box-shadow: 0 0 0 3px rgba(0,0,0,.08);
+    box-shadow: var(--vc-accent-ring);
 }
 
 
@@ -676,8 +676,7 @@
 ───────────────────────────────────────────── */
 .vc-modal .modal-content {
     border: 1px solid var(--vc-border);
-    border-radius: var(--vc-radius-lg);
-    box-shadow: 0 0 0 1px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.10);
+    border-radius: var(--vc-radius-md);
     background: var(--vc-bg);
 }
 
@@ -796,171 +795,5 @@
 /* Filter bar moved to components/filter_bar.css (Phase 2). */
 
 
-/* ─────────────────────────────────────────────
-   22. PIVOT TABLE (รถ × เดือน)
-───────────────────────────────────────────── */
-.vc-pivot-wrap {
-    margin-bottom: var(--vc-space-4);
-    overflow: visible !important;
-}
-
-.vc-pivot-summary {
-    list-style: none;
-    cursor: pointer;
-    padding: var(--vc-space-3) var(--vc-space-5);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--vc-space-3);
-    font-size: var(--vc-text-sm);
-    color: var(--vc-fg-muted);
-    transition: background var(--vc-transition);
-}
-
-.vc-pivot-summary::-webkit-details-marker { display: none; }
-.vc-pivot-summary::marker               { content: ''; }
-.vc-pivot-summary:hover                  { background: var(--vc-bg-subtle); }
-
-.vc-pivot-wrap[open] > .vc-pivot-summary {
-    background: var(--vc-bg-subtle);
-    border-bottom: 1px solid var(--vc-border);
-    color: var(--vc-fg);
-}
-
-.vc-pivot-wrap[open] > .vc-pivot-summary .vc-collapse-chevron {
-    transform: rotate(180deg);
-}
-
-.vc-pivot-scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.vc-pivot-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--vc-text-xs);
-    background: var(--vc-bg);
-}
-
-.vc-pivot-table thead th {
-    background: var(--vc-bg-subtle);
-    color: var(--vc-fg-muted);
-    font-size: 11px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: var(--vc-tracking-wide);
-    text-align: left;
-    padding: 8px var(--vc-space-3);
-    border-bottom: 1px solid var(--vc-border);
-    white-space: nowrap;
-}
-
-.vc-pivot-table thead th.text-end { text-align: right; }
-
-.vc-pivot-table tbody td {
-    padding: 0 var(--vc-space-3);
-    height: 40px;
-    border-bottom: 1px solid var(--vc-border);
-    white-space: nowrap;
-    vertical-align: middle;
-}
-
-.vc-pivot-table tbody tr:last-child td { border-bottom: none; }
-.vc-pivot-table tbody tr:hover td      { background: var(--vc-bg-subtle); }
-
-/* sticky first column */
-.vc-pivot-th-sticky,
-.vc-pivot-td-sticky {
-    position: sticky;
-    left: 0;
-    z-index: 2;
-    background: var(--vc-bg);
-    border-right: 1px solid var(--vc-border);
-    padding-left: var(--vc-space-4) !important;
-}
-
-.vc-pivot-table thead .vc-pivot-th-sticky {
-    background: var(--vc-bg-subtle);
-    z-index: 3;
-}
-
-.vc-pivot-table tbody tr:hover .vc-pivot-td-sticky { background: var(--vc-bg-subtle); }
-
-.vc-pivot-td-sticky {
-    font-weight: 500;
-    color: var(--vc-fg);
-    min-width: 120px;
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* heatmap data cell */
-.vc-pivot-cell {
-    font-family: var(--vc-font-mono);
-    font-feature-settings: "tnum" 1;
-    font-variant-numeric: tabular-nums;
-    background: rgba(79, 70, 229, calc(var(--cell-heat, 0) * 0.002));
-    transition: background var(--vc-transition);
-    min-width: 72px;
-    text-align: right;
-}
-
-.vc-pivot-cell-empty {
-    color: var(--vc-fg-subtle);
-    text-align: right;
-    min-width: 72px;
-}
-
-/* total column */
-.vc-pivot-total-col {
-    background: var(--vc-bg-subtle) !important;
-    border-left: 1px solid var(--vc-border);
-    font-weight: 500;
-    color: var(--vc-fg);
-    min-width: 80px;
-}
-
-/* footer row */
-.vc-pivot-table tfoot td {
-    padding: 0 var(--vc-space-3);
-    height: 40px;
-    background: var(--vc-bg-subtle);
-    border-top: 2px solid var(--vc-border);
-    font-weight: 600;
-    font-size: var(--vc-text-xs);
-    white-space: nowrap;
-    vertical-align: middle;
-    font-family: var(--vc-font-mono);
-    font-feature-settings: "tnum" 1;
-}
-
-.vc-pivot-table tfoot .vc-pivot-td-sticky {
-    background: var(--vc-bg-subtle);
-    font-weight: 600;
-    color: var(--vc-fg);
-    font-family: inherit;
-}
-
-/* drill-down link inside pivot cell — Phase 4.3 */
-.vc-pivot-link {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-    border-radius: 3px;
-    padding: 0 2px;
-    transition: background var(--vc-transition), color var(--vc-transition);
-}
-.vc-pivot-link:hover {
-    color: var(--vc-accent, #4F46E5);
-    background: rgba(79, 70, 229, 0.08);
-    text-decoration: none;
-}
-.vc-pivot-link:focus-visible {
-    outline: 2px solid var(--vc-accent, #4F46E5);
-    outline-offset: 1px;
-}
-.vc-pivot-cell:has(.vc-pivot-link:hover) {
-    background: rgba(79, 70, 229, calc(var(--cell-heat, 0) * 0.003 + 0.05));
-}
+/* §22. Pivot table moved to components/pivot.css (Phase 7, 2026-05-22)
+   shared with budget_manage.html. Loaded globally via design-system.css. */

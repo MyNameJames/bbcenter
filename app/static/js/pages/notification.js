@@ -2,6 +2,8 @@
    - Polling /api/notifications ทุก 30 วิ
    - Dropdown panel (group by booking, tabs, sticky payment)
    - Toast popup (desktop only, สำหรับ event สำคัญ)
+   - Icons: Lucide only (FA mapped via faToLucide())
+   - Tab switch = client-side filter (no refetch)
    โหลดจาก _header.html → ทุกหน้าที่มี header
 */
 
@@ -31,9 +33,13 @@ function bootNotifications() {
         panelOpen: false,
         currentTab: 'all',       // 'all' | 'unread' | 'payment'
         lastData: null,
+        lastError: false,
         expanded: new Set(),     // booking_ids ที่ expand อยู่
         seenToastIds: new Set(), // กัน toast ซ้ำ
         lastBadge: 0,
+        // booking_ids (number) + 'loose:<id>' (string) ที่อ่านแล้วในรอบ panel นี้
+        // → คงไว้ใน unread tab จนกว่าจะปิด panel (รอผู้ใช้อ่านจบก่อน)
+        justRead: new Set(),
     };
 
     // ── Utils ─────────────────────────────────
@@ -44,13 +50,91 @@ function bootNotifications() {
         }[ch]));
     }
 
-    function categoryToClass(cat, ntype) {
-        if (cat === 'mileage')       return 'cat-mileage';
-        if (cat === 'budget')        return 'cat-budget';
-        if (cat === 'payment' || cat === 'payment_admin') return 'cat-payment';
-        // status category → ใช้ ntype
-        const n = ntype || 'info';
-        return 'status-' + n;
+    // Server returns FA classes ("fa-solid fa-credit-card") — map → Lucide name.
+    function faToLucide(fa) {
+        const s = String(fa || '');
+        // Specific matches first (most specific wins)
+        if (s.includes('fa-gauge') || s.includes('fa-tachometer')) return 'gauge';
+        if (s.includes('fa-wallet'))            return 'wallet';
+        if (s.includes('fa-credit-card'))       return 'credit-card';
+        if (s.includes('fa-money'))             return 'banknote';
+        if (s.includes('fa-coins'))             return 'coins';
+        if (s.includes('fa-fuel') || s.includes('fa-gas'))      return 'fuel';
+        if (s.includes('fa-car'))               return 'car';
+        if (s.includes('fa-truck'))             return 'truck';
+        if (s.includes('fa-wrench') || s.includes('fa-tools')) return 'wrench';
+        if (s.includes('fa-screwdriver'))       return 'wrench';
+        if (s.includes('fa-calendar'))          return 'calendar';
+        if (s.includes('fa-clock'))             return 'clock';
+        if (s.includes('fa-bell-slash'))        return 'bell-off';
+        if (s.includes('fa-bell'))              return 'bell';
+        if (s.includes('fa-circle-check') || s.includes('fa-check-circle')) return 'check-circle-2';
+        if (s.includes('fa-check'))             return 'check';
+        if (s.includes('fa-circle-xmark') || s.includes('fa-times-circle') || s.includes('fa-circle-x')) return 'x-circle';
+        if (s.includes('fa-xmark') || s.includes('fa-times'))   return 'x';
+        if (s.includes('fa-triangle-exclamation') || s.includes('fa-exclamation-triangle')) return 'alert-triangle';
+        if (s.includes('fa-circle-exclamation') || s.includes('fa-exclamation-circle')) return 'alert-circle';
+        if (s.includes('fa-octagon-exclamation')) return 'alert-octagon';
+        if (s.includes('fa-circle-info') || s.includes('fa-info-circle')) return 'info';
+        if (s.includes('fa-user'))              return 'user';
+        if (s.includes('fa-users'))             return 'users';
+        if (s.includes('fa-arrow-right'))       return 'arrow-right';
+        if (s.includes('fa-arrow-left'))        return 'arrow-left';
+        if (s.includes('fa-chevron-right'))     return 'chevron-right';
+        if (s.includes('fa-chevron-down'))      return 'chevron-down';
+        if (s.includes('fa-spinner'))           return 'loader-2';
+        if (s.includes('fa-file'))              return 'file';
+        if (s.includes('fa-paperclip'))         return 'paperclip';
+        if (s.includes('fa-trash'))             return 'trash-2';
+        if (s.includes('fa-pen') || s.includes('fa-edit') || s.includes('fa-pencil')) return 'pencil';
+        if (s.includes('fa-plus'))              return 'plus';
+        if (s.includes('fa-minus'))             return 'minus';
+        // Fallback by ntype-style classes
+        return 'bell';
+    }
+
+    // Role → icon + label (สำหรับ cat-icon ใน group head)
+    function roleIcon(role) {
+        if (role === 'user')     return 'bell';
+        if (role === 'approver') return 'user';
+        if (role === 'admin')    return 'circle-alert';
+        return null;
+    }
+    function roleLabel(role) {
+        if (role === 'user')     return 'Booking ของฉัน';
+        if (role === 'approver') return 'Booking ที่ฉันอนุมัติ';
+        if (role === 'admin')    return 'Booking ที่ฉันดูแล (Admin)';
+        return '';
+    }
+    function roleChipText(role) {
+        if (role === 'approver') return 'อนุมัติ';
+        if (role === 'admin')    return 'Admin';
+        return '';
+    }
+
+    // Icon name for a notification group/item — prefers server, falls back per category/ntype.
+    function pickIcon(n) {
+        if (n && n.icon) return faToLucide(n.icon);
+        const cat = n && n.category;
+        if (cat === 'mileage') return 'gauge';
+        if (cat === 'budget')  return 'wallet';
+        if (cat === 'payment' || cat === 'payment_admin') return 'credit-card';
+        const nt = n && n.ntype;
+        if (nt === 'success') return 'check-circle-2';
+        if (nt === 'warning') return 'alert-triangle';
+        if (nt === 'danger')  return 'alert-octagon';
+        return 'info';
+    }
+
+    function lucideIcon(name, extraClass) {
+        const cls = extraClass ? ` class="${extraClass}"` : '';
+        return `<i data-lucide="${escapeHtml(name)}"${cls}></i>`;
+    }
+
+    function refreshLucide() {
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+        }
     }
 
     function ntypeLabel(n) {
@@ -58,7 +142,6 @@ function bootNotifications() {
     }
 
     function overdueClass(createdAt) {
-        // ประมาณจาก ISO หรือ dd/mm/yyyy HH:MM — ใช้เท่าที่มี ถ้า parse ไม่ได้ ให้ default
         const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})$/.exec(createdAt || '');
         if (!m) return '';
         const d = new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5]);
@@ -69,14 +152,37 @@ function bootNotifications() {
     }
 
     // ── Rendering ─────────────────────────────
+    function renderSkeleton() {
+        const row = `<div class="notif-loading-row">
+            <div class="notif-loading-icon"></div>
+            <div class="notif-loading-lines">
+                <div class="notif-loading-line long"></div>
+                <div class="notif-loading-line short"></div>
+            </div>
+        </div>`;
+        listEl.innerHTML = row + row + row;
+    }
+
+    function renderError() {
+        listEl.innerHTML = `<div class="notif-error">
+            ${lucideIcon('wifi-off')}
+            <div class="notif-empty-title">เชื่อมต่อไม่ได้</div>
+            <div class="notif-empty-sub">กำลังลองใหม่อัตโนมัติ...</div>
+            <button type="button" class="notif-retry" id="notifRetryBtn">ลองอีกครั้ง</button>
+        </div>`;
+        const btn = document.getElementById('notifRetryBtn');
+        if (btn) btn.addEventListener('click', refresh);
+        refreshLucide();
+    }
+
     function renderEmpty(tab) {
         const msg = {
-            all:     { icon:'fa-regular fa-bell-slash', title:'ยังไม่มีการแจ้งเตือน', sub:'การแจ้งเตือนใหม่จะปรากฏที่นี่' },
-            unread:  { icon:'fa-solid fa-circle-check', title:'อ่านครบแล้ว', sub:'ไม่มีการแจ้งเตือนที่ยังไม่ได้อ่าน' },
-            payment: { icon:'fa-solid fa-circle-check', title:'ไม่มีรายการค้างชำระ', sub:'ชำระครบแล้วทุกรายการ' },
-        }[tab] || { icon:'fa-regular fa-bell-slash', title:'ยังไม่มีการแจ้งเตือน', sub:'' };
+            all:     { icon:'bell-off',         title:'ยังไม่มีการแจ้งเตือน', sub:'การแจ้งเตือนใหม่จะปรากฏที่นี่' },
+            unread:  { icon:'check-circle-2',   title:'อ่านครบแล้ว',           sub:'ไม่มีการแจ้งเตือนที่ยังไม่ได้อ่าน' },
+            payment: { icon:'check-circle-2',   title:'ไม่มีรายการค้างชำระ',   sub:'ชำระครบแล้วทุกรายการ' },
+        }[tab] || { icon:'bell-off', title:'ยังไม่มีการแจ้งเตือน', sub:'' };
         return `<div class="notif-empty">
-            <i class="${msg.icon}"></i>
+            ${lucideIcon(msg.icon)}
             <div class="notif-empty-title">${msg.title}</div>
             <div class="notif-empty-sub">${msg.sub}</div>
         </div>`;
@@ -84,74 +190,90 @@ function bootNotifications() {
 
     function renderPaymentCard(n) {
         const od = overdueClass(n.created_at);
+        const titleIcon = pickIcon(n);
+        const isAdmin = (n.category === 'payment_admin');
         return `<div class="notif-payment-card ${od}" data-id="${n.id}">
             <div class="notif-payment-head">
-                <i class="${escapeHtml(n.icon || 'fa-solid fa-credit-card')} title-icon"></i>
+                ${lucideIcon(titleIcon, 'title-icon')}
                 <div class="notif-payment-title">${escapeHtml(n.booking_title || ('คำขอ #' + n.booking_id))}</div>
-                <i class="fa-solid fa-bell notif-payment-bell" title="เกินกำหนด"></i>
+                ${lucideIcon('bell-ring', 'notif-payment-bell')}
             </div>
             <div class="notif-payment-message">${escapeHtml(n.message)}</div>
             <div class="notif-payment-actions">
-                ${n.category === 'payment_admin'
+                ${isAdmin
                     ? `<a class="notif-btn-link" href="${escapeHtml(n.action_url)}">
-                         ดูรายการทั้งหมด <i class="fa-solid fa-arrow-right"></i>
+                         ดูรายการทั้งหมด ${lucideIcon('arrow-right')}
                        </a>`
                     : `<button class="notif-btn-primary" data-act="report-paid" data-booking="${n.booking_id}">
-                         <i class="fa-solid fa-check"></i> ฉันจ่ายแล้ว
-                       </button>
-                       <a class="notif-btn-link" href="${escapeHtml(n.action_url)}">ดูรายละเอียด</a>`
+                         ${lucideIcon('check')} ฉันจ่ายแล้ว
+                       </button>`
                 }
             </div>
         </div>`;
+    }
+
+    // Stage timeline (booking ของ user เอง) — replace message timeline
+    function renderStageTimeline(stages) {
+        return stages.map((st, i) => {
+            const isLast = i === stages.length - 1;
+            const desc = st.desc_main
+                ? `<div class="notif-stage-desc">${escapeHtml(st.desc_main)}</div>
+                   ${st.desc_sub ? `<div class="notif-stage-sub">${escapeHtml(st.desc_sub)}</div>` : ''}`
+                : `<div class="notif-stage-desc">${escapeHtml(st.desc || '')}</div>`;
+            return `<div class="notif-stage ${isLast ? 'notif-stage--last' : ''}">
+                <div class="notif-stage-icon">${lucideIcon(st.icon || 'circle')}</div>
+                <div class="notif-stage-body">
+                    <div class="notif-stage-title">${escapeHtml(st.title)}</div>
+                    ${desc}
+                </div>
+                <div class="notif-stage-time">${escapeHtml(st.ts || '')}</div>
+            </div>`;
+        }).join('');
     }
 
     function renderGroup(g) {
         const latest = g.latest || {};
         const unread = g.unread_count > 0;
         const isExp = state.expanded.has(g.booking_id);
-        const iconCls = categoryToClass(latest.category, latest.ntype);
-        const latestIcon = escapeHtml(latest.icon || 'fa-solid fa-circle-info');
-
-        const timelineItems = (g.items || []).map(it => `
-            <div class="notif-timeline-item" data-id="${it.id}">
-                <span><i class="${escapeHtml(it.icon || 'fa-solid fa-circle-info')} notif-timeline-icon"></i>${escapeHtml(it.message)}</span>
-                <span class="notif-timeline-time">${escapeHtml(it.created_rel)} · ${escapeHtml(it.created_at)}</span>
-            </div>`).join('');
+        const groupIcon = pickIcon(latest);                       // preview icon (latest event)
+        const headerIcon = roleIcon(g.role) || groupIcon;         // cat-icon (role context)
+        const rLabel = roleLabel(g.role);
+        const rChip = roleChipText(g.role);
+        // Backend (vehicle_view.py:_build_*_stages) garantee stages.length > 0 สำหรับ group ที่ valid
+        // → ไม่มี fallback ไป notif-timeline-item อีกแล้ว
+        const stages = Array.isArray(g.stages) ? g.stages : [];
+        const displayCount = stages.length;
 
         return `<div class="notif-group ${unread ? 'unread' : ''} ${isExp ? 'expanded' : ''}" data-booking="${g.booking_id}">
-            <div class="notif-group-head" data-act="toggle">
+            <div class="notif-group-head" data-act="toggle" role="button" tabindex="0"
+                 aria-expanded="${isExp ? 'true' : 'false'}">
                 <span class="notif-dot-unread"></span>
-                <div class="notif-cat-icon ${iconCls}"><i class="${latestIcon}"></i></div>
+                <div class="notif-cat-icon" title="${escapeHtml(rLabel)}">${lucideIcon(headerIcon)}</div>
                 <div class="notif-group-main">
                     <div class="notif-group-title-row">
                         <span class="notif-group-title">${escapeHtml(g.booking_title)}</span>
                         <span class="notif-group-id">#${g.booking_id}</span>
-                        <span class="notif-group-count">${g.items.length}</span>
+                        <span class="notif-group-count">${displayCount}</span>
+                        ${rChip ? `<span class="notif-role-chip">${escapeHtml(rChip)}</span>` : ''}
                     </div>
                     <div class="notif-group-preview">
-                        <i class="${escapeHtml(latest.icon || 'fa-solid fa-circle-info')}"></i>${escapeHtml(latest.message || '')}
+                        ${lucideIcon(groupIcon)}${escapeHtml(latest.message || '')}
                     </div>
                     <div class="notif-group-meta">${escapeHtml(latest.created_rel || '')}</div>
                 </div>
-                <i class="notif-chevron fa-solid fa-chevron-right"></i>
+                ${lucideIcon('chevron-right', 'notif-chevron')}
             </div>
-            <div class="notif-timeline">
-                ${timelineItems}
-                <div class="notif-timeline-footer">
-                    <a href="/vehicle/detail/${g.booking_id}" data-act="open-booking">
-                        ดูรายละเอียด booking <i class="fa-solid fa-arrow-right"></i>
-                    </a>
-                </div>
+            <div class="notif-timeline notif-timeline--stages">
+                ${renderStageTimeline(stages)}
             </div>
         </div>`;
     }
 
     function renderLooseItem(n) {
-        const iconCls = categoryToClass(n.category, n.ntype);
         return `<div class="notif-group ${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-act="open-single">
-            <div class="notif-group-head">
+            <div class="notif-group-head" role="button" tabindex="0">
                 <span class="notif-dot-unread"></span>
-                <div class="notif-cat-icon ${iconCls}"><i class="${escapeHtml(n.icon || 'fa-solid fa-circle-info')}"></i></div>
+                <div class="notif-cat-icon">${lucideIcon(pickIcon(n))}</div>
                 <div class="notif-group-main">
                     <div class="notif-group-preview">${escapeHtml(n.message)}</div>
                     <div class="notif-group-meta">${escapeHtml(n.created_rel)}</div>
@@ -161,8 +283,12 @@ function bootNotifications() {
     }
 
     function renderList(data) {
-        if (!data) return;
+        if (!data) {
+            if (state.lastError) renderError(); else renderSkeleton();
+            return;
+        }
         const tab = state.currentTab;
+        listEl.setAttribute('aria-labelledby', `notifTab-${tab}`);
 
         // Sticky section (แสดงเฉพาะ tab all / payment)
         const stickyHtml = (tab === 'unread') ? ''
@@ -175,48 +301,65 @@ function bootNotifications() {
         let loose  = data.loose || [];
 
         if (tab === 'unread') {
-            groups = groups.filter(g => g.unread_count > 0);
-            loose  = loose.filter(n => !n.is_read);
+            // keep items ที่เพิ่งอ่านในรอบ panel นี้ไว้ด้วย (state.justRead)
+            // → user จะได้อ่านจบก่อนค่อยปิด panel แล้ว item ถึงหายไป
+            groups = groups.filter(g => g.unread_count > 0 || state.justRead.has(g.booking_id));
+            loose  = loose.filter(n => !n.is_read || state.justRead.has('loose:' + n.id));
         } else if (tab === 'payment') {
-            // สำหรับ tab payment — แสดงเฉพาะ sticky (ซึ่ง render แยกด้านบน)
             groups = [];
             loose  = [];
             if (!stickyHtml) {
                 listEl.innerHTML = renderEmpty('payment');
+                refreshLucide();
                 return;
             }
             listEl.innerHTML = '';
+            refreshLucide();
             return;
         }
 
         if (groups.length === 0 && loose.length === 0 && !stickyHtml) {
             listEl.innerHTML = renderEmpty(tab);
+            refreshLucide();
             return;
         }
 
         listEl.innerHTML =
             groups.map(renderGroup).join('') +
             loose.map(renderLooseItem).join('');
+        refreshLucide();
     }
 
     function renderTabs(data) {
         if (!data) return;
-        const tAll     = (data.groups || []).reduce((s,g) => s + g.items.length, 0) + (data.loose || []).length;
+        // นับ stages length (= displayCount ใน renderGroup) + loose items
+        const tAll = (data.groups || []).reduce((s, g) => s + (g.stages || []).length, 0)
+                   + (data.loose || []).length;
         const tUnread  = data.unread || 0;
         const tPayment = data.unread_payment || 0;
 
-        tabsEl.innerHTML = `
-            <button class="notif-tab ${state.currentTab==='all'?'active':''}" data-tab="all">
-                ทั้งหมด <span class="notif-tab-count">${tAll}</span>
-            </button>
-            <button class="notif-tab ${state.currentTab==='unread'?'active':''}" data-tab="unread">
-                ยังไม่อ่าน <span class="notif-tab-count">${tUnread}</span>
-            </button>
-            <button class="notif-tab ${state.currentTab==='payment'?'active':''}" data-tab="payment">
-                <i class="fa-solid fa-credit-card"></i> ต้องจ่ายเงิน
-                <span class="notif-tab-count">${tPayment}</span>
-                ${tPayment > 0 ? '<span class="notif-tab-dot"></span>' : ''}
+        const tab = (name, label, count, opts = {}) => {
+            const active = state.currentTab === name;
+            const dot = opts.dot && count > 0 ? '<span class="notif-tab-dot"></span>' : '';
+            const ic = opts.icon ? lucideIcon(opts.icon) : '';
+            return `<button class="notif-tab ${active ? 'active' : ''}"
+                            id="notifTab-${name}"
+                            role="tab"
+                            aria-selected="${active ? 'true' : 'false'}"
+                            tabindex="${active ? '0' : '-1'}"
+                            data-tab="${name}">
+                ${ic}${label}
+                <span class="notif-tab-count">${count}</span>
+                ${dot}
             </button>`;
+        };
+
+        tabsEl.innerHTML =
+            tab('all',     'ทั้งหมด',     tAll) +
+            tab('unread',  'ยังไม่อ่าน',  tUnread) +
+            tab('payment', 'ต้องจ่ายเงิน', tPayment, { icon: 'wallet', dot: true });
+
+        refreshLucide();
     }
 
     function renderBadge(data) {
@@ -225,7 +368,6 @@ function bootNotifications() {
             badge.textContent = (raw > 30) ? '30+' : String(raw);
             badge.classList.add('show');
             bellBtn.classList.add('has-unread');
-            // Pop animation เมื่อ count เพิ่ม
             if (raw > state.lastBadge && state.lastBadge !== 0) {
                 badge.classList.remove('pop'); void badge.offsetWidth; badge.classList.add('pop');
                 bellBtn.classList.remove('shake'); void bellBtn.offsetWidth; bellBtn.classList.add('shake');
@@ -233,8 +375,6 @@ function bootNotifications() {
         } else {
             badge.classList.remove('show');
             bellBtn.classList.remove('has-unread');
-            const icon = bellBtn.querySelector('i');
-            if (icon) { icon.classList.remove('fa-solid'); icon.classList.add('fa-regular'); }
         }
         state.lastBadge = raw;
     }
@@ -248,14 +388,13 @@ function bootNotifications() {
         const el = document.createElement('div');
         el.className = `notif-toast toast-${n.ntype || 'info'}`;
         el.dataset.id = n.id;
-        const iconCls = categoryToClass(n.category, n.ntype);
         el.innerHTML = `
-            <div class="notif-toast-icon ${iconCls}"><i class="${escapeHtml(n.icon || 'fa-solid fa-circle-info')}"></i></div>
+            <div class="notif-toast-icon">${lucideIcon(pickIcon(n))}</div>
             <div class="notif-toast-body">
                 <div class="notif-toast-title">${escapeHtml(n.booking_title ? ('คำขอ #' + n.booking_id + ' · ' + n.booking_title) : ntypeLabel(n.ntype))}</div>
                 <div class="notif-toast-msg">${escapeHtml(n.message)}</div>
             </div>
-            <button class="notif-toast-close" aria-label="ปิด"><i class="fa-solid fa-xmark"></i></button>
+            <button class="notif-toast-close" aria-label="ปิด">${lucideIcon('x')}</button>
             <div class="notif-toast-progress"></div>`;
 
         el.addEventListener('click', (e) => {
@@ -267,6 +406,7 @@ function bootNotifications() {
         });
 
         toastContainer.appendChild(el);
+        refreshLucide();
         setTimeout(() => dismissToast(el), TOAST_DURATION_MS);
     }
     function dismissToast(el) {
@@ -276,7 +416,6 @@ function bootNotifications() {
     }
 
     function maybeShowToasts(data) {
-        // Toast เฉพาะ mobile-skip (CSS จัดการ) + event สำคัญที่ยังไม่อ่าน + เพิ่งเกิด (within 45s) + ยังไม่เคย toast
         if (!data || !data.notifications) return;
         const now = Date.now();
         data.notifications.forEach(n => {
@@ -290,7 +429,7 @@ function bootNotifications() {
             if (!m) return;
             const t = new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5]).getTime();
             if (now - t > 45000) {
-                state.seenToastIds.add(n.id);   // mark seen แต่ไม่ toast (เก่าแล้ว)
+                state.seenToastIds.add(n.id);
                 return;
             }
             showToast(n);
@@ -301,8 +440,13 @@ function bootNotifications() {
     async function refresh() {
         try {
             const r = await fetch('/api/notifications', { credentials:'same-origin' });
-            if (!r.ok) return;
+            if (!r.ok) {
+                state.lastError = true;
+                if (state.panelOpen && !state.lastData) renderError();
+                return;
+            }
             const data = await r.json();
+            state.lastError = false;
             state.lastData = data;
             renderBadge(data);
             maybeShowToasts(data);
@@ -310,24 +454,35 @@ function bootNotifications() {
                 renderTabs(data);
                 renderList(data);
             }
-        } catch (e) { /* silent */ }
+        } catch (e) {
+            state.lastError = true;
+            if (state.panelOpen && !state.lastData) renderError();
+        }
     }
 
     // ── Panel control ────────────────────
     function openPanel() {
         state.panelOpen = true;
         panel.classList.add('open');
+        bellBtn.setAttribute('aria-expanded', 'true');
         document.body.style.overflow = window.innerWidth < 768 ? 'hidden' : '';
         if (state.lastData) {
             renderTabs(state.lastData);
             renderList(state.lastData);
+        } else if (state.lastError) {
+            renderError();
+        } else {
+            renderSkeleton();
         }
         refresh();
     }
     function closePanel() {
         state.panelOpen = false;
         panel.classList.remove('open');
+        bellBtn.setAttribute('aria-expanded', 'false');
         document.body.style.overflow = '';
+        // reset justRead → รอบหน้าเปิด panel item ที่อ่านไปแล้วจะหายจาก unread tab ทันที
+        state.justRead.clear();
     }
     function togglePanel() {
         if (state.panelOpen) closePanel(); else openPanel();
@@ -339,9 +494,13 @@ function bootNotifications() {
         togglePanel();
     });
 
+    // กัน click ภายใน panel bubble ไป document (กรณี innerHTML replace ทำให้
+    // e.target หลุดจาก DOM → panel.contains() คืน false → ปิด panel โดยไม่ตั้งใจ)
+    panel.addEventListener('click', (e) => { e.stopPropagation(); });
+
     document.addEventListener('click', (e) => {
         if (!state.panelOpen) return;
-        if (window.innerWidth < 768) return;   // mobile ปิดด้วยปุ่ม back
+        if (window.innerWidth < 768) return;
         if (!panel.contains(e.target) && !bellBtn.contains(e.target)) closePanel();
     });
 
@@ -349,13 +508,36 @@ function bootNotifications() {
         if (e.key === 'Escape' && state.panelOpen) closePanel();
     });
 
-    // Tabs
+    // Tabs — click + keyboard (instant client-side filter, no refetch)
+    function setTab(name) {
+        if (!name || state.currentTab === name) return;
+        state.currentTab = name;
+        renderTabs(state.lastData);
+        renderList(state.lastData);
+    }
     tabsEl.addEventListener('click', (e) => {
         const btn = e.target.closest('.notif-tab');
         if (!btn) return;
-        state.currentTab = btn.dataset.tab;
-        renderTabs(state.lastData);
-        renderList(state.lastData);
+        setTab(btn.dataset.tab);
+    });
+    tabsEl.addEventListener('keydown', (e) => {
+        const order = ['all', 'unread', 'payment'];
+        const idx = order.indexOf(state.currentTab);
+        if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            setTab(order[(idx + 1) % order.length]);
+            tabsEl.querySelector('.notif-tab.active')?.focus();
+        } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            setTab(order[(idx - 1 + order.length) % order.length]);
+            tabsEl.querySelector('.notif-tab.active')?.focus();
+        } else if (e.key === 'Home') {
+            e.preventDefault(); setTab(order[0]);
+            tabsEl.querySelector('.notif-tab.active')?.focus();
+        } else if (e.key === 'End') {
+            e.preventDefault(); setTab(order[order.length - 1]);
+            tabsEl.querySelector('.notif-tab.active')?.focus();
+        }
     });
 
     // Mark all
@@ -366,46 +548,65 @@ function bootNotifications() {
         });
     }
 
-    // List interactions (delegation)
+    // List interactions (delegation) — toggle group, open loose item, keyboard activate
+    function toggleGroup(group) {
+        const bid = parseInt(group.dataset.booking, 10);
+        if (state.expanded.has(bid)) state.expanded.delete(bid);
+        else state.expanded.add(bid);
+        group.classList.toggle('expanded');
+        const head = group.querySelector('.notif-group-head');
+        if (head) head.setAttribute('aria-expanded', group.classList.contains('expanded') ? 'true' : 'false');
+
+        if (group.classList.contains('expanded')) {
+            setTimeout(async () => {
+                if (!state.expanded.has(bid)) return;
+                const ids = state.lastData?.groups
+                    ?.find(g => g.booking_id === bid)?.items
+                    ?.filter(it => !it.is_read && !it.is_sticky)
+                    ?.map(it => it.id) || [];
+                for (const id of ids) {
+                    fetch(`/api/notifications/${id}/read`, { method:'POST' }).catch(()=>{});
+                }
+                if (ids.length) {
+                    state.justRead.add(bid);  // ค้างใน unread tab จนปิด panel
+                    setTimeout(refresh, 400);
+                }
+            }, 1500);
+        }
+    }
+
     listEl.addEventListener('click', async (e) => {
         const head = e.target.closest('[data-act="toggle"]');
         if (head) {
-            const group = head.closest('.notif-group');
-            const bid = parseInt(group.dataset.booking, 10);
-            if (state.expanded.has(bid)) state.expanded.delete(bid);
-            else state.expanded.add(bid);
-            group.classList.toggle('expanded');
-
-            // mark-as-read หลัง 1.5 วิ ถ้ายัง expand
-            if (group.classList.contains('expanded')) {
-                setTimeout(async () => {
-                    if (!state.expanded.has(bid)) return;
-                    const ids = state.lastData?.groups
-                        ?.find(g => g.booking_id === bid)?.items
-                        ?.filter(it => !it.is_read && !it.is_sticky)
-                        ?.map(it => it.id) || [];
-                    for (const id of ids) {
-                        fetch(`/api/notifications/${id}/read`, { method:'POST' }).catch(()=>{});
-                    }
-                    if (ids.length) setTimeout(refresh, 400);
-                }, 1500);
-            }
+            toggleGroup(head.closest('.notif-group'));
             return;
         }
-
-        const openBooking = e.target.closest('[data-act="open-booking"]');
-        if (openBooking) { return; /* native navigation */ }
 
         const singleCard = e.target.closest('[data-act="open-single"]');
         if (singleCard) {
             const id = parseInt(singleCard.dataset.id, 10);
             const item = (state.lastData?.loose || []).find(n => n.id === id);
             await fetch(`/api/notifications/${id}/read`, { method:'POST' }).catch(()=>{});
+            state.justRead.add('loose:' + id);  // ค้างใน unread tab จนปิด panel
             if (item && item.action_url && item.action_url !== '#') {
                 window.location.href = item.action_url;
             } else {
                 refresh();
             }
+        }
+    });
+    listEl.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const head = e.target.closest('[data-act="toggle"]');
+        if (head) {
+            e.preventDefault();
+            toggleGroup(head.closest('.notif-group'));
+            return;
+        }
+        const single = e.target.closest('[data-act="open-single"]');
+        if (single) {
+            e.preventDefault();
+            single.click();
         }
     });
 
@@ -416,24 +617,28 @@ function bootNotifications() {
         e.preventDefault();
         const bookingId = parseInt(btn.dataset.booking, 10);
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่ง...';
+        btn.innerHTML = `${lucideIcon('loader-2')} กำลังส่ง...`;
+        refreshLucide();
         try {
             const r = await fetch(`/api/payment/report-by-booking/${bookingId}`, { method:'POST' });
             if (r.ok) {
                 const card = btn.closest('.notif-payment-card');
                 card.querySelector('.notif-payment-actions').innerHTML =
                     `<div class="notif-payment-pending">
-                        <i class="fa-regular fa-clock"></i> รอ Admin ยืนยันการชำระ
+                        ${lucideIcon('clock')} รอ Admin ยืนยันการชำระ
                      </div>`;
+                refreshLucide();
             } else {
                 const data = await r.json().catch(() => ({}));
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> ฉันจ่ายแล้ว';
+                btn.innerHTML = `${lucideIcon('check')} ฉันจ่ายแล้ว`;
+                refreshLucide();
                 alert(data.msg || 'เกิดข้อผิดพลาด');
             }
         } catch (err) {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> ฉันจ่ายแล้ว';
+            btn.innerHTML = `${lucideIcon('check')} ฉันจ่ายแล้ว`;
+            refreshLucide();
         }
     });
 

@@ -163,7 +163,7 @@ msg_id = _send(text)
 booking.telegram_message_id = msg_id
 db.session.commit()
 ```
-ครอบคลุมเฉพาะ Vehicle (approved, forwarded, rejected)
+ครอบคลุมเฉพาะ Vehicle (approved, forwarded, rejected, cancelled — Phase 9, 2026-05-22)
 
 ### 2. In-app Notification
 **Pattern:**
@@ -171,7 +171,7 @@ db.session.commit()
 from views.notification_service import notify_*
 notify_xxx(booking, ...)  # commit อยู่ใน _create()
 ```
-ครอบคลุมเฉพาะ Vehicle (15+ functions ใน notification_service.py)
+ครอบคลุมเฉพาะ Vehicle (16+ functions ใน notification_service.py — Event #16 `notify_user_cancelled` เพิ่ม Phase 9, 2026-05-22 สำหรับ multi-recipient cancel-after-approve)
 Delivery: polled by `/api/notifications` + sticky for payment unpaid
 Cron escalation: `notification_cron.check_payment_escalation()` (APScheduler)
 

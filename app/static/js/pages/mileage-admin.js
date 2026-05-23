@@ -151,6 +151,87 @@ document.getElementById('feRefuel').addEventListener('change', function () {
     document.getElementById('feRefuelWrap').style.display = this.checked ? 'block' : 'none';
 });
 
+/* ── Toolbar: status chips ────────────────────── */
+(function bindStatusChips() {
+    const form = document.getElementById('filterForm');
+    const hidden = document.getElementById('statusFilter');
+    if (!form || !hidden) return;
+    document.querySelectorAll('.mlg-status-chips .mlg-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            hidden.value = btn.dataset.status || '';
+            form.submit();
+        });
+    });
+})();
+
+/* ── Toolbar: advanced filter toggle ──────────── */
+(function bindAdvToggle() {
+    const btn   = document.getElementById('advFilterBtn');
+    const sheet = document.getElementById('advSheet');
+    if (!btn || !sheet) return;
+    btn.addEventListener('click', () => {
+        const open = !sheet.hasAttribute('hidden');
+        if (open) sheet.setAttribute('hidden', '');
+        else sheet.removeAttribute('hidden');
+        btn.setAttribute('aria-expanded', String(!open));
+    });
+})();
+
+/* ── Toolbar: date preset ─────────────────────── */
+(function bindDatePreset() {
+    const preset = document.getElementById('datePreset');
+    const form   = document.getElementById('filterForm');
+    const dStart = form && form.querySelector('input[name="date_start"]');
+    const dEnd   = form && form.querySelector('input[name="date_end"]');
+    const showAll = document.getElementById('showAllInput');
+    const rangeGroup = document.getElementById('dateRangeGroup');
+    if (!preset || !form || !dStart || !dEnd) return;
+
+    const fmt = d => d.toISOString().slice(0, 10);
+    const today = () => new Date();
+    const daysAgo = n => { const d = today(); d.setDate(d.getDate() - n); return d; };
+    const monthStart = () => { const d = today(); d.setDate(1); return d; };
+
+    // Initial preset detection
+    function detectInitial() {
+        if (showAll && showAll.value === '1') return 'all';
+        if (!dStart.value && !dEnd.value) return 'month';
+        return 'custom';
+    }
+    preset.value = detectInitial();
+    if (preset.value === 'custom') rangeGroup.removeAttribute('hidden');
+    else if (preset.value === 'all') rangeGroup.setAttribute('hidden', '');
+    else rangeGroup.setAttribute('hidden', '');
+
+    preset.addEventListener('change', () => {
+        const v = preset.value;
+        if (v === 'custom') {
+            rangeGroup.removeAttribute('hidden');
+            if (showAll) showAll.value = '';
+            return; // wait for user to pick dates + click Apply
+        }
+        rangeGroup.setAttribute('hidden', '');
+        if (v === 'all') {
+            dStart.value = '';
+            dEnd.value = '';
+            if (showAll) showAll.value = '1';
+        } else if (v === 'month') {
+            dStart.value = '';
+            dEnd.value = '';
+            if (showAll) showAll.value = '';
+        } else if (v === '7d') {
+            dStart.value = fmt(daysAgo(7));
+            dEnd.value = fmt(today());
+            if (showAll) showAll.value = '';
+        } else if (v === '30d') {
+            dStart.value = fmt(daysAgo(30));
+            dEnd.value = fmt(today());
+            if (showAll) showAll.value = '';
+        }
+        form.submit();
+    });
+})();
+
 /* ── Budget filter: sub-options follow type (pattern: updateExpSubDropdown) ── */
 (function bindBudgetFilter() {
     const typeSel = document.getElementById('filterBudgetType');

@@ -20,8 +20,8 @@
      .vc-kpi-value--success     green
      .vc-kpi-value--danger      red
      .vc-kpi-value--blue        blue (info)
-     .vc-kpi-value--purple      violet
      .vc-kpi-value--warn        amber
+     (--purple retired Phase 8, 2026-05-22 — zero markup usage)
 
    Macro: app/templates/_components/kpi.html
    Created: 2026-05-14 (Phase 2 component library)
@@ -77,7 +77,6 @@
 .vc-kpi-value--success { color: var(--vc-green); }
 .vc-kpi-value--danger  { color: var(--vc-red); }
 .vc-kpi-value--blue    { color: var(--vc-blue); }
-.vc-kpi-value--purple  { color: var(--vc-purple); }
 .vc-kpi-value--warn    { color: var(--vc-amber); }
 
 .vc-kpi-unit {

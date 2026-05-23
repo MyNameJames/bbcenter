@@ -159,3 +159,16 @@ def notify_rejected(booking, rejected_by):
         f"{reason_line}"
     )
     _save_message_id(booking, _send(text))
+
+
+# Phase 9 (2026-05-22) — Cancel booking (user or admin, after approve)
+def notify_cancelled(booking, cancelled_by):
+    delete_old_message(booking)
+    text = (
+        f"🚫  <b>ยกเลิกการจอง</b>  —  <code>#{booking.id}</code>\n\n"
+        f"👤  <b>{booking.user.full_name or booking.user.username}</b>  |  {booking.user.department or '-'}\n"
+        f"📍  {booking.destination}\n"
+        f"🗓  {_fmt_date(booking.start_datetime)}  {_fmt_time(booking.start_datetime)} น.\n\n"
+        f"✍️  ยกเลิกโดย <b>{cancelled_by.full_name or cancelled_by.username}</b>"
+    )
+    _save_message_id(booking, _send(text))

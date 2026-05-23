@@ -26,6 +26,7 @@
 ## วิธีใช้
 
 | 13 | Phase 5.3 — ลบ inline `style=""` ใน templates | Frontend | ไฟล์ที่มีมากสุด: `mileage_admin.html` (112 จุด, ส่วนใหญ่เป็น dynamic Jinja values เช่น width/color จาก data), `design_system_reference.html` (86, token swatches), `dashboard.html` (73). กลยุทธ์: สร้าง CSS class สำหรับ patterns ที่ซ้ำ (font-size/color combos), คง dynamic width/color ที่ขึ้นกับ Jinja data ไว้เป็น inline | 2026-05-16 |
+| 14 | budget_manage — Personal pivot (deferred จาก Phase 7) | Vehicle Admin | Phase 7 redesign (2026-05-22) ทำได้แค่ central + dept pivots จาก `VehicleBudget` table. **Personal pivot ทำไม่ได้ตรงๆ** เพราะ `BudgetType` enum มีแค่ `central`/`department` (ไม่มี `personal`). Personal data จริงอยู่ที่ `VehicleMileage.personal_paid_at` + `expense_type='self'`. ถ้าจะทำต้อง: (a) decide rows = ต่อ user หรือต่อ dept (b) aggregate `VehicleMileage.fuel_cost` (override) หรือ compute จาก distance/fuel_rate*price (c) filter `personal_status=1` (d) group by `extract('month', personal_paid_at)` + fiscal year mapping เดิม. ใช้ pattern `_build_budget_pivot()` เป็น template, query mileage แทน | 2026-05-22 |
 
 - เมื่อมีคำสั่ง **"ไว้เป็น future feature"** → เพิ่มแถวในตารางด้านบน
 - ระบุ Module, บริบท, และวันที่บันทึกทุกครั้ง

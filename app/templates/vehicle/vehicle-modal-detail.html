@@ -1,23 +1,24 @@
 {# vehicle-modal-detail.html — Modal รายการจอง (single + group รวมใน modal เดียว)
    JS: openEventDetail() อยู่ใน vehicle.js
+   2026-05-20 redesign: ทิ้ง 44px header circle → status pill ใต้ title;
+   solid full-bleed divider; "ผู้จอง" → "ผู้โดยสาร · N คน"; primary info คงเดิม.
 #}
 <div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable bk-modal-dialog">
-        <div class="modal-content bk-modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
 
-            {# ── Header: status dot + title + date + close ──
-               Phase 3 (2026-05-17): ds-status-dot → vc-status-dot; FA → Lucide.
-               JS เซ็ต class + replace icon outerHTML ใน vehicle.js:openEventDetail() #}
+            {# ── Header: title + date + status pill + close ── #}
             <div class="card-header bg-white border-0 pt-4 pb-3 px-4">
                 <div class="d-flex align-items-start gap-3">
-                    <div id="detailHeaderDot" class="vc-status-dot vc-status-dot--approved flex-shrink-0 bk-detail-header-dot">
-                        <i id="detailHeaderIcon" data-lucide="circle-check" style="width:20px;height:20px;"></i>
-                    </div>
                     <div class="flex-grow-1">
                         <div class="bk-detail-title">รายละเอียดการจอง</div>
                         <div id="detailDateLine" class="bk-detail-date"></div>
+                        <span id="detailStatusPill" class="bk-detail-status bk-detail-status--approved">
+                            <i id="detailStatusIcon" data-lucide="circle-check"></i>
+                            <span id="detailStatusText">อนุมัติแล้ว</span>
+                        </span>
                     </div>
-                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close" title="ปิด"></button>
                 </div>
             </div>
 
@@ -41,9 +42,11 @@
 
             <div class="bk-detail-divider"></div>
 
-            {# ── Section label ── #}
-            <div class="px-4 pt-4 pb-2">
-                <span class="bk-detail-section-label">ผู้จอง</span>
+            {# ── Section header: ผู้โดยสาร · N คน ── #}
+            <div class="bk-detail-section-header">
+                <span class="bk-detail-section-label">ผู้โดยสาร</span>
+                <span class="bk-detail-section-label">·</span>
+                <span id="detailMemberCount" class="bk-detail-section-label">1 คน</span>
             </div>
 
             {# ── Members list (JS inject) ── #}

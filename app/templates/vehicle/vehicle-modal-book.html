@@ -3,25 +3,25 @@
    JS validation อยู่ใน vehicle.js (DOMContentLoaded > bookingForm)
 #}
 <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered bk-modal-dialog">
-        <div class="card modal-content border-0 bk-modal-content">
+    <div class="modal-dialog modal-dialog-centered ">
+        <div class="card modal-content border-0">
             <form action="{{ url_for('vehicle.book_vehicle_simple') }}" method="POST" id="bookingForm" novalidate>
 
                 <input type="hidden" name="start_datetime" id="bk_start_datetime">
                 <input type="hidden" name="end_datetime"   id="bk_end_datetime">
 
                 <div class="card-header bg-white d-flex align-items-start">
-                    <div class="row w-100">
-                        <div class="col-12">
-                            <div class="row gx-0 d-flex justify-content-between pt-2">
-                                <div class="col d-flex align-items-start gap-2">
-                                    <div class="row">
-                                        <div class="col-auto">
-                                            <span class="ps-2"><i data-lucide="folder-plus" style="width:22px;height:22px;"></i></span>
+                    <div class="row">
+                        <div class="col-12 d-flex align-items-start gap-2 pt-3">
+                            <div class="row gx-0 d-flex justify-content-between">
+                                <div class="col gap-2 flex-grow-1">
+                                    <div class="row gx-0 d-flex align-items-center gap-2">
+                                        <div class="col-auto bk-detail-member-avatar rounded-circle d-flex align-items-center justify-content-center" style="background: var(--vc-fg); color: var(--vc-fg-inverted);">
+                                             <i data-lucide="user" style="width:16px;height:16px;"></i>
+                                            <!-- <i data-lucide="user"></i> -->
                                         </div>
                                         <div class="col">
                                             <div class="row">
-                                                <small class="text-muted">ผู้จอง :</small>
                                                 <span class="bk-row-main">{{ current_user.full_name or current_user.username }}</span>
                                                 <span class="bk-row-sub">{{ current_user.department or '' }}{% if current_user.email %} · {{ current_user.email }}{% endif %}</span>
                                             </div>

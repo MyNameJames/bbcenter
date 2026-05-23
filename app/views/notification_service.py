@@ -304,6 +304,36 @@ def notify_admin_deleted(booking_id, user_id, destination, deleted_by):
     )
 
 
+# #16 — Booking cancelled (Phase 9, 2026-05-22) — user or admin cancels approved booking
+def notify_user_cancelled(*, user_id, booking, cancelled_by, role_label):
+    """Multi-recipient cancel notify. role_label = 'admin' | 'approver' | 'driver' | 'mate' | 'owner'
+       เรียก 1 ครั้ง/recipient — caller loop user_ids แล้วเรียกซ้ำ.
+       'owner' ใช้เมื่อ admin ยกเลิกของ user (แจ้งเจ้าของ).
+    """
+    canceller = _display_name(cancelled_by)
+    if role_label == 'mate':
+        msg = f'ทริป #{booking.id} ที่คุณร่วมไป{booking.destination} ถูกยกเลิกโดย {canceller}'
+    elif role_label == 'driver':
+        msg = f'คำขอ #{booking.id} ไป{booking.destination} ถูกยกเลิก (คุณเป็นคนขับที่ถูก assign) — โดย {canceller}'
+    elif role_label == 'approver':
+        dept = booking.trip_department or '-'
+        msg = f'คำขอ #{booking.id} ไป{booking.destination} (แผนก {dept}) ถูกยกเลิกโดย {canceller}'
+    elif role_label == 'owner':
+        msg = f'คำขอ #{booking.id} ไป{booking.destination} ของคุณถูกยกเลิกโดย Admin ({canceller})'
+    else:  # admin
+        msg = f'คำขอ #{booking.id} ไป{booking.destination} ถูกยกเลิกโดย {canceller}'
+
+    _create(
+        user_id    = user_id,
+        booking_id = booking.id,
+        message    = msg,
+        ntype      = 'warning',
+        category   = 'status',
+        icon       = ICON['deleted'],  # trash icon (reuse, semantic match)
+        action_url = _book_url(booking),
+    )
+
+
 # ─────────────────────────────────────────────
 # Payment confirm feedback (admin confirms → notify user)
 # ─────────────────────────────────────────────

@@ -1,34 +1,48 @@
 {# templates/_header.html
    วิธีใช้ใน Jinja2: {% include '_header.html' %}
    ตัวแปร optional:
-     page_title      — ชื่อหน้า (default: 'ระบบจองรถ')
-     show_month_nav  — True ถ้าต้องการปุ่ม prev/next เดือน (default: False)
+     page_section   — section ใน breadcrumb (เช่น "บริการ")
+     page_title     — ชื่อหน้า (default: ไม่แสดง)
+     show_month_nav — True ถ้าต้องการปุ่ม prev/next เดือน (default: False)
+
+   Vercel-style refresh (Phase 6.0, 2026-05-20): topbar 56px,
+   breadcrumb left, 32×32 icon buttons right. ดู vercel.css.
 #}
-<header class="top-header container-xxl d-flex align-items-center gap-2" id="topHeader"
-    style="position:sticky;top:0;z-index:5;">
+<header class="vrc-topbar d-flex align-items-center gap-2 border-bottom" id="topHeader">
 
     {# ── Hamburger (mobile) ── #}
-    <button type="button" class="ds-btn-icon rounded-3 d-xl-none bg-white ms-1" id="mobileToggle"
-        onclick="bbToggleSidebar()">
-        <i class="bi bi-list" style="font-size:1.1rem;"></i>
+    <button type="button" class="ds-btn-icon d-xl-none" id="mobileToggle"
+        onclick="bbToggleSidebar()" title="เมนู">
+        <i data-lucide="menu"></i>
     </button>
 
-    {# ── Page title ── #}
+    {# ── Breadcrumb ── #}
+    {% if page_title or page_section %}
+    <nav class="vrc-topbar-crumb d-flex align-items-center gap-2 fw-medium" aria-label="breadcrumb">
+        {% if page_section %}
+        <span class="vrc-topbar-crumb-section">{{ page_section }}</span>
+        <span class="sep">/</span>
+        {% endif %}
+        {% if page_title %}
+        <span class="vrc-topbar-crumb-title">{{ page_title }}</span>
+        {% endif %}
+    </nav>
+    {% endif %}
 
     {# ── Right-side actions ── #}
-    <div class="ms-auto d-flex align-items-center gap-2 me-1" style="position:relative;">
+    <div class="ms-auto d-flex align-items-center gap-2">
 
         {# ── Notification Bell + Panel (partial) ── #}
         {% include '_notification_panel.html' %}
 
         {# ── User avatar + dropdown ── #}
-        <div class=" " id="hdrUserWrap">
-            <button type="button" class="ds-btn-icon rounded-3 bg-white ms-1" id="hdrUserBtn" onclick="bbToggleUserMenu()">
-                <i class="fa-regular fa-user"></i>
+        <div id="hdrUserWrap" style="position:relative;">
+            <button type="button" class="ds-btn-icon" id="hdrUserBtn" onclick="bbToggleUserMenu()" title="โปรไฟล์">
+                <i data-lucide="user"></i>
             </button>
             <div class="hdr-user-menu" id="hdrUserMenu">
                 <div class="hdr-user-top">
-                    <i class="fa-regular fa-user ds-btn-icon rounded-3 bg-white ms-1"></i>
+                    <i data-lucide="user" class="ds-btn-icon rounded-3 bg-white"></i>
                     <div class="hdr-user-info">
                         <div class="hdr-user-name">{{ current_user.full_name or current_user.username }}</div>
                         {% if current_user.department %}
@@ -38,7 +52,7 @@
                 </div>
                 {% if current_user.email %}
                 <div class="hdr-user-row">
-                    <i class="bi bi-envelope"></i>
+                    <i data-lucide="mail"></i>
                     <span>{{ current_user.email }}</span>
                 </div>
                 {% endif %}
@@ -195,6 +209,9 @@ window.bbToggleUserMenu = function() {
     if (menu) menu.classList.toggle('open');
 };
 </script>
+
+{# ── Vercel-style refresh (Phase 6.0) — topbar + future components ── #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vercel.css') }}">
 
 {# ── Notification CSS + Toast container + JS ── #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/notification.css') }}">

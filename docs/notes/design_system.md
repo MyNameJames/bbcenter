@@ -1,6 +1,10 @@
 # BBCenter V2 — Design System Reference
-**Updated:** 2026-05-14 (Phase 3 + namespace alignment — doc rewritten to use `--vc-*` only; `--ds-*` = legacy, retire ใน Phase 5 cleanup)
-**Style:** Vercel-inspired Light Mode | **Primary:** Pure Black `#000` (`--vc-primary`) | **Accent:** Indigo `#4F46E5` (`--vc-accent`) | **Font:** Sarabun (UI) + Geist Mono (numeric/code)
+**Updated:** 2026-05-22 (budget_manage Phase 8: dead purple CSS cleanup — `.vc-btn-purple` + `.vc-badge-purple` (budget_manage.css §7) + `.vc-kpi-value--purple` (components/kpi.css) ลบครบ. Tokens `--vc-purple*` ใน tokens.css เก็บไว้สำหรับ swatch demo. Closes purple retirement loop ที่เริ่ม Phase 4 (markup) — ตอนนี้ functional CSS file zero references; only design_system_reference.html ใช้ใน demo)
+**Updated:** 2026-05-22 (budget_manage Phase 7: Pivot section — fiscal year (Mar→Feb) × dept, 2 collapsed cards (central + dept). **CSS architecture move:** `.vc-pivot-*` block (~165 lines) extracted from `fuel_admin.css` §22 → `components/pivot.css` shared component (loaded globally via `design-system.css` @import). Reusable principle: **collapsible pivot via `<details class="vc-card vc-pivot-wrap">`** — sticky-col table, heat-tinted cells (`--cell-heat: 0..100` via indigo low-opacity), drill-down links per cell + total col + grand total tfoot, footer mono tabular-nums. Pattern ใช้ได้ใน admin pages อื่นที่ต้องการ overview table ที่ "ย่อได้" และ "scroll-able sticky column". Personal pivot deferred → future_features #14 (BudgetType ไม่มี personal, ต้อง query VehicleMileage แทน))
+**Updated:** 2026-05-22 (budget_manage Phase 6: 3 modal `ds-alert-*` info/warning boxes → meta lines. Pattern (a) `<dl class="budget-modal-meta">` Stripe-style label-value pairs (border-block divider + flex baseline rows + `<dt>` SMALL CAPS uppercase muted + `<dd>` sm/600/fg) สำหรับ context info; pattern (b) `<p.budget-modal-notice>` thin top-border info line w/ lucide icon สำหรับ "อธิบายผลของ action". Reusable principle: **เลือกใช้ alert box เฉพาะ destructive/error warning จริง** — context info (label-value) ที่อยู่ในฟอร์มอนุญาตให้ใช้ meta block แทน เพื่อ focus กลับไปที่ form input)
+**Updated:** 2026-05-22 (budget_manage Phase 5: personal row card → inline line — drop card chrome (border/bg/radius/padding) → `padding-block` + bottom border separator; `.meta` flex baseline inline (label+value 1 บรรทัด); typography demoted (label sm lowercase, value sm mono fg); reusable principle: **lightweight inline strip** สำหรับ secondary info section ที่ไม่ควรแข่ง prominence กับ primary card grid — เก็บ color signal บน icon (green warmth) แทน value text)
+**Updated:** 2026-05-21 (Clean UI spec — apply 5 carousel principles: borders not shadows · 60-30-10 palette · spacing · 3-weight typography · hierarchy by size+weight; budget_manage Phase 1: CTA `vc-btn-purple`→`vc-btn-primary` · `.vc-bcard--inactive` stripe→dashed flat (§13) · dropdown padding 6→8px; budget_manage Phase 2: KPI 6→4 cells (`vc-kpi-group--6`→`--4`) · "งบส่วนกลาง"+"งบงานกอง" amounts ย้ายขึ้น `.vc-section-hdr-amount` (mono/tnum/600); budget_manage Phase 3: card hierarchy — `.vc-bcard-row` → `.vc-bcard-pct-hero` (percent เป็น hero text-lg/600/mono + label muted xs) · `.vc-bcard-amounts` demoted (used md/600→sm/500/muted, total sm/muted→xs/subtle) · ลบ `.used.is-purple` (purple บน data value หลุด scope); budget_manage Phase 4 premium polish — purple retirement complete (markup zero, CSS rules `.vc-btn-purple`/`.vc-badge-purple` kept for Phase 8) · `.vc-progress > span` baseline `--vc-green`→`--vc-fg` (Linear monochrome — reusable principle) · SMALL CAPS labels (`.vc-bcard-pct-label` + `.vc-section-hdr-amount-label` 11px/500 uppercase tracking-wide — reusable premium tag pattern) · `.vc-bcard-pct` text-lg→text-2xl/tracking-tight · asymmetric child margin-top แทน flat gap · `.vc-kpi-cell--signal` modifier (bg-subtle highlight 1 cell แทนใช้สี) · page-scoped animation tokens `--bm-ease-out`/`--bm-dur-fast/-base/-slow` + 3 keyframes (`bm-fade-up/-progress-fill/-fade-in`) + per-card stagger via inline `--bm-delay` + signature progress-fill animation + `.budget-modal-enter` scoped modal entrance + `prefers-reduced-motion` block)
+**Style:** Vercel-inspired Light Mode | **Primary:** Pure Black `#000` (`--vc-primary`) | **Accent:** Indigo `#4F46E5` (`--vc-accent`, focus ring + sidebar active only) | **Font:** Sarabun (UI) + Geist Mono (numeric/code)
 
 > **Canonical rule:** Use `--vc-*` tokens only in new CSS/templates. `--ds-*` is legacy (Indigo-era pre-2026-05) and still alive in `tokens.css` for un-migrated pages — do not introduce new references. See [SKILL §3.2](../../.claude/skills/bbcenter-design/SKILL.md) for the binary list of allowed tokens.
 >
@@ -27,6 +31,22 @@
 | **Tight radius** | 4–8px เท่านั้น (`--vc-radius-xs/sm/md`) |
 | **Vercel-style surfaces** | `vc-card` เป็น base surface (ไม่ใช้ Bootstrap `.card` ใน vc-scope) |
 | **Lucide icons ใน vc-scope** | `<i data-lucide="...">` (Font Awesome เฉพาะ legacy pages) |
+
+---
+
+## 1.5 Clean UI Principles (canonical — apply ทุกหน้า)
+
+| # | Principle | กฎใน BBCenter |
+|---|---|---|
+| 1 | **Borders, not shadows** | `box-shadow: none` ทุก surface — ยกเว้น `--vc-accent-ring` (focus). Border 1px `--vc-border` แทน |
+| 2 | **60-30-10 palette** | 60% page bg (`--vc-bg-subtle`) · 30% surface (`--vc-bg`) · 10% signal (text + border + black CTA). Status colors = exception, ใช้แค่ badge/dot |
+| 3 | **Generous spacing** | Page padding 24-32px · card body 16-24px · ห้าม `padding < 8px` บน interactive element · touch target ≥ 32×32px |
+| 4 | **Fewer fonts & weights** | 2 fonts (Sarabun + Geist Mono). **Weight allowlist: 400 / 500 / 600 เท่านั้น** — ban 300, 700, 800 |
+| 5 | **Hierarchy by size+weight** | 1 element = 1 size + 1 weight + 1 color. ห้ามใช้สี accent (indigo) เป็น primary heading — ใช้ `--vc-fg` |
+
+> **Indigo accent (`--vc-accent`) scope:** focus ring + sidebar active + secondary hover เท่านั้น. **ห้ามใช้บน CTA fill** — primary CTA = `--vc-primary` (black) เสมอ
+>
+> **`--vc-purple` scope:** budget_manage page only
 
 ---
 
@@ -69,14 +89,23 @@
 | `--vc-accent-border` | `#C7D2FE` | tinted border |
 | `--vc-accent-ring` | `0 0 0 3px rgba(79,70,229,.18)` | focus ring |
 
-### Semantic Colors (Vercel palette)
-| ชื่อ | Base | Bg-tint | Border-tint | ใช้กับ |
+### Semantic Colors (Vercel palette) — used **outside** 60-30-10 budget
+| ชื่อ | Base | Bg-tint | Border-tint | ใช้กับ | Allowed surfaces |
+|---|---|---|---|---|---|
+| **Blue** (info / approved) | `--vc-blue` `#0070F3` | `--vc-blue-bg` (10%) | `--vc-blue-border` (25%) | สถานะอนุมัติ / informational | badge, dot, link |
+| **Amber** (warning / pending) | `--vc-amber` `#F5A623` | `--vc-amber-bg` (10%) | `--vc-amber-border` (25%) | รออนุมัติ / รอเบิก | badge, dot, KPI value (over-budget) |
+| **Red** (danger / error) | `--vc-red` `#EE0000` | `--vc-red-bg` (8%) | `--vc-red-border` (20%) | ปฏิเสธ / ลบ / over budget | badge, dot, delete button, error text |
+| **Green** (success / received) | `--vc-green` `#0F9D58` | `--vc-green-bg` (10%) | `--vc-green-border` (25%) | สำเร็จ / ได้เงิน | badge, dot |
+| **Purple** (scoped) | `--vc-purple` `#7928CA` | — | — | special highlight | **budget_manage page only** |
+
+> **Rule:** ห้ามใช้ semantic color เป็น background ของ surface ใหญ่ (card body, page bg). ใช้แค่ badge, dot, icon, text. ห้าม mix > 3 semantic colors ใน viewport เดียว
+
+### 60-30-10 Proportions
+| % | Role | Token | Hex | ตัวอย่าง |
 |---|---|---|---|---|
-| **Blue** (info / approved) | `--vc-blue` `#0070F3` | `--vc-blue-bg` (10%) | `--vc-blue-border` (25%) | สถานะอนุมัติ / informational |
-| **Amber** (warning / pending) | `--vc-amber` `#F5A623` | `--vc-amber-bg` (10%) | `--vc-amber-border` (25%) | รออนุมัติ / รอเบิก |
-| **Red** (danger / error) | `--vc-red` `#EE0000` | `--vc-red-bg` (8%) | `--vc-red-border` (20%) | ปฏิเสธ / ลบ / over budget |
-| **Green** (success / received) | `--vc-green` `#0F9D58` | `--vc-green-bg` (10%) | `--vc-green-border` (25%) | สำเร็จ / ได้เงิน |
-| **Purple** (optional accent) | `--vc-purple` `#7928CA` | — | — | special highlight (rare) |
+| **60%** | Page surface | `--vc-bg-subtle` | `#FAFAFA` | `<body>` / `main` background |
+| **30%** | Component surface | `--vc-bg` | `#FFFFFF` | card / sidebar / modal / table tbody |
+| **10%** | Signal (text + border + CTA) | `--vc-fg` + `--vc-border` + `--vc-primary` | `#000` / `#EAEAEA` / `#000` | heading, divider, primary button |
 
 ---
 
@@ -97,6 +126,19 @@
 | `--vc-text-xl` | 24px (page title) |
 | `--vc-text-2xl` | 32px (KPI value large) |
 | `--vc-text-3xl` | 48px (display) |
+
+### Font weight allowlist — **3 levels เท่านั้น**
+
+| Weight | Use | Examples |
+|---|---|---|
+| **400** | Body text, table cells, meta | paragraph, `td`, muted labels |
+| **500** | Medium emphasis, labels, nav, buttons, KPI label | label, nav-item, `.vc-btn`, overline |
+| **600** | Headings, KPI values, card titles, strong emphasis | h1-h3, `.vc-kpi-value`, `.vc-card-head-title` |
+
+**Banned:** `300`, `700`, `800`, `bold` keyword. Migration:
+- `font-weight: 700` → `600` (heading) หรือ `500` (caption emphasis)
+- `font-weight: 800` → `600`
+- `font-weight: 300` → `400`
 
 ### Letter-spacing
 | Token | Value | ใช้กับ |
@@ -123,6 +165,22 @@
 
 > Bootstrap utility (`p-3`, `gap-2`) ใช้ก่อน — ใช้ token เมื่อ custom layout เท่านั้น
 
+### Spacing usage map (apply per context)
+
+| Context | Recommended | Token |
+|---|---|---|
+| Page top padding (`main`) | 24-32px | `--vc-space-6` / `-8` |
+| Card body padding | 16-24px | `--vc-space-4` / `-6` |
+| Card head ↔ body gap | 12-16px | `--vc-space-3` / `-4` |
+| KPI cell padding | 16px | `--vc-space-4` |
+| Form field gap (between) | 12-16px | `--vc-space-3` / `-4` |
+| Inline gap (icon ↔ text) | 6-8px | `--vc-space-2` |
+| Section gap (between cards) | 16-24px | `--vc-space-4` / `-6` |
+| Modal padding | 20-24px | `--vc-space-5` / `-6` |
+| Empty state padding-y | 48px | `--vc-space-12` |
+
+**Hard rule:** ห้าม `padding < 8px` (`--vc-space-2`) บน interactive element (button/input/row). Touch target ≥ 32×32px
+
 ---
 
 ## 5. Border Radius
@@ -137,15 +195,29 @@
 
 ---
 
-## 6. Shadow
+## 6. Shadow — STRICT no-shadow rule
 
-**ไม่มี shadow** — ใช้ border (`--vc-border`) แทน
+**ไม่มี shadow ใดๆ** — แม้ `0 1px 2px rgba(...)` ที่ดู "เบา" ก็ห้าม. Modal/popover ใช้ border + overlay เท่านั้น
 
+**Allowed exception (เดียว):** focus ring สำหรับ accessibility
 ```css
-/* เดียวที่ได้รับอนุญาต = focus ring */
 --vc-focus-ring: 0 0 0 2px var(--vc-bg), 0 0 0 4px var(--vc-fg);
 --vc-accent-ring: 0 0 0 3px rgba(79,70,229,.18);  /* focus state สำหรับ accent element */
 ```
+
+### Border system per surface
+
+| Surface | Border | Radius |
+|---|---|---|
+| Card (`vc-card`) | `1px solid --vc-border` | `--vc-radius-sm` (6px) |
+| Input | `1px solid --vc-border` → focus `--vc-accent` + ring | `--vc-radius-xs` (4px) |
+| Modal | `1px solid --vc-border` + overlay `rgba(9,9,11,.4)` | `--vc-radius-md` (8px) |
+| Button (secondary/ghost) | `1px solid --vc-border` → hover `--vc-border-hover` | `--vc-radius-xs` (4px) |
+| Badge | `1px solid` semantic-border | `--vc-radius-xs` |
+| Pill / avatar | none หรือ 1px | `--vc-radius-full` |
+| Calendar cell | `1px solid --vc-border` (right + bottom only) | 0 |
+| Table row | `1px solid --vc-border` (bottom only, `last-child` remove) | 0 |
+| KPI cell divider | `1px solid --vc-border` (between cells) | inherit |
 
 ---
 
@@ -274,7 +346,22 @@
 </form>
 ```
 
-### 9.9 Alert (ds-alert — page-level flash messages)
+### 9.9 Modal (vc-modal)
+- Container: `--vc-bg` · `1px solid --vc-border` · radius `--vc-radius-md` (8px) · **NO shadow**
+- Overlay: `rgba(9,9,11,.4)` (no blur required)
+- Padding: `--vc-space-6` (24px)
+- Header: border-bottom `--vc-border` · padding-bottom `--vc-space-4`
+- Footer: border-top `--vc-border` · padding-top `--vc-space-4` · `flex justify-end gap --vc-space-2`
+- Close: `vc-btn-ghost` 32×32 พร้อม lucide `x`
+
+### 9.10 Calendar Cell (rendered by vehicle.js)
+Reference: [vehicle-warm-mockup.html](../design/vehicle-warm-mockup.html) lines 290-335
+- `.calendar-cell`: `border-right + border-bottom: 1px solid --vc-border` · `padding: 8px` · `gap: 4px` · flat (no shadow/radius per cell)
+- `.date-number` (today): `border: 1.5px solid --vc-fg` · transparent bg · weight 600 — **border-only, not filled**
+- `.event-card`: border 1px `--vc-border` · radius `--vc-radius-sm` · padding `5px 8px` · `--vc-text-xs` · hover เปลี่ยน `border-color` เป็น `--vc-fg-subtle` (ห้าม shadow/transform)
+- Status: 6px dot ใน `--vc-{green|amber|red|blue}` — ไม่ใช้สีพื้น chip
+
+### 9.11 Alert (ds-alert — page-level flash messages)
 > `.ds-alert*` ยังใช้ได้สำหรับ Flask flash messages (global ใน design-system.css) — ไม่ต้อง migrate. กฎ "ไม่ใช้ ds-*" ใช้กับ **token references** เป็นหลัก ไม่ใช่ class name ของ component ที่ยังไม่ migrate
 
 ```html
@@ -344,16 +431,35 @@
 
 ## 13. Do & Don't
 
-| Do ✅ | Don't ❌ |
-|---|---|
-| ใช้ `--vc-*` token ทุกครั้ง | hardcode hex color · ใช้ `--ds-*` ใหม่ |
-| `vc-card` เป็น surface ใน vc-scope | สร้าง `<div style="background:#fff;">` |
-| Lucide icon ใน vc-scope | mix lucide + FA ในหน้าเดียว |
-| Border แทน shadow | `box-shadow` ใดๆ ยกเว้น focus |
-| Radius 4–8px (`--vc-radius-xs/sm/md`) | `border-radius > 12px` (ยกเว้น pill `-full`) |
-| Sarabun ทุก UI element | ผสม font หลายตระกูล |
-| `.table-responsive` ครอบ `vc-table` ทุกครั้ง | table ไม่มี responsive wrapper |
-| Flat vocab `vc-badge-success` | BEM `vc-badge--success` |
+### Do ✅
+- ใช้ `var(--vc-*)` token ทุก color/spacing/radius reference
+- Border 1px เป็น default; ไม่มี `box-shadow` ใดๆ ยกเว้น focus ring
+- Surface 3 ระดับเท่านั้น: `--vc-bg-subtle` (page) → `--vc-bg` (card) → `--vc-bg-hover` (row hover)
+- **1 element = 1 size + 1 weight + 1 color**
+- Font weight อนุญาตเฉพาะ **400 / 500 / 600**
+- Primary CTA = **1 ปุ่มต่อหน้า** (`--vc-primary` black). Secondary action ใช้ border-only
+- Radius: 4px (button/badge/input), 6px (card), 8px (modal), 9999px (pill/avatar)
+- Lucide icon ใน `.vc-scope`, Font Awesome เฉพาะ legacy pages
+- Numeric/money cells ใช้ `vc-mono` utility (tabular-nums)
+- Touch target ≥ 32×32px
+- Spacing token > literal pixel ทุกครั้ง
+- `.table-responsive` ครอบ `vc-table` ทุกครั้ง
+- Flat vocab `vc-badge-success` (ไม่ใช้ BEM `--`)
+
+### Don't ❌
+- ห้าม `box-shadow` ใดๆ — รวม `0 1px 2px rgba(...)` ที่ดู "เบา" ก็ห้าม (ยกเว้น focus ring)
+- ห้าม `border-left: Npx solid <accent>` บน card/KPI/alert (AI-dashboard tell)
+- ห้าม `font-weight: 700 / 800 / 300` — รวม `bold` keyword
+- ห้ามใช้ indigo (`--vc-accent`) เป็น background fill ของปุ่ม CTA (จะดู Material/Bootstrap-default)
+- ห้าม mix > 3 semantic colors ใน viewport เดียว
+- ห้าม `border-radius > 12px` (ยกเว้น pill `--vc-radius-full`)
+- ห้ามผสม Lucide + Font Awesome ในหน้าเดียวกัน
+- ห้าม inline `style="..."` ใน template — ย้ายไป CSS class
+- ห้ามสร้าง token ใหม่ (`--my-*`, `--ds-*`) — ใช้ `--vc-*` อย่างเดียว
+- ห้าม `padding < 8px` บน interactive element
+- ห้าม hex literal ใน CSS rule (เช่น `color: #666`) — ใช้ token
+- ห้าม zebra-striped table, gradient background, glow effect
+- ห้าม vertical borders ระหว่าง column ใน table (horizontal line อย่างเดียว)
 
 ---
 
@@ -392,3 +498,38 @@
 | `--ds-sidebar-width` / `-header-height` / `-transition` | (no vc equivalent yet — keep) | layout tokens |
 
 > **Phase 5 cleanup plan:** เพิ่ม `--vc-z-*` + `--vc-sidebar-width` ฯลฯ ก่อน batch-replace + delete Part A ของ tokens.css
+
+---
+
+## 15. Critical Fix List (2026-05-21 audit — apply per phase)
+
+ลำดับ priority สำหรับ Clean UI compliance:
+
+| # | File:line | Issue | Fix |
+|---|---|---|---|
+| 1 | `app/static/css/vehicle_admin.css:916` | `box-shadow: var(--vc-shadow-lg)` — token ไม่มีจริง (broken ref) | ลบบรรทัด |
+| 2 | `app/static/css/vehicle.css:303` | sidebar drawer shadow `4px 0 24px rgba(0,0,0,.18)` | แทนด้วย `border-right: 1px solid --vc-border` + overlay |
+| 3 | `app/static/css/vehicle.css:401` | `box-shadow: 0 1px 4px rgba(0,0,0,.04)` | ลบ shadow, เพิ่ม `border: 1px solid --vc-border` |
+| 4 | `app/static/css/main.css:258, 269, 276` | Glow shadow `0px 0px 70px 25px` (legacy login decoration) | ลบทั้งหมด |
+| 5 | `app/static/css/fuel_admin.css:548, 637, 680` | Modal/toast shadows | แทนด้วย border + radius |
+| 6 | `app/static/css/vehicle_admin.css:177, 586, 740` | `font-weight: 800` | → `600` |
+| 7 | `app/static/css/vercel.css:71` | `font-weight: 300` (breadcrumb sep) | → `400` |
+| 8 | `app/static/css/notification.css:416` | `border-left: 2px solid` accent strip | → `border-bottom` หรือ `border-top` |
+| 9 | `docs/design/vehicle-warm-mockup.html:354` | `.evt:hover { box-shadow }` ใน mockup เอง | port เป็น `border-color` hover เท่านั้น |
+| 10 | Audit ทั่ว codebase | `border-radius > 12px` | ลดเหลือ 4/6/8/full |
+
+**Migration strategy:** ทำเป็น phase ทีละไฟล์ (เริ่ม vehicle_admin.css — broken token + 3 weight-800). ห้าม batch-replace ทั้งหมดในครั้งเดียว
+
+---
+
+## 16. Open Question Decisions (2026-05-21)
+
+จาก ux-designer audit, ตัดสินแล้ว:
+
+| Q | Decision | Rationale |
+|---|---|---|
+| **Indigo `#4F46E5` เก็บหรือทิ้ง?** | **เก็บ** | scope = focus ring + sidebar active + secondary hover เท่านั้น. ห้ามใช้บน CTA fill (primary = `--vc-primary` black) — รักษา brand recognition โดยไม่ทำให้ดู Material |
+| **`--vc-purple` ลบไหม?** | **เก็บ scope** | ใช้แค่ budget_manage page. หน้าอื่นถ้าต้อง highlight ใช้ `--vc-blue` แทน |
+| **Mockup shadow on `.evt:hover`** | **ลบ** | ยึดกฎ no-shadow strict. ใช้ `border-color: --vc-fg-subtle` hover แทน |
+| **Font weight 700→600 migration** | **Phase per file** | เริ่ม `vehicle_admin.css` (มี weight 800 + broken token), ตามด้วยไฟล์ที่มี 700. ห้าม batch-replace |
+| **Mobile sidebar shadow** | **ลบ** | แทนด้วย `border-right: 1px solid --vc-border` + overlay `rgba(0,0,0,.4)`. Material-style drawer shadow ไม่เข้ากับ Vercel aesthetic |

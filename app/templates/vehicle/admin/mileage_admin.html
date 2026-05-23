@@ -42,7 +42,7 @@
             {% endwith %}
 
             {# ── Page Header ────────────────────────────── #}
-            <div class="fuel-header">
+            <div class="fuel-header d-flex align-items-end justify-content-between flex-wrap gap-3 mb-4 pt-3">
                 <div>
                     <h1 class="fuel-title">บันทึกเลขไมล์</h1>
                     <p class="fuel-subtitle">ติดตามไมล์ออก-กลับ · คำนวณค่าน้ำมัน · กรอง+export</p>
@@ -53,106 +53,60 @@
                         รอกรอก {{ missing_count }} รายการ
                     </span>
                     {% endif %}
-                    <a href="{{ url_for('vehicle.mileage_export') }}" id="exportLink" class="vc-btn vc-btn-secondary">
-                        <i data-lucide="download" class="vc-icon-sm"></i>
-                        Export Excel
-                    </a>
                 </div>
             </div>
 
-            {# ── KPI Cards (4 cells) ─────────────────────── #}
-            <div class="vc-card va-kpi-card" style="margin-bottom: var(--vc-space-4);">
-                <div class="vc-kpi-group va-kpi-4">
+            {# ── Filter Toolbar (Arto+ inspired) ─────────── #}
+            {% set has_adv_filter = f.vehicle_id or f.driver_id or f.booker_q or f.budget_type or f.budget_sub or f.cost_min or f.cost_max %}
+            <form method="get" action="{{ url_for('vehicle.mileage_log') }}" class="mlg-toolbar" id="filterForm">
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="wallet" class="vc-icon-sm"></i>
-                            ค่าน้ำมันเดือนนี้
-                        </p>
-                        <p class="vc-kpi-value">
-                            {{ '{:,.0f}'.format(month_total_cost) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">{{ TH_MONTH_FULL[curr_month-1] }} {{ curr_year + 543 }}</p>
+                {# Row 1: date · status chips · actions #}
+                <div class="mlg-toolbar-row">
+
+                    {# Left: date preset + custom range #}
+                    <div class="mlg-toolbar-left">
+                        <select id="datePreset" class="vc-filter-select mlg-date-preset" aria-label="ช่วงเวลา">
+                            <option value="month">เดือนนี้</option>
+                            <option value="7d">7 วันล่าสุด</option>
+                            <option value="30d">30 วันล่าสุด</option>
+                            <option value="all" {% if f.show_all %}selected{% endif %}>ทั้งหมด</option>
+                            <option value="custom">กำหนดเอง</option>
+                        </select>
+                        <div class="mlg-date-range" id="dateRangeGroup">
+                            <input type="date" name="date_start" value="{{ f.date_start }}" class="vc-filter-select mlg-date-input" aria-label="จากวันที่">
+                            <span class="mlg-date-sep">–</span>
+                            <input type="date" name="date_end" value="{{ f.date_end }}" class="vc-filter-select mlg-date-input" aria-label="ถึงวันที่">
+                        </div>
+                        <input type="hidden" name="show_all" id="showAllInput" value="{{ '1' if f.show_all else '' }}">
                     </div>
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="target" class="vc-icon-sm"></i>
-                            งบประมาณทั้งปี
-                        </p>
-                        <p class="vc-kpi-value">
-                            {{ '{:,.0f}'.format(total_budget) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">รวมส่วนกลาง + กอง</p>
+                    {# Center: status chips (submit on click via JS) #}
+                    <div class="mlg-status-chips" role="tablist" aria-label="กรองสถานะ">
+                        <button type="button" class="mlg-chip {% if not f.status_filter %}is-active{% endif %}" data-status="" role="tab">ทั้งหมด</button>
+                        <button type="button" class="mlg-chip mlg-chip--neutral {% if f.status_filter=='none' %}is-active{% endif %}" data-status="none" role="tab">รอกรอก</button>
+                        <button type="button" class="mlg-chip mlg-chip--warning {% if f.status_filter=='partial' %}is-active{% endif %}" data-status="partial" role="tab">รอกลับ</button>
+                        <button type="button" class="mlg-chip mlg-chip--success {% if f.status_filter=='complete' %}is-active{% endif %}" data-status="complete" role="tab">ครบ</button>
                     </div>
+                    <input type="hidden" name="status_filter" id="statusFilter" value="{{ f.status_filter }}">
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="trending-up" class="vc-icon-sm"></i>
-                            ใช้ไปแล้ว
-                        </p>
-                        <p class="vc-kpi-value vc-kpi-value--muted">
-                            {{ '{:,.0f}'.format(total_used) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">
-                            {% if total_budget > 0 %}
-                                {{ '{:.1f}'.format(total_used/total_budget*100) }}% ของงบ
-                            {% else %}—{% endif %}
-                        </p>
+                    {# Right: export + advanced filter #}
+                    <div class="mlg-toolbar-right">
+                        <a href="{{ url_for('vehicle.mileage_export') }}" id="exportLink" class="vc-btn vc-btn-secondary vc-btn-sm">
+                            <i data-lucide="download" class="vc-icon-sm"></i> Export
+                        </a>
+                        <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm mlg-adv-btn {% if has_adv_filter %}is-active{% endif %}" id="advFilterBtn" aria-expanded="{{ 'true' if has_adv_filter else 'false' }}" aria-controls="advSheet">
+                            <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i> Filter
+                            {% if has_adv_filter %}<span class="mlg-adv-dot" aria-hidden="true"></span>{% endif %}
+                        </button>
                     </div>
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="piggy-bank" class="vc-icon-sm"></i>
-                            คงเหลือ
-                        </p>
-                        <p class="vc-kpi-value vc-kpi-value--success">
-                            {{ '{:,.0f}'.format(total_remaining) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">
-                            {% if pending_personal_count > 0 %}
-                                <i data-lucide="hand-coins" class="vc-icon-sm"></i>
-                                personal รอเบิก {{ pending_personal_count }}
-                            {% else %}
-                                ไม่มีรอเบิก personal
-                            {% endif %}
-                        </p>
-                    </div>
-
                 </div>
-            </div>
 
-            {# ── Filter Bar ─────────────────────────────── #}
-            <form method="get" action="{{ url_for('vehicle.mileage_log') }}" class="vc-filter-bar mlg-filter-bar" id="filterForm">
-
-                {# Section 1: ช่วงเวลา #}
-                <section class="mlg-filter-section">
-                    <h4 class="mlg-filter-section-title">
-                        <i data-lucide="calendar" class="vc-icon-sm"></i>
-                        ช่วงเวลา
-                    </h4>
-                    <div class="mlg-filter-section-body">
+                {# Row 2: advanced filter sheet (collapsible) #}
+                <div class="mlg-adv-sheet" id="advSheet" {% if not has_adv_filter %}hidden{% endif %}>
+                    <div class="mlg-adv-grid">
                         <div class="vc-filter-group">
-                            <span class="vc-filter-label">จากวันที่</span>
-                            <input type="date" name="date_start" value="{{ f.date_start }}" class="vc-filter-select mlg-filter-date">
-                        </div>
-                        <div class="vc-filter-group">
-                            <span class="vc-filter-label">ถึงวันที่</span>
-                            <input type="date" name="date_end" value="{{ f.date_end }}" class="vc-filter-select mlg-filter-date">
-                        </div>
-                    </div>
-                </section>
-
-                {# Section 2: ค้นหา #}
-                <section class="mlg-filter-section">
-                    <h4 class="mlg-filter-section-title">
-                        <i data-lucide="search" class="vc-icon-sm"></i>
-                        ค้นหา
-                    </h4>
-                    <div class="mlg-filter-section-body">
-                        <div class="vc-filter-group flex-grow-1">
                             <span class="vc-filter-label">รถ</span>
-                            <select name="vehicle_id" class="vc-filter-select" style="min-width:130px;">
+                            <select name="vehicle_id" class="vc-filter-select">
                                 <option value="">ทั้งหมด</option>
                                 {% for v in vehicles_all %}
                                 <option value="{{ v.id }}" {% if f.vehicle_id == v.id %}selected{% endif %}>
@@ -161,38 +115,28 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="vc-filter-group flex-grow-1">
+                        <div class="vc-filter-group">
                             <span class="vc-filter-label">คนขับ</span>
-                            <select name="driver_id" class="vc-filter-select" style="min-width:130px;">
+                            <select name="driver_id" class="vc-filter-select">
                                 <option value="">ทั้งหมด</option>
                                 {% for d in drivers_all %}
                                 <option value="{{ d.id }}" {% if f.driver_id == d.id %}selected{% endif %}>{{ d.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="vc-filter-group flex-grow-1">
+                        <div class="vc-filter-group">
                             <span class="vc-filter-label">ผู้จอง</span>
                             <input type="text" name="booker_q" value="{{ f.booker_q }}" list="bookersList"
-                                   class="vc-filter-select mlg-filter-booker" placeholder="ค้นหาชื่อ…">
+                                   class="vc-filter-select" placeholder="ค้นหาชื่อ…">
                             <datalist id="bookersList">
                                 {% for u in bookers_all %}
                                 <option value="{{ u.full_name or u.username }}"></option>
                                 {% endfor %}
                             </datalist>
                         </div>
-                    </div>
-                </section>
-
-                {# Section 3: งบประมาณ #}
-                <section class="mlg-filter-section">
-                    <h4 class="mlg-filter-section-title">
-                        <i data-lucide="wallet" class="vc-icon-sm"></i>
-                        งบประมาณ
-                    </h4>
-                    <div class="mlg-filter-section-body">
                         <div class="vc-filter-group">
                             <span class="vc-filter-label">งบ</span>
-                            <select name="budget_type" id="filterBudgetType" class="vc-filter-select" style="min-width:120px;">
+                            <select name="budget_type" id="filterBudgetType" class="vc-filter-select">
                                 <option value="">ทั้งหมด</option>
                                 <option value="central"    {% if f.budget_type=='central'    %}selected{% endif %}>ส่วนกลาง</option>
                                 <option value="department" {% if f.budget_type=='department' %}selected{% endif %}>ส่วนกอง</option>
@@ -201,57 +145,28 @@
                         </div>
                         <div class="vc-filter-group" id="filterBudgetSubWrap">
                             <span class="vc-filter-label">หมวด/กอง</span>
-                            <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select" style="min-width:160px;">
+                            <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select">
                                 <option value="">ทั้งหมด</option>
                             </select>
                         </div>
-                    </div>
-                </section>
-
-                {# Section 4: สถานะ + ค่าใช้จ่าย #}
-                <section class="mlg-filter-section">
-                    <h4 class="mlg-filter-section-title">
-                        <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i>
-                        สถานะ + ค่าใช้จ่าย
-                    </h4>
-                    <div class="mlg-filter-section-body">
                         <div class="vc-filter-group">
-                            <span class="vc-filter-label">สถานะ</span>
-                            <select name="status_filter" class="vc-filter-select">
-                                <option value="">ทั้งหมด</option>
-                                <option value="complete" {% if f.status_filter=='complete' %}selected{% endif %}>ครบ</option>
-                                <option value="partial"  {% if f.status_filter=='partial'  %}selected{% endif %}>รอกลับ</option>
-                                <option value="none"     {% if f.status_filter=='none'     %}selected{% endif %}>รอกรอก</option>
-                            </select>
-                        </div>
-                        <div class="vc-filter-group">
-                            <span class="vc-filter-label">ค่าน้ำมันต่ำสุด (฿)</span>
-                            <input type="number" name="cost_min" value="{{ f.cost_min }}" min="0" step="10"
-                                   class="vc-filter-select mlg-filter-num" placeholder="0">
-                        </div>
-                        <div class="vc-filter-group">
-                            <span class="vc-filter-label">ค่าน้ำมันสูงสุด (฿)</span>
-                            <input type="number" name="cost_max" value="{{ f.cost_max }}" min="0" step="10"
-                                   class="vc-filter-select mlg-filter-num" placeholder="∞">
+                            <span class="vc-filter-label">ค่าน้ำมัน (฿)</span>
+                            <div class="mlg-range-pair">
+                                <input type="number" name="cost_min" value="{{ f.cost_min }}" min="0" step="10"
+                                       class="vc-filter-select" placeholder="ต่ำสุด">
+                                <span class="mlg-range-sep">–</span>
+                                <input type="number" name="cost_max" value="{{ f.cost_max }}" min="0" step="10"
+                                       class="vc-filter-select" placeholder="สูงสุด">
+                            </div>
                         </div>
                     </div>
-                </section>
-
-                {# Actions row #}
-                <div class="mlg-filter-actions-row">
-                    <a href="{{ url_for('vehicle.mileage_log') }}" class="vc-btn vc-btn-ghost vc-btn-sm" title="รีเซต (เดือนนี้)">
-                        เฉพาะเดือนนี้
-                    </a>
-                    <a href="{{ url_for('vehicle.mileage_log') }}?show_all=1"
-                       class="vc-btn vc-btn-ghost vc-btn-sm {% if f.show_all %}active{% endif %}" title="ดูทุกรายการ">
-                        ทั้งหมด
-                    </a>
-                    <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm" title="กรอง">
-                        <i data-lucide="filter" class="vc-icon-sm"></i>
-                        กรอง
-                    </button>
+                    <div class="mlg-adv-actions">
+                        <a href="{{ url_for('vehicle.mileage_log') }}" class="vc-btn vc-btn-ghost vc-btn-sm">ล้างทั้งหมด</a>
+                        <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
+                            <i data-lucide="check" class="vc-icon-sm"></i> นำไปใช้
+                        </button>
+                    </div>
                 </div>
-
             </form>
 
             {# ── Summary Strip ──────────────────────────── #}

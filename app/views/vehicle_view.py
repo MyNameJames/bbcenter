@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app
 from flask_login import login_required, current_user
-from models import db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage, SystemConfig, VehicleBudget, VehicleDepartment, BudgetType, Notification, DeptApprover, OTRateConfig, DriverOT, DriverOTSlot, FuelPrice, FuelBill
+from models import db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage, SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment, BudgetType, Notification, DeptApprover, OTRateConfig, DriverOT, DriverOTSlot, FuelPrice, FuelBill, RepairTicket, MaintenanceTicket, RoomBooking
 from sqlalchemy import and_, extract, or_, func
 from datetime import datetime, date, timedelta
-from views.telegram_service import (notify_approved, notify_forwarded_to_approver, notify_approver_approved, notify_rejected)
+from views.telegram_service import (notify_approved, notify_forwarded_to_approver, notify_approver_approved, notify_rejected,
+                                    notify_cancelled            as tg_notify_cancelled)
 from views.notification_service import (
     notify_booking_created      as _n_booking_created,
     notify_admin_assigned       as _n_admin_assigned,
@@ -18,6 +19,7 @@ from views.notification_service import (
     notify_payment_required     as _n_payment_required,
     notify_admin_deleted        as _n_admin_deleted,
     notify_payment_confirmed    as _n_payment_confirmed,
+    notify_user_cancelled       as _n_user_cancelled,
 )
 from services import budget_service as budget_svc
 import os, time
@@ -77,6 +79,11 @@ def index():
         drivers=drivers,
         expense_categories=EXPENSE_CATEGORIES,
         total_vehicles=len(vehicles),
+        page_section='บริการ',
+        page_title='ปฏิทินการจองรถ',
+        # Phase 9 (2026-05-22) — `canCancel` gating needs admin + now
+        now=datetime.now(),
+        is_vehicle_admin=is_vehicle_admin(),
     )
 
 
@@ -216,6 +223,133 @@ def delete_booking(booking_id):
     except Exception as e:
         db.session.rollback()
         flash(f'เกิดข้อผิดพลาดในการลบ: {str(e)}', 'danger')
+
+    return redirect(url_for('vehicle.index'))
+
+
+# ─────────────────────────────────────────────
+# Phase 9 (2026-05-22) — Cancel booking (soft, status='cancelled')
+# C1: User+Admin can cancel pending/waiting_approver/approved bookings
+# Time guard: must be BEFORE booking.start_datetime
+# ─────────────────────────────────────────────
+@vehicle_bp.route('/vehicle/cancel/<int:booking_id>', methods=['POST'])
+@login_required
+def cancel_booking(booking_id):
+    """C1 — Soft cancel approved/pending/waiting_approver booking. Row kept for audit."""
+    booking = VehicleBooking.query.get_or_404(booking_id)
+
+    # Permission: owner OR admin
+    is_owner = (current_user.id == booking.user_id)
+    is_admin = is_vehicle_admin()
+    if not (is_owner or is_admin):
+        flash('คุณไม่มีสิทธิ์ยกเลิกการจองนี้', 'danger')
+        return redirect(url_for('vehicle.index'))
+
+    # Status guard
+    if booking.status not in ('pending', 'waiting_approver', 'approved'):
+        flash(f'ยกเลิกไม่ได้ — สถานะปัจจุบันคือ {booking.status}', 'warning')
+        return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
+
+    # Time guard — block หลัง trip start
+    if datetime.now() >= booking.start_datetime:
+        flash('ทริปเริ่มแล้ว ไม่สามารถยกเลิกได้ — ติดต่อ Admin หากจำเป็น', 'warning')
+        return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
+
+    try:
+        prev_status = booking.status
+
+        # ── Refund budget (idempotent — no-op ถ้ายังไม่เคยหัก)
+        refunds = budget_svc.refund_for_booking(
+            booking,
+            note=f'cancel booking #{booking.id} by {current_user.username}',
+        )
+        db.session.flush()
+
+        # ── Build recipient sets BEFORE status flip
+        # Priority cascade (highest → lowest): owner > admin > approver > driver > mate
+        # ทุก lower-priority set จะ discard user_id ที่อยู่ใน higher-priority set แล้ว
+        # → ทุก user_id ได้รับ notification เพียง 1 ใบเท่านั้น (role_label = highest priority)
+        already_notified = set()
+        already_notified.add(current_user.id)  # canceler never notifies themselves
+
+        # 1) Owner (priority #1) — only if admin cancels someone else's booking
+        owner_notify_id = booking.user_id if (is_admin and not is_owner) else None
+        if owner_notify_id and owner_notify_id not in already_notified:
+            already_notified.add(owner_notify_id)
+        else:
+            owner_notify_id = None  # ป้องกัน double-notify ถ้า owner = canceler
+
+        # 2) Admin user_ids (priority #2)
+        admin_user_ids = {u.id for u in User.query.filter(
+            or_(User.role_vehicle == 'admin', User.is_superadmin.is_(True))
+        ).all()}
+        admin_user_ids -= already_notified
+        already_notified |= admin_user_ids
+
+        # 3) Approver user_ids (priority #3) — only if booking went through approver flow
+        approver_user_ids = set()
+        if booking.trip_department_id and prev_status in ('waiting_approver', 'approved'):
+            apv_rows = DeptApprover.query.filter_by(
+                dept_id=booking.trip_department_id).all()
+            approver_user_ids = {r.user_id for r in apv_rows} - already_notified
+            already_notified |= approver_user_ids
+
+        # 4) Driver-as-user (priority #4) — if driver.user_id linked
+        driver_user_id = None
+        if booking.driver_id and booking.driver and booking.driver.user_id:
+            cand = booking.driver.user_id
+            if cand not in already_notified:
+                driver_user_id = cand
+                already_notified.add(cand)
+
+        # 5) Trip mates (priority #5) — other user_ids in same trip_group
+        trip_mate_user_ids = set()
+        if booking.trip_group:
+            mate_rows = VehicleBooking.query.filter(
+                VehicleBooking.trip_group == booking.trip_group,
+                VehicleBooking.id != booking.id,
+            ).all()
+            trip_mate_user_ids = {m.user_id for m in mate_rows if m.user_id} - already_notified
+            already_notified |= trip_mate_user_ids
+
+        # ── Notify (in-app) — ลำดับตาม priority
+        if owner_notify_id:
+            _n_user_cancelled(user_id=owner_notify_id, booking=booking,
+                              cancelled_by=current_user, role_label='owner')
+
+        for uid in admin_user_ids:
+            _n_user_cancelled(user_id=uid, booking=booking,
+                              cancelled_by=current_user, role_label='admin')
+
+        for uid in approver_user_ids:
+            _n_user_cancelled(user_id=uid, booking=booking,
+                              cancelled_by=current_user, role_label='approver')
+
+        if driver_user_id:
+            _n_user_cancelled(user_id=driver_user_id, booking=booking,
+                              cancelled_by=current_user, role_label='driver')
+
+        for uid in trip_mate_user_ids:
+            _n_user_cancelled(user_id=uid, booking=booking,
+                              cancelled_by=current_user, role_label='mate')
+
+        # ── Soft cancel — flip status, row kept
+        booking.status = 'cancelled'
+        booking.updated_by = current_user.id
+
+        # ── Telegram — delete old (approved/assigned msg) + send cancel
+        # Pattern matches approve_booking — let exception abort txn (consistent w/ project convention)
+        tg_notify_cancelled(booking, current_user)
+
+        db.session.commit()
+
+        if refunds:
+            flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย · คืนงบ {len(refunds)} รายการ', 'success')
+        else:
+            flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'ยกเลิกไม่สำเร็จ: {e}', 'danger')
 
     return redirect(url_for('vehicle.index'))
 
@@ -572,11 +706,484 @@ def api_notifications():
                 g['unread_count'] += 1
             if g['latest'] is None:
                 g['latest'] = d
+                g['_sort_dt'] = n.created_at  # raw datetime for sorting (DD/MM/YYYY string sort broken)
         else:
             loose_items.append(d)
 
+    # ══════════════════════════════════════════════════════════
+    # Stage tracker — 3 roles: user > approver > admin
+    # ══════════════════════════════════════════════════════════
+    # Role detection (global)
+    is_admin_role = (current_user.role_vehicle == 'admin') or current_user.is_superadmin
+    approver_dept_ids = {d.dept_id for d in DeptApprover.query.filter(
+        DeptApprover.user_id == current_user.id
+    ).all()}
+
+    # ── Synthetic groups (approver/admin) — booking ที่ไม่มี notif target current_user
+    if approver_dept_ids or is_admin_role:
+        existing_bids = set(groups_map.keys())
+        synth_bids = set()
+
+        if approver_dept_ids:
+            approver_synth = (VehicleBooking.query
+                              .filter(VehicleBooking.trip_department_id.in_(approver_dept_ids),
+                                      VehicleBooking.status.in_(['waiting_approver', 'approved', 'rejected']),
+                                      VehicleBooking.created_at >= cutoff_90d,
+                                      VehicleBooking.is_ad_hoc == False)
+                              .order_by(VehicleBooking.updated_at.desc().nullslast(),
+                                        VehicleBooking.created_at.desc())
+                              .limit(50).all())
+            for b in approver_synth:
+                if b.id not in existing_bids:
+                    synth_bids.add(b.id)
+
+        if is_admin_role:
+            admin_synth = (VehicleBooking.query
+                           .filter(VehicleBooking.created_at >= (now - timedelta(days=60)),
+                                   VehicleBooking.is_ad_hoc == False,
+                                   VehicleBooking.status.in_(['pending', 'waiting_approver', 'approved']))
+                           .order_by(VehicleBooking.updated_at.desc().nullslast(),
+                                     VehicleBooking.created_at.desc())
+                           .limit(50).all())
+            for b in admin_synth:
+                if b.id not in existing_bids:
+                    synth_bids.add(b.id)
+
+        if synth_bids:
+            synth_bookings = VehicleBooking.query.filter(VehicleBooking.id.in_(synth_bids)).all()
+            for b in synth_bookings:
+                groups_map[b.id] = {
+                    'booking_id':   b.id,
+                    'booking_title': b.destination or f'คำขอ #{b.id}',
+                    'items':        [],
+                    'unread_count': 0,
+                    'latest':       None,
+                    'is_synthetic': True,
+                }
+
     groups = list(groups_map.values())
-    groups.sort(key=lambda g: g['latest']['created_at'] if g['latest'] else '', reverse=True)
+
+    # ── Bulk fetch — สำหรับทุก booking ใน groups (ไม่จำกัด role) ──
+    all_booking_ids = [g['booking_id'] for g in groups if g['booking_id']]
+    booking_map = {}
+    mileage_map = {}
+    log_map = {}
+    notifs_by_booking = {}
+    mates_by_group = {}
+    mate_users = {}
+    updater_users = {}
+
+    if all_booking_ids:
+        all_bookings = VehicleBooking.query.filter(
+            VehicleBooking.id.in_(all_booking_ids)
+        ).all()
+        booking_map = {b.id: b for b in all_bookings}
+
+        mileages = VehicleMileage.query.filter(
+            VehicleMileage.booking_id.in_(all_booking_ids)
+        ).all()
+        mileage_map = {m.booking_id: m for m in mileages}
+
+        logs = (VehicleBudgetLog.query
+                .filter(VehicleBudgetLog.booking_id.in_(all_booking_ids),
+                        VehicleBudgetLog.event_type == 'deduct')
+                .order_by(VehicleBudgetLog.created_at.desc())
+                .all())
+        for log in logs:
+            if log.booking_id not in log_map:
+                log_map[log.booking_id] = log
+
+        # All notifications for these bookings (any user_id) — สำหรับ event timestamp
+        all_notifs = (Notification.query
+                      .filter(Notification.booking_id.in_(all_booking_ids))
+                      .order_by(Notification.created_at.asc())
+                      .all())
+        for n in all_notifs:
+            notifs_by_booking.setdefault(n.booking_id, []).append(n)
+
+        # Trip mates (สำหรับ user stage)
+        trip_groups_set = {b.trip_group for b in booking_map.values() if b.trip_group}
+        if trip_groups_set:
+            all_mates = (VehicleBooking.query
+                         .filter(VehicleBooking.trip_group.in_(trip_groups_set))
+                         .all())
+            mate_user_ids = {m.user_id for m in all_mates if m.user_id}
+            if mate_user_ids:
+                mate_users = {u.id: u for u in User.query.filter(User.id.in_(mate_user_ids)).all()}
+            for m in all_mates:
+                mates_by_group.setdefault(m.trip_group, []).append(m)
+
+        # Updater users (สำหรับ admin/approver stage actor names)
+        updater_ids = {b.updated_by for b in booking_map.values() if b.updated_by}
+        booking_owner_ids = {b.user_id for b in booking_map.values() if b.user_id}
+        all_user_ids = updater_ids | booking_owner_ids
+        if all_user_ids:
+            updater_users = {u.id: u for u in User.query.filter(User.id.in_(all_user_ids)).all()}
+
+    # ── Helpers ────────────────────────────────────────────────
+    def _fmt_ts(dt):
+        return dt.strftime('%d/%m/%Y %H:%M') if dt else ''
+
+    def _resolve_role(booking):
+        """Priority: user > approver > admin"""
+        if booking.user_id == current_user.id:
+            return 'user'
+        if booking.trip_department_id in approver_dept_ids:
+            return 'approver'
+        if is_admin_role:
+            return 'admin'
+        return None
+
+    def _extract_events(notifs):
+        """Map event_key → notification.created_at (asc-sorted input)."""
+        ev = {}
+        saw_forwarded = False
+        for n in notifs:
+            icon = n.icon or ''
+            cat  = n.category or ''
+            msg  = n.message or ''
+            if 'fa-calendar-plus' in icon:
+                ev.setdefault('booking_created', n.created_at)
+            elif 'fa-car' in icon:
+                ev.setdefault('admin_assigned', n.created_at)
+            elif 'fa-paper-plane' in icon:
+                ev.setdefault('forwarded', n.created_at)
+                saw_forwarded = True
+            elif 'fa-circle-check' in icon and cat == 'status':
+                if saw_forwarded:
+                    ev.setdefault('approver_approved', n.created_at)
+                else:
+                    ev.setdefault('admin_approved', n.created_at)
+            elif 'fa-circle-xmark' in icon:
+                if 'หัวหน้าแผนก' in msg:
+                    ev.setdefault('approver_rejected', n.created_at)
+                else:
+                    ev.setdefault('admin_rejected', n.created_at)
+            elif 'fa-link' in icon:
+                ev.setdefault('merged', n.created_at)
+            elif 'fa-flag-checkered' in icon:
+                ev.setdefault('mileage_end_notif', n.created_at)
+            elif 'fa-flag' in icon:
+                ev.setdefault('mileage_start_notif', n.created_at)
+            elif 'fa-sack-dollar' in icon:
+                ev.setdefault('budget_deducted', n.created_at)
+            elif 'fa-credit-card' in icon and cat == 'payment':
+                if 'ยืนยันแล้ว' in msg:
+                    ev.setdefault('payment_confirmed', n.created_at)
+                else:
+                    ev.setdefault('payment_required', n.created_at)
+        return ev
+
+    def _budget_label(log):
+        budget = log.budget if log else None
+        if not budget:
+            return ''
+        bt = (budget.budget_type.name if budget.budget_type else '').lower()
+        type_label = 'งบส่วนกลาง' if bt == 'central' else 'งบส่วนกอง'
+        dept_name = budget.department.name if budget.department else ''
+        return f'{type_label} - {dept_name}' if dept_name else type_label
+
+    def _plate_of(booking):
+        return booking.snap_vehicle_plate or (
+            booking.assigned_vehicle.license_plate if booking.assigned_vehicle else ''
+        )
+
+    # ── Stage builders ─────────────────────────────────────────
+    def _build_user_stages(booking, mileage, log, events):
+        stages = []
+        is_approved = booking.status == 'approved'
+        is_rejected = bool(events.get('admin_rejected') or events.get('approver_rejected'))
+
+        # Stage 0 (fallback): pending / forwarded — แสดงเฉพาะกรณียังไม่ approved และยังไม่ rejected
+        # เพื่อให้ booking ทุกสถานะมี stage อย่างน้อย 1 อัน (ไม่ตก fallback timeline)
+        if not is_approved and not is_rejected:
+            if events.get('forwarded'):
+                stages.append({
+                    'key': 'pending_approver', 'icon': 'send',
+                    'title': 'รอหัวหน้าแผนกอนุมัติ',
+                    'desc_main': booking.destination or '',
+                    'ts': _fmt_ts(events.get('forwarded')),
+                })
+            else:
+                stages.append({
+                    'key': 'pending', 'icon': 'clock',
+                    'title': 'รอ Admin พิจารณา',
+                    'desc_main': booking.destination or '',
+                    'ts': _fmt_ts(events.get('booking_created') or booking.created_at),
+                })
+        # Stage 1: approved
+        if booking.status == 'approved' and booking.updated_at:
+            plate = _plate_of(booking)
+            desc_main = f'อนุมัติรถ {plate}'.strip() if plate else 'อนุมัติคำขอจองรถ'
+            desc_sub = ''
+            if booking.trip_group:
+                names = []
+                for m in mates_by_group.get(booking.trip_group, []):
+                    if m.id == booking.id: continue
+                    u = mate_users.get(m.user_id)
+                    nm = (u.full_name if u else None) or m.contact_name
+                    if nm and nm not in names:
+                        names.append(nm)
+                if names:
+                    desc_sub = f'เดินทางร่วมกับ {", ".join(names)}'
+            ts = events.get('approver_approved') or events.get('admin_approved') or booking.updated_at
+            stages.append({
+                'key': 'approved', 'icon': 'check-circle-2',
+                'title': 'ได้รับการอนุมัติแล้ว',
+                'desc_main': desc_main, 'desc_sub': desc_sub,
+                'ts': _fmt_ts(ts),
+            })
+        # Stage 2: trip_start
+        if mileage and mileage.odometer_start is not None:
+            stages.append({
+                'key': 'trip_start', 'icon': 'play-circle',
+                'title': 'เริ่มเดินทาง',
+                'desc': f'เริ่มต้นที่ {mileage.odometer_start:,} กม.',
+                'ts': _fmt_ts(mileage.actual_start or events.get('mileage_start_notif') or mileage.created_at),
+            })
+        # Stage 3: trip_end
+        if mileage and mileage.odometer_end is not None:
+            distance = mileage.odometer_end - (mileage.odometer_start or 0)
+            stages.append({
+                'key': 'trip_end', 'icon': 'flag',
+                'title': 'เดินทางเสร็จสิ้น',
+                'desc': f'รวมระยะทาง {distance:,} กม.',
+                'ts': _fmt_ts(mileage.actual_end or events.get('mileage_end_notif')),
+            })
+        # Stage 4: budget
+        if log:
+            stages.append({
+                'key': 'budget', 'icon': 'wallet',
+                'title': 'ใช้งบประมาณ',
+                'desc_main': f'ใช้ ฿{abs(float(log.change_amount)):,.0f}',
+                'desc_sub': f'หักจาก {_budget_label(log)}' if _budget_label(log) else '',
+                'ts': _fmt_ts(log.created_at),
+            })
+        # Stage R (terminal): rejected — แสดงเป็น stage สุดท้ายถ้าถูกปฏิเสธ
+        if events.get('admin_rejected'):
+            stages.append({
+                'key': 'rejected', 'icon': 'x-circle',
+                'title': 'ถูกปฏิเสธโดย Admin',
+                'desc_main': booking.reject_reason or '',
+                'ts': _fmt_ts(events.get('admin_rejected')),
+            })
+        elif events.get('approver_rejected'):
+            stages.append({
+                'key': 'rejected', 'icon': 'x-circle',
+                'title': 'ถูกปฏิเสธโดยหัวหน้าแผนก',
+                'desc_main': booking.reject_reason or '',
+                'ts': _fmt_ts(events.get('approver_rejected')),
+            })
+        return stages
+
+    def _build_admin_stages(booking, mileage, log, events):
+        stages = []
+        owner = updater_users.get(booking.user_id) if booking.user_id else None
+        owner_name = (owner.full_name if owner else '') or 'ไม่ระบุ'
+
+        # Stage 1: created
+        ts = events.get('booking_created') or booking.created_at
+        stages.append({
+            'key': 'created', 'icon': 'inbox',
+            'title': 'คำขอเข้ามา',
+            'desc_main': f'คำขอจาก {owner_name}',
+            'desc_sub': booking.destination or '',
+            'ts': _fmt_ts(ts),
+        })
+        # Stage 2: assigned
+        if events.get('admin_assigned') or booking.assigned_vehicle_id:
+            plate = _plate_of(booking)
+            drv = booking.snap_driver_name or (booking.driver.name if booking.driver else '')
+            stages.append({
+                'key': 'assigned', 'icon': 'truck',
+                'title': 'มอบหมายรถ + คนขับ',
+                'desc_main': plate or 'รอกำหนดรถ',
+                'desc_sub': f'คนขับ: {drv}' if drv else '',
+                'ts': _fmt_ts(events.get('admin_assigned')),
+            })
+        # Stage 3: decision (admin approve เอง OR forward)
+        if events.get('forwarded'):
+            stages.append({
+                'key': 'forwarded', 'icon': 'send',
+                'title': 'ส่งต่อหัวหน้าแผนก',
+                'desc_main': booking.trip_department or booking.snap_department_name or '',
+                'ts': _fmt_ts(events.get('forwarded')),
+            })
+        elif events.get('admin_approved'):
+            updater = updater_users.get(booking.updated_by) if booking.updated_by else None
+            updater_name = (updater.full_name if updater else '') or 'Admin'
+            stages.append({
+                'key': 'admin_approved', 'icon': 'check-circle-2',
+                'title': 'อนุมัติโดย Admin',
+                'desc_main': updater_name,
+                'ts': _fmt_ts(events.get('admin_approved')),
+            })
+        elif events.get('admin_rejected'):
+            stages.append({
+                'key': 'admin_rejected', 'icon': 'x-circle',
+                'title': 'ปฏิเสธโดย Admin',
+                'desc_main': booking.reject_reason or '',
+                'ts': _fmt_ts(events.get('admin_rejected')),
+            })
+        # Stage 4: approver decision (เฉพาะกรณี waiting_approver → ...)
+        if events.get('approver_approved'):
+            updater = updater_users.get(booking.updated_by) if booking.updated_by else None
+            updater_name = (updater.full_name if updater else '') or 'หัวหน้าแผนก'
+            stages.append({
+                'key': 'approver_approved', 'icon': 'check-check',
+                'title': 'หัวหน้าแผนกอนุมัติ',
+                'desc_main': updater_name,
+                'ts': _fmt_ts(events.get('approver_approved')),
+            })
+        elif events.get('approver_rejected'):
+            stages.append({
+                'key': 'approver_rejected', 'icon': 'x-circle',
+                'title': 'หัวหน้าแผนกปฏิเสธ',
+                'desc_main': booking.reject_reason or '',
+                'ts': _fmt_ts(events.get('approver_rejected')),
+            })
+        # Stage 5: trip_done
+        if mileage and mileage.odometer_end is not None:
+            distance = mileage.odometer_end - (mileage.odometer_start or 0)
+            fuel = float(mileage.fuel_cost or 0)
+            stages.append({
+                'key': 'trip_done', 'icon': 'flag',
+                'title': 'ทริปเสร็จสิ้น',
+                'desc_main': f'ระยะทางรวม {distance:,} กม.',
+                'desc_sub': f'ค่าน้ำมัน ฿{fuel:,.0f}' if fuel else '',
+                'ts': _fmt_ts(mileage.actual_end),
+            })
+        # Stage 6: budget
+        if log:
+            stages.append({
+                'key': 'budget', 'icon': 'wallet',
+                'title': 'หักงบเสร็จ',
+                'desc_main': f'ใช้ ฿{abs(float(log.change_amount)):,.0f}',
+                'desc_sub': _budget_label(log),
+                'ts': _fmt_ts(log.created_at),
+            })
+        # Stage 7: payment received (personal เท่านั้น)
+        if mileage and mileage.personal_paid_at:
+            fuel = float(mileage.fuel_cost or 0)
+            stages.append({
+                'key': 'payment_received', 'icon': 'coins',
+                'title': 'รับเงินจาก User',
+                'desc_main': f'{owner_name} ฿{fuel:,.0f}',
+                'desc_sub': 'ยืนยันรับเงินแล้ว',
+                'ts': _fmt_ts(mileage.personal_paid_at),
+            })
+        return stages
+
+    def _build_approver_stages(booking, mileage, log, events):
+        stages = []
+        owner = updater_users.get(booking.user_id) if booking.user_id else None
+        owner_name = (owner.full_name if owner else '') or 'ไม่ระบุ'
+
+        # Stage 1: forwarded — emit เสมอ (fallback ใช้ booking.created_at ถ้าไม่มี forwarded event)
+        forwarded_ts = events.get('forwarded') or booking.created_at
+        stages.append({
+            'key': 'forwarded', 'icon': 'send',
+            'title': 'ได้รับคำขอ' if events.get('forwarded') else 'รอ Admin ส่งต่อ',
+            'desc_main': 'ส่งต่อโดย Admin' if events.get('forwarded') else '',
+            'desc_sub': f'{owner_name} · {booking.destination or ""}',
+            'ts': _fmt_ts(forwarded_ts),
+        })
+        # Stage 2: my decision
+        if events.get('approver_approved'):
+            stages.append({
+                'key': 'my_approved', 'icon': 'check-circle-2',
+                'title': 'อนุมัติแล้ว',
+                'desc_main': '',
+                'ts': _fmt_ts(events.get('approver_approved')),
+            })
+        elif events.get('approver_rejected'):
+            stages.append({
+                'key': 'my_rejected', 'icon': 'x-circle',
+                'title': 'ปฏิเสธแล้ว',
+                'desc_main': booking.reject_reason or '',
+                'ts': _fmt_ts(events.get('approver_rejected')),
+            })
+        # Stage 3: trip_done
+        if mileage and mileage.odometer_end is not None:
+            distance = mileage.odometer_end - (mileage.odometer_start or 0)
+            stages.append({
+                'key': 'trip_done', 'icon': 'flag',
+                'title': 'ทริปเสร็จ',
+                'desc_main': f'ระยะทางรวม {distance:,} กม.',
+                'ts': _fmt_ts(mileage.actual_end),
+            })
+        # Stage 4: budget (เฉพาะ dept budget)
+        if log and log.budget and log.budget.budget_type \
+                and log.budget.budget_type.name.lower() == 'department':
+            stages.append({
+                'key': 'budget', 'icon': 'wallet',
+                'title': 'หักงบแผนก',
+                'desc_main': f'ใช้ ฿{abs(float(log.change_amount)):,.0f}',
+                'desc_sub': _budget_label(log),
+                'ts': _fmt_ts(log.created_at),
+            })
+        return stages
+
+    # ── Run stage builders ────────────────────────────────────
+    for g in groups:
+        bid = g['booking_id']
+        booking = booking_map.get(bid)
+        if not booking:
+            continue
+        role = _resolve_role(booking)
+        if not role:
+            continue
+        mileage = mileage_map.get(bid)
+        log = log_map.get(bid)
+        events = _extract_events(notifs_by_booking.get(bid, []))
+
+        if role == 'user':
+            stages = _build_user_stages(booking, mileage, log, events)
+        elif role == 'approver':
+            stages = _build_approver_stages(booking, mileage, log, events)
+        else:
+            stages = _build_admin_stages(booking, mileage, log, events)
+
+        if stages:
+            g['stages'] = stages
+            g['role']   = role
+            # Synthetic groups → ใช้ stage สุดท้ายเป็น preview/sort key
+            if g.get('is_synthetic'):
+                last = stages[-1]
+                preview_msg = last.get('desc_main') or last.get('desc') or last.get('title', '')
+                g['latest'] = {
+                    'id': None, 'message': preview_msg,
+                    'ntype': 'info', 'category': 'status',
+                    'icon': last.get('icon', 'info'),
+                    'is_read': True, 'is_sticky': False,
+                    'booking_id': bid, 'booking_title': g['booking_title'],
+                    'action_url': f'/vehicle/detail/{bid}',
+                    'created_at': last.get('ts', ''),
+                    'created_rel': '',
+                }
+                # raw datetime สำหรับ sort — รวบทุก event source แล้วเลือก max
+                _candidate_dts = [
+                    booking.created_at, booking.updated_at,
+                    events.get('booking_created'), events.get('admin_assigned'),
+                    events.get('forwarded'),
+                    events.get('admin_approved'), events.get('approver_approved'),
+                    events.get('admin_rejected'), events.get('approver_rejected'),
+                    mileage.actual_start if mileage else None,
+                    mileage.actual_end if mileage else None,
+                    mileage.personal_paid_at if mileage else None,
+                    log.created_at if log else None,
+                ]
+                _valid_dts = [dt for dt in _candidate_dts if dt is not None]
+                g['_sort_dt'] = max(_valid_dts) if _valid_dts else booking.created_at
+
+    # ── Sort + drop group ไม่มี stages (frontend ไม่มี fallback timeline แล้ว) ──
+    groups = [g for g in groups if g.get('stages')]
+    # sort by raw datetime (latest event/stage on top) — string `DD/MM/YYYY HH:MM` ไม่ sortable lexically
+    _EPOCH = datetime(1970, 1, 1)
+    groups.sort(key=lambda g: g.get('_sort_dt') or _EPOCH, reverse=True)
+    # strip internal raw datetime ก่อน jsonify (Flask jsonify ไม่ serialize datetime default)
+    for g in groups:
+        g.pop('_sort_dt', None)
 
     # Badge count for UI (max 30+)
     badge = unread if unread <= 30 else '30+'
@@ -662,18 +1269,210 @@ def payment_report_paid_by_booking(booking_id):
 
 
 # ─────────────────────────────────────────────
-# ประวัติการจองของ User
+# Unified Activity History (Phase 10, 2026-05-22)
+# รวม 4 service types: vehicle / repair / room / maintenance
 # ─────────────────────────────────────────────
+
+# status → (badge tone, dot color suffix, thai label)
+_HIST_STATUS_META = {
+    'pending':          ('warning', 'amber',  'รออนุมัติ'),
+    'waiting_approver': ('warning', 'amber',  'รอหัวหน้าอนุมัติ'),
+    'approved':         ('blue',    'blue',   'อนุมัติแล้ว'),
+    'rejected':         ('danger',  'red',    'ปฏิเสธ'),
+    'in_progress':      ('blue',    'blue',   'ดำเนินการ'),
+    'done':             ('success', 'green',  'เสร็จสิ้น'),
+    'cancelled':        ('neutral', 'subtle', 'ยกเลิก'),
+    'confirmed':        ('blue',    'blue',   'จองแล้ว'),
+}
+
+# service_type → (lucide icon, label, create-url endpoint)
+_HIST_SERVICE_META = {
+    'vehicle':     ('car',       'จองรถ',          'vehicle.index'),
+    'repair':      ('wrench',    'แจ้งซ่อม IT',    'repair.index'),
+    'room':        ('door-open', 'จองห้องประชุม',  'room.index'),
+    'maintenance': ('settings',  'แจ้งซ่อมอาคาร',  'maintenance.index'),
+}
+
+
+def _hist_status(status):
+    return _HIST_STATUS_META.get(status, ('neutral', 'subtle', status or '—'))
+
+
+def _hist_day_label(dt):
+    """relative thai label: วันนี้ / เมื่อวาน / N วันก่อน / 'D MMM YYYY' (พ.ศ.)"""
+    today = get_bkk_time().date()
+    d     = dt.date()
+    delta = (today - d).days
+    if delta == 0: return 'วันนี้'
+    if delta == 1: return 'เมื่อวาน'
+    if 1 < delta < 7: return f'{delta} วันก่อน'
+    th_months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
+                 'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+    return f'{d.day} {th_months[d.month-1]} {d.year + 543}'
+
+
+def _hist_base_item(prefix, row, *, service_type, title, subtitle,
+                    status, occurs_at, meta, detail_url, reject_reason=None):
+    tone, dot, label = _hist_status(status)
+    ts = row.created_at or occurs_at
+    return {
+        'id':            f'{prefix}-{row.id}',
+        'service_type':  service_type,
+        'service_icon':  _HIST_SERVICE_META[service_type][0],
+        'service_label': _HIST_SERVICE_META[service_type][1],
+        'title':         title,
+        'subtitle':      subtitle,
+        'status':        status,
+        'status_label':  label,
+        'status_tone':   tone,
+        'status_dot':    dot,
+        'timestamp':     ts,
+        'occurs_at':     occurs_at,
+        'meta':          meta,
+        'detail_url':    detail_url,
+        'reject_reason': reject_reason,
+        'day_key':       ts.strftime('%Y-%m-%d') if ts else '',
+        'day_label':     _hist_day_label(ts) if ts else '',
+    }
+
+
+def _vehicle_to_activity(b):
+    veh = b.assigned_vehicle
+    subtitle = (f'{veh.brand} {veh.model} · {veh.license_plate}' if veh
+                else (b.snap_vehicle_plate or 'ยังไม่ได้รับรถ'))
+    meta = [
+        ('clock', f"{b.start_datetime.strftime('%H:%M')}–{b.end_datetime.strftime('%H:%M')}"),
+        ('users', f'{b.passenger_count} คน'),
+    ]
+    if b.driver:               meta.append(('user-check', b.driver.name))
+    elif not b.need_driver:    meta.append(('user',       'ขับเอง'))
+    if b.trip_group:           meta.append(('git-branch', f'กลุ่ม {b.trip_group}'))
+    return _hist_base_item(
+        'veh', b, service_type='vehicle',
+        title=b.destination, subtitle=subtitle, status=b.status,
+        occurs_at=b.start_datetime, meta=meta,
+        detail_url=url_for('vehicle.detail_booking', booking_id=b.id),
+        reject_reason=(b.reject_reason if b.status == 'rejected' else None),
+    )
+
+
+def _repair_to_activity(t):
+    meta = [('map-pin', t.location), ('tag', t.category)]
+    if t.urgency: meta.append(('alert-triangle', t.urgency))
+    if t.asset_tag: meta.append(('hash', t.asset_tag))
+    return _hist_base_item(
+        'rep', t, service_type='repair',
+        title=t.subject, subtitle=f'แจ้งซ่อม IT · {t.category}',
+        status=t.status, occurs_at=t.created_at, meta=meta,
+        detail_url=url_for('repair.edit', id=t.id),
+    )
+
+
+def _maintenance_to_activity(t):
+    meta = [('map-pin', t.location), ('tag', t.category)]
+    if t.urgency: meta.append(('alert-triangle', t.urgency))
+    if t.contact_number: meta.append(('phone', t.contact_number))
+    return _hist_base_item(
+        'mnt', t, service_type='maintenance',
+        title=t.subject, subtitle=f'แจ้งซ่อมอาคาร · {t.category}',
+        status=t.status, occurs_at=t.created_at, meta=meta,
+        detail_url=url_for('maintenance.edit', id=t.id),
+    )
+
+
+def _room_to_activity(b):
+    meta = [
+        ('clock', f"{b.start_time.strftime('%d %b · %H:%M')}–{b.end_time.strftime('%H:%M')}"),
+        ('map-pin', b.room_name),
+    ]
+    return _hist_base_item(
+        'room', b, service_type='room',
+        title=b.title, subtitle=f'ห้องประชุม · {b.room_name}',
+        status='confirmed', occurs_at=b.start_time, meta=meta,
+        detail_url=url_for('room.index'),
+    )
+
+
+def _collect_user_activities(user_id, *, service_type='', status='', q=''):
+    """รวม activity 4 service ของ user → sorted newest-first."""
+    items = []
+    wants = {service_type} if service_type else {'vehicle','repair','room','maintenance'}
+
+    if 'vehicle' in wants:
+        items.extend(_vehicle_to_activity(b)
+                     for b in VehicleBooking.query.filter_by(user_id=user_id).all())
+    if 'repair' in wants:
+        items.extend(_repair_to_activity(t)
+                     for t in RepairTicket.query.filter_by(user_id=user_id).all())
+    if 'maintenance' in wants:
+        items.extend(_maintenance_to_activity(t)
+                     for t in MaintenanceTicket.query.filter_by(user_id=user_id).all())
+    if 'room' in wants:
+        items.extend(_room_to_activity(b)
+                     for b in RoomBooking.query.filter_by(user_id=user_id).all())
+
+    if status:
+        items = [i for i in items if i['status'] == status]
+    if q:
+        ql = q.lower().strip()
+        items = [i for i in items
+                 if ql in (i['title'] or '').lower() or ql in (i['subtitle'] or '').lower()]
+
+    items.sort(key=lambda x: x['timestamp'] or get_bkk_time(), reverse=True)
+    return items
+
+
+def _hist_counts(all_items):
+    return {
+        'total':       len(all_items),
+        'pending':     sum(1 for i in all_items if i['status'] in ('pending','waiting_approver')),
+        'in_progress': sum(1 for i in all_items if i['status'] == 'in_progress'),
+        'done':        sum(1 for i in all_items if i['status'] in ('approved','done','confirmed')),
+        'rejected':    sum(1 for i in all_items if i['status'] in ('rejected','cancelled')),
+        'by_type': {
+            t: sum(1 for i in all_items if i['service_type'] == t)
+            for t in ('vehicle','repair','room','maintenance')
+        },
+    }
+
+
 @vehicle_bp.route('/vehicle/history')
 @login_required
 def booking_history():
-    status_filter = request.args.get('status', '')
-    query = VehicleBooking.query.filter_by(user_id=current_user.id)
-    if status_filter:
-        query = query.filter_by(status=status_filter)
-    bookings = query.order_by(VehicleBooking.created_at.desc()).all()
-    return render_template('vehicle/vehicle_history.html',
-                           bookings=bookings, status_filter=status_filter)
+    """Unified activity history — vehicle + repair + room + maintenance."""
+    filters = {
+        'type':   request.args.get('type', ''),
+        'status': request.args.get('status', ''),
+        'q':      request.args.get('q', ''),
+    }
+    items     = _collect_user_activities(current_user.id, service_type=filters['type'],
+                                          status=filters['status'], q=filters['q'])
+    all_items = _collect_user_activities(current_user.id)   # for counts (unfiltered)
+    return render_template(
+        'vehicle/vehicle_history.html',
+        items=items,
+        counts=_hist_counts(all_items),
+        filters=filters,
+        service_meta=_HIST_SERVICE_META,
+    )
+
+
+@vehicle_bp.route('/vehicle/history/feed')
+@login_required
+def history_feed():
+    """JSON feed — client-side filter refetch (no full page reload)."""
+    items = _collect_user_activities(
+        current_user.id,
+        service_type=request.args.get('type', ''),
+        status=request.args.get('status', ''),
+        q=request.args.get('q', ''),
+    )
+    def _ser(i):
+        d = dict(i)
+        d['timestamp'] = i['timestamp'].isoformat() if i['timestamp'] else None
+        d['occurs_at'] = i['occurs_at'].isoformat() if i['occurs_at'] else None
+        return d
+    return jsonify({'items': [_ser(i) for i in items]})
 
 
 # ─────────────────────────────────────────────
@@ -2474,6 +3273,28 @@ def budget_manage():
             rate = float(m.booking.assigned_vehicle.fuel_rate or 10)
             total_personal_received += round((dist / rate) * fuel_price, 2)
 
+    # ── ส่วนตัวค้างจ่าย: trip ปิดทริปแล้ว แต่ admin ยังไม่ได้กดรับเงิน
+    #    Scope: เดือนที่เลือก (จับคู่กับ KPI อื่น). Trigger จาก actual_end (ทริปปิด)
+    personal_unpaid_mileages = VehicleMileage.query.join(VehicleBooking).filter(
+        VehicleBooking.expense_type == 'personal',
+        VehicleMileage.odometer_end.isnot(None),
+        ((VehicleMileage.personal_status == 0) | (VehicleMileage.personal_status.is_(None))),
+        extract('year',  VehicleMileage.actual_end) == sel_year,
+        extract('month', VehicleMileage.actual_end) == sel_month,
+    ).all()
+    total_personal_unpaid_amount = 0.0
+    for m in personal_unpaid_mileages:
+        if m.fuel_cost:
+            total_personal_unpaid_amount += float(m.fuel_cost)
+        elif m.odometer_end and m.odometer_start and m.booking.assigned_vehicle:
+            dist = m.odometer_end - m.odometer_start
+            rate = float(m.booking.assigned_vehicle.fuel_rate or 10)
+            total_personal_unpaid_amount += round((dist / rate) * fuel_price, 2)
+
+    # ── นับ budget rows ที่ใช้เกินเพดาน (used > cap, active เท่านั้น) สำหรับ critical signal
+    over_budget_rows = [b for b in (_active_central + _active_dept)
+                        if float(b['used_amount']) > float(b['budget_amount']) > 0]
+
     kpi = {
         'central_budget':       total_central_budget,
         'dept_budget':          total_dept_budget,
@@ -2489,7 +3310,54 @@ def budget_manage():
         'dept_pending_count':    total_dept_pending,
         'total_pending_count':   total_central_pending + total_dept_pending,
         'personal_received':     total_personal_received,
+        # Phase 2 redesign (2026-05-22): new signals สำหรับ summary card footer
+        'personal_unpaid_count':  len(personal_unpaid_mileages),
+        'personal_unpaid_amount': total_personal_unpaid_amount,
+        'over_budget_count':      len(over_budget_rows),
+        'pct_of_cap':             (((total_central_used + total_dept_used) /
+                                    (total_central_budget + total_dept_budget)) * 100)
+                                   if (total_central_budget + total_dept_budget) > 0 else 0,
     }
+
+    # ── Phase 2E (2026-05-22): personal mileage rows สำหรับ section ส่วนตัว
+    #    Scope: เดือนที่เลือก (จับคู่ filter), รวมทั้ง paid + unpaid.
+    #    Trigger window: paid → personal_paid_at; unpaid → actual_end (วันปิดทริป)
+    personal_rows = []
+    _personal_all = VehicleMileage.query.join(VehicleBooking).filter(
+        VehicleBooking.expense_type == 'personal',
+        VehicleMileage.odometer_end.isnot(None),
+        or_(
+            and_(VehicleMileage.personal_status == 1,
+                 extract('year',  VehicleMileage.personal_paid_at) == sel_year,
+                 extract('month', VehicleMileage.personal_paid_at) == sel_month),
+            and_(or_(VehicleMileage.personal_status == 0,
+                     VehicleMileage.personal_status.is_(None)),
+                 extract('year',  VehicleMileage.actual_end) == sel_year,
+                 extract('month', VehicleMileage.actual_end) == sel_month),
+        ),
+    ).order_by(VehicleMileage.actual_end.desc()).all()
+
+    for pm in _personal_all:
+        if pm.fuel_cost:
+            pcost = float(pm.fuel_cost)
+        elif pm.odometer_end and pm.odometer_start and pm.booking and pm.booking.assigned_vehicle:
+            dist  = pm.odometer_end - pm.odometer_start
+            rate  = float(pm.booking.assigned_vehicle.fuel_rate or 10)
+            pcost = round((dist / rate) * fuel_price, 2)
+        else:
+            pcost = 0.0
+
+        bk = pm.booking
+        personal_rows.append({
+            'mileage_id':   pm.id,
+            'booking_id':   bk.id if bk else None,
+            'date':         pm.actual_end,
+            'user':         (bk.user.full_name or bk.user.username) if (bk and bk.user) else '—',
+            'destination':  (bk.destination if bk else '') or '—',
+            'fuel_cost':    pcost,
+            'is_paid':      (pm.personal_status == 1),
+            'paid_at':      pm.personal_paid_at,
+        })
 
     # pending_list สำหรับ refund modal — ตัด field ลงให้พอดี
     pending_list = []
@@ -2517,6 +3385,12 @@ def budget_manage():
     eligible_approvers = User.query.order_by(User.full_name).all()
 
     TH_MONTHS = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+
+    # ── Phase 7 (2026-05-22) — Pivot งบส่วนกลาง/แผนก × เดือน (ปีงบ Mar→Feb)
+    #    fiscal_year_start_ad = ปีที่ "เริ่มเดือน 3"; ถ้า sel_month >= 3 → start = sel_year, else start = sel_year - 1
+    fiscal_year_start_ad = sel_year if sel_month >= 3 else sel_year - 1
+    pivot = _build_budget_pivot(fiscal_year_start_ad)
+
     return render_template('vehicle/admin/budget_manage.html',
                            central_budgets=central_budgets,
                            dept_budgets=dept_budgets,
@@ -2525,9 +3399,108 @@ def budget_manage():
                            eligible_approvers=eligible_approvers,
                            kpi=kpi,
                            pending_list=pending_list,
+                           personal_rows=personal_rows,
                            sel_year=sel_year, sel_month=sel_month,
                            month_label=f"{TH_MONTHS[sel_month]} {sel_year+543}",
+                           TH_MONTHS=TH_MONTHS,
+                           pivot=pivot,
+                           fiscal_year_start_ad=fiscal_year_start_ad,
                            now=now)
+
+
+def _build_budget_pivot(fiscal_year_start_ad):
+    """Build fiscal-year (Mar→Feb) pivot for budget_manage page.
+
+    Phase 7 (2026-05-22). Fiscal year = months [3..12] of `fiscal_year_start_ad`
+    + months [1..2] of `fiscal_year_start_ad + 1`. Filter `is_active=True` only
+    (inactive budgets excluded from pivot per design intent).
+
+    Phase 2 (2026-05-22, redesign continuation): เพิ่ม `personal` row —
+    sum fuel_cost ของ VehicleMileage ที่ expense_type='personal' + personal_status=1
+    (admin ยืนยันรับเงินแล้ว) ภายใน fiscal year. Aggregate ตาม personal_paid_at.
+
+    Returns dict:
+      {
+        'central':        { dept_id: { month_num: used_amount } },
+        'central_labels': { dept_id: dept_name },
+        'central_max':    float,           # max used cell (for heat scale)
+        'dept':           { dept_id: { month_num: used_amount } },
+        'dept_labels':    { dept_id: dept_name },
+        'dept_max':       float,
+        'personal':       { month_num: total_received },   # 1 row across fiscal year
+        'personal_max':   float,
+        'fiscal_months':  [(month, year_ad), ...]   # ordered Mar→Feb (12 tuples)
+      }
+    """
+    fiscal_months = [(m, fiscal_year_start_ad) for m in range(3, 13)] \
+                  + [(m, fiscal_year_start_ad + 1) for m in (1, 2)]
+
+    # Build OR(year=Y AND month=M) conditions across 12 (m,y) pairs
+    year_month_conds = [and_(VehicleBudget.year == y, VehicleBudget.month == m)
+                        for (m, y) in fiscal_months]
+
+    rows = (VehicleBudget.query
+            .filter(VehicleBudget.is_active.is_(True))
+            .filter(or_(*year_month_conds))
+            .join(VehicleBudget.budget_type)
+            .join(VehicleBudget.department)
+            .all())
+
+    central, dept = {}, {}
+    labels_c, labels_d = {}, {}
+    for b in rows:
+        is_central = (b.budget_type.name == 'central')
+        bucket = central if is_central else dept
+        labels = labels_c if is_central else labels_d
+        did = b.department_id
+        if did not in bucket:
+            bucket[did] = {}
+            labels[did] = b.department.name
+        bucket[did][b.month] = float(b.used_amount or 0)
+
+    max_c = max((v for row in central.values() for v in row.values() if v > 0), default=0)
+    max_d = max((v for row in dept.values()    for v in row.values() if v > 0), default=0)
+
+    # ── Personal row: aggregate ทุก mileage ที่ admin รับเงินแล้ว (personal_status=1)
+    #    ภายใน fiscal year (group by month of personal_paid_at)
+    fy_start = datetime(fiscal_year_start_ad,     3, 1)
+    fy_end   = datetime(fiscal_year_start_ad + 1, 3, 1)
+    personal_mileages = (VehicleMileage.query
+                         .join(VehicleBooking)
+                         .filter(VehicleBooking.expense_type == 'personal',
+                                 VehicleMileage.personal_status == 1,
+                                 VehicleMileage.personal_paid_at >= fy_start,
+                                 VehicleMileage.personal_paid_at <  fy_end)
+                         .all())
+    fuel_price = float(SystemConfig.get('fuel_price', '40'))
+    personal = {}
+    for mi in personal_mileages:
+        if not mi.personal_paid_at:
+            continue
+        if mi.fuel_cost:
+            cost = float(mi.fuel_cost)
+        elif mi.odometer_end and mi.odometer_start and mi.booking.assigned_vehicle:
+            dist = mi.odometer_end - mi.odometer_start
+            rate = float(mi.booking.assigned_vehicle.fuel_rate or 10)
+            cost = round((dist / rate) * fuel_price, 2)
+        else:
+            cost = 0.0
+        mkey = mi.personal_paid_at.month
+        personal[mkey] = personal.get(mkey, 0.0) + cost
+
+    max_p = max((v for v in personal.values() if v > 0), default=0)
+
+    return {
+        'central':        central,
+        'central_labels': labels_c,
+        'central_max':    max_c,
+        'dept':           dept,
+        'dept_labels':    labels_d,
+        'dept_max':       max_d,
+        'personal':       personal,
+        'personal_max':   max_p,
+        'fiscal_months':  fiscal_months,
+    }
 
 
 # ══════════════════════════════════════════════════════

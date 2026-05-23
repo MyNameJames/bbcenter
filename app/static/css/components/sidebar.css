@@ -2,10 +2,18 @@
    Sidebar — shared component (used by `_sidebar.html`)
    Moved here Phase 4.1.5 (2026-05-15) so every page loading
    design-system.css gets sidebar styling for free.
+
+   Phase 6.0 Vercel refresh (2026-05-20):
+     - width 250 → 256, bg #fff → --vc-bg-subtle
+     - brand 62→56 height, logo 40→28 mark
+     - section label UPPERCASE + letter-spacing
+     - item height 32, font .82rem, icon 16px lucide
+     - logout footer red on hover
+   `.sb-badge` rules left untouched per user instruction.
    ============================================================ */
 
 :root {
-    --sidebar-width: 250px;
+    --sidebar-width: 236px;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -18,7 +26,7 @@
     height: 100vh;
     height: 100dvh;
     width: var(--sidebar-width);
-    background: #fff;
+    background: var(--vc-bg-subtle);
     border-right: 1px solid var(--vc-border);
     display: flex;
     flex-direction: column;
@@ -30,26 +38,32 @@
 
 /* Brand row */
 .sb-brand {
-    height: 62px;
-    padding: 0 1.25rem;
-    display: flex; align-items: center; gap: 10px;
-    border-bottom: 1px solid var(--vc-border);
+    height: 56px;
+    padding: 0 12px;
+    display: flex; align-items: center; gap: 8px;
+    /* border-bottom: 1px solid var(--vc-border); */
     flex-shrink: 0;
 }
 .sb-logo {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 8px;
     text-decoration: none; color: var(--vc-fg);
-    font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em;
+    font-weight: 700; font-size: .95rem; letter-spacing: -.01em;
     flex: 1; min-width: 0;
 }
 .sb-logo-icon {
-    width: 40px; height: 40px;
+    width: 28px; height: 28px;
     background: var(--vc-fg);
     color: var(--vc-fg-inverted);
-    border-radius: 10px;
+    border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
-    font-size: .95rem;
     flex-shrink: 0;
+    overflow: hidden;
+}
+/* override fs-3/fs-5/ps-1/pe-1 ที่ inline ใน template (FA fa-b ×2) */
+.sb-logo-icon i {
+    font-size: .68rem !important;
+    padding: 0 !important;
+    line-height: 1;
 }
 .sb-logo-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sb-close {
@@ -58,11 +72,11 @@
     justify-content: center; border-radius: 8px; cursor: pointer;
     font-size: 1rem; padding: 0;
 }
-.sb-close:hover { background: var(--vc-bg-subtle); color: var(--vc-fg-muted); }
+.sb-close:hover { background: var(--vc-bg-hover); color: var(--vc-fg); }
 
 /* Nav scroll area */
 .sb-nav {
-    flex: 1; overflow-y: auto; padding: .75rem 0;
+    flex: 1; overflow-y: auto; padding: 8px;
     scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent;
 }
 .sb-nav::-webkit-scrollbar { width: 4px; }
@@ -70,57 +84,65 @@
 
 /* Section label */
 .sb-section-label {
-    font-size: .65rem;
-    font-weight: 700;
+    font-size: .68rem;
+    font-weight: 500;
     color: var(--vc-fg-subtle);
-    padding: 0 1.25rem;
-    margin: 1rem 0 .3rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 0 8px;
+    margin: 12px 0 4px;
 }
-.sb-section-label:first-child { margin-top: .25rem; }
+.sb-section-label:first-child { margin-top: 4px; }
 
 /* Nav item */
 .sb-item {
     display: flex; align-items: center; gap: 10px;
-    padding: .48rem .9rem;
-    margin: .06rem .65rem;
-    border-radius: 9px;
+    padding: 0 8px;
+    height: 35px;
+    margin: 1px 0;
+    border-radius: 8px;
     color: var(--vc-fg-muted);
-    font-size: .88rem; font-weight: 500;
+    font-size: .82rem; font-weight: 400;
     text-decoration: none;
     cursor: pointer;
     transition: background .14s, color .14s;
     position: relative;
 }
 .sb-item:hover {
-    background: var(--vc-bg-subtle);
+    background: var(--vc-bg-hover);
     color: var(--vc-fg);
 }
 .sb-item.active {
     background: var(--vc-bg-hover);
     color: var(--vc-fg);
-    font-weight: 600;
+    font-weight: 500;
 }
 .sb-item.active .sb-icon { color: var(--vc-fg); }
 
 .sb-icon {
-    width: 20px; height: 20px;
+    width: 18px; height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
-    color: var(--vc-fg-subtle);
+    color: var(--vc-fg-muted);
     flex-shrink: 0;
     transition: color .20s;
 }
-.sb-item:hover .sb-icon { color: var(--vc-fg-muted); }
-.sb-item.active .sb-icon {
-    background: none;
-    color: var(--vc-fg);
+.sb-item:hover  .sb-icon { color: var(--vc-fg); }
+.sb-item.active .sb-icon { color: var(--vc-fg); }
+
+/* size Lucide SVG ภายใน .sb-icon — default 24×24 ใหญ่ไป */
+.sb-icon [data-lucide],
+.sb-icon svg.lucide {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.5;
 }
 
 .sb-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Badge (pending count) — Vercel-style: square w/ rounded corners */
+/* Badge (pending count) — Vercel-style: square w/ rounded corners
+   ★ left untouched per user instruction (sb-badge ใช้เหมือนเดิม) */
 .sb-badge {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 20px; height: 20px; padding: 0 6px;
@@ -139,11 +161,11 @@
 /* Footer / logout */
 .sb-footer {
     border-top: 1px solid var(--vc-border);
-    padding: .6rem 0;
+    padding: 8px;
     flex-shrink: 0;
 }
 .sb-logout {
-    color: var(--vc-fg-subtle);
+    color: var(--vc-fg-muted);
 }
 .sb-logout:hover {
     background: var(--vc-red-bg);

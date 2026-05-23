@@ -1,0 +1,262 @@
+/* ════════════════════════════════════════════════════════════
+   vercel.css — Vercel-style Phase 6.0 (2026-05-20)
+
+   เริ่มจาก _header refresh: topbar 56px + breadcrumb + 32x32 icon
+   button + red notification dot. ใช้ token --vc-* ที่มีอยู่
+   (ไม่สร้าง variable ซ้อน). Class prefix `vrc-` เพื่อกัน conflict
+   กับ Bootstrap .btn-primary และ namespace `vc-*` เดิม.
+
+   Roadmap: หลัง _header เสถียร → ค่อยเพิ่ม sidebar, button variants,
+   calendar styles ตามที่ port จาก docs/design/vehicle-warm-mockup.html
+   ════════════════════════════════════════════════════════════ */
+
+/* ─────────────────── BOOTSTRAP OVERRIDE ───────────────────
+   Bootstrap `.container-fluid` default มี `padding-x: 1.5rem` (gutter).
+   Vercel layout จัด spacing เองที่ระดับ page → ลบ padding ทิ้งทั้งหมด */
+.container-fluid {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* ─────────────────── PAGE BG ───────────────────
+   body bg = subtle gray → กลมกลืนกับ topbar + sidebar ที่ใช้ bg-subtle.
+   .vc-card / .card ภายในยังคงเป็นพื้นขาว → เด่นออกมาด้วย border */
+body {
+    background: var(--vc-bg-subtle);
+}
+
+/* ─────────────────── PAGE HEAD ───────────────────
+   ใช้คู่กับ Bootstrap utility ใน markup:
+   <div class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-4">
+   CSS เหลือเฉพาะ typography (font-size/color/letter-spacing) */
+.vrc-page-title {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    color: var(--vc-fg);
+    line-height: 1.2;
+}
+.vrc-page-subtitle {
+    font-size: 13px;
+    color: var(--vc-fg-muted);
+    line-height: 1.4;
+}
+
+/* ─────────────────── TOPBAR ───────────────────
+   Layout (d-flex / align-items-center / gap-2 / sticky-top / border-bottom)
+   ใช้ Bootstrap utility ใน markup. CSS เหลือเฉพาะ:
+   - height 56px (BS ไม่มี exact value)
+   - bg + border-color (token --vc-*)
+   - padding-x 14px (BS px-3=16px, ใกล้แต่อยากเป๊ะ)
+   - z-index 5 (sticky-top ของ BS = 1020 สูงไป)
+   ★ ใส่ position:sticky + top:0 ซ้ำใน CSS เพื่อ override z-index ของ sticky-top */
+.vrc-topbar {
+  height: 56px;
+  background: var(--vc-bg-subtle);
+  border-color: var(--vc-border) !important;
+  padding: 0 14px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+/* Breadcrumb — layout/gap/fw-medium ใช้ BS class ใน markup */
+.vrc-topbar-crumb {
+  font-size: 14px;
+  color: var(--vc-fg);
+  min-width: 0;
+}
+.vrc-topbar-crumb .sep {
+  color: var(--vc-fg-subtle);
+  font-weight: 400;
+  font-size: 18px;
+}
+.vrc-topbar-crumb-section { color: var(--vc-fg-muted); font-weight: 400; }
+.vrc-topbar-crumb-title   { color: var(--vc-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ─────────────────── ICON BUTTON 32×32 ───────────────────
+   re-skin `.ds-btn-icon` ที่อยู่ใน .vrc-topbar ให้กลมกลืน — ไม่ต้องแก้
+   markup ของ notification_panel หรือ user button ที่ใช้ class เดิม */
+.vrc-topbar-btn,
+.vrc-topbar .ds-btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--vc-fg-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+  font-size: 1rem;
+}
+.vrc-topbar-btn:hover,
+.vrc-topbar .ds-btn-icon:hover {
+  background: var(--vc-bg-hover);
+  color: var(--vc-fg);
+}
+
+/* ─────────────────── RED DOT (notification) ───────────────────
+   ใช้ตอน notification.js ยังไม่ render badge — แสดง dot เรียบๆ แทนเลข */
+.vrc-topbar-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  background: var(--vc-red);
+  border-radius: 50%;
+  border: 1.5px solid var(--vc-bg-subtle);
+}
+
+/* override existing `.notif-badge` (set by notification.js) ใน topbar →
+   เปลี่ยนจาก "18" pill แดงเด่น เป็น 6px dot เรียบ ตาม Vercel style.
+   notification.js ยังคง toggle hidden/visible เหมือนเดิม — text content
+   ถูกซ่อนด้วย font-size:0 + color transparent */
+.vrc-topbar .notif-badge {
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  min-width: 0;
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  background: var(--vc-red);
+  border: 1.5px solid var(--vc-bg-subtle);
+  border-radius: 50%;
+}
+
+/* ─────────────────── TOOLBAR (month nav + วันนี้) ───────────────────
+   ใช้ BS utility ใน markup สำหรับ layout (d-flex/gap-2/mb-3/px-2)
+   CSS เหลือเฉพาะ button shape + colors + month-label typography */
+.vrc-btn-icon {
+    width: 32px; height: 32px; padding: 0;
+    background: var(--vc-bg);
+    color: var(--vc-fg-muted);
+    border: 1px solid var(--vc-border);
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background 100ms ease, color 100ms ease;
+}
+.vrc-btn-icon:hover { background: var(--vc-bg-hover); color: var(--vc-fg); }
+
+.vrc-btn-ghost {
+    height: 32px; padding: 0 10px;
+    background: var(--vc-bg);
+    color: var(--vc-fg);
+    border: 1px solid var(--vc-border);
+    border-radius: 8px;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: background 100ms ease;
+}
+.vrc-btn-ghost:hover { background: var(--vc-bg-hover); }
+
+.vrc-toolbar-month {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--vc-fg);
+    min-width: 160px;
+}
+
+/* Lucide icon size ใน toolbar buttons */
+.vrc-btn-icon [data-lucide],
+.vrc-btn-icon svg.lucide,
+.vrc-btn-ghost [data-lucide],
+.vrc-btn-ghost svg.lucide {
+    width: 16px; height: 16px;
+    stroke-width: 1.5;
+}
+
+/* ─────────────────── LUCIDE ICON SIZE ใน topbar ───────────────────
+   default Lucide SVG render ที่ 24×24 — ใหญ่เกินใน button 32×32
+   ปรับเป็น 18×18 ให้สมดุลกับ breadcrumb text 14px
+   ★ ปรับขนาด icon ได้ที่ rule นี้ (width/height) */
+.vrc-topbar [data-lucide],
+.vrc-topbar svg.lucide,
+.vrc-topbar .ds-btn-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.5;
+}
+
+/* ─────────────────── CALENDAR OVERFLOW POPOVER ───────────────────
+   เปิดจาก trigger ".event-more.vc-cal-more" ในเซลล์ calendar
+   - no shadow (border-only)
+   - no header (trigger label พอแล้ว — ลบ data-bs-title ใน vehicle.js)
+   - grid row: dot | time (44px) | dest (truncate)
+   - status dot 6px ใช้สี --vc-green / --vc-amber / --vc-blue / --vc-red
+   ────────────────────────────────────────────────────────────────── */
+.popover.vc-cal-pop {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    box-shadow: none;
+    width: 240px;
+    max-width: 240px;
+}
+.popover.vc-cal-pop .popover-header { display: none; }
+.popover.vc-cal-pop .popover-body {
+    padding: 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+.popover.vc-cal-pop .popover-arrow::before { border-color: var(--vc-border) !important; }
+.popover.vc-cal-pop .popover-arrow::after  { border-color: var(--vc-bg) !important;    }
+
+.vc-cal-pop-row {
+    display: grid;
+    grid-template-columns: auto 44px 1fr;
+    align-items: center;
+    column-gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--vc-border);
+    cursor: pointer;
+    transition: background 80ms;
+}
+.vc-cal-pop-row:last-child { border-bottom: none; }
+.vc-cal-pop-row:hover      { background: var(--vc-bg-subtle); }
+
+.vc-cal-pop-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    background: var(--vc-fg-subtle); /* fallback */
+}
+.vc-cal-pop-dot--approved { background: var(--vc-green); }
+.vc-cal-pop-dot--pending  { background: var(--vc-amber); }
+.vc-cal-pop-dot--approver { background: var(--vc-amber); }
+.vc-cal-pop-dot--rejected { background: var(--vc-red); }
+.vc-cal-pop-dot--group    { background: var(--vc-blue); }
+
+.vc-cal-pop-time {
+    font-family: var(--vc-font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--vc-fg);
+    font-variant-numeric: tabular-nums;
+}
+.vc-cal-pop-dest {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--vc-fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vc-cal-pop-dest-icon {
+    width: 11px;
+    height: 11px;
+    stroke-width: 1.75;
+    vertical-align: -1px;
+    margin-right: 3px;
+    color: var(--vc-blue);
+}

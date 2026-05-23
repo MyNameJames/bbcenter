@@ -33,6 +33,13 @@
     border-bottom: 1px solid var(--vc-border);
 }
 
+.va-page-header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
 .va-page-header-actions {
     display: flex;
     gap: var(--vc-space-2);
@@ -41,19 +48,30 @@
 
 .va-page-header-actions:empty { display: none; }
 
+/* Eyebrow — premium uppercase tag เหนือ H1 */
+.va-page-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--vc-fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
 .va-page-title {
     font-size: var(--vc-text-xl);            /* 24px */
     font-weight: 600;
     letter-spacing: var(--vc-tracking-tight);
     color: var(--vc-fg);
-    line-height: 1.2;
+    line-height: 1.15;
     margin: 0;
 }
 
 .va-page-subtitle {
     font-size: var(--vc-text-sm);
     color: var(--vc-fg-muted);
-    margin: 6px 0 0 0;
+    margin: 4px 0 0 0;
     line-height: 1.4;
 }
 
@@ -112,19 +130,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    background: transparent;
-    border: none;
+    width: 32px;
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-sm);
     color: var(--vc-fg-muted);
-    transition: background var(--vc-transition), color var(--vc-transition), border-color var(--vc-transition);
+    transition: background var(--vc-dur-fast) var(--vc-ease-snap),
+                color var(--vc-dur-fast) var(--vc-ease-snap),
+                border-color var(--vc-dur-fast) var(--vc-ease-snap);
     flex-shrink: 0;
+    cursor: pointer;
 }
 .va-week-nav:hover {
-    background: var(--vc-bg-hover);
+    background: var(--vc-bg-subtle);
     color: var(--vc-fg);
-    border-color: var(--vc-border-hover);
+    border-color: var(--vc-fg);
 }
+.va-week-nav:active { transform: scale(0.95); }
 
 .va-week-strip {
     flex: 1;
@@ -143,15 +165,19 @@
     padding: var(--vc-space-3) 4px;
     border: 1px solid transparent;
     border-radius: var(--vc-radius-sm);
-    transition: all var(--vc-transition);
+    transition: background var(--vc-dur-fast) var(--vc-ease-snap),
+                border-color var(--vc-dur-fast) var(--vc-ease-snap),
+                color var(--vc-dur-fast) var(--vc-ease-snap),
+                transform var(--vc-dur-base) var(--vc-ease-spring);
     position: relative;
     min-width: 0;
     overflow: hidden;
 }
 .va-week-day:hover {
-    background: var(--vc-bg-hover);
-    border-color: var(--vc-border);
+    background: var(--vc-bg-subtle);
+    border-color: var(--vc-border-hover);
 }
+.va-week-day:active { transform: scale(0.97); }
 
 .va-week-day-name {
     font-size: 10px;
@@ -168,15 +194,17 @@
     line-height: 1;
 }
 
-/* Today marker */
+/* Today marker — dot indicator (premium, silent) */
 .va-week-day-today::after {
+    content: '';
     position: absolute;
-    top: 4px;
-    right: 4px;
-    font-size: 7px;
-    font-weight: 800;
-    color: var(--vc-blue);
-    letter-spacing: 0.05em;
+    top: 6px;
+    right: 6px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--vc-blue);
+    box-shadow: 0 0 0 2px var(--vc-bg);
 }
 
 /* Selected state — Dark Vercel feel */
@@ -193,8 +221,8 @@
     color: var(--vc-bg);
 }
 .va-week-day-active.va-week-day-today::after {
-    color: var(--vc-bg);
-    opacity: 0.6;
+    background: var(--vc-bg);
+    box-shadow: 0 0 0 2px var(--vc-fg);
 }
 
 /* Booking volume indicator (1 / 2-3 / 4+ events per day) */
@@ -289,7 +317,7 @@
    JS renders cards via innerHTML using .bl-* / .va-trip-*.
 ───────────────────────────────────────────── */
 .va-list {
-    padding: var(--vc-space-3);
+    padding: var(--vc-space-4);
     min-height: 80px;
     display: flex;
     flex-direction: column;
@@ -335,9 +363,9 @@
     display: flex;
     align-items: center;
     gap: var(--vc-space-3);
-    padding: var(--vc-space-3) var(--vc-space-4);
+    padding: var(--vc-space-4);
     border-bottom: 1px solid var(--vc-border);
-    transition: background var(--vc-transition);
+    transition: background var(--vc-dur-instant) var(--vc-ease-snap);
 }
 .vs-row:last-child { border-bottom: none; }
 .vs-row:hover { background: var(--vc-bg-subtle); }
@@ -382,10 +410,20 @@
     font-size: 11.5px;
     font-weight: 600;
     color: var(--vc-fg);
-    transition: all var(--vc-transition);
+    transition: opacity var(--vc-dur-fast) var(--vc-ease-snap),
+                transform var(--vc-dur-fast) var(--vc-ease-snap),
+                background var(--vc-dur-fast) var(--vc-ease-snap),
+                border-color var(--vc-dur-fast) var(--vc-ease-snap);
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    opacity: 0.55;
+    transform: translateX(4px);
+}
+.vs-row:hover .vs-btn,
+.vs-btn:focus-visible {
+    opacity: 1;
+    transform: translateX(0);
 }
 .vs-btn:hover { border-color: var(--vc-fg); background: var(--vc-bg); }
 .vs-btn-fix { color: var(--vc-green); }
@@ -583,7 +621,7 @@
 
 .va-modal-section {
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.08em;
     color: var(--vc-fg-muted);
     margin-bottom: var(--vc-space-3);
@@ -737,7 +775,7 @@
 
 .swap-veh-label { font-size: 13px; font-weight: 700; color: var(--vc-fg); }
 .swap-veh-plate { font-size: 11px; color: var(--vc-fg-muted); }
-.swap-veh-status { margin-left: auto; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
+.swap-veh-status { margin-left: auto; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
 
 
 /* ─────────────────────────────────────────────
@@ -913,7 +951,7 @@
     border-radius: var(--vc-radius-md);
     font-size: 14px;
     font-weight: 600;
-    box-shadow: var(--vc-shadow-lg);
+    border: 1px solid var(--vc-border);
     transform: translateY(100px);
     opacity: 0;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -933,4 +971,177 @@
     .va-modal-section { font-size: 10px; }
     .adm-exp-tab      { font-size: var(--vc-text-xs); padding: var(--vc-space-2); }
     .adm-exp-tab i    { display: none; }      /* hide icons on phone modal */
+}
+
+
+/* ════════════════════════════════════════════════════
+   PHASE 2 — Premium polish (2026-05-22)
+   - KPI hover rail + semantic icon color per cell
+   - Filter tabs: underline indicator (replaces dark fill)
+   - Booking row: 1px hover lift + inset selection rail
+   Scoped to .va-kpi-card / .va-filter-tabs / .bl-card
+   to avoid leaking to fuel_admin / budget_admin pages.
+   ════════════════════════════════════════════════════ */
+
+/* ── KPI cell — hover rail + semantic icon ──────── */
+.va-kpi-card .vc-kpi-cell {
+    overflow: hidden;
+    transition: background var(--vc-dur-instant) var(--vc-ease-snap);
+}
+
+.va-kpi-card .vc-kpi-cell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--vc-fg);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--vc-dur-base) var(--vc-ease-out);
+    pointer-events: none;
+}
+
+.va-kpi-card .vc-kpi-cell:hover { background: var(--vc-bg-subtle); }
+.va-kpi-card .vc-kpi-cell:hover::before { transform: scaleX(1); }
+
+/* Semantic icon color on hover — order matches template:
+   1 pending (amber) · 2 approver (blue) · 3 approved (green) · 4 rejected (red) */
+.va-kpi-card .vc-kpi-cell .vc-kpi-label .vc-icon-sm {
+    transition: color var(--vc-dur-fast) var(--vc-ease-snap);
+}
+.va-kpi-card .vc-kpi-cell:nth-child(1):hover .vc-kpi-label .vc-icon-sm { color: var(--vc-amber); }
+.va-kpi-card .vc-kpi-cell:nth-child(2):hover .vc-kpi-label .vc-icon-sm { color: var(--vc-blue); }
+.va-kpi-card .vc-kpi-cell:nth-child(3):hover .vc-kpi-label .vc-icon-sm { color: var(--vc-green); }
+.va-kpi-card .vc-kpi-cell:nth-child(4):hover .vc-kpi-label .vc-icon-sm { color: var(--vc-red); }
+
+
+/* ── Filter tabs — underline indicator (premium) ── */
+.va-filter-tabs .ftab {
+    position: relative;
+    border-radius: 0;
+    background: transparent;
+    transition: color var(--vc-dur-fast) var(--vc-ease-snap);
+}
+.va-filter-tabs .ftab::after {
+    content: '';
+    position: absolute;
+    left: var(--vc-space-3);
+    right: var(--vc-space-3);
+    bottom: -1px;
+    height: 2px;
+    background: var(--vc-fg);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform var(--vc-dur-base) var(--vc-ease-out);
+    pointer-events: none;
+}
+.va-filter-tabs .ftab:hover {
+    background: transparent;
+    color: var(--vc-fg);
+}
+.va-filter-tabs .ftab.active {
+    background: transparent;
+    color: var(--vc-fg);
+    font-weight: 600;
+}
+.va-filter-tabs .ftab.active::after { transform: scaleX(1); }
+
+.va-filter-tabs .ftab-cnt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    padding: 1px 6px;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-xs);
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--vc-fg-muted);
+    line-height: 1.4;
+    opacity: 1;
+    margin-left: 6px;
+    transition: background var(--vc-dur-fast) var(--vc-ease-snap),
+                color var(--vc-dur-fast) var(--vc-ease-snap),
+                border-color var(--vc-dur-fast) var(--vc-ease-snap);
+}
+
+/* .va-filter-tabs .ftab.active .ftab-cnt {
+    background: var(--vc-fg);
+    color: var(--vc-bg);
+    border-color: var(--vc-fg);
+} */
+
+
+/* ── Booking row — hover lift + selection rail ──── */
+.bl-card {
+    transition: transform var(--vc-dur-fast) var(--vc-ease-snap),
+                border-color var(--vc-dur-instant) var(--vc-ease-snap),
+                background var(--vc-dur-instant) var(--vc-ease-snap),
+                box-shadow var(--vc-dur-fast) var(--vc-ease-snap);
+}
+.bl-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--vc-fg);
+    background: var(--vc-bg-subtle);
+}
+
+/* Selection via inset box-shadow → ไม่ดัน layout */
+.bl-selected {
+    transform: translateX(2px);
+    box-shadow: inset 3px 0 0 var(--vc-fg);
+    background: var(--vc-bg-subtle) !important;
+    border-color: var(--vc-border) !important;
+}
+.bl-notify-selected {
+    transform: translateX(2px);
+    box-shadow: inset 3px 0 0 var(--vc-blue);
+    background: var(--vc-blue-bg) !important;
+    border-color: var(--vc-blue-border) !important;
+}
+
+/* ── KPI label tighten (Phase F polish) ─────────── */
+.va-kpi-card .vc-kpi-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--vc-fg-subtle);
+}
+
+
+/* ── Modal entry animation (Phase C polish) ────────
+   Scoped to 4 modals in this page only — ห้าม leak
+   ไป vc-modal ของหน้าอื่น (fuel_admin, manage_fleet ฯลฯ) */
+#assignModal.fade .modal-dialog,
+#swapModal.fade .modal-dialog,
+#repairModal.fade .modal-dialog,
+#revertModal.fade .modal-dialog {
+    transform: translateY(16px) scale(0.97);
+    opacity: 0;
+    transition: transform var(--vc-dur-slow) var(--vc-ease-out),
+                opacity var(--vc-dur-slow) var(--vc-ease-out);
+}
+#assignModal.fade.show .modal-dialog,
+#swapModal.fade.show .modal-dialog,
+#repairModal.fade.show .modal-dialog,
+#revertModal.fade.show .modal-dialog {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+
+/* Reduce motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .va-kpi-card .vc-kpi-cell::before,
+    .va-filter-tabs .ftab::after,
+    .bl-card,
+    .bl-selected,
+    .bl-notify-selected,
+    .vs-btn,
+    #assignModal.fade .modal-dialog,
+    #swapModal.fade .modal-dialog,
+    #repairModal.fade .modal-dialog,
+    #revertModal.fade .modal-dialog { transition: none !important; transform: none !important; }
+    .vs-btn { opacity: 1 !important; }
 }

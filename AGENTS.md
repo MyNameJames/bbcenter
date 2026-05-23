@@ -4,7 +4,7 @@
 
 ## 📖 Reading Strategy
 
-1. CLAUDE.md (ไฟล์นี้) — โหลดอัตโนมัติ
+1. AGENTS.md (ไฟล์นี้) — โหลดอัตโนมัติ
 2. [INDEX.md](docs/notes/INDEX.md) — เปิดเมื่อต้องหา route/symbol/template
 3. Deep-dive — อ่านเฉพาะไฟล์ที่ INDEX ชี้ไป
 
@@ -76,7 +76,7 @@ Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + 
 **Business logic**
 - Budget mutation: ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` / `is_active` ตรงๆ — ทุก mutation ต้องผ่าน `app/services/budget_service.py` (เพื่อ ledger + idempotency)
   - **Deduct/override** 4 call sites: `mileage_log()`, `driver_mileage()`, `override_fuel()`, `budget_manage()` POST
-  - **Refund** (`refund_for_booking()`) 5 call sites: `delete_booking()` (ก่อน cascade), `cancel_booking()` (Phase 9, 2026-05-22 — soft cancel), `approve_booking()` admin reject + approver reject, `admin_assign()` reject
+  - **Refund** (`refund_for_booking()`) 4 call sites: `delete_booking()` (ก่อน cascade), `approve_booking()` admin reject + approver reject, `admin_assign()` reject
   - **`set_active(budget, active)`** (2026-05-18) — toggle ปิด/เปิดใช้งาน → log `set_active`/`set_inactive`; `is_active=False` block `approve_booking` (admin + approver paths ผ่าน `_lookup_budget_for_booking()`) + `top_up` + `manual_adjust`; ไม่ block mileage deduct/refund (booking เก่าปิดทริปได้); KPI sum filter `is_active=True`
 - Mileage formula: `fuel_cost = (distance / vehicle.fuel_rate) * fuel_price` (override ถ้า `mileage.fuel_cost` มีค่า)
 - Fuel reserve depletion (2026-05-18): `_depletes_reserve(method)` = `method == 'transfer'` (เงินสด เบิกจากกองกลาง) **เท่านั้น** — `card`=บัตรส่วนกลาง, `self`=ผู้โดยสารจ่ายเอง (เก็บประวัติ ไม่หัก reserve). กระทบ `reserve_used` + `balance_after` ใน admin_fuel.html
@@ -116,7 +116,7 @@ booking.telegram_message_id = msg_id; db.session.commit()
 
 ---
 
-## 🤖 Subagents — Claude spawn เองตามเงื่อนไข
+## 🤖 Subagents — Codex spawn เองตามเงื่อนไข
 
 | Agent | Spawn เมื่อ |
 |---|---|

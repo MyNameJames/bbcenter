@@ -17,7 +17,7 @@
 </head>
 <body>
 
-<div class="container-fluid container-p-y">
+<div class="container-fluid">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     {% set active_menu = 'vehicle' %}
@@ -41,50 +41,42 @@
                 {% endif %}
             {% endwith %}
 
-            <div class="va-page-header">
+            <div class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-4 pt-3">
                 <div>
-                    <h1 class="va-page-title">ปฏิทินการจองรถ</h1>
-                    <p class="va-page-subtitle">ระยะเวลาการใช้รถ 08:00 - 17:00 · วันอาทิตย์ไม่ให้บริการ</p>
+                    <h1 class="vrc-page-title mb-0">ปฏิทินการจองรถ</h1>
+                    <p class="vrc-page-subtitle mt-1 mb-0">ระยะเวลาการใช้รถ 08:00 - 17:00 · วันอาทิตย์ไม่ให้บริการ</p>
                 </div>
-                <div class="va-page-header-actions"></div>
+                <div class="d-flex align-items-center gap-2"></div>
             </div>
 
             <!-- Toolbar -->
-            <div class="flex-grow-1 pt-2 pb-3">
-                <div class="toolbar">
-                    <div class="row w-100 gx-0 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center gap-2 col-auto">
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm me-auto" id="prevMonthBtn" title="เดือนก่อนหน้า">
-                                <i data-lucide="chevron-left" class="vc-icon-sm"></i>
-                            </button>
-                            <h5 class="d-flex align-items-center mx-2 mb-0 fw-bold" id="currentMonthLabel" style="text-align:center;min-width:120px;"></h5>
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" id="nextMonthBtn" title="เดือนถัดไป">
-                                <i data-lucide="chevron-right" class="vc-icon-sm"></i>
-                            </button>
-                            <button type="button" class="vc-btn vc-btn-secondary justify-content-end" id="todayBtn" title="กระโดดไปวันนี้">วันนี้</button>
-                        </div>
-                    </div>
-                </div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <button type="button" class="vrc-btn-icon" id="prevMonthBtn" title="เดือนก่อนหน้า">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <button type="button" class="vrc-btn-icon" id="nextMonthBtn" title="เดือนถัดไป">
+                    <i data-lucide="chevron-right"></i>
+                </button>
+                <div class="vrc-toolbar-month px-2" id="currentMonthLabel"></div>
+                <button type="button" class="vrc-btn-ghost d-inline-flex align-items-center gap-1" id="todayBtn" title="กระโดดไปวันนี้">
+                    <i data-lucide="calendar"></i> วันนี้
+                </button>
             </div>
 
             <div class="flex-grow-1">
                 <div class="row mb-3">
                     <div class="col-12">
-                        <div class="vc-card p-3" role="grid" aria-label="ปฏิทินการจองรถ — ใช้ปุ่มลูกศรซ้าย-ขวาเปลี่ยนเดือน, T เพื่อกระโดดไปวันนี้">
-                            <div class="card-header bg-white">
-                                <div class="calendar-grid" role="row">
-                                    <div class="calendar-header-cell text-danger" role="columnheader" aria-label="อาทิตย์">อา</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="จันทร์">จ</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="อังคาร">อ</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="พุธ">พ</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="พฤหัสบดี">พฤ</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="ศุกร์">ศ</div>
-                                    <div class="calendar-header-cell text-primary" role="columnheader" aria-label="เสาร์">ส</div>
-                                </div>
+                        <div class="vc-card overflow-hidden" role="grid" aria-label="ปฏิทินการจองรถ — ใช้ปุ่มลูกศรซ้าย-ขวาเปลี่ยนเดือน, T เพื่อกระโดดไปวันนี้">
+                            <div class="calendar-grid calendar-grid-head border-bottom" role="row">
+                                <div class="calendar-header-cell text-danger" role="columnheader" aria-label="อาทิตย์">อา</div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="จันทร์">จ</div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="อังคาร">อ</div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="พุธ">พ</div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="พฤหัสบดี">พฤ</div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="ศุกร์">ศ</div>
+                                <div class="calendar-header-cell text-primary" role="columnheader" aria-label="เสาร์">ส</div>
                             </div>
-                            <div class="card-body pt-2">
-                                <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
-                            </div>
+                            <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
                         </div>
                     </div>
                 </div>
@@ -156,9 +148,12 @@ window.BOOKINGS = [
     detailUrl:  "{{ url_for('vehicle.detail_booking', booking_id=b.id) }}",
     editUrl:    "{{ url_for('vehicle.edit_booking', booking_id=b.id) }}",
     deleteUrl:  "{{ url_for('vehicle.delete_booking', booking_id=b.id) }}",
+    cancelUrl:  "{{ url_for('vehicle.cancel_booking', booking_id=b.id) }}",
     assignUrl:  "{{ url_for('vehicle.admin_assign', booking_id=b.id) }}",
     isOwner:    {{ 'true' if b.user_id == current_user.id else 'false' }},
     isPending:  {{ 'true' if b.status == 'pending' else 'false' }},
+    {# Phase 9 (2026-05-22) — cancel button gate: owner/admin AND status ∈ cancellable AND ก่อน start_datetime #}
+    canCancel:  {{ 'true' if (b.status in ('pending', 'waiting_approver', 'approved') and b.start_datetime > now and (b.user_id == current_user.id or is_vehicle_admin)) else 'false' }},
     expenseType:     {{ (b.expense_type or '') | tojson }},
     centralCategory: {{ (b.central_category or '') | tojson }},
     tripDepartment:  {{ (b.trip_department or '') | tojson }},

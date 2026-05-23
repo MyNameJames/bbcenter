@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/repair.css') }}">
+    <link href="{{ url_for('static', filename='vendor/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/datatables/css/responsive.bootstrap5.min.css') }}" rel="stylesheet">
 </head>
 <body data-edit-ticket="{{ edit_ticket.id if edit_ticket else '' }}">
 {% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
