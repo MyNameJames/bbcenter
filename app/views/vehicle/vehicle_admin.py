@@ -157,7 +157,7 @@ def manage_fleet():
         .group_by(VehicleBooking.driver_id).all())
     driver_jobs = {did: cnt for did, cnt in job_rows}
 
-    return render_template('vehicle/admin/admin_manage_fleet.html',
+    return render_template('vehicle/admin/vehicle_fleet.html',
                            vehicles=vehicles, drivers=drivers, users=users,
                            depts=depts, approvers=approvers,
                            vehicle_odometers=vehicle_odometers,

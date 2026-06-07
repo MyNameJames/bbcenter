@@ -1,7 +1,7 @@
 /* ============================================================
    BBCenter V2 — vehicle.css
    ============================================================ */
-@import url('./design-system.css');
+@import url('../../core/css/design-system.css');
 
 :root {
     --primary:       var(--vc-accent);

@@ -209,20 +209,21 @@ bbcenter/
 │   │       ├── vehicle_budget.py · vehicle_driver.py    ← controllers ต่อ feature
 │   │       └── vehicle_budget_service.py  ← ย้ายจาก services/ (services/ ถูกลบ)
 │   ├── templates/
-│   │   ├── _sidebar.html, _header.html
-│   │   ├── _notification_panel.html, _notification_toast.html
-│   │   ├── auth/, dashboard/, repair/, maintenance/, room/, usermng/
+│   │   ├── _shared/            ← partials กลาง (sidebar/header/navbar/notification_*) — ขั้น 4
+│   │   ├── _components/        ← Jinja macros (_modal/kpi/badge/filter_bar/...)
+│   │   ├── auth/, dashboard/, repair/, maintenance/, usermng/
+│   │   ├── room/ + room/modals/room_*.html
 │   │   └── vehicle/
-│   │       ├── vehicle-modal-*.html (5 modals)
-│   │       ├── admin/ (5 pages)
+│   │       ├── modals/vehicle_*.html (5 modals)    ← ขั้น 4
+│   │       ├── admin/ (pages) + admin/modals/fuel_*.html
 │   │       └── driver_home.html
-│   └── static/
-│       ├── css/design-system.css    ← --vc-* tokens (canonical; --ds-* retired)
-│       ├── css/vehicle.css, vehicle_admin.css, notification.css
-│       ├── js/vehicle.js, notification.js
-│       ├── js/core/{icons,format,http}.js         ← shared ES modules (Phase 4.0)
-│       ├── js/pages/{vehicle-admin,repair,approver-inbox}.js  ← per-page ES modules
-│       ├── images/icons/calendar-add.png
+│   └── static/                  ← asset แยกตาม domain (ขั้น 5, 2026-06-07)
+│       ├── core/                ← shared ข้าม domain
+│       │   ├── css/design-system.css (--vc-* tokens) · tokens · main · util · vercel · notification · components/*
+│       │   └── js/{icons,format,http,main,notification}.js   ← shared ES modules
+│       ├── vehicle/            ← css/vehicle_*.css + js/vehicle_*.js (prefix หน้าที่)
+│       ├── repair/ · room/ · maintenance/ · dashboard/   ← css/<domain>.css + js/<domain>.js
+│       ├── images/ (shared: icons/calendar-add.png, favicon, img-01) · fonts/
 │       ├── uploads/{repair,maintenance,mileage}/
 │       └── vendor/
 └── docs/

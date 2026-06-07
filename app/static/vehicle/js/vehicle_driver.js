@@ -3,7 +3,7 @@
    Tab switching, accordion cards, actual_start/end stamping,
    upload-zone visual feedback, ad-hoc modal + searchable combo.
 ══════════════════════════════════════════════════ */
-import { initIcons } from '../core/icons.js';
+import { initIcons } from '../../core/js/icons.js';
 
 initIcons();
 

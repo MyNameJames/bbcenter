@@ -462,7 +462,7 @@ def budget_manage():
     fiscal_year_start_ad = sel_year if sel_month >= 3 else sel_year - 1
     pivot = _build_budget_pivot(fiscal_year_start_ad)
 
-    return render_template('vehicle/admin/budget_manage.html',
+    return render_template('vehicle/admin/vehicle_budget.html',
                            central_budgets=central_budgets,
                            dept_budgets=dept_budgets,
                            archived_budgets=archived_budgets,
@@ -641,7 +641,7 @@ def budget_personal():
         })
 
     TH_MONTHS = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
-    return render_template('vehicle/admin/budget_personal.html',
+    return render_template('vehicle/admin/vehicle_budget_personal.html',
                            rows=rows,
                            total_pending=total_pending,
                            total_paid=total_paid,

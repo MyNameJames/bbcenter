@@ -112,7 +112,7 @@ booking.telegram_message_id = msg_id; db.session.commit()
 - Radius 4–6px
 - Icons: Font Awesome (`fa-solid` นำหน้าทุก field เทคนิค)
 - **No `border-left/top` สีพิเศษ** บน card/KPI (ดู AI-generated)
-- Vehicle modal: ไฟล์แยกใน `vehicle-modal-*.html`, **ห้ามมี inline `<script>`** — JS อยู่ใน vehicle.js
+- Vehicle modal: ไฟล์แยกใน `vehicle/modals/vehicle_*.html` (ขั้น 4, 2026-06-07; เดิม `vehicle-modal-*.html`), **ห้ามมี inline `<script>`** — JS อยู่ใน vehicle.js · partials กลางอยู่ `templates/_shared/` · macro อยู่ `templates/_components/`
 
 รายละเอียด → [design_system.md](docs/notes/design_system.md)
 

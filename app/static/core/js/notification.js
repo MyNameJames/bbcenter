@@ -4,7 +4,7 @@
    - Toast popup (desktop only, สำหรับ event สำคัญ)
    - Icons: Lucide only (FA mapped via faToLucide())
    - Tab switch = client-side filter (no refetch)
-   โหลดจาก _header.html → ทุกหน้าที่มี header
+   โหลดจาก _shared/header.html → ทุกหน้าที่มี header
 */
 
 const POLL_INTERVAL_MS = 30000;

@@ -475,75 +475,62 @@
 .va-trip:hover { border-color: var(--vc-border-hover); }
 .va-trip--no-mileage { opacity: 0.92; }
 
-/* ── Head: plate + exp + status + amount ── */
+/* ── บรรทัด 1: ทะเบียน → ปลายทาง | payment (ขวา) — Phase 16, 2026-06-07 ── */
 .va-trip-head {
     display: flex;
     align-items: center;
     gap: var(--vc-space-2);
-    flex-wrap: wrap;
 }
 .va-trip-plate {
     font-size: 14px;
     font-weight: 700;
     color: var(--vc-fg);
     letter-spacing: 0.02em;
-}
-.va-trip-exp {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 10px;
-    border-radius: 999px;
-    line-height: 1.4;
-}
-.va-trip-exp--central {
-    background: var(--vc-bg-hover);
-    color: var(--vc-fg-muted);
-}
-.va-trip-exp--department {
-    background: var(--vc-blue-bg);
-    color: var(--vc-blue);
-}
-.va-trip-exp--personal {
-    background: var(--vc-red-bg);
-    color: var(--vc-red);
-}
-.va-trip-status { margin-left: auto; }
-.va-trip-amount {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--vc-fg);
-}
-
-/* ── Person row: avatar + name + dest ── */
-.va-trip-person {
-    display: flex;
-    align-items: center;
-    gap: var(--vc-space-2);
-}
-.va-trip-avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--vc-bg-hover);
-    color: var(--vc-fg-subtle);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
 }
-.va-trip-name {
+.va-trip-arrow { flex-shrink: 0; color: var(--vc-fg-subtle); }
+.va-trip-dest {
+    flex: 1;
+    min-width: 0;
     font-size: 13px;
     font-weight: 600;
     color: var(--vc-fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-.va-trip-dest {
+/* payment มุมขวา */
+.va-trip-pay {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 12px;
-    color: var(--vc-fg-muted);
-    margin-left: auto;
-    text-align: right;
+}
+.va-trip-pay--done { color: var(--vc-fg-muted); }
+.va-trip-pay-btn {
+    flex-shrink: 0;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: var(--vc-radius-xs);
+    background: var(--vc-fg);
+    border: 1px solid var(--vc-fg);
+    color: var(--vc-bg);
+    cursor: pointer;
+    line-height: 1.4;
+    transition: background var(--vc-transition), border-color var(--vc-transition);
+}
+.va-trip-pay-btn:hover {
+    background: var(--vc-green);
+    border-color: var(--vc-green);
 }
 
-/* ── Mileage 1-line strip ── */
+/* ── บรรทัด 2: mileage (icon car) ── */
 .va-trip-mileage {
     display: flex;
     align-items: center;
@@ -554,87 +541,29 @@
     border-radius: var(--vc-radius-xs);
     font-size: 12px;
     line-height: 1.5;
-}
-.va-trip-mileage-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--vc-fg-subtle);
-    letter-spacing: 0.08em;
-    margin-right: 2px;
-}
-.va-trip-mileage-range,
-.va-trip-mileage-dist {
-    font-weight: 600;
     color: var(--vc-fg);
 }
-.va-trip-mileage-rate {
-    color: var(--vc-fg-muted);
-}
-.va-trip-mileage-dot {
-    color: var(--vc-fg-subtle);
-}
+.va-trip-mileage-ico { color: var(--vc-fg-subtle); }
+.va-trip-mileage-dot { color: var(--vc-fg-subtle); }
+.va-trip-mileage--empty { color: var(--vc-fg-subtle); }
 
-/* ── Foot: meta + actions (divider above) ── */
-.va-trip-foot {
+/* ── บรรทัด 3: badges (ใต้ divider) — คนขับ · สถานะ · อัตราน้ำมัน · ค่าน้ำมัน · OT ── */
+.va-trip-badges {
     display: flex;
     align-items: center;
     gap: var(--vc-space-2);
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
     padding-top: var(--vc-space-3);
     border-top: 1px solid var(--vc-border);
-    flex-wrap: wrap;
 }
-.va-trip-meta {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--vc-fg-muted);
-}
-.va-trip-meta--pending { color: var(--vc-fg-muted); }
-.va-trip-meta--ok {
-    color: var(--vc-green);
-    font-weight: 600;
-}
-.va-trip-foot-actions {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--vc-space-2);
-}
-
-/* ── Foot buttons (keep legacy color theme) ── */
-.va-trip-btn {
-    appearance: none;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 5px 12px;
-    border-radius: var(--vc-radius-xs);
-    transition: all var(--vc-transition);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    line-height: 1.4;
-}
-.va-trip-btn--tg {
+.va-trip-badge { white-space: nowrap; }
+.va-trip-badge--ot {
     background: var(--vc-blue-bg);
-    border: 1px solid var(--vc-blue-border);
     color: var(--vc-blue);
-}
-.va-trip-btn--tg:hover {
-    background: var(--vc-blue);
-    color: var(--vc-bg);
-    border-color: var(--vc-blue);
-}
-.va-trip-btn--paid {
-    background: var(--vc-fg);
-    border: 1px solid var(--vc-fg);
-    color: var(--vc-bg);
-}
-.va-trip-btn--paid:hover {
-    background: var(--vc-green);
-    border-color: var(--vc-green);
-    color: var(--vc-bg);
+    border-color: var(--vc-blue-border);
 }
 
 
@@ -810,8 +739,9 @@
 /* ─────────────────────────────────────────────
    10. BOOKING ROW — TASK-LIST CARD
    (Phase 11, 2026-06-06: แทน left-icon layout เดิม — เลิกใช้ bl-icon)
+   (Phase 14/14.1, 2026-06-07: 3-line — single+group โครงเดียวกัน)
    โครง: bl-card > [checkbox?] bl-body [bl-grp-collapse?]
-   bl-body > bl-head(title+desc | due) + bl-foot(author | status+actions)
+   bl-body > bl-head(ชื่อ/รถ | status/badge) + bl-trip(purpose→dest/สรุป) + bl-foot(bl-badges scroll-x | actions)
 ───────────────────────────────────────────── */
 
 /* Flat section (Phase 11.2, 2026-06-06: #sectionBefore เอากรอบ vc-card ออก — header/list ชิดขอบ) */
@@ -873,20 +803,16 @@
     gap: var(--vc-space-3);
 }
 
-/* ── Head: title/desc (ซ้าย) | เวลา (ขวา) ── */
+/* ── Head: ชื่อ/รถ (ซ้าย) | status หรือ "N งานรวม" (ขวา) ── */
 .bl-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--vc-space-4);
 }
-.bl-head-text {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
 .bl-title {
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 15px;
     font-weight: 700;
     color: var(--vc-fg);
@@ -895,23 +821,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.bl-desc {
-    font-size: 13px;
-    color: var(--vc-fg-muted);
-    line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.bl-due {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-    white-space: nowrap;
-}
-.bl-due-label { font-size: 12px; color: var(--vc-fg-subtle); }
-.bl-due-value { font-size: 13px; font-weight: 700; color: var(--vc-fg); }
 
 /* ── Foot: ผู้จอง (ซ้าย) | status + actions (ขวา) — เส้นคั่นบาง ── */
 .bl-foot {
@@ -922,11 +831,8 @@
     padding-top: var(--vc-space-3);
     border-top: 1px solid var(--vc-border);
 }
-/* ── Single-row 3-line layout (Phase 14, 2026-06-07) ──
-   บรรทัด1: ชื่อผู้จอง | status · บรรทัด2: purpose → dest · บรรทัด3: badges | actions
-   scope :not(.bl-card--group) กัน group row (ใช้ .bl-head/.bl-foot/.bl-due ร่วม) */
-.bl-card:not(.bl-card--group) .bl-head { align-items: center; }
-.bl-card:not(.bl-card--group) .bl-title { flex: 1 1 auto; min-width: 0; }
+/* ── 3-line layout (Phase 14 single / 14.1 group — โครงเดียวกัน) ──
+   บรรทัด1: ชื่อ/รถ | status · บรรทัด2: purpose→dest หรือสรุป · บรรทัด3: badges | actions */
 
 /* บรรทัด 2: วัตถุประสงค์ → ปลายทาง */
 .bl-trip {
@@ -973,12 +879,6 @@
     border-color: var(--vc-purple-border);
 }
 
-.bl-foot-right {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--vc-space-2);
-    flex-shrink: 0;
-}
 .bl-status   { flex-shrink: 0; }
 .bl-meta-ico { color: var(--vc-fg-subtle); }
 
@@ -1108,10 +1008,8 @@
     .adm-exp-tab      { font-size: var(--vc-text-xs); padding: var(--vc-space-2); }
     .adm-exp-tab i    { display: none; }      /* hide icons on phone modal */
 
-    /* Booking task-card — group: due ลงล่าง; single: head คง row (ชื่อ|status) */
+    /* Booking task-card — head คง row (ชื่อ|status), ซ่อน action รอง */
     .bl-card { padding: var(--vc-space-4); }
-    .bl-card--group .bl-head { flex-direction: column; gap: 4px; }
-    .bl-card--group .bl-due  { align-self: flex-start; }
     .bl-action-secondary { display: none; }
 }
 

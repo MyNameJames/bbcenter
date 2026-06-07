@@ -3,7 +3,7 @@
    Calendar + booking + group rendering + 4 modals.
 ══════════════════════════════════════════════════ */
 
-import { initIcons, bindModalReinit } from '../core/icons.js';
+import { initIcons, bindModalReinit } from '../../core/js/icons.js';
 bindModalReinit();
 // Popover content (calendar "+N รายการ") render asynchronously — re-init Lucide ตอน popover เปิด
 // + Escape-to-close ทุก popover ที่เปิดอยู่

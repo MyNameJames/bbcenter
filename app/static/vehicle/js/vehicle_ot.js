@@ -4,7 +4,7 @@
      - Bootstrap 5 modal (global)
      - core/icons.js (lucide wrapper)
 */
-import { initIcons } from '../core/icons.js';
+import { initIcons } from '../../core/js/icons.js';
 
 const dataEl = document.getElementById('otCostData');
 if (!dataEl) {

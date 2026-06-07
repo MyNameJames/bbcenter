@@ -4,7 +4,7 @@
 // jQuery $(document).ready() wrapper needed. jQuery itself is still
 // used as a global for DataTable.
 
-import { initIcons, bindModalReinit } from '../core/icons.js';
+import { initIcons, bindModalReinit } from '../../core/js/icons.js';
 
 // ── DataTable ───────────────────────────────────────
 const $table = $('#repairTable');

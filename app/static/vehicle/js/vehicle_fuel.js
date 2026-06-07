@@ -10,7 +10,7 @@
    - Reserve modal: live preview of new balance
    - Re-init Lucide icons on shown.bs.modal
 ══════════════════════════════════════════════════ */
-import { initIcons, bindModalReinit } from '../core/icons.js';
+import { initIcons, bindModalReinit } from '../../core/js/icons.js';
 
 /* ── DOM helpers ───────────────────────────────── */
 const $  = (sel, root) => (root || document).querySelector(sel);

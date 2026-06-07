@@ -3,7 +3,7 @@
    Calendar + booking + edit + detail. Pattern จาก pages/vehicle.js
 ══════════════════════════════════════════════════ */
 
-import { initIcons, bindModalReinit } from '../core/icons.js';
+import { initIcons, bindModalReinit } from '../../core/js/icons.js';
 bindModalReinit();
 document.addEventListener('shown.bs.popover', () => {
     document.querySelectorAll('.popover').forEach(tip => initIcons(tip));

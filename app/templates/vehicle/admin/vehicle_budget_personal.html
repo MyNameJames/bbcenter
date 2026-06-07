@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
     <style>
         /* ── KPI row ────────────────────────────── */
         .kpi-row {
@@ -131,12 +131,12 @@
 <div class="app-container">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% set active_menu = 'admin' %}
-    {% include '_sidebar.html' %}
+    {% include '_shared/sidebar.html' %}
 
     <main class="main-content">
         {% set page_section = 'ผู้ดูแลระบบ' %}
         {% set page_title = 'งบส่วนตัว' %}
-        {% include '_header.html' %}
+        {% include '_shared/header.html' %}
 
         <div style="overflow-y:auto; height:calc(100vh - 60px); background:var(--vc-bg-subtle);">
             <div class="container-fluid" style="max-width:1100px; padding:20px 20px 40px;">

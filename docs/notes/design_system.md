@@ -1,5 +1,5 @@
 # BBCenter V2 — Design System Reference
-**Updated:** 2026-06-06 (Token palette refresh + single-font: สี core ปรับเป็น gray-scale/Tailwind-style — `--vc-fg`/`--vc-primary` `#000`→`#111827`, `--vc-fg-muted` `#666`→`#6B7280`, `--vc-fg-subtle` `#888`→`#9CA3AF`, `--vc-border` `#EAEAEA`→`#E5E7EB`, `--vc-primary-hover` `#333`→`#1F2937`; semantic `--vc-green` `#16A34A` / `--vc-amber` `#D97706` / `--vc-red` `#DC2626` (hover `#B91C1C`) / `--vc-blue` `#2563EB` (hover `#1D4ED8`) + bg/border rgba ปรับตาม. Accent indigo `#4F46E5` คงไว้. **Font:** บังคับ Sarabun อย่างเดียวทุกที่ — `--vc-font-mono` Poppins→Sarabun + เพิ่ม `--vc-font-sans`; ลบ Geist Mono/IBM Plex/Poppins/Montserrat/Inter/Prompt ออกหมด (link + CSS); `_header.html` โหลด Sarabun global; base `body{font-family:--vc-font-sans}` ใน design-system.css. `.ds-btn-primary:hover` hardcode→token)
+**Updated:** 2026-06-06 (Token palette refresh + single-font: สี core ปรับเป็น gray-scale/Tailwind-style — `--vc-fg`/`--vc-primary` `#000`→`#111827`, `--vc-fg-muted` `#666`→`#6B7280`, `--vc-fg-subtle` `#888`→`#9CA3AF`, `--vc-border` `#EAEAEA`→`#E5E7EB`, `--vc-primary-hover` `#333`→`#1F2937`; semantic `--vc-green` `#16A34A` / `--vc-amber` `#D97706` / `--vc-red` `#DC2626` (hover `#B91C1C`) / `--vc-blue` `#2563EB` (hover `#1D4ED8`) + bg/border rgba ปรับตาม. Accent indigo `#4F46E5` คงไว้. **Font:** บังคับ Sarabun อย่างเดียวทุกที่ — `--vc-font-mono` Poppins→Sarabun + เพิ่ม `--vc-font-sans`; ลบ Geist Mono/IBM Plex/Poppins/Montserrat/Inter/Prompt ออกหมด (link + CSS); `_shared/header.html` โหลด Sarabun global; base `body{font-family:--vc-font-sans}` ใน design-system.css. `.ds-btn-primary:hover` hardcode→token)
 **Updated:** 2026-05-22 (budget_manage Phase 8: dead purple CSS cleanup — `.vc-btn-purple` + `.vc-badge-purple` (budget_manage.css §7) + `.vc-kpi-value--purple` (components/kpi.css) ลบครบ. Tokens `--vc-purple*` ใน tokens.css เก็บไว้สำหรับ swatch demo. Closes purple retirement loop ที่เริ่ม Phase 4 (markup) — ตอนนี้ functional CSS file zero references; only design_system_reference.html ใช้ใน demo)
 **Updated:** 2026-05-22 (budget_manage Phase 7: Pivot section — fiscal year (Mar→Feb) × dept, 2 collapsed cards (central + dept). **CSS architecture move:** `.vc-pivot-*` block (~165 lines) extracted from `fuel_admin.css` §22 → `components/pivot.css` shared component (loaded globally via `design-system.css` @import). Reusable principle: **collapsible pivot via `<details class="vc-card vc-pivot-wrap">`** — sticky-col table, heat-tinted cells (`--cell-heat: 0..100` via indigo low-opacity), drill-down links per cell + total col + grand total tfoot, footer mono tabular-nums. Pattern ใช้ได้ใน admin pages อื่นที่ต้องการ overview table ที่ "ย่อได้" และ "scroll-able sticky column". Personal pivot deferred → future_features #14 (BudgetType ไม่มี personal, ต้อง query VehicleMileage แทน))
 **Updated:** 2026-05-22 (budget_manage Phase 6: 3 modal `ds-alert-*` info/warning boxes → meta lines. Pattern (a) `<dl class="budget-modal-meta">` Stripe-style label-value pairs (border-block divider + flex baseline rows + `<dt>` SMALL CAPS uppercase muted + `<dd>` sm/600/fg) สำหรับ context info; pattern (b) `<p.budget-modal-notice>` thin top-border info line w/ lucide icon สำหรับ "อธิบายผลของ action". Reusable principle: **เลือกใช้ alert box เฉพาะ destructive/error warning จริง** — context info (label-value) ที่อยู่ในฟอร์มอนุญาตให้ใช้ meta block แทน เพื่อ focus กลับไปที่ form input)
@@ -9,10 +9,10 @@
 
 > **Canonical rule:** Use `--vc-*` tokens only in new CSS/templates. `--ds-*` is legacy (Indigo-era pre-2026-05) and still alive in `tokens.css` for un-migrated pages — do not introduce new references. See [SKILL §3.2](../../.claude/skills/bbcenter-design/SKILL.md) for the binary list of allowed tokens.
 >
-> **Token source:** [app/static/css/tokens.css](../../app/static/css/tokens.css) — Part A `--ds-*` (legacy, freeze), Part B `--vc-*` (canonical). Imported by `design-system.css`.
+> **Token source:** [app/static/core/css/tokens.css](../../app/static/core/css/tokens.css) — Part A `--ds-*` (legacy, freeze), Part B `--vc-*` (canonical). Imported by `design-system.css`.
 >
 > **Component library (Phase 2):**
-> - CSS: `app/static/css/components/{kpi,filter_bar,badge,pill,empty_state,form_group,table_shell,modal_shell}.css` — `@import`-ed by `design-system.css`.
+> - CSS: `app/static/core/css/components/{kpi,filter_bar,badge,pill,empty_state,form_group,table_shell,modal_shell}.css` — `@import`-ed by `design-system.css`.
 > - Macros: `app/templates/_components/{kpi,filter_bar,badge,pill,empty_state,form_group,table_shell,_modal}.html` — opt-in per page (Phase 3 migrates each page).
 > - Class naming: **flat vocab** `.vc-{block}-{tone-or-mod}` matching `/bbcenter-design` skill (e.g. `vc-badge-warning`, `vc-empty-title`).
 >
@@ -112,7 +112,7 @@
 
 ## 3. Typography
 
-**Font stack:** Sarabun เท่านั้น — ห้ามใช้ font อื่น (โหลด global ใน `_header.html`)
+**Font stack:** Sarabun เท่านั้น — ห้ามใช้ font อื่น (โหลด global ใน `_shared/header.html`)
 - UI text: `--vc-font-sans` = `'Sarabun', sans-serif` (ทุก context body/heading)
 - Mono / numeric: `--vc-font-mono` = `'Sarabun', sans-serif` (ใช้ `tabular-nums`/`font-feature-settings` แทนการเปลี่ยน font เพื่อจัดเรียงตัวเลข)
 

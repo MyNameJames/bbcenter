@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
     <style>
         /* ═══════════════════════════════════════════════════════
            Design Tokens — History Page
@@ -546,12 +546,12 @@
 <div class="app-container">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% set active_menu = 'history' %}
-    {% include '_sidebar.html' %}
+    {% include '_shared/sidebar.html' %}
 
     <main class="main-content">
         {% set page_section = 'เมนู' %}
         {% set page_title = 'ประวัติการจอง' %}
-        {% include '_header.html' %}
+        {% include '_shared/header.html' %}
 
         <div class="view-section active" style="overflow-y:auto;">
         <div class="history-shell">

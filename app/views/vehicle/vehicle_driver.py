@@ -55,7 +55,7 @@ def driver_home():
     vehicles = Vehicle.query.filter_by(status='active').order_by(Vehicle.id).all()
     users    = User.query.order_by(User.full_name).all()
 
-    return render_template('vehicle/driver_home.html',
+    return render_template('vehicle/vehicle_driver.html',
                            driver=driver,
                            bookings=bookings,
                            today_start=today_start,

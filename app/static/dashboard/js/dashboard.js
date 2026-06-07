@@ -4,7 +4,7 @@
    - Live clock (Thai locale, tabular nums)
    ══════════════════════════════════════════════════ */
 
-import { initIcons, bindModalReinit } from '../core/icons.js';
+import { initIcons, bindModalReinit } from '../../core/js/icons.js';
 
 initIcons();
 bindModalReinit();

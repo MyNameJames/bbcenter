@@ -1,7 +1,7 @@
 /* pages/budget-admin.js — interactions for /admin/budget (ES module)
  * load AFTER bootstrap.bundle.min.js
  */
-import { initIcons, bindModalReinit } from '../core/icons.js';
+import { initIcons, bindModalReinit } from '../../core/js/icons.js';
 
 initIcons();
 bindModalReinit();

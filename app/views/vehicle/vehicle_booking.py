@@ -393,7 +393,7 @@ def approver_inbox():
                )
                .all())
 
-    return render_template('vehicle/approver_inbox.html',
+    return render_template('vehicle/vehicle_approver.html',
                            pending=pending, history=history,
                            budgets=budgets,
                            active_menu='approver')

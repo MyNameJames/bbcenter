@@ -1,5 +1,5 @@
 {# templates/_header.html
-   วิธีใช้ใน Jinja2: {% include '_header.html' %}
+   วิธีใช้ใน Jinja2: {% include '_shared/header.html' %}
    ตัวแปร optional:
      page_section   — section ใน breadcrumb (เช่น "บริการ")
      page_title     — ชื่อหน้า (default: ไม่แสดง)
@@ -33,7 +33,7 @@
     <div class="ms-auto d-flex align-items-center gap-2">
 
         {# ── Notification Bell + Panel (partial) ── #}
-        {% include '_notification_panel.html' %}
+        {% include '_shared/notification_panel.html' %}
 
         {# ── User avatar + dropdown ── #}
         <div id="hdrUserWrap" style="position:relative;">
@@ -211,12 +211,12 @@ window.bbToggleUserMenu = function() {
 </script>
 
 {# ── Vercel-style refresh (Phase 6.0) — topbar + future components ── #}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vercel.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='core/css/vercel.css') }}">
 
 {# ── Notification CSS + Toast container + JS ── #}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/notification.css') }}">
-{% include '_notification_toast.html' %}
-<script type="module" src="{{ url_for('static', filename='js/pages/notification.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='core/css/notification.css') }}">
+{% include '_shared/notification_toast.html' %}
+<script type="module" src="{{ url_for('static', filename='core/js/notification.js') }}"></script>
 
 {# ── Sarabun (font เดียวของระบบ — --vc-font-sans / --vc-font-mono) ──
    โหลด global ที่นี่ทุกหน้าจึงได้ Sarabun เสมอ. ห้ามโหลด font อื่น. #}

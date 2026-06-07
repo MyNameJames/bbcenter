@@ -9,21 +9,21 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
 </head>
 <body>
 <div class="container-fluid container-p-y">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% set active_menu = 'admin' %}
-    {% include '_sidebar.html' %}
+    {% include '_shared/sidebar.html' %}
 
     <main class="main-content vc-scope">
         {% set page_section = 'ผู้ดูแลระบบ' %}
         {% set page_title = 'อนุมัติรถ' %}
-        {% include '_header.html' %}
+        {% include '_shared/header.html' %}
 
         <div class="container-xxl px-3 pt-2">
 
@@ -136,11 +136,9 @@
                         </div>
 
                         {# Trip section (หลัง) #}
-                        <div class="vc-card" id="sectionAfter">
+                        <div class="va-flat" id="sectionAfter">
                             <div class="vc-card-head">
-                                <h3 class="vc-card-head-title">
-                                    <i data-lucide="route" class="vc-icon-sm"></i>
-                                    รายละเอียดการเดินทาง
+                                <h3 class="vc-card-head-title">รายละเอียดการเดินทาง
                                     <span class="vc-card-head-meta" id="afterCount">0 รายการ</span>
                                 </h3>
                             </div>
@@ -416,7 +414,10 @@ window.BOOKINGS_DATA = [
     fuelCost:    {{ m.fuel_cost | float if m and m.fuel_cost else 0 }},
     personalStatus: {{ m.personal_status if m else 0 }},
     personalPaidAt: {{ (((m.personal_paid_at.day|string) ~ '/' ~ (m.personal_paid_at.month|string) ~ '/' ~ ((m.personal_paid_at.year+543)|string)) if m and m.personal_paid_at else '') | tojson }},
-    markPaidUrl: {{ url_for('adminfleet.budget_personal_mark_paid') | tojson }}
+    actualEnd:   {{ (((m.actual_end.day|string) ~ '/' ~ (m.actual_end.month|string) ~ '/' ~ ((m.actual_end.year+543)|string)) if m and m.actual_end else '') | tojson }},
+    markPaidUrl: {{ url_for('adminfleet.budget_personal_mark_paid') | tojson }},
+    otHours:     {{ (b.driver_ots[0].total_hours | float) if b.driver_ots else 0 }},
+    otAmount:    {{ (b.driver_ots[0].total_amount | float) if b.driver_ots else 0 }}
 }{% if not loop.last %},{% endif %}
 {% endfor %}
 ];
@@ -449,10 +450,10 @@ window.FUEL_PRICE = {{ fuel_price }};
 window.SERVER_NOW = {{ now.isoformat() | tojson }};
 </script>
 
-{% include 'vehicle/vehicle-modal-detail.html' %}
+{% include 'vehicle/modals/vehicle_detail.html' %}
 
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='js/pages/vehicle-admin.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_admin.js') }}"></script>
 </body>
 </html>

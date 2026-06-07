@@ -8,9 +8,9 @@
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/approver_inbox.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_approver.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 {% set active_menu = 'approver' %}
-{% include '_sidebar.html' %}
+{% include '_shared/sidebar.html' %}
 
 <main class="main-content vc-scope">
     {% set page_section = 'ผู้อนุมัติ' %}
     {% set page_title = 'รายการรออนุมัติ' %}
-    {% include '_header.html' %}
+    {% include '_shared/header.html' %}
 
     <div class="container-xxl px-3 py-4 approver-wrap">
 
@@ -358,6 +358,6 @@
 </div>
 
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='js/pages/approver-inbox.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_approver.js') }}"></script>
 </body>
 </html>

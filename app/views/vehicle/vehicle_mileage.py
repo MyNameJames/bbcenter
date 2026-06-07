@@ -375,7 +375,7 @@ def mileage_log():
             breakdown[b.assigned_vehicle_id][mo_idx] += c
             breakdown_totals[mo_idx] += c
 
-    return render_template('vehicle/admin/mileage_admin.html',
+    return render_template('vehicle/admin/vehicle_mileage.html',
         rows=rows,
         display_rows=display_rows,
         fuel_price=fuel_price,

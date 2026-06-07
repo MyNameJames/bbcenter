@@ -3,7 +3,7 @@
    Depends on: BOOKINGS_DATA, VEHICLES_DATA, DRIVERS_DATA,
                BUDGETS_DATA, PURPOSES_DATA, FUEL_PRICE, SERVER_NOW
 ══════════════════════════════════════════════════ */
-import { initIcons } from '../core/icons.js';
+import { initIcons } from '../../core/js/icons.js';
 
 /* ── Constants ────────────────────────────────── */
 const EN_DAYS   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -406,7 +406,12 @@ function renderSingleRow(b, idx = 0) {
 
     const statusBadge = `<span class="bl-status vc-badge ${sb.cls}">${sb.label}</span>`;
 
-    /* badge 1 — ผู้โดยสาร */
+    /* badge 1 — ช่วงเวลาเดินทาง */
+    const timeText  = b.start ? `${esc(b.start)}${b.end ? `–${esc(b.end)}` : ''}` : '';
+    const timeBadge = timeText
+        ? `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="clock" class="vc-icon-sm"></i>${timeText}</span>` : '';
+
+    /* badge 2 — ผู้โดยสาร */
     const paxBadge = `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="users" class="vc-icon-sm"></i>${b.pax || 0}</span>`;
 
     /* badge 2 — งบที่อนุมัติ (ยังไม่จัดสรร → amber เตือน) */
@@ -450,6 +455,7 @@ function renderSingleRow(b, idx = 0) {
             </div>
             <div class="bl-foot">
                 <div class="bl-badges">
+                    ${timeBadge}
                     ${paxBadge}
                     ${budgetBadge}
                     ${adhocBadge}
@@ -531,6 +537,12 @@ function renderGroupRow(grpName, members, idx = 0) {
             </div>
         </div>`).join('');
 
+    /* Phase 14.1 (2026-06-07): group row โครง 3-line คล้าย single —
+       head(รถ | "N งานรวม") + trip(สรุป) + foot(badges เวลา/คน | actions) */
+    const grpTimeBadge = times
+        ? `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="clock" class="vc-icon-sm"></i>${esc(times)}</span>` : '';
+    const grpPaxBadge = `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="users" class="vc-icon-sm"></i>${totalPax}</span>`;
+
     return `
     <div class="bl-card bl-card--group${isGrpNotifySel?' bl-notify-selected':''}${isGrpNotifySelectable?' bl-notify-mode':''}"
          id="blgrp-${grpName}"
@@ -539,34 +551,29 @@ function renderGroupRow(grpName, members, idx = 0) {
         ${grpCheckboxSlot}
         <div class="bl-body">
             <div class="bl-head">
-                <div class="bl-head-text">
-                    <span class="bl-title">${esc(vLabel)}</span>
-                    <span class="bl-desc">${members.length} งานในเที่ยวเดียว · ${totalPax} คน</span>
-                </div>
-                <div class="bl-due">
-                    <span class="bl-due-label">เวลาเดินทาง</span>
-                    <span class="bl-due-value">${times}</span>
-                </div>
+                <span class="bl-title">${esc(vLabel)}</span>
+                ${titleBadge}
             </div>
             <div class="bl-foot">
-                ${titleBadge}
-                <div class="bl-foot-right">
-                    <div class="bl-actions" onclick="event.stopPropagation()">
-                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" onclick="ungroupAll('${grpName}')" title="แยกงานทั้งหมด">
-                            <i data-lucide="shuffle" class="vc-icon-sm"></i>
-                        </button>
-                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" onclick="openAssignModal(null,'group','${grpName}')" title="แก้ไขกลุ่ม">
-                            <i data-lucide="pencil" class="vc-icon-sm"></i>
-                        </button>
-                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm bl-grp-chev"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#${colId}"
-                                aria-expanded="false"
-                                onclick="event.stopPropagation()"
-                                title="ขยาย/ย่อ">
-                            <i data-lucide="chevron-down" class="vc-icon-sm"></i>
-                        </button>
-                    </div>
+                <div class="bl-badges">
+                    ${grpTimeBadge}
+                    ${grpPaxBadge}
+                </div>
+                <div class="bl-actions" onclick="event.stopPropagation()">
+                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" onclick="ungroupAll('${grpName}')" title="แยกงานทั้งหมด">
+                        <i data-lucide="shuffle" class="vc-icon-sm"></i>
+                    </button>
+                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" onclick="openAssignModal(null,'group','${grpName}')" title="แก้ไขกลุ่ม">
+                        <i data-lucide="pencil" class="vc-icon-sm"></i>
+                    </button>
+                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm bl-grp-chev"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#${colId}"
+                            aria-expanded="false"
+                            onclick="event.stopPropagation()"
+                            title="ขยาย/ย่อ">
+                        <i data-lucide="chevron-down" class="vc-icon-sm"></i>
+                    </button>
                 </div>
             </div>
             <div class="collapse bl-grp-collapse" id="${colId}">
@@ -793,108 +800,97 @@ function renderAfter() {
     list.innerHTML = groups.map(g => renderTripRow(g)).join('');
 }
 
+/* tag งบ สำหรับ fuel/OT badge (personal = เรียกเก็บ) */
+function tripBudgetTag(expType) {
+    if (expType === 'central')    return 'หักงบส่วนกลาง';
+    if (expType === 'department') return 'หักงบส่วนกอง';
+    return 'เรียกเก็บ';
+}
+
 function renderTripRow(group) {
     const b       = group[0];
     const isGroup = group.length > 1;
 
-    const bm     = group.find(x => x.odoStart !== null && x.odoEnd !== null) || b;
-    const hasOdo = bm.odoStart !== null && bm.odoEnd !== null;
-    const dist   = hasOdo ? (bm.odoEnd - bm.odoStart) : 0;
+    const bm      = group.find(x => x.odoStart !== null && x.odoEnd !== null) || b;
+    const started = bm.odoStart !== null;                          // ออกเลขเริ่มแล้ว
+    const hasOdo  = bm.odoStart !== null && bm.odoEnd !== null;    // ปิดงานแล้ว
+    const dist    = hasOdo ? (bm.odoEnd - bm.odoStart) : 0;
 
-    const veh        = vehicles.find(v => v.id === bm.vehicleId);
-    const fuelRate   = veh ? Number(veh.fuelRate) : 0;
-    const override   = Number(bm.fuelCost) || 0;
-    const autoCost   = (hasOdo && fuelRate > 0)
-                       ? Math.round((dist / fuelRate) * fuelPrice * 100) / 100
-                       : 0;
-    const isOverride = override > 0;
-    const total      = hasOdo ? (isOverride ? override : autoCost) : 0;
+    const veh      = vehicles.find(v => v.id === bm.vehicleId);
+    const fuelRate = veh ? Number(veh.fuelRate) : 0;
+    const override = Number(bm.fuelCost) || 0;
+    const autoCost = (hasOdo && fuelRate > 0)
+                     ? Math.round((dist / fuelRate) * fuelPrice * 100) / 100
+                     : 0;
+    const total    = hasOdo ? (override > 0 ? override : autoCost) : 0;
 
     const plate    = b.vehicleLabel ? b.vehicleLabel.split(' · ').pop() : '—';
-    const nameText = isGroup ? `งานร่วม ${group.length} รายการ` : esc(b.booker);
-    const destText = isGroup ? '' : esc(b.dest || '');
+    const destText = isGroup ? `งานร่วม ${group.length} รายการ` : esc(b.dest || b.booker || '—');
 
-    const expBadgeCls = b.expType==='central' ? 'va-trip-exp--central'
-                      : b.expType==='department' ? 'va-trip-exp--department' : 'va-trip-exp--personal';
-    const expLabel = b.expType==='central' ? 'ส่วนกลาง'
-                   : b.expType==='department' ? esc(b.deptName) : 'ส่วนตัว';
+    const budgetTag = tripBudgetTag(b.expType);
+    const isCharge  = b.expType === 'personal';
 
-    const tripBadgeCls   = hasOdo ? 'vc-badge-success vc-badge-dot' : 'vc-badge-warning vc-badge-dot';
-    const tripBadgeLabel = hasOdo ? 'บันทึกไมล์แล้ว' : 'รอบันทึกไมล์';
-
-    const mileageHtml = hasOdo ? `
-        <div class="va-trip-mileage">
-            <span class="va-trip-mileage-label">MILEAGE</span>
-            <span class="va-trip-mileage-range vc-mono">${fmtNum(bm.odoStart)} → ${fmtNum(bm.odoEnd)}</span>
-            <span class="va-trip-mileage-dot">·</span>
-            <span class="va-trip-mileage-dist vc-mono">${fmtNum(dist)} กม.</span>
-            ${fuelRate > 0
-                ? `<span class="va-trip-mileage-dot">·</span>
-                   <span class="va-trip-mileage-rate">อัตรา ${fmtNum(fuelRate)} กม./ลิตร</span>`
-                : ''}
-            ${isOverride
-                ? `<span class="va-trip-mileage-dot">·</span>
-                   <span class="va-trip-mileage-rate">กำหนดเอง</span>`
-                : ''}
-        </div>` : '';
-
-    let metaIcon = 'clock';
-    let metaText = 'ยังไม่เริ่ม / กำลังเดินทาง · รอออกเลขไมล์';
-    let metaCls  = 'va-trip-meta--pending';
-    let leftActionHtml = '';
-
-    if (!hasOdo) {
-        metaIcon = 'clock';
-        metaText = 'ยังไม่เริ่ม / กำลังเดินทาง · รอออกเลขไมล์';
-        metaCls  = 'va-trip-meta--pending';
-    } else if (b.expType === 'personal') {
-        if (bm.personalStatus === 1) {
-            metaIcon = 'circle-check';
-            metaText = `จ่ายแล้ว · ${esc(bm.personalPaidAt)}`;
-            metaCls  = 'va-trip-meta--ok';
+    /* บรรทัด 1 มุมขวา — payment (ว่างถ้ายังไม่ปิดงาน) */
+    let payHtml = '';
+    if (hasOdo) {
+        if (isCharge) {
+            payHtml = bm.personalStatus === 1
+                ? `<span class="va-trip-pay va-trip-pay--done"><i data-lucide="circle-check" class="vc-icon-sm"></i>จ่ายแล้ว · ${esc(bm.personalPaidAt)}</span>`
+                : `<button type="button" class="va-trip-pay-btn" onclick="event.stopPropagation();markPaid(${bm.mileageId}, ${bm.id})" title="ยืนยันการชำระเงินจากผู้จอง"><i data-lucide="wallet" class="vc-icon-sm"></i>ยืนยันการชำระเงิน</button>`;
         } else {
-            metaIcon = 'wallet';
-            metaText = 'รอรับเงินจากผู้จอง';
-            metaCls  = 'va-trip-meta--pending';
-            leftActionHtml = `
-                <button type="button" class="va-trip-btn va-trip-btn--paid" onclick="markPaid(${bm.mileageId}, ${bm.id})" title="ยืนยันได้รับเงินแล้ว">
-                    <i data-lucide="check" class="vc-icon-sm"></i>
-                    รับเงินแล้ว
-                </button>`;
+            payHtml = `<span class="va-trip-pay va-trip-pay--done"><i data-lucide="circle-check" class="vc-icon-sm"></i>จ่ายแล้ว${bm.actualEnd ? ` · ${esc(bm.actualEnd)}` : ''}</span>`;
         }
-    } else {
-        metaIcon = 'circle-check';
-        const tag = b.expType === 'department' ? '(ตัดงบกอง)' : '(ตัดงบกลาง)';
-        metaText = `บันทึกไมล์แล้ว ${tag}`;
-        metaCls  = 'va-trip-meta--ok';
     }
+
+    /* บรรทัด 2 — mileage (icon car) */
+    const mileageHtml = hasOdo
+        ? `<div class="va-trip-mileage">
+               <i data-lucide="car" class="vc-icon-sm va-trip-mileage-ico"></i>
+               <span class="vc-mono">${fmtNum(bm.odoStart)} → ${fmtNum(bm.odoEnd)}</span>
+               <span class="va-trip-mileage-dot">·</span>
+               <span class="vc-mono">${fmtNum(dist)} กม.</span>
+               ${fuelRate > 0 ? `<span class="va-trip-mileage-dot">·</span><span class="vc-mono">${fmtNum(fuelRate)} กม./ลิตร</span>` : ''}
+           </div>`
+        : `<div class="va-trip-mileage va-trip-mileage--empty">ยังไม่บันทึกเลขไมล์</div>`;
+
+    /* บรรทัด 3 — badges: คนขับ · สถานะ · อัตราน้ำมัน · ค่าน้ำมัน · OT */
+    const driverBadge = b.driverLabel
+        ? `<span class="vc-badge vc-badge-neutral va-trip-badge"><i data-lucide="user" class="vc-icon-sm"></i>${esc(b.driverLabel)}</span>`
+        : '';
+
+    const isPast = new Date(b.endIso) < serverNow;
+    let stCls, stIcon, stLabel;
+    if (hasOdo)       { stCls = 'vc-badge-success'; stIcon = 'flag';       stLabel = 'สิ้นสุดการเดินทาง'; }
+    else if (started) { stCls = 'vc-badge-blue';    stIcon = 'navigation'; stLabel = 'เริ่มเดินทาง'; }
+    else if (isPast)  { stCls = 'vc-badge-neutral'; stIcon = 'circle-x';   stLabel = 'ยกเลิก (ไม่บันทึกไมล์)'; }
+    else              { stCls = 'vc-badge-warning'; stIcon = 'clock';      stLabel = 'รอเดินทาง'; }
+    const statusBadge = `<span class="vc-badge ${stCls} va-trip-badge"><i data-lucide="${stIcon}" class="vc-icon-sm"></i>${stLabel}</span>`;
+
+    // const rateBadge = `<span class="vc-badge vc-badge-neutral va-trip-badge"><i data-lucide="fuel" class="vc-icon-sm"></i>${fmtNum(fuelPrice)}฿/ลิตร</span>`;
+
+    const fuelBadge = hasOdo
+        ? `<span class="vc-badge va-trip-badge ${isCharge ? 'vc-badge-warning' : 'vc-badge-neutral'}"><i data-lucide="fuel" class="vc-icon-sm"></i>${fmtBaht(total)} (${budgetTag}) | ${fmtNum(fuelPrice)}฿/ลิตร </span>`
+        : '';
+    const otH = Number(bm.otHours)  || 0;
+    const otA = Number(bm.otAmount) || 0;
+    const otBadge = otA > 0
+        ? `<span class="vc-badge va-trip-badge ${isCharge ? 'vc-badge-warning' : 'va-trip-badge--ot'}"><i data-lucide="clock" class="vc-icon-sm"></i>OT +${fmtNum(otH)} ชม. · ${fmtBaht(otA)} (${budgetTag})</span>`
+        : '';
 
     return `
     <div class="va-trip${!hasOdo ? ' va-trip--no-mileage' : ''}">
         <div class="va-trip-head">
             <span class="va-trip-plate">${esc(plate)}</span>
-            <span class="va-trip-exp ${expBadgeCls}">${expLabel}</span>
-            <span class="vc-badge ${tripBadgeCls} va-trip-status">${tripBadgeLabel}</span>
-            ${hasOdo ? `<span class="va-trip-amount vc-mono">${fmtBaht(total)}</span>` : ''}
-        </div>
-        <div class="va-trip-person">
-            <span class="va-trip-avatar"><i data-lucide="user" class="vc-icon-sm"></i></span>
-            <span class="va-trip-name">${nameText}</span>
-            ${destText ? `<span class="va-trip-dest">${destText}</span>` : ''}
+            <i data-lucide="arrow-right" class="vc-icon-sm va-trip-arrow"></i>
+            <span class="va-trip-dest">${destText}</span>
+            ${payHtml}
         </div>
         ${mileageHtml}
-        <div class="va-trip-foot">
-            <span class="va-trip-meta ${metaCls}">
-                <i data-lucide="${metaIcon}" class="vc-icon-sm"></i>
-                ${metaText}
-            </span>
-            <div class="va-trip-foot-actions">
-                ${leftActionHtml}
-                <button type="button" class="va-trip-btn va-trip-btn--tg" onclick="notifyDept(${b.id})" title="แจ้งผ่าน Telegram">
-                    <i data-lucide="send" class="vc-icon-sm"></i>
-                    แจ้ง Telegram
-                </button>
-            </div>
+        <div class="va-trip-badges">
+            ${driverBadge}
+            ${statusBadge}
+            ${fuelBadge}
+            ${otBadge}
         </div>
     </div>`;
 }

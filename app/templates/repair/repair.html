@@ -10,11 +10,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/repair.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='repair/css/repair.css') }}">
     <link href="{{ url_for('static', filename='vendor/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='vendor/datatables/css/responsive.bootstrap5.min.css') }}" rel="stylesheet">
 </head>
@@ -25,12 +25,12 @@
 <div class="container-fluid container-p-y">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% set active_menu = 'repair' %}
-    {% include '_sidebar.html' %}
+    {% include '_shared/sidebar.html' %}
 
     <main class="main-content vc-scope">
         {% set page_section = 'บริการ' %}
         {% set page_title = 'แจ้งซ่อม IT' %}
-        {% include '_header.html' %}
+        {% include '_shared/header.html' %}
 
         <div class="container-xxl px-3 pt-2">
 
@@ -482,6 +482,6 @@
 <script src="{{ url_for('static', filename='vendor/datatables/js/dataTables.bootstrap5.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/datatables/js/dataTables.responsive.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/datatables/js/responsive.bootstrap5.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='js/pages/repair.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='repair/js/repair.js') }}"></script>
 </body>
 </html>

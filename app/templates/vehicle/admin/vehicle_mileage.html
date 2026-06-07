@@ -9,11 +9,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/fuel_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mileage_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_mileage.css') }}">
 </head>
 <body>
 {% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
@@ -22,12 +22,12 @@
 <div class="container-fluid container-p-y">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% set active_menu = 'mileage' %}
-    {% include '_sidebar.html' %}
+    {% include '_shared/sidebar.html' %}
 
     <main class="main-content vc-scope">
         {% set page_section = 'ผู้ดูแลระบบ' %}
         {% set page_title = 'เลขไมล์' %}
-        {% include '_header.html' %}
+        {% include '_shared/header.html' %}
 
         <div class="container-xxl px-3 pt-2">
 
@@ -685,6 +685,6 @@
 </script>
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='js/pages/mileage-admin.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_mileage.js') }}"></script>
 </body>
 </html>
