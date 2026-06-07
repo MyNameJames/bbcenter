@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet · อนุมัติการจองรถ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root{
+  --ink:#18181B; --ink-2:#52525B; --ink-3:#A1A1AA; --ink-4:#C4C4CC;
+  --line:#ECECEE; --line-2:#F4F4F5;
+  --bg:#FFFFFF; --canvas:#FBFBFC; --hover:#F5F5F6;
+  --brand:#4F46E5; --brand-600:#4338CA; --brand-weak:#EEF0FF;
+  --green:#15803D; --green-bg:#E9F6EE;
+  --amber:#92710A; --amber-bg:#FBF2D6;
+  --red:#BE2030;   --red-bg:#FBE8EA;
+  --pink:#BE2063;  --pink-bg:#FBE7F0;
+  --blue:#2563EB;  --blue-bg:#E8EEFD;
+  --r:8px; --r-sm:6px; --r-lg:12px;
+  --sh:0 1px 2px rgba(24,24,27,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'IBM Plex Sans Thai','Inter',sans-serif;
+  background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+.num,.en{font-family:'Inter','IBM Plex Sans Thai',sans-serif;font-feature-settings:'tnum'}
+.svg{width:18px;height:18px;stroke-width:1.7}
+.svg-s{width:15px;height:15px;stroke-width:1.7}
+.svg-xs{width:13px;height:13px;stroke-width:1.8}
+button{font-family:inherit}
+
+/* ════ APP SHELL ════ */
+.app{display:grid;grid-template-columns:248px 1fr;height:100vh;overflow:hidden}
+
+/* ── sidebar ── */
+.nav{background:var(--bg);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px}
+.brand .mark{width:30px;height:30px;border-radius:8px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center}
+.brand .name{font-family:'Inter';font-weight:700;font-size:16px;letter-spacing:-.3px}
+.brand .name b{color:var(--brand)}
+.nav-group{margin-top:6px}
+.nav-label{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-4);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:var(--r-sm);color:var(--ink-2);font-size:13.5px;font-weight:500;cursor:pointer;text-decoration:none;transition:.12s;position:relative}
+.nav-item:hover{background:var(--hover);color:var(--ink)}
+.nav-item .svg{color:var(--ink-3)}
+.nav-item.active{background:var(--brand-weak);color:var(--brand);font-weight:600}
+.nav-item.active .svg{color:var(--brand)}
+.nav-item .badge{margin-left:auto;font-size:11px;font-weight:600;background:var(--amber-bg);color:var(--amber);border-radius:20px;padding:1px 7px}
+.nav-item .count-pill{margin-left:auto;font-size:11px;font-weight:600;background:var(--ink);color:#fff;border-radius:20px;min-width:20px;text-align:center;padding:1px 6px}
+.nav-spacer{flex:1}
+.nav-foot{border-top:1px solid var(--line-2);padding-top:10px;margin-top:8px}
+.nav-user{display:flex;align-items:center;gap:10px;padding:8px 8px 2px;margin-top:6px}
+.nav-user .av{width:30px;height:30px;border-radius:50%;background:#6366F1;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Inter'}
+.nav-user .info{min-width:0;line-height:1.25}
+.nav-user .info .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-user .info .r{font-size:11.5px;color:var(--ink-3)}
+
+/* ── workspace ── */
+.workspace{display:flex;flex-direction:column;min-width:0;background:var(--canvas)}
+
+/* topbar */
+.topbar{height:60px;flex:0 0 auto;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 22px}
+.search{flex:1;max-width:440px;display:flex;align-items:center;gap:10px;background:var(--canvas);border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;color:var(--ink-3);font-size:13.5px;cursor:text;transition:.12s}
+.search:hover{border-color:#E0E0E2}
+.search .kbd{margin-left:auto;font-family:'Inter';font-size:11px;font-weight:600;color:var(--ink-3);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:4px}
+.icon-btn{width:38px;height:38px;border:none;background:transparent;border-radius:var(--r-sm);color:var(--ink-2);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:.12s}
+.icon-btn:hover{background:var(--hover);color:var(--ink)}
+.icon-btn .ping{position:absolute;top:9px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--red);border:2px solid var(--bg)}
+.top-div{width:1px;height:24px;background:var(--line);margin:0 6px}
+.top-profile{display:flex;align-items:center;gap:8px;padding:4px 6px 4px 4px;border-radius:30px;cursor:pointer;transition:.12s}
+.top-profile:hover{background:var(--hover)}
+.top-profile .av{width:32px;height:32px;border-radius:50%;background:#0EA5E9;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Inter'}
+
+/* canvas scroll */
+.canvas{flex:1;overflow-y:auto;padding:0}
+.canvas::-webkit-scrollbar{width:10px}
+.canvas::-webkit-scrollbar-thumb{background:#E4E4E7;border-radius:10px;border:3px solid var(--canvas)}
+.wrap{max-width:1140px;margin:0 auto;padding:18px 28px 48px}
+
+/* crumb bar */
+.crumbbar{display:flex;align-items:center;justify-content:space-between;padding:6px 0 16px}
+.crumb{display:flex;align-items:center;gap:10px;color:var(--ink-3);font-size:13px}
+.crumb .back{width:30px;height:30px;border:1px solid var(--line);background:var(--bg);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;color:var(--ink-2);cursor:pointer}
+.crumb .back:hover{background:var(--hover)}
+.crumb b{color:var(--ink);font-weight:600}
+.crumb .sl{color:var(--ink-4)}
+.last-act{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-3)}
+.last-act .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+
+/* ════ ENTITY (profile + date strip) ════ */
+.entity{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px 24px 8px;margin-bottom:20px}
+.entity-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.ent-id{display:flex;gap:16px;align-items:center}
+.cal-av{width:58px;height:58px;border-radius:14px;background:var(--ink);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 auto;font-family:'Inter'}
+.cal-av .d{font-size:24px;font-weight:700;line-height:1}
+.cal-av .m{font-size:9.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;margin-top:3px}
+.ent-eyebrow{font-size:12px;font-weight:500;color:var(--ink-3);letter-spacing:.2px}
+.ent-id h1{font-size:21px;font-weight:700;letter-spacing:-.4px;margin:2px 0 4px}
+.ent-meta{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-2)}
+.ent-meta .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.ent-meta .sl{color:var(--ink-4)}
+.ent-actions{display:flex;align-items:center;gap:10px}
+.av-stack{display:flex;align-items:center;padding-right:4px}
+.av-stack .av{width:32px;height:32px;border-radius:50%;border:2px solid var(--bg);font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Inter';margin-left:-9px}
+.av-stack .av:first-child{margin-left:0}
+.av-stack .more{background:var(--line-2);color:var(--ink-2);font-weight:600}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px 13px;cursor:pointer;transition:.12s;white-space:nowrap}
+.btn:hover{background:var(--hover);border-color:#E2E2E5}
+.btn-sm{padding:6px 11px;font-size:12.5px}
+.btn-icon{padding:8px;width:36px;justify-content:center}
+.btn-primary{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:var(--sh)}
+.btn-primary:hover{background:var(--brand-600);border-color:var(--brand-600)}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn-ghost:hover{background:var(--hover);color:var(--ink)}
+.btn-danger{color:var(--red);border-color:#F0D7DA;background:var(--bg)}
+.btn-danger:hover{background:var(--red-bg);border-color:#EBC4C9}
+
+/* week strip */
+.weekstrip{display:flex;align-items:stretch;gap:6px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line-2)}
+.wk-nav{width:34px;border:1px solid var(--line);background:var(--bg);color:var(--ink-3);cursor:pointer;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;transition:.12s}
+.wk-nav:hover{background:var(--hover);color:var(--ink)}
+.wk-day{flex:1;background:transparent;border:1px solid transparent;cursor:pointer;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:4px;border-radius:var(--r);transition:.12s;font-family:'Inter'}
+.wk-day:hover{background:var(--hover)}
+.wk-day .wd{font-size:11px;font-weight:500;color:var(--ink-3)}
+.wk-day .dd{font-size:15px;font-weight:600;color:var(--ink)}
+.wk-day .pip{width:5px;height:5px;border-radius:50%;background:transparent}
+.wk-day.has .pip{background:var(--brand)}
+.wk-day.sel{background:var(--ink);border-color:var(--ink)}
+.wk-day.sel .wd{color:rgba(255,255,255,.6)}
+.wk-day.sel .dd{color:#fff}
+.wk-day.sel.has .pip{background:#fff}
+
+/* ════ GRID ════ */
+.grid{display:grid;grid-template-columns:1fr 332px;gap:20px;align-items:start}
+
+/* panel (light, reduced — section not heavy card) */
+.panel{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh)}
+.panel-pad{padding:6px 22px 8px}
+.panel-side{padding:18px 18px 10px}
+
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:16px 0 2px}
+.sec-title{font-size:15px;font-weight:700;letter-spacing:-.2px;display:flex;align-items:center;gap:9px}
+.sec-title .count{font-family:'Inter';font-size:11.5px;font-weight:600;color:var(--ink-2);background:var(--line-2);border-radius:20px;padding:2px 8px}
+.sec-head .actions{display:flex;gap:6px}
+
+/* tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding-top:6px}
+.tab{background:none;border:none;border-bottom:2px solid transparent;padding:9px 11px 11px;font-family:inherit;font-size:13px;color:var(--ink-3);cursor:pointer;display:flex;align-items:center;gap:7px;margin-bottom:-1px;font-weight:500;transition:.12s}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
+.tab .b{font-family:'Inter';font-size:11px;font-weight:600;background:var(--line-2);color:var(--ink-2);border-radius:20px;padding:1px 7px;min-width:18px;text-align:center}
+.tab.active .b{background:var(--ink);color:#fff}
+
+/* booking rows */
+.rows{display:flex;flex-direction:column}
+.row{display:flex;gap:14px;padding:18px 2px;border-bottom:1px solid var(--line-2);transition:.12s}
+.row:last-child{border-bottom:none}
+.row:hover{background:#FCFCFD}
+.st-circle{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:2px solid #D4D4D8;margin-top:2px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.12s}
+.st-circle:hover{border-color:var(--brand)}
+.st-circle.done{background:var(--green);border-color:var(--green)}
+.st-circle.done .svg-xs{stroke:#fff}
+.row-body{flex:1;display:flex;justify-content:space-between;gap:18px;min-width:0}
+.row-main{min-width:0}
+.row-main h3{font-size:14.5px;font-weight:600;letter-spacing:-.1px}
+.row-main p{font-size:12.5px;color:var(--ink-2);margin:3px 0 11px}
+.row-meta{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--ink-2)}
+.av-xs{width:24px;height:24px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Inter';flex:0 0 auto}
+.row-meta .sl{color:var(--ink-4)}
+.row-meta b{font-weight:600;color:var(--ink)}
+.row-side{display:flex;flex-direction:column;align-items:flex-end;gap:13px;flex:0 0 auto;text-align:right}
+.badge{display:inline-flex;align-items:center;gap:6px;font-family:'Inter';font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.badge .bd{width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge .t{font-weight:500;opacity:.8;font-family:'IBM Plex Sans Thai'}
+.b-amber{color:var(--amber);background:var(--amber-bg)}
+.b-green{color:var(--green);background:var(--green-bg)}
+.b-red{color:var(--red);background:var(--red-bg)}
+.b-blue{color:var(--blue);background:var(--blue-bg)}
+.row-actions{display:flex;gap:7px}
+
+/* vehicle rail */
+.veh-rows{display:flex;flex-direction:column;margin-top:6px}
+.veh-row{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line-2);transition:.12s;border-radius:8px}
+.veh-row:last-child{border-bottom:none}
+.veh-row:hover{background:#FCFCFD}
+.veh-ic{width:38px;height:38px;border-radius:10px;background:var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--ink-2);flex:0 0 auto}
+.veh-row.busy .veh-ic{background:var(--ink);color:#fff}
+.veh-info{flex:1;min-width:0}
+.veh-info .p{font-family:'Inter';font-size:13.5px;font-weight:600;letter-spacing:-.1px}
+.veh-info .m{font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.veh-free{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:var(--green);white-space:nowrap}
+.veh-free .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.veh-key{width:32px;height:32px;border:1px solid var(--line);background:var(--bg);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;color:var(--ink-3);cursor:pointer;transition:.12s}
+.veh-key:hover{background:var(--hover);color:var(--ink)}
+.veh-swap{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--bg);border-radius:var(--r-sm);padding:6px 11px;cursor:pointer;color:var(--ink);transition:.12s}
+.veh-swap:hover{background:var(--hover)}
+.side-foot{padding:12px 2px 4px;margin-top:4px;border-top:1px solid var(--line-2);display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3)}
+.side-foot b{font-family:'Inter';color:var(--ink);font-weight:600}
+
+.mock-note{max-width:1140px;margin:0 auto;padding:0 28px 28px;color:var(--ink-4);font-size:11.5px}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ════ SIDEBAR ════ -->
+  <aside class="nav">
+    <div class="brand">
+      <span class="mark"><i data-lucide="car-front" class="svg"></i></span>
+      <span class="name">BB<b>Fleet</b></span>
+    </div>
+
+    <a class="nav-item"><i data-lucide="layout-dashboard" class="svg"></i> ภาพรวม</a>
+
+    <div class="nav-group">
+      <div class="nav-label">คำขอจองรถ</div>
+      <a class="nav-item active"><i data-lucide="clipboard-check" class="svg"></i> อนุมัติการจอง <span class="count-pill">1</span></a>
+      <a class="nav-item"><i data-lucide="history" class="svg"></i> ประวัติการจอง</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">จัดการ</div>
+      <a class="nav-item"><i data-lucide="car" class="svg"></i> รายการรถ</a>
+      <a class="nav-item"><i data-lucide="wallet" class="svg"></i> งบประมาณ</a>
+      <a class="nav-item"><i data-lucide="fuel" class="svg"></i> เติมน้ำมัน</a>
+      <a class="nav-item"><i data-lucide="gauge" class="svg"></i> เลขไมล์</a>
+    </div>
+
+    <div class="nav-spacer"></div>
+
+    <div class="nav-foot">
+      <a class="nav-item"><i data-lucide="settings" class="svg"></i> ตั้งค่า</a>
+      <a class="nav-item"><i data-lucide="life-buoy" class="svg"></i> ช่วยเหลือ <span class="badge">8</span></a>
+      <div class="nav-user">
+        <span class="av">PJ</span>
+        <div class="info">
+          <div class="n">ภัทรพร จตุพร</div>
+          <div class="r">ผู้ดูแลระบบ</div>
+        </div>
+        <i data-lucide="chevron-up" class="svg-s" style="color:var(--ink-3)"></i>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════ WORKSPACE ════ -->
+  <div class="workspace">
+
+    <!-- topbar -->
+    <header class="topbar">
+      <div class="search">
+        <i data-lucide="search" class="svg-s"></i>
+        <span>ค้นหา ทะเบียนรถ คนขับ หรือพิมพ์คำสั่ง</span>
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn"><i data-lucide="sparkles" class="svg"></i></button>
+        <button class="icon-btn"><i data-lucide="user-plus" class="svg"></i></button>
+        <button class="icon-btn"><i data-lucide="bell" class="svg"></i><span class="ping"></span></button>
+        <div class="top-div"></div>
+        <div class="top-profile">
+          <span class="av">PJ</span>
+          <i data-lucide="chevron-down" class="svg-s" style="color:var(--ink-3)"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- canvas -->
+    <div class="canvas">
+      <div class="wrap">
+
+        <!-- crumb -->
+        <div class="crumbbar">
+          <div class="crumb">
+            <button class="back"><i data-lucide="arrow-left" class="svg-s"></i></button>
+            อนุมัติการจอง <span class="sl">›</span> <b>วันเสาร์ที่ 6 มิ.ย. 2569</b>
+          </div>
+          <div class="last-act"><span class="dot"></span> อัปเดตล่าสุด วันนี้ <span class="num">09:00</span></div>
+        </div>
+
+        <!-- entity -->
+        <section class="entity">
+          <div class="entity-top">
+            <div class="ent-id">
+              <div class="cal-av"><span class="d">6</span><span class="m">มิ.ย.</span></div>
+              <div>
+                <div class="ent-eyebrow"><span class="num">1–7</span> มิถุนายน <span class="num">2569</span></div>
+                <h1>วันเสาร์ที่ <span class="num">6</span> มิถุนายน</h1>
+                <div class="ent-meta"><span class="dot"></span> วันนี้ <span class="sl">·</span> จองทั้งหมด <span class="num">2</span> <span class="sl">·</span> รออนุมัติ <span class="num">1</span></div>
+              </div>
+            </div>
+            <div class="ent-actions">
+              <div class="av-stack">
+                <span class="av" style="background:#6366F1">พจ</span>
+                <span class="av" style="background:#0EA5E9">วร</span>
+                <span class="av more">+2</span>
+              </div>
+              <button class="btn btn-sm"><i data-lucide="merge" class="svg-s"></i> รวมงาน</button>
+              <button class="btn btn-primary btn-sm"><i data-lucide="send" class="svg-s"></i> แจ้งเตือน</button>
+              <button class="btn btn-icon btn-sm"><i data-lucide="more-horizontal" class="svg-s"></i></button>
+            </div>
+          </div>
+
+          <nav class="weekstrip">
+            <button class="wk-nav"><i data-lucide="chevron-left" class="svg-s"></i></button>
+            <button class="wk-day"><span class="wd">จ</span><span class="dd">1</span><span class="pip"></span></button>
+            <button class="wk-day"><span class="wd">อ</span><span class="dd">2</span><span class="pip"></span></button>
+            <button class="wk-day has"><span class="wd">พ</span><span class="dd">3</span><span class="pip"></span></button>
+            <button class="wk-day"><span class="wd">พฤ</span><span class="dd">4</span><span class="pip"></span></button>
+            <button class="wk-day"><span class="wd">ศ</span><span class="dd">5</span><span class="pip"></span></button>
+            <button class="wk-day sel has"><span class="wd">ส</span><span class="dd">6</span><span class="pip"></span></button>
+            <button class="wk-day"><span class="wd">อา</span><span class="dd">7</span><span class="pip"></span></button>
+            <button class="wk-nav"><i data-lucide="chevron-right" class="svg-s"></i></button>
+          </nav>
+        </section>
+
+        <!-- grid -->
+        <div class="grid">
+
+          <!-- main -->
+          <main>
+            <div class="panel panel-pad">
+              <div class="sec-head">
+                <h2 class="sec-title">รายการจอง <span class="count num">2</span></h2>
+                <div class="actions">
+                  <button class="btn btn-ghost btn-sm"><i data-lucide="merge" class="svg-s"></i> รวมงาน</button>
+                  <button class="btn btn-ghost btn-sm"><i data-lucide="bell-ring" class="svg-s"></i> แจ้งเตือน</button>
+                </div>
+              </div>
+
+              <div class="tabs">
+                <button class="tab active">ทั้งหมด <span class="b num">2</span></button>
+                <button class="tab">รออนุมัติ <span class="b num">1</span></button>
+                <button class="tab">ส่ง Approver <span class="b num">0</span></button>
+                <button class="tab">อนุมัติแล้ว <span class="b num">1</span></button>
+                <button class="tab">ปฏิเสธ <span class="b num">0</span></button>
+              </div>
+
+              <div class="rows">
+
+                <article class="row">
+                  <span class="st-circle"></span>
+                  <div class="row-body">
+                    <div class="row-main">
+                      <h3>ไปรษณีย์กลาง · ฟ้ากด</h3>
+                      <p>รับ-ส่งเอกสารราชการประจำสัปดาห์</p>
+                      <div class="row-meta">
+                        <span class="av-xs" style="background:#6366F1">พจ</span>
+                        <b>พระมหาจตุพร ธมฺมาโภ</b> <span class="sl">·</span> ฝ่ายกิจการ <span class="sl">·</span> <span class="num">3</span> ที่นั่ง
+                      </div>
+                    </div>
+                    <div class="row-side">
+                      <span class="badge b-amber"><span class="bd"></span> รออนุมัติ <span class="t num">· 08:00–12:00</span></span>
+                      <div class="row-actions">
+                        <button class="btn btn-primary btn-sm"><i data-lucide="check" class="svg-s"></i> อนุมัติ</button>
+                        <button class="btn btn-danger btn-sm">ยกเลิก</button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="row">
+                  <span class="st-circle done"><i data-lucide="check" class="svg-xs"></i></span>
+                  <div class="row-body">
+                    <div class="row-main">
+                      <h3>ประชุมโครงการ · ฟ้ากด</h3>
+                      <p>ประชุมความคืบหน้าโครงการประจำเดือน</p>
+                      <div class="row-meta">
+                        <span class="av-xs" style="background:#0EA5E9">วร</span>
+                        <b>วรกฤต เสมาทับ</b> <span class="sl">·</span> ฝ่ายแผน <span class="sl">·</span> ฮข <span class="num">3858</span>
+                      </div>
+                    </div>
+                    <div class="row-side">
+                      <span class="badge b-green"><span class="bd"></span> อนุมัติแล้ว <span class="t num">· 13:00–17:00</span></span>
+                      <div class="row-actions">
+                        <button class="btn btn-ghost btn-sm"><i data-lucide="rotate-ccw" class="svg-s"></i> ย้อนสถานะ</button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+              </div>
+            </div>
+
+            <!-- trip history -->
+            <div class="panel panel-pad" style="margin-top:20px">
+              <div class="sec-head">
+                <h2 class="sec-title">รายละเอียดการเดินทาง <span class="count num">1</span></h2>
+              </div>
+              <div class="rows">
+                <article class="row">
+                  <span class="st-circle"></span>
+                  <div class="row-body">
+                    <div class="row-main">
+                      <h3>ฮข <span class="num">3858</span> · TOYOTA Hiace <span style="color:var(--ink-3);font-weight:500">(รถตู้ครัว)</span></h3>
+                      <p>วรกฤต เสมาทับ → ฟ้ากด · ส่วนตัว</p>
+                      <div class="row-meta">
+                        <i data-lucide="clock" class="svg-s" style="color:var(--ink-3)"></i> ยังไม่เริ่ม / กำลังเดินทาง <span class="sl">·</span> รอออกเลขไมล์
+                      </div>
+                    </div>
+                    <div class="row-side">
+                      <span class="badge b-amber"><span class="bd"></span> รอบันทึกไมล์</span>
+                      <div class="row-actions">
+                        <button class="btn btn-primary btn-sm"><i data-lucide="send" class="svg-s"></i> แจ้ง Telegram</button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </main>
+
+          <!-- right rail -->
+          <aside class="panel panel-side">
+            <div class="sec-head" style="padding-top:0">
+              <h2 class="sec-title"><i data-lucide="car" class="svg-s"></i> การใช้รถ</h2>
+              <span class="count num" style="font-family:'Inter';font-size:11.5px;font-weight:600;color:var(--ink-2);background:var(--line-2);border-radius:20px;padding:2px 8px">6</span>
+            </div>
+            <div class="veh-rows">
+
+              <div class="veh-row">
+                <div class="veh-ic"><i data-lucide="car" class="svg"></i></div>
+                <div class="veh-info"><div class="p">1นจ 9208</div><div class="m">TOYOTA Commuter (รถตู้)</div></div>
+                <span class="veh-free"><span class="dot"></span> ว่าง</span>
+                <button class="veh-key"><i data-lucide="key-round" class="svg-xs"></i></button>
+              </div>
+
+              <div class="veh-row">
+                <div class="veh-ic"><i data-lucide="car" class="svg"></i></div>
+                <div class="veh-info"><div class="p">ฮฉ 5064</div><div class="m">TOYOTA Hiace (รถตู้)</div></div>
+                <span class="veh-free"><span class="dot"></span> ว่าง</span>
+                <button class="veh-key"><i data-lucide="key-round" class="svg-xs"></i></button>
+              </div>
+
+              <div class="veh-row busy">
+                <div class="veh-ic"><i data-lucide="car" class="svg"></i></div>
+                <div class="veh-info"><div class="p">ฮข 3858</div><div class="m">วรกฤต · ฟ้ากด · 13:00–17:00</div></div>
+                <button class="veh-swap"><i data-lucide="shuffle" class="svg-xs"></i> Swap</button>
+              </div>
+
+              <div class="veh-row">
+                <div class="veh-ic"><i data-lucide="truck" class="svg"></i></div>
+                <div class="veh-info"><div class="p">ศม 139</div><div class="m">ISUZU D-MAX (รถกระบะ)</div></div>
+                <span class="veh-free"><span class="dot"></span> ว่าง</span>
+                <button class="veh-key"><i data-lucide="key-round" class="svg-xs"></i></button>
+              </div>
+
+              <div class="veh-row">
+                <div class="veh-ic"><i data-lucide="truck" class="svg"></i></div>
+                <div class="veh-info"><div class="p">กร 7922</div><div class="m">TOYOTA VIGO (รถกระบะ)</div></div>
+                <span class="veh-free"><span class="dot"></span> ว่าง</span>
+                <button class="veh-key"><i data-lucide="key-round" class="svg-xs"></i></button>
+              </div>
+
+              <div class="veh-row">
+                <div class="veh-ic"><i data-lucide="car" class="svg"></i></div>
+                <div class="veh-info"><div class="p">ฮข 1603</div><div class="m">TOYOTA Hiace (รถตู้)</div></div>
+                <span class="veh-free"><span class="dot"></span> ว่าง</span>
+                <button class="veh-key"><i data-lucide="key-round" class="svg-xs"></i></button>
+              </div>
+
+            </div>
+            <div class="side-foot">
+              <span>ว่าง <b class="num">5</b> / ใช้งาน <b class="num">1</b></span>
+              <span>ทั้งหมด <b class="num">6</b> คัน</span>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+
+      <p class="mock-note">Mockup — standalone · ไม่ผูก Flask/route · เปิดด้วย browser ตรงๆ ได้</p>
+    </div>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

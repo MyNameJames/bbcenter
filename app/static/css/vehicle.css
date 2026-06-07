@@ -25,7 +25,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
-    font-family: 'Sarabun', 'Inter', sans-serif;
+    font-family: var(--vc-font-sans);
     /* background-color: var(--bg-light); */
     color: var(--text-main);
     margin: 0;
@@ -85,7 +85,7 @@ body {
 
 /* ── Form helpers ──────────────────────────────────────────── */
 .form-section-title {
-    font-family: 'Prompt', sans-serif;
+    font-family: var(--vc-font-sans);
     font-weight: 700; font-size: .85rem;
     color: var(--primary);
     margin-bottom: 14px;
@@ -292,6 +292,347 @@ body {
 .mobile-list-section { display: none; }
 .mobile-indicator    { display: none; }
 
+/* ── Mobile premium — Hero + Day-bar (Phase B, 2026-05-23) ──
+   Mobile-only; desktop hides via .d-md-none in template. */
+.vrc-m-hero {
+    padding-top: 8px;
+    padding-bottom: 4px;
+}
+.vrc-m-hero-title {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--vc-fg);
+    margin: 0;
+    line-height: 1.2;
+}
+.vrc-m-hero-sub {
+    font-size: 12.5px;
+    color: var(--vc-fg-muted);
+    margin: 4px 0 0;
+    line-height: 1.4;
+}
+.vrc-m-month {
+    margin-top: 14px;
+}
+.vrc-m-month-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vc-fg);
+    letter-spacing: -0.005em;
+    font-variant-numeric: tabular-nums;
+}
+.vrc-m-month-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.vrc-m-month-controls .vrc-btn-icon {
+    width: 32px;
+    height: 32px;
+}
+.vrc-m-today-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    /* height: 30px; */
+    /* padding: 0 8px; */
+    border-radius: var(--vc-radius-xs);
+    border: 1px solid var(--vc-border);
+    background: var(--vc-bg);
+    color: var(--vc-fg);
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--vc-dur-fast) var(--vc-ease-snap),
+                border-color var(--vc-dur-fast),
+                transform var(--vc-dur-fast);
+}
+.vrc-m-today-btn:hover  { background: var(--vc-bg-hover); }
+.vrc-m-today-btn:active { transform: scale(.96); }
+.vrc-m-today-btn i { width: 11px; height: 11px; stroke-width: 1.75; }
+
+/* Day-label sub-bar — scrolls with content (sticky removed 2026-05-23
+   — was leaking z-index above notification panel + minor UX value). */
+.vrc-m-daybar {
+    /* background: var(--vc-bg); */
+    border-bottom: 1px solid var(--vc-border);
+    padding: 12px 4px;
+    margin: 0 -4px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.vrc-m-daybar-text {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+.vrc-m-daybar-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vc-fg);
+    letter-spacing: -0.005em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vrc-m-daybar-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--vc-fg-subtle);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.vrc-m-daybar-count:empty { display: none; }
+
+/* Animation — hero + daybar fade-in */
+@media (prefers-reduced-motion: no-preference) {
+    .vrc-m-hero {
+        animation: vrc-m-rise var(--vc-dur-slow) var(--vc-ease-out) both;
+    }
+    .vrc-m-daybar-label,
+    .vrc-m-daybar-count {
+        animation: vrc-m-fade var(--vc-dur-base) var(--vc-ease-out) both;
+    }
+}
+@keyframes vrc-m-rise {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes vrc-m-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ── Mobile premium — Event cards (Phase C, 2026-05-23) ── */
+.vrc-m-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 24px;
+}
+
+.vrc-m-evt {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    overflow: hidden;
+    transition: border-color var(--vc-dur-fast),
+                transform var(--vc-dur-fast);
+}
+.vrc-m-evt:hover  { border-color: var(--vc-fg-subtle); }
+.vrc-m-evt:active { transform: scale(.985); }
+
+.vrc-m-evt-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+}
+
+.vrc-m-evt-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--vc-fg-subtle);
+    flex-shrink: 0;
+    margin-top: 7px;
+}
+.vrc-m-evt-dot--approved  { background: var(--vc-green); }
+.vrc-m-evt-dot--pending   { background: var(--vc-amber); }
+.vrc-m-evt-dot--approver  { background: var(--vc-blue);  }
+.vrc-m-evt-dot--rejected  { background: var(--vc-red);   }
+.vrc-m-evt-dot--group     { background: var(--vc-accent);}
+.vrc-m-evt-dot--completed { background: var(--vc-fg-subtle); }
+
+.vrc-m-evt-body {
+    flex: 1;
+    min-width: 0;
+}
+.vrc-m-evt-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vc-fg);
+    letter-spacing: -0.005em;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vrc-m-evt-meta {
+    font-size: 12.5px;
+    color: var(--vc-fg-muted);
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 6px;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+}
+.vrc-m-evt-meta .sep { color: var(--vc-fg-disabled); }
+
+.vrc-m-evt-status {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: var(--vc-radius-full);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    margin-top: 1px;
+}
+.vrc-m-evt-status--approved  { background: var(--vc-green-bg); color: var(--vc-green); border-color: var(--vc-green-border); }
+.vrc-m-evt-status--pending   { background: var(--vc-amber-bg); color: var(--vc-amber); border-color: var(--vc-amber-border); }
+.vrc-m-evt-status--approver  { background: var(--vc-blue-bg);  color: var(--vc-blue);  border-color: var(--vc-blue-border);  }
+.vrc-m-evt-status--rejected  { background: var(--vc-red-bg);   color: var(--vc-red);   border-color: var(--vc-red-border);   }
+.vrc-m-evt-status--group     { background: var(--vc-accent-light); color: var(--vc-accent); border-color: var(--vc-accent-border); }
+.vrc-m-evt-status--completed { background: var(--vc-bg-subtle);color: var(--vc-fg-subtle); border-color: var(--vc-border); }
+
+/* Group toggle chevron */
+.vrc-m-evt-toggle {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    color: var(--vc-fg-muted);
+    border-radius: var(--vc-radius-xs);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: -2px;
+    transition: background var(--vc-dur-fast);
+}
+.vrc-m-evt-toggle:hover { background: var(--vc-bg-hover); }
+.vrc-m-evt-toggle i {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--vc-dur-base) var(--vc-ease-out);
+}
+.vrc-m-evt-toggle:not(.collapsed) i { transform: rotate(180deg); }
+
+/* Group sub-rows (collapsed by default) */
+.vrc-m-evt-sub {
+    border-top: 1px solid var(--vc-border);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--vc-bg-subtle);
+}
+.vrc-m-evt-sub-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background var(--vc-dur-fast),
+                border-color var(--vc-dur-fast);
+    font-family: inherit;
+    color: var(--vc-fg);
+}
+.vrc-m-evt-sub-row:hover { background: var(--vc-bg-hover); border-color: var(--vc-fg-subtle); }
+.vrc-m-evt-sub-time {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--vc-fg);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    min-width: 42px;
+    letter-spacing: -0.005em;
+}
+.vrc-m-evt-sub-body {
+    flex: 1;
+    min-width: 0;
+}
+.vrc-m-evt-sub-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vc-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+.vrc-m-evt-sub-meta {
+    font-size: 11.5px;
+    color: var(--vc-fg-muted);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Empty state — circled icon + 2-line copy */
+.vrc-m-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 56px 16px;
+    gap: 14px;
+}
+.vrc-m-empty-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--vc-fg-subtle);
+}
+.vrc-m-empty-icon i { width: 24px; height: 24px; stroke-width: 1.75; }
+.vrc-m-empty-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vc-fg);
+    letter-spacing: -0.005em;
+}
+.vrc-m-empty-sub {
+    font-size: 12.5px;
+    color: var(--vc-fg-muted);
+    margin-top: -10px;
+    line-height: 1.4;
+}
+
+/* (Phase D FAB block removed 2026-05-23 — reverted to inline button in daybar per user request.) */
+
+/* ── Mobile premium — Stagger reveal (Phase E, 2026-05-23) ──
+   Mobile-only elements (`.vrc-m-evt`, `.vrc-m-empty`) live inside
+   `d-md-none` containers, so animation rules can sit outside the
+   max-width media query safely (desktop never renders them). */
+@media (prefers-reduced-motion: no-preference) {
+    .vrc-m-evt {
+        animation: vrc-m-item-in var(--vc-dur-base) var(--vc-ease-out) both;
+        animation-delay: calc(var(--i, 0) * 30ms);
+    }
+    .vrc-m-empty {
+        animation: vrc-m-item-in var(--vc-dur-slow) var(--vc-ease-out) both;
+    }
+}
+@keyframes vrc-m-item-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 1199px) {
     /* Sidebar ซ่อนอยู่ทางซ้าย, เปิดด้วย .show */
@@ -330,60 +671,144 @@ body {
 }
 
 @media (max-width: 767px) {
-    /* Calendar compact */
-    .calendar-wrapper {
-        flex: 0 0 auto;
-        overflow: hidden;
-        padding: 0;
-        background: #fff;
+    /* ── Mobile premium (Phase A — 2026-05-23) ──
+       Compact calendar, square cells (aspect-ratio:1), today filled-black,
+       selected = inset ring, press scale, no card border. */
+
+    /* Calendar wrapper — drop card chrome on mobile */
+    #calendarView .vc-card {
+        border: 0;
+        background: transparent;
+        border-radius: 0;
+        overflow: visible;
     }
+
+    /* Grid + header */
     .calendar-grid {
         grid-template-columns: repeat(7, 1fr);
-        border: none; border-radius: 0; gap: 0;
+        border: 0;
+        border-radius: 0;
+        gap: 2px;
+        padding: 0 4px;
     }
+    .calendar-grid-head {
+        background: transparent;
+        padding: 0 4px;
+    }
+    .calendar-header-cell {
+        padding: 6px 0;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: .04em;
+        color: var(--vc-fg-subtle);
+        text-transform: uppercase;
+        border: 0;
+    }
+
+    /* Cell — square, rounded, animated press */
     .calendar-cell {
-        min-height: auto;
-        height: 52px;
-        padding: .2rem;
+        min-height: 0;
+        height: auto;
+        aspect-ratio: 1;
+        padding: 0;
+        gap: 3px;
+        border: 0;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         position: relative;
-        /* border-right: 1px solid var(--border-color);
-        border-bottom: 1px solid var(--border-color); */
+        font-variant-numeric: tabular-nums;
+        transition: background var(--vc-dur-fast) var(--vc-ease-snap),
+                    transform var(--vc-dur-fast);
     }
+    .calendar-cell:nth-child(7n) { border-right: 0; }
+    .calendar-cell:hover  { background: var(--vc-bg-hover); }
+    .calendar-cell:active { transform: scale(.94); }
+
     .calendar-cell .events-container,
     .calendar-cell .event-more { display: none !important; }
-    .calendar-cell .date-number { margin: 0; text-align: center; }
-    .calendar-header-cell { padding: .4rem 0; font-size: .68rem; border-bottom: 1px solid var(--border-color); }
 
-    /* dot บน mobile */
-    .mobile-indicator {
-        display: block !important;
-        width: 5px; height: 5px;
-        background: var(--primary);
-        border-radius: 50%;
-        position: absolute;
-        bottom: 6px;
-        left: 50%;
-        transform: translateX(-50%);
+    .calendar-cell .date-number {
+        width: auto;
+        height: auto;
+        margin: 0;
+        font-size: 13px;
+        font-weight: 500;
+        color: inherit;
+        background: transparent;
+        border: 0;
     }
 
-    /* Mobile list */
+    /* Today — filled black (premium, inverts text) */
+    .calendar-cell.today {
+        background: var(--vc-fg);
+        color: var(--vc-on-primary);
+    }
+    .calendar-cell.today:hover { background: var(--vc-fg); }
+    .calendar-cell.today .date-number {
+        color: var(--vc-on-primary);
+        font-weight: 600;
+        border: 0;
+        background: transparent;
+    }
+
+    /* Selected — inset ring (no layout shift) */
+    .calendar-cell.selected {
+        background: transparent;
+        outline: 0;
+        box-shadow: inset 0 0 0 1.5px var(--vc-fg);
+    }
+    /* Selected + today combo — keep filled black, drop extra ring.
+       Must re-assert background เพราะ .selected (above) set transparent
+       → today auto-selected on load จะกลายเป็น white text on white bg */
+    .calendar-cell.selected.today {
+        background: var(--vc-fg);
+        box-shadow: none;
+    }
+
+    /* Other-month — faded */
+    .calendar-cell.other-month {
+        background: transparent;
+        opacity: .3;
+    }
+    .calendar-cell.other-month:hover { background: transparent; }
+
+    /* Past day — silent (Q4) */
+    .calendar-cell.past-day { cursor: not-allowed; }
+    .calendar-cell.past-day:hover { background: var(--vc-bg-hover); }
+
+    /* Indicator — Phase F (2026-05-23) volume hint:
+       1 booking = 4px round dot · 2-3 = 14px short bar · 4+ = 22px long bar */
+    .mobile-indicator {
+        display: block !important;
+        width: 4px; height: 4px;
+        margin: 0;
+        background: var(--vc-fg-subtle);
+        border-radius: 50%;
+        position: static;
+        transform: none;
+    }
+    .mobile-indicator--bar-md,
+    .mobile-indicator--bar-lg {
+        height: 3px;
+        border-radius: 999px;
+    }
+    .mobile-indicator--bar-md { width: 14px; }
+    .mobile-indicator--bar-lg { width: 22px; }
+
+    .calendar-cell.today .mobile-indicator {
+        background: var(--vc-on-primary);
+        opacity: .7;
+    }
+
+    /* Mobile list shell */
     .mobile-list-section {
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
-        overflow: hidden;
-    }
-    .mobile-list-header {
-        /* padding: .875rem 1rem .5rem; */
-        flex-shrink: 0;
-        /* background: var(--bg-light); */
-        /* font-weight: 700; */
-        font-size: 1rem;
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
+        overflow: visible;
     }
     /* #mobileListContent {
          padding: .5rem 1rem 1rem; 
@@ -414,6 +839,12 @@ body {
         white-space: nowrap;
     } */
 
+    /* Phase E (2026-05-23): calendar fade-in on every renderCalendar */
+    @media (prefers-reduced-motion: no-preference) {
+        #calendarBody {
+            animation: vrc-m-fade var(--vc-dur-slow) var(--vc-ease-out) .05s both;
+        }
+    }
 } /* end @media (max-width: 767px) */
 
 
@@ -439,13 +870,13 @@ body {
 /* .bk-modal-dialog     { max-width: 480px; } */
 /* .bk-modal-dialog-sm  { max-width: 380px; } */
 
-/* Detail modal — header / info rows / section label / divider
-   2026-05-20 redesign: ทิ้ง 44px header circle → status pill ใต้ title;
-   dashed divider → solid full-bleed; member avatar เป็น neutral gray. */
+/* Detail modal — base classes (shared by vehicle + room modal-detail)
+   2026-05-20: ทิ้ง 44px header circle → status pill; solid full-bleed divider.
+   2026-05-23 premium: ทุก override อยู่ใน .bk-detail-content scope ด้านล่าง (ไม่ leak ไป room). */
 .bk-detail-title        { font-size: 1rem; font-weight: 600; color: var(--vc-fg); }
 .bk-detail-date         { font-size: .8rem; color: var(--vc-fg-subtle); margin-top: 2px; }
 
-/* Inline status pill (แทน .bk-detail-header-dot เดิม) */
+/* Inline status pill (base — ใช้ใน room ด้วย) */
 .bk-detail-status {
     display: inline-flex;
     align-items: center;
@@ -467,20 +898,20 @@ body {
 .bk-detail-status--group     { background: var(--vc-green-bg); color: var(--vc-green); }
 .bk-detail-status--completed { background: var(--vc-green-bg); color: var(--vc-green); }
 
-/* Solid full-bleed divider (จากเดิม dashed inset 24) */
+/* Solid full-bleed divider */
 .bk-detail-divider      { margin: 0; border-top: 1px solid var(--vc-border); }
 
-/* Primary info rows — time / plate / driver */
+/* Primary info rows (base) */
 .bk-detail-info         { padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; }
 .bk-detail-row          { display: flex; align-items: flex-start; gap: 12px; }
 .bk-detail-icon         { width: 16px; height: 16px; color: var(--vc-fg-subtle); flex-shrink: 0; margin-top: 1px; }
 .bk-detail-text         { font-size: .875rem; color: var(--vc-fg); }
 
-/* Section header (ผู้โดยสาร · N คน) */
+/* Section header (base) */
 .bk-detail-section-header { display: flex; align-items: center; gap: 4px; padding: 16px 24px 8px; }
 .bk-detail-section-label  { font-size: .7rem; font-weight: 700; color: var(--vc-fg-subtle); letter-spacing: .04em; }
 
-/* Member row avatar — neutral gray (ไม่ใช่ status color) */
+/* Member avatar (base) */
 .bk-detail-member-avatar {
     width: 32px;
     height: 32px;
@@ -494,6 +925,215 @@ body {
 }
 .bk-detail-member-avatar [data-lucide],
 .bk-detail-member-avatar svg.lucide { width: 14px; height: 14px; stroke-width: 1.75; }
+
+/* ════════════════════════════════════════
+   Vehicle Detail Modal — Premium overrides (2026-05-23)
+   Scoped under .bk-detail-content เพื่อไม่ leak ไป room-modal-detail.html
+   ════════════════════════════════════════ */
+.bk-detail-dialog { max-width: 440px; }
+.bk-detail-content {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--vc-border);
+    animation: bk-content-rise .35s cubic-bezier(.16,1,.3,1) .05s both;
+}
+
+/* Header — eyebrow + hero date + absolute close */
+.bk-detail-content .bk-detail-head {
+    position: relative;
+    padding: 20px 24px 16px;
+    background: #fff;
+}
+.bk-detail-content .bk-detail-eyebrow {
+    font-size: .7rem;
+    font-weight: 500;
+    color: var(--vc-fg-subtle);
+    letter-spacing: 0;
+    margin-bottom: 6px;
+}
+.bk-detail-content .bk-detail-date {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--vc-fg);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    margin-top: 0;
+}
+.bk-detail-content .bk-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 28px; height: 28px;
+    opacity: .4;
+    transition: opacity .15s;
+}
+.bk-detail-content .bk-close:hover { opacity: .75; }
+
+/* Status pill upgrade — full radius + matching border + bouncy entry */
+.bk-detail-content .bk-detail-status {
+    height: 24px;
+    padding: 0 10px;
+    border-radius: var(--vc-radius-full);
+    font-size: .73rem;
+    font-weight: 500;
+    line-height: 1;
+    margin-top: 10px;
+    border: 1px solid transparent;
+    box-sizing: border-box;
+    animation: bk-pill-in .35s cubic-bezier(.16,1,.3,1) .15s both;
+}
+.bk-detail-content .bk-detail-status [data-lucide],
+.bk-detail-content .bk-detail-status svg.lucide { stroke-width: 2; }
+.bk-detail-content .bk-detail-status--approved  { border-color: var(--vc-green-border); }
+.bk-detail-content .bk-detail-status--pending   { border-color: var(--vc-amber-border); }
+.bk-detail-content .bk-detail-status--approver  { border-color: var(--vc-blue-border);  }
+.bk-detail-content .bk-detail-status--rejected  { border-color: var(--vc-red-border);   }
+.bk-detail-content .bk-detail-status--group     { border-color: var(--vc-green-border); }
+.bk-detail-content .bk-detail-status--completed { border-color: var(--vc-green-border); }
+
+/* Info rows — tiered hierarchy + tabular-nums + row stagger */
+.bk-detail-content .bk-detail-info {
+    padding: 18px 24px 20px;
+    gap: 14px;
+}
+.bk-detail-content .bk-detail-text {
+    font-variant-numeric: tabular-nums;
+}
+.bk-detail-content .bk-detail-row {
+    animation: bk-row-in .3s ease-out both;
+}
+.bk-detail-content .bk-detail-row:nth-child(1) { animation-delay: .15s; }
+.bk-detail-content .bk-detail-row:nth-child(2) { animation-delay: .20s; }
+.bk-detail-content .bk-detail-row:nth-child(3) { animation-delay: .25s; }
+
+.bk-detail-content .bk-detail-row--primary .bk-detail-text {
+    font-weight: 600;
+    font-size: .9375rem;
+    letter-spacing: -0.005em;
+}
+.bk-detail-content .bk-detail-row--primary .bk-detail-icon {
+    color: var(--vc-fg);
+}
+.bk-detail-content .bk-detail-plate-code {
+    font-family: var(--vc-font-mono);
+    letter-spacing: 0.02em;
+    margin-right: 8px;
+}
+.bk-detail-content .bk-detail-plate-brand {
+    color: var(--vc-fg-muted);
+    font-weight: 500;
+}
+
+/* Section header — drop UPPERCASE, label-left / count-right */
+.bk-detail-content .bk-detail-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 18px 24px 10px;
+    gap: 8px;
+}
+.bk-detail-content .bk-detail-section-label {
+    font-size: .78rem;
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    letter-spacing: 0;
+    text-transform: none;
+}
+.bk-detail-content .bk-detail-section-count {
+    font-size: .73rem;
+    color: var(--vc-fg-subtle);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Member tiles — cards with avatar ring + hover + stagger */
+.bk-detail-content .bk-detail-members {
+    padding: 4px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.bk-detail-content .bk-detail-member {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    background: #fff;
+    transition: border-color .15s, background .15s;
+    animation: bk-member-in .3s cubic-bezier(.16,1,.3,1) both;
+    animation-delay: calc(.25s + var(--bk-i, 0) * .05s);
+}
+.bk-detail-content .bk-detail-member:hover {
+    background: var(--vc-bg-subtle);
+    border-color: var(--vc-border-hover);
+}
+.bk-detail-content .bk-detail-member-avatar {
+    width: 36px;
+    height: 36px;
+    background: #fff;
+    border: 1px solid var(--vc-border);
+    color: var(--vc-fg-muted);
+}
+.bk-detail-content .bk-detail-member-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.bk-detail-content .bk-detail-member-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.bk-detail-content .bk-detail-member-name {
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--vc-fg);
+    min-width: 0;
+}
+.bk-detail-content .bk-detail-member-trip {
+    font-size: .8rem;
+    color: var(--vc-fg-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+}
+.bk-detail-content .bk-detail-member-pickup {
+    font-size: .75rem;
+    color: var(--vc-fg-subtle);
+    margin-top: 2px;
+}
+
+/* Footer — separator + bg-subtle action bar, :has() empty collapse */
+.bk-detail-content .bk-detail-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--vc-border);
+    background: var(--vc-bg-subtle);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.bk-detail-content .bk-detail-footer:has(#detailActions:empty) { display: none; }
+.bk-detail-content .bk-detail-footer .vc-btn-sm {
+    height: 32px;
+    padding: 0 14px;
+    font-size: .8125rem;
+}
+
+/* Keyframes */
+@keyframes bk-content-rise { from {opacity:0; transform:translateY(8px)} to {opacity:1; transform:none} }
+@keyframes bk-pill-in      { from {opacity:0; transform:translateY(-4px) scale(.95)} to {opacity:1; transform:none} }
+@keyframes bk-row-in       { from {opacity:0; transform:translateX(-4px)} to {opacity:1; transform:none} }
+@keyframes bk-member-in    { from {opacity:0; transform:translateY(6px)} to {opacity:1; transform:none} }
+
+@media (prefers-reduced-motion: reduce) {
+    .bk-detail-content,
+    .bk-detail-content .bk-detail-status,
+    .bk-detail-content .bk-detail-row,
+    .bk-detail-content .bk-detail-member { animation: none; }
+}
 
 /* Book modal — duration preview ใต้ช่วงเวลา */
 .bk-duration-preview {

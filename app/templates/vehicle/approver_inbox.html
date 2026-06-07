@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/approver_inbox.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
 </head>
 <body>
 
@@ -20,6 +21,7 @@
 {% include '_sidebar.html' %}
 
 <main class="main-content vc-scope">
+    {% set page_section = 'ผู้อนุมัติ' %}
     {% set page_title = 'รายการรออนุมัติ' %}
     {% include '_header.html' %}
 

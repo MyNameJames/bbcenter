@@ -1,6 +1,8 @@
 # Database Schema
 
-> **Snapshot ของ [models.py](../../../app/models.py) ณ 2026-05-18** — 27 tables
+> **Snapshot ของ models ณ 2026-05-18** — 27 tables (table list ครบ)
+> 🗂️ **2026-06-07: `models.py` แตกเป็น package [`models/`](../../../app/models/) ตาม domain** (base/user/common/repair/maintenance/room/vehicle/vehicle_budget/vehicle_ot/vehicle_fuel). path `models.py` ในหัวข้อ ### ทั้งหมดด้านล่าง **ตายแล้ว** — class ย้ายไปไฟล์ domain (ดู mapping ที่ [INDEX.md §Database Models](../INDEX.md#-database-models)). โครง schema/column **ไม่เปลี่ยน** (refactor ย้าย class ล้วน ไม่แตะ DB)
+> ⚠️ **DRIFT (ตรวจ 2026-06-02):** line-ref `models.py:NNN` ในหัวข้อ ### **ผิด 17/27 tables** ตั้งแต่ก่อน refactor + ตอนนี้ path เปลี่ยนเป็น package ด้วย → **ต้อง full re-sync (db-helper) ก่อนเชื่อ line ในไฟล์นี้** — table names + column + ภาพรวมยังถูก
 > ส่วนบน = ตารางปัจจุบัน · ส่วนล่าง = ประวัติ + เหตุผลทุก version
 > Migration files → [app/migrations/migrations-index.md](../../../app/migrations/migrations-index.md)
 
@@ -191,13 +193,13 @@
 | `id` | Integer PK | |
 | `budget_type_id` | FK → budget_type | central / department |
 | `department_id` | FK → vehicle_department | central → ชี้ไป row budget_type_id=1 |
-| `year` | Integer | ปีงบประมาณ |
-| `month` | Integer | เดือน |
+| `year` | Integer | **anchor** เดือนที่ตั้งงบ (v2.13: ไม่ใช้ใน lookup แล้ว — คงไว้สำหรับ UniqueConstraint + set_budget) |
+| `month` | Integer | **anchor** (v2.13: เหมือน `year`) |
 | `budget_amount` | Numeric(12,2) | งบที่ตั้งไว้ default 0 |
-| `used_amount` | Numeric(12,2) | ใช้ไปแล้ว default 0 (cache ของ SUM(log.change_amount)) |
+| `used_amount` | Numeric(12,2) | ใช้ไปแล้ว default 0 (cache ของ SUM(log.change_amount)) — v2.13: เป็นยอดสะสม**ทั้งช่วง** start–end (ข้ามเดือนได้) |
 | `approver_id` | FK → user nullable | สำหรับ department budget เท่านั้น |
-| `start_date` | Date nullable | วันเริ่มใช้งบ (null = ทั้งเดือน) |
-| `end_date` | Date nullable | วันสิ้นสุดงบ |
+| `start_date` | Date nullable | **v2.13: active period** — วันเริ่มที่งบเปิดใช้ (เคยเป็น metadata; ตอนนี้กำหนดการแสดง + หักงบ) |
+| `end_date` | Date nullable | **v2.13: active period** — วันสิ้นสุด. งบ active = `is_active=True AND start_date <= วันที่ <= end_date` |
 | `is_active` | Boolean NOT NULL default True | False → block approve_booking + top_up/manual_adjust; KPI ไม่นับ; mileage deduct/refund ไม่ block (v2.9) |
 
 **Constraint:** `UNIQUE(budget_type_id, department_id, year, month)`
@@ -526,6 +528,7 @@ INSERT INTO expense_type (id, name) VALUES (1, 'central'), (2, 'department'), (3
 | v2.10 | 2026-05-18 | 27 | `ot_rate_config` + `day_of_week` — per-weekday OT rate override (NULL=ทุกวัน) |
 | v2.11 | 2026-05-18 | 27 | `vehicle_booking` + `is_ad_hoc` + `contact_name` — ad-hoc trip (งานนอกระบบ) driver-created off-the-books |
 | v2.12 | 2026-05-22 | 27 | `vehicle_booking.status` — doc-only: เพิ่ม `cancelled` ใน enum comment (Phase 9 `cancel_booking()`). ไม่มี schema change — value ถูกใช้ที่ vehicle_view.py:2858 ตั้งแต่ 2026-05-18 แล้ว |
+| v2.13 | 2026-06-06 | 27 | `vehicle_budget` — **งบช่วงเวลา**: backfill `start_date`/`end_date` จาก year/month + index `ix_vb_active_period`. ไม่มี schema change (column มีอยู่แล้ว) แต่เปลี่ยน semantic — ดู [v2.13 detail](#v213--vehiclebudget-active-period-2026-06-06) |
 
 ---
 
@@ -883,6 +886,27 @@ Migration สร้าง row `event_type='adjust'` 1 row ต่อ vehicle_budg
 
 ---
 
+## v2.13 — VehicleBudget active period (2026-06-06)
+
+*Migration: [2026-06-06_budget-active-period-backfill.sql](../../../app/migrations/2026-06-06_budget-active-period-backfill.sql)*
+
+### Feature codename: "งบช่วงเวลา" (active period budget)
+
+**บริบทธุรกิจ:** เดิม `vehicle_budget` ผูก `year`+`month` แบบแข็ง (UniqueConstraint + lookup ตามเดือน) → งบ 1 ก้อน = 1 เดือน. พอขึ้นเดือนใหม่ที่ admin ยังไม่ตั้งงบ หน้า budget_manage ว่างเปล่า + การหักงบ/approve หา budget ของเดือนนั้นไม่เจอ → ทำงานไม่ได้ ต้องตั้งงบใหม่ทุกเดือน. เปลี่ยนให้ **ช่วงเวลา (`start_date`–`end_date`) + `is_active`** เป็นตัวกำหนดว่างบเปิดใช้หรือไม่ — งบ 1 ก้อนใช้ข้ามเดือนได้ + admin "เพิ่มเวลา" ขยาย end_date นำงบกลับมาใช้ได้
+
+### ไม่มี schema change — semantic + backfill เท่านั้น
+
+| Change | เหตุผล |
+|--------|--------|
+| Backfill `start_date` = วันแรกของเดือน anchor, `end_date` = วันสุดท้าย (WHERE null) | column มีอยู่แล้ว (nullable ตั้งแต่ v2.1). งบเดิม ~ทั้งหมด null → ถ้าปล่อยไว้จะตกไป section "คลังงบ" (ถือว่า no_period) หลัง deploy → หักงบ/approve พังทันที. backfill จาก year/month ให้งบเดิมยัง active ครอบเดือนตัวเอง ไม่พัง. Idempotent (WHERE null → รันซ้ำปลอดภัย) |
+| Index `ix_vb_active_period` บน (department_id, budget_type_id, is_active, start_date, end_date) | รองรับ `_lookup_budget_for_booking()` ที่หางบ active ครอบวัน booking (date-range query) — เรียกทุกครั้งที่ approve + ปิดทริป |
+| `start_date`/`end_date` semantic: metadata → **active period** | เคยเป็นแค่ข้อมูลแสดง. ตอนนี้กำหนดทั้งการแสดง (active-for-month overlap) + การหักงบ (`_lookup_budget_for_booking` หา `is_active=True AND start_date <= วันที่ <= end_date`). overlap หลายก้อน → start_date ล่าสุด |
+| `year`/`month` → anchor (คงไว้) | เลิกใช้ใน lookup แต่ไม่ลบ — ยังเป็น UniqueConstraint(type,dept,year,month) (SQLite drop constraint ต้อง recreate table — เลี่ยง) + `set_budget` ยังตั้งงบรายเดือนตาม anchor. `used_amount` กลายเป็นยอดสะสมทั้งช่วง (ข้ามเดือน) — pivot×เดือน เลยดึงจาก `vehicle_budget_log.created_at` แทน used_amount |
+
+**App-layer (ไม่ใช่ schema):** `_lookup_budget_for_booking(booking, on_date=None)` + 3 จุดหักงบใช้ helper ร่วม; `approve_booking` block ถ้า lookup คืน None; `budget_manage` GET แยก active-for-month vs `archived_budgets` + POST action `extend_period`; `_build_budget_pivot` ดึงจาก ledger. ดู [INDEX.md](../INDEX.md) § Key Functions
+
+---
+
 ## Future Schema Changes (Planned)
 
 *อ้างอิง: [future_features.md](../future_features.md)*
@@ -897,7 +921,7 @@ Migration สร้าง row `event_type='adjust'` 1 row ต่อ vehicle_budg
 
 ## Maintenance Protocol
 
-**ทุกครั้งที่แก้ [models.py](../../../app/models.py)** ต้องทำทั้งหมด:
+**ทุกครั้งที่แก้ [`models/`](../../../app/models/) (ไฟล์ domain ใดก็ตาม)** ต้องทำทั้งหมด:
 
 1. **เขียน migration SQL** ใน `app/migrations/YYYY-MM-DD_<slug>.sql`
    - `BEGIN TRANSACTION;` ... `COMMIT;`

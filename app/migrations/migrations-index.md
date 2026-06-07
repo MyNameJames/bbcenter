@@ -20,6 +20,7 @@
 | 2026-05-18 | [2026-05-18_vehicle-budget-is-active.sql](2026-05-18_vehicle-budget-is-active.sql) | `vehicle_budget` (+is_active) | [v2.9](../../docs/notes/database/schema.md#v29--vehiclebudget-isactive-2026-05-18) |
 | 2026-05-18 | [2026-05-18_ot-rate-config-day-of-week.sql](2026-05-18_ot-rate-config-day-of-week.sql) | `ot_rate_config` (+day_of_week) | [v2.10](../../docs/notes/database/schema.md#v210--otrateconfig-dayofweek-2026-05-18) |
 | 2026-05-18 | [2026-05-18_vehicle-booking-ad-hoc.sql](2026-05-18_vehicle-booking-ad-hoc.sql) | `vehicle_booking` (+is_ad_hoc, +contact_name) | [v2.11](../../docs/notes/database/schema.md#v211--vehiclebooking-ad-hoc-trip-2026-05-18) |
+| 2026-06-06 | [2026-06-06_budget-active-period-backfill.sql](2026-06-06_budget-active-period-backfill.sql) | `vehicle_budget` (backfill `start_date`/`end_date` จาก year/month + index `ix_vb_active_period`) — ไม่มี schema change | [v2.13](../../docs/notes/database/schema.md#v213--vehiclebudget-active-period-2026-06-06) |
 
 ---
 

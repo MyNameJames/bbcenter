@@ -1,36 +1,30 @@
 {# vehicle-modal-detail.html — Modal รายการจอง (single + group รวมใน modal เดียว)
    JS: openEventDetail() อยู่ใน vehicle.js
-   2026-05-20 redesign: ทิ้ง 44px header circle → status pill ใต้ title;
-   solid full-bleed divider; "ผู้จอง" → "ผู้โดยสาร · N คน"; primary info คงเดิม.
+   2026-05-23 premium redesign: eyebrow + hero date (date-first hierarchy);
+   status pill = full-radius + matching border + bk-pill-in anim;
+   info rows reorder = plate (primary) → driver → time + tabular-nums + monospace plate;
+   members = card tiles with avatar ring + stagger animation;
+   footer = border-top + bg-subtle separator, :has() empty collapse.
+   Scoped via .bk-detail-content (ไม่ leak ไป room-modal-detail.html ที่ใช้ classes ซ้อนกัน).
 #}
 <div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable bk-detail-dialog">
+        <div class="modal-content bk-detail-content">
 
-            {# ── Header: title + date + status pill + close ── #}
-            <div class="card-header bg-white border-0 pt-4 pb-3 px-4">
-                <div class="d-flex align-items-start gap-3">
-                    <div class="flex-grow-1">
-                        <div class="bk-detail-title">รายละเอียดการจอง</div>
-                        <div id="detailDateLine" class="bk-detail-date"></div>
-                        <span id="detailStatusPill" class="bk-detail-status bk-detail-status--approved">
-                            <i id="detailStatusIcon" data-lucide="circle-check"></i>
-                            <span id="detailStatusText">อนุมัติแล้ว</span>
-                        </span>
-                    </div>
-                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close" title="ปิด"></button>
-                </div>
+            {# ── Header: eyebrow + hero date + status pill ── #}
+            <div class="bk-detail-head">
+                <div class="bk-detail-eyebrow">การจองรถ</div>
+                <div id="detailDateLine" class="bk-detail-date"></div>
+                <span id="detailStatusPill" class="bk-detail-status bk-detail-status--approved">
+                    <i id="detailStatusIcon" data-lucide="circle-check"></i>
+                    <span id="detailStatusText">อนุมัติแล้ว</span>
+                </span>
+                <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close" title="ปิด"></button>
             </div>
 
-            <div class="bk-detail-divider"></div>
-
-            {# ── Info rows: time / plate / driver ── #}
+            {# ── Info rows: plate (primary) → driver → time ── #}
             <div class="bk-detail-info">
-                <div class="bk-detail-row">
-                    <i data-lucide="clock" class="bk-detail-icon"></i>
-                    <span id="detailTime" class="bk-detail-text"></span>
-                </div>
-                <div class="bk-detail-row">
+                <div class="bk-detail-row bk-detail-row--primary">
                     <i data-lucide="car" class="bk-detail-icon"></i>
                     <span id="detailPlate" class="bk-detail-text"></span>
                 </div>
@@ -38,22 +32,25 @@
                     <i data-lucide="user" class="bk-detail-icon"></i>
                     <span id="detailDriver" class="bk-detail-text"></span>
                 </div>
+                <div class="bk-detail-row">
+                    <i data-lucide="clock" class="bk-detail-icon"></i>
+                    <span id="detailTime" class="bk-detail-text"></span>
+                </div>
             </div>
 
             <div class="bk-detail-divider"></div>
 
-            {# ── Section header: ผู้โดยสาร · N คน ── #}
+            {# ── Section header: ผู้โดยสาร (label ซ้าย, count ขวา) ── #}
             <div class="bk-detail-section-header">
                 <span class="bk-detail-section-label">ผู้โดยสาร</span>
-                <span class="bk-detail-section-label">·</span>
-                <span id="detailMemberCount" class="bk-detail-section-label">1 คน</span>
+                <span id="detailMemberCount" class="bk-detail-section-count">1 คน</span>
             </div>
 
-            {# ── Members list (JS inject) ── #}
-            <div id="detailMembersList" class="px-4 pb-2"></div>
+            {# ── Members list (JS inject — bk-detail-member tiles) ── #}
+            <div id="detailMembersList" class="bk-detail-members"></div>
 
-            {# ── Footer actions (single + owner + pending เท่านั้น) ── #}
-            <div class="card-footer border-0 bg-white pb-3 pt-2 px-4">
+            {# ── Footer actions (single + owner + pending เท่านั้น; collapse via :has(#detailActions:empty)) ── #}
+            <div class="bk-detail-footer">
                 <div id="detailActions" class="d-flex justify-content-end gap-2"></div>
             </div>
 

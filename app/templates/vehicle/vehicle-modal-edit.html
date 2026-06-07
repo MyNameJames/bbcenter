@@ -1,66 +1,113 @@
 {# vehicle-modal-edit.html — Modal แก้ไขการจอง
    วิธีใช้: {% include 'vehicle/vehicle-modal-edit.html' %}
-   JS: openEditBookingModal() + flatpickr อยู่ใน vehicle.js
+   JS: openEditBookingModal() + initFlatpickrInModal() อยู่ใน vehicle.js
+   2026-05-23: mirror layout จาก vehicle-modal-book.html (avatar header + date/start_time/end_time แยก field
+                + bk-field-wrap + valid icons); ค่า prefill ผ่าน JS ตอน openEditBookingModal().
 #}
 <div class="modal fade" id="editBookingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered bk-modal-dialog">
-        <div class="card modal-content border-0 bk-modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="card modal-content border-0">
             <form id="editBookingForm" method="POST" novalidate>
 
+                <input type="hidden" name="start_datetime" id="editStartDatetime">
+                <input type="hidden" name="end_datetime"   id="editEndDatetime">
+
                 <div class="card-header bg-white d-flex align-items-start">
-                    <div class="d-flex align-items-start gap-3 flex-grow-1">
-                        <span class="ps-1 pt-1"><i data-lucide="pencil" style="width:22px;height:22px;color:var(--vc-fg-muted);"></i></span>
-                        <div>
-                            <div class="bk-row-main">แก้ไขการจองรถ</div>
-                            <div class="bk-row-sub">แก้ไขได้เฉพาะรายการที่ยังรออนุมัติ</div>
+                    <div class="row">
+                        <div class="col-12 d-flex align-items-start gap-2 pt-3">
+                            <div class="row gx-0 d-flex justify-content-between">
+                                <div class="col gap-2 flex-grow-1">
+                                    <div class="row gx-0 d-flex align-items-center gap-2">
+                                        <div class="col-auto bk-detail-member-avatar rounded-circle d-flex align-items-center justify-content-center" style="background: var(--vc-fg); color: var(--vc-fg-inverted);">
+                                            <i data-lucide="user" style="width:16px;height:16px;"></i>
+                                        </div>
+                                        <div class="col">
+                                            <div class="row">
+                                                <span class="bk-row-main">{{ current_user.full_name or current_user.username }}</span>
+                                                <span class="bk-row-sub">{{ current_user.department or '' }}{% if current_user.email %} · {{ current_user.email }}{% endif %}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-auto d-flex align-items-start">
+                                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="card-body">
                     <hr class="bk-divider">
 
                     <div class="mb-2">
-                        <label class="form-label mb-1"><small>วันและเวลาไป :</small></label>
-                        <input type="text" name="start_datetime" id="editStartDatetime"
-                            class="form-control" placeholder="เลือกวันและเวลา" required>
-                        <div class="invalid-feedback">กรุณาเลือกวัน-เวลาออก</div>
+                        <label for="edit_date" class="form-label mb-1"><small>วันที่เดินทาง :</small></label>
+                        <div class="bk-field-wrap">
+                            <input type="date" class="form-control" id="edit_date" required>
+                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
+                            <div class="invalid-feedback">กรุณาเลือกวันที่เดินทาง</div>
+                        </div>
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label mb-1"><small>วันและเวลากลับ :</small></label>
-                        <input type="text" name="end_datetime" id="editEndDatetime"
-                            class="form-control" placeholder="เลือกวันและเวลา" required>
-                        <div class="invalid-feedback">กรุณาเลือกวัน-เวลากลับ</div>
+                        <label class="form-label mb-1"><small>ช่วงเวลาเดินทาง :</small></label>
+                        <div class="row justify-content-between align-items-center gx-2">
+                            <div class="col-5">
+                                <div class="bk-field-wrap">
+                                    <input type="time" id="edit_start_time" class="form-control" required>
+                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
+                                    <div class="invalid-feedback">กรุณาระบุเวลาออก</div>
+                                </div>
+                            </div>
+                            <span class="col-auto d-flex align-items-center"><i data-lucide="arrow-right" style="width:16px;height:16px;color:var(--vc-fg-subtle);"></i></span>
+                            <div class="col-5">
+                                <div class="bk-field-wrap">
+                                    <input type="time" id="edit_end_time" class="form-control" required>
+                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
+                                    <div class="invalid-feedback">กรุณาระบุเวลากลับ</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="edit_duration_preview" class="bk-duration-preview" aria-live="polite"></div>
                     </div>
 
                     <div class="mb-2">
                         <div class="row justify-content-between align-items-center gx-2">
                             <div class="col-8">
-                                <label class="form-label mb-1"><small>วัตถุประสงค์การเดินทาง :</small></label>
-                                <input type="text" name="purpose" id="editPurpose" class="form-control" required>
-                                <div class="invalid-feedback">กรุณาระบุวัตถุประสงค์</div>
+                                <label for="editPurpose" class="form-label mb-1"><small>วัตถุประสงค์การเดินทาง :</small></label>
+                                <div class="bk-field-wrap">
+                                    <input type="text" name="purpose" id="editPurpose" class="form-control pe-5" required>
+                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
+                                    <div class="invalid-feedback">กรุณาระบุวัตถุประสงค์</div>
+                                </div>
                             </div>
                             <div class="col-4">
-                                <label class="form-label mb-1"><small>จำนวนผู้เดินทาง :</small></label>
-                                <input type="number" name="passenger_count" id="editPax"
-                                    class="form-control" min="1" value="1" required>
-                                <div class="invalid-feedback">กรุณาระบุจำนวน</div>
+                                <label for="editPax" class="form-label mb-1"><small>จำนวนผู้เดินทาง :</small></label>
+                                <div class="bk-field-wrap">
+                                    <input type="number" name="passenger_count" id="editPax" class="form-control pe-5" min="1" value="1" max="10" required>
+                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
+                                    <div class="invalid-feedback">กรุณาระบุจำนวน</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label mb-1"><small>สถานที่ปลายทาง :</small></label>
-                        <input type="text" name="destination" id="editDest" class="form-control" required>
-                        <div class="invalid-feedback">กรุณาระบุสถานที่ปลายทาง</div>
+                        <label for="editDest" class="form-label mb-1"><small>สถานที่ปลายทาง :</small></label>
+                        <div class="bk-field-wrap">
+                            <input type="text" name="destination" id="editDest" class="form-control pe-5" required>
+                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
+                            <div class="invalid-feedback">กรุณาระบุสถานที่ปลายทาง</div>
+                        </div>
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label mb-1"><small>จุดขึ้นรถ :</small></label>
-                        <input type="text" name="pickup_location" id="editPickup"
-                            class="form-control" placeholder="เช่น หน้าอาคารเรียน 1">
+                        <label for="editPickup" class="form-label mb-1"><small>จุดขึ้นรถ :</small></label>
+                        <div class="bk-field-wrap">
+                            <input type="text" name="pickup_location" id="editPickup" class="form-control pe-5" placeholder="เช่น หน้าอาคารเรียน 1" required>
+                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
+                            <div class="invalid-feedback">กรุณาระบุจุดขึ้นรถ</div>
+                        </div>
                     </div>
 
                     <div class="row pt-2">
@@ -72,6 +119,17 @@
                         </div>
                     </div>
 
+                    <div class="bk-info-note col-12 rounded-2 py-3 px-3 mt-3">
+                        <div class="row">
+                            <span class="col-1 pe-1"><i data-lucide="info" style="width:16px;height:16px;"></i></span>
+                            <div class="col">
+                                <div class="row">
+                                    <small class="fw-bold">หมายเหตุ :</small>
+                                    <small>แก้ไขได้เฉพาะรายการที่ยังรออนุมัติ — การแก้ไขจะถูกบันทึกและแจ้ง Admin</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card-footer bg-white d-flex justify-content-end gap-2 pt-2 pb-3">

@@ -26,7 +26,8 @@
     {% include '_sidebar.html' %}
 
     <main class="main-content vc-scope">
-        {% set page_title = 'จัดการค่าล่วงเวลา (OT)' %}
+        {% set page_section = 'ผู้ดูแลระบบ' %}
+        {% set page_title = 'ค่าล่วงเวลา' %}
         {% include '_header.html' %}
 
         <div class="container-xxl px-3 pt-2">
@@ -45,12 +46,8 @@
             {# ── Page header ────────────────────────────── #}
             <div class="cost-header">
                 <div>
-                    <h1 class="cost-title">จัดการค่าล่วงเวลา (OT)</h1>
+                    <h1 class="cost-title d-flex align-items-end justify-content-between flex-wrap gap-3 mb-2 pt-3">ค่าล่วงเวลา</h1>
                     <p class="cost-subtitle">อนุมัติ · บันทึกการจ่าย · ออกใบเสร็จคนขับ
-                        <span class="cost-range-chip" style="margin-left:var(--vc-space-2);">
-                            <i data-lucide="calendar-range" class="vc-icon-sm"></i>
-                            {{ range_label }}
-                        </span>
                     </p>
                 </div>
                 <div class="cost-header-actions">

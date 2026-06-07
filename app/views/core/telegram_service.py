@@ -1,8 +1,12 @@
+import os
 import requests
 from datetime import datetime
 
-TELEGRAM_BOT_TOKEN     = "8630024542:AAFR-VaVpp75CwE2u_0IJY1U43oTFzq9rLM"
-TELEGRAM_GROUP_CHAT_ID = "-5275480755"
+TELEGRAM_BOT_TOKEN     = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_GROUP_CHAT_ID = os.getenv("TELEGRAM_GROUP_CHAT_ID")
+
+if not TELEGRAM_BOT_TOKEN or not TELEGRAM_GROUP_CHAT_ID:
+    print("[Telegram] ⚠️  TELEGRAM_BOT_TOKEN / TELEGRAM_GROUP_CHAT_ID ไม่ได้ตั้งใน .env — การแจ้งเตือน Telegram จะถูกข้าม")
 
 TH_MONTHS = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
              'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
@@ -18,6 +22,8 @@ def _fmt_time(dt):
 
 def _send(text: str) -> int | None:
     """ส่งข้อความ — คืนค่า message_id ถ้าสำเร็จ หรือ None ถ้าล้มเหลว"""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_GROUP_CHAT_ID:
+        return None
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         resp = requests.post(url, json={
@@ -35,6 +41,8 @@ def _send(text: str) -> int | None:
 def delete_old_message(booking):
     """ลบข้อความเก่าออกจาก group (ถ้ามี message_id เก็บไว้)"""
     if not booking.telegram_message_id:
+        return
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_GROUP_CHAT_ID:
         return
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteMessage"

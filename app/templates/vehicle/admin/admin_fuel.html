@@ -29,6 +29,7 @@
     {% include '_sidebar.html' %}
 
     <main class="main-content vc-scope">
+        {% set page_section = 'ผู้ดูแลระบบ' %}
         {% set page_title = 'ค่าน้ำมัน' %}
         {% include '_header.html' %}
 
@@ -46,7 +47,7 @@
             {% endwith %}
 
             {# ── Page Header ────────────────────────────── #}
-            <div class="fuel-header">
+            <div class=" fuel-header d-flex align-items-end justify-content-between flex-wrap gap-3 mb-2 pt-3">
                 <div>
                     <h1 class="fuel-title">ค่าน้ำมัน</h1>
                     <p class="fuel-subtitle">บันทึกบิล · จัดการเงินสำรอง · ติดตามใบเบิก</p>

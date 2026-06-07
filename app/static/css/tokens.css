@@ -24,20 +24,20 @@
     --vc-bg-inverted:    #000000;
 
     /* ── Border ──────────────────────────────── */
-    --vc-border:         #EAEAEA;
+    --vc-border:         #E5E7EB;
     --vc-border-hover:   #999999;
     --vc-border-strong:  #666666;
 
     /* ── Foreground / Text ───────────────────── */
-    --vc-fg:             #000000;
-    --vc-fg-muted:       #666666;
-    --vc-fg-subtle:      #888888;
+    --vc-fg:             #111827;
+    --vc-fg-muted:       #6B7280;
+    --vc-fg-subtle:      #9CA3AF;
     --vc-fg-disabled:    #BBBBBB;
     --vc-fg-inverted:    #FFFFFF;
 
-    /* ── Primary action (pure black) ─────────── */
-    --vc-primary:        #000000;
-    --vc-primary-hover:  #333333;
+    /* ── Primary action (gray-900) ───────────── */
+    --vc-primary:        #111827;
+    --vc-primary-hover:  #1F2937;
     --vc-on-primary:     #FFFFFF;
 
     /* ── Accent (Indigo — focus ring, sidebar active, secondary CTA)
@@ -50,27 +50,27 @@
     --vc-accent-border:  #C7D2FE;
     --vc-accent-ring:    0 0 0 3px rgba(79,70,229,.18);
 
-    /* ── Semantic — Vercel Blue (info) ───────── */
-    --vc-blue:           #0070F3;
-    --vc-blue-hover:     #0061D5;
-    --vc-blue-bg:        rgba(0,112,243,.10);
-    --vc-blue-border:    rgba(0,112,243,.25);
+    /* ── Semantic — Blue (info) ──────────────── */
+    --vc-blue:           #2563EB;
+    --vc-blue-hover:     #1D4ED8;
+    --vc-blue-bg:        rgba(37,99,235,.10);
+    --vc-blue-border:    rgba(37,99,235,.25);
 
     /* ── Semantic — Amber (warning / pending) ─ */
-    --vc-amber:          #F5A623;
-    --vc-amber-bg:       rgba(245,166,35,.10);
-    --vc-amber-border:   rgba(245,166,35,.25);
+    --vc-amber:          #D97706;
+    --vc-amber-bg:       rgba(217,119,6,.10);
+    --vc-amber-border:   rgba(217,119,6,.25);
 
     /* ── Semantic — Red (error / danger) ─────── */
-    --vc-red:            #EE0000;
-    --vc-red-hover:      #C50000;
-    --vc-red-bg:         rgba(238,0,0,.08);
-    --vc-red-border:     rgba(238,0,0,.20);
+    --vc-red:            #DC2626;
+    --vc-red-hover:      #B91C1C;
+    --vc-red-bg:         rgba(220,38,38,.08);
+    --vc-red-border:     rgba(220,38,38,.20);
 
     /* ── Semantic — Green (success/received) ── */
-    --vc-green:          #0F9D58;
-    --vc-green-bg:       rgba(15,157,88,.10);
-    --vc-green-border:   rgba(15,157,88,.25);
+    --vc-green:          #16A34A;
+    --vc-green-bg:       rgba(22,163,74,.10);
+    --vc-green-border:   rgba(22,163,74,.25);
 
     /* ── Optional violet accent ──────────────── */
     --vc-purple:         #7928CA;
@@ -95,7 +95,7 @@
     --vc-space-10:       40px;
     --vc-space-12:       48px;
 
-    /* ── Type scale (Geist hierarchy) ────────── */
+    /* ── Type scale ──────────────────────────── */
     --vc-text-xs:        12px;
     --vc-text-sm:        13px;
     --vc-text-base:      14px;
@@ -110,8 +110,9 @@
     --vc-tracking-tighter:  -.04em;
     --vc-tracking-wide:     .02em;
 
-    /* ── Font stacks ─────────────────────────── */
-    --vc-font-mono:      'Poppins-Medium', 'Poppins', sans-serif;
+    /* ── Font stacks (Sarabun เท่านั้น — ห้ามใส่ font อื่น) ── */
+    --vc-font-sans:      'Sarabun', sans-serif;
+    --vc-font-mono:      'Sarabun', sans-serif;
 
     /* ── Component heights ───────────────────── */
     --vc-h-input-sm:     28px;

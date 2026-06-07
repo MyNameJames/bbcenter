@@ -12,7 +12,13 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default_super_secret_key')
+_secret_key = os.getenv('FLASK_SECRET_KEY')
+if not _secret_key:
+    raise RuntimeError(
+        "FLASK_SECRET_KEY ไม่ได้ตั้งใน .env — ต้องตั้งก่อนรันแอป "
+        "(gen ด้วย: python -c \"import secrets; print(secrets.token_hex(24))\")"
+    )
+app.config['SECRET_KEY'] = _secret_key
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{BASE_DIR}/instance/portal.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)  # หมดใน 8 ชั่วโมง
@@ -44,7 +50,7 @@ app.register_blueprint(repair_bp)
 from views.maintenance_view import maintenance_bp 
 app.register_blueprint(maintenance_bp)
 
-from views.vehicle_view import vehicle_bp, adminfleet_bp, admincost_bp, driver_bp
+from views.vehicle import vehicle_bp, adminfleet_bp, admincost_bp, driver_bp
 app.register_blueprint(vehicle_bp)
 app.register_blueprint(adminfleet_bp)
 app.register_blueprint(admincost_bp)
@@ -79,6 +85,28 @@ def inject_approver_pending_count():
     return {'approver_pending_count': count, 'is_budget_approver': is_budget_approver}
 
 
+# Sidebar badge: "อนุมัติรถ" — count of pending bookings whose start_datetime
+# falls on tomorrow (BKK time). Only computed for vehicle admins / superadmins.
+@app.context_processor
+def inject_admin_pending_tomorrow():
+    from flask_login import current_user
+    from models import VehicleBooking, get_bkk_time
+    from datetime import datetime, timedelta, time
+    if not current_user.is_authenticated:
+        return {}
+    if not (current_user.role_vehicle == 'admin' or current_user.is_superadmin):
+        return {}
+    tomorrow_date = (get_bkk_time() + timedelta(days=1)).date()
+    day_start = datetime.combine(tomorrow_date, time.min)
+    day_end   = datetime.combine(tomorrow_date, time.max)
+    count = VehicleBooking.query.filter(
+        VehicleBooking.status == 'pending',
+        VehicleBooking.start_datetime >= day_start,
+        VehicleBooking.start_datetime <= day_end,
+    ).count()
+    return {'pending_count': count}
+
+
 # ==========================================
 
 # Route หน้าแรกสุด (เวลาคนพิมพ์แค่ชื่อเว็บ) ให้โยนไปหน้า Login
@@ -107,7 +135,7 @@ def design_system_reference():
 import os as _os
 if _os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
     try:
-        from views.notification_cron import init_scheduler
+        from views.core.notification_cron import init_scheduler
         init_scheduler(app)
     except Exception as _e:
         print(f"[Scheduler] init error: {_e}")
@@ -116,4 +144,5 @@ if _os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    debug_mode = os.getenv('FLASK_DEBUG', '0') == '1'
+    app.run(host='0.0.0.0', port=5001, debug=debug_mode)

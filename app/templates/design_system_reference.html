@@ -7,7 +7,7 @@
 <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
 <style>
 /* ── Reference page overrides ── */
@@ -38,7 +38,7 @@ body { background: var(--vc-bg-subtle); padding: 40px 0 80px; }
 .ref-section-code {
     font-size: var(--vc-text-xs);
     color: var(--vc-fg-subtle);
-    font-family: monospace;
+    font-family: var(--vc-font-mono);
 }
 .ref-section-body { padding: 20px; }
 
@@ -47,17 +47,17 @@ body { background: var(--vc-bg-subtle); padding: 40px 0 80px; }
 .token-item { border-radius: var(--vc-radius-sm); overflow: hidden; border: 1px solid var(--vc-border); }
 .token-swatch { height: 48px; }
 .token-meta { padding: 8px 10px; }
-.token-name  { font-size: .65rem; font-family: monospace; color: var(--vc-fg-subtle); }
+.token-name  { font-size: .65rem; font-family: var(--vc-font-mono); color: var(--vc-fg-subtle); }
 .token-value { font-size: .72rem; font-weight: 600; color: var(--vc-fg-muted); margin-top: 1px; }
 
 /* Spacing ruler */
 .space-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .space-bar  { height: 24px; background: var(--vc-accent-light); border-radius: 4px; border: 1px solid var(--vc-accent-border); }
-.space-label{ font-size: .72rem; color: var(--vc-fg-subtle); font-family: monospace; white-space: nowrap; min-width: 80px; }
+.space-label{ font-size: .72rem; color: var(--vc-fg-subtle); font-family: var(--vc-font-mono); white-space: nowrap; min-width: 80px; }
 
 /* Shadow demo */
 .shadow-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-.shadow-demo { height: 60px; background: #fff; border-radius: var(--vc-radius-sm); display: flex; align-items: center; justify-content: center; font-size: .72rem; color: var(--vc-fg-subtle); font-family: monospace; }
+.shadow-demo { height: 60px; background: #fff; border-radius: var(--vc-radius-sm); display: flex; align-items: center; justify-content: center; font-size: .72rem; color: var(--vc-fg-subtle); font-family: var(--vc-font-mono); }
 
 /* Sticky TOC */
 .ref-toc {
@@ -113,7 +113,7 @@ body { background: var(--vc-bg-subtle); padding: 40px 0 80px; }
         <p class="ds-caption">Inspired by Noviq Agency UI &amp; FinPay Dashboard · Token-based · Bootstrap 5 compatible</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
             <span class="ds-pill ds-pill-success">✅ Production Ready</span>
-            <span class="ds-pill ds-pill-purple">Sarabun + IBM Plex Sans Thai</span>
+            <span class="ds-pill ds-pill-purple">Sarabun</span>
             <span class="ds-pill ds-pill-info">4px Grid</span>
             <span class="ds-pill ds-pill-neutral">CSS Custom Properties</span>
         </div>
@@ -201,7 +201,7 @@ body { background: var(--vc-bg-subtle); padding: 40px 0 80px; }
     <div class="ref-section" id="tokens-typography">
         <div class="ref-section-header">
             <span class="ref-section-name">2. Typography Scale</span>
-            <span class="ref-section-code">Sarabun / IBM Plex Sans Thai</span>
+            <span class="ref-section-code">Sarabun</span>
         </div>
         <div class="ref-section-body">
             <div style="display:flex;flex-direction:column;gap:16px;">

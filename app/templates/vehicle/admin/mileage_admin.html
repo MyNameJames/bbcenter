@@ -25,7 +25,8 @@
     {% include '_sidebar.html' %}
 
     <main class="main-content vc-scope">
-        {% set page_title = 'บันทึกเลขไมล์' %}
+        {% set page_section = 'ผู้ดูแลระบบ' %}
+        {% set page_title = 'เลขไมล์' %}
         {% include '_header.html' %}
 
         <div class="container-xxl px-3 pt-2">
@@ -216,7 +217,7 @@
             {# ── Bookings Table ─────────────────────────── #}
             <div class="vc-card mt-2 mb-3">
 
-                <div class="vc-card-head">
+                <div class="vc-card-head py-3">
                     <h3 class="vc-card-head-title">
                         <i data-lucide="list" class="vc-icon-sm"></i>
                         รายการ Booking
@@ -312,7 +313,7 @@
                                 {% if r.has_refuel %}
                                 <a href="{{ url_for('fuel.admin_fuel', vehicle_id=b.assigned_vehicle_id) }}"
                                    class="mlg-refuel-link" title="มีการเติมน้ำมันใน trip นี้ — คลิกเพื่อดู">
-                                    <span class="vc-badge vc-badge-blue vc-badge-dot">
+                                    <span class="vc-badge vc-badge-blue">
                                         <i data-lucide="fuel" class="vc-icon-sm"></i> เติมน้ำมัน
                                     </span>
                                 </a>

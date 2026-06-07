@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# BBCenter pre-commit secret guard
+# block ไม่ให้ commit ถ้า:
+#   1. มีไฟล์ .env (ค่าจริง) ถูก stage   — ยกเว้น .env.example
+#   2. staged diff มี pattern ของ secret (Telegram token / hardcoded SECRET_KEY / generic API key)
+#
+# ติดตั้ง (ครั้งเดียวต่อ clone):  git config core.hooksPath tools/git-hooks
+# ข้าม (กรณีฉุกเฉิน, ไม่แนะนำ):   git commit --no-verify
+#
+set -euo pipefail
+
+RED=$'\033[0;31m'; YEL=$'\033[1;33m'; NC=$'\033[0m'
+fail=0
+
+# 1) กันไฟล์ .env (ค่าจริง) หลุด — อนุญาตเฉพาะ *.env.example / *.env.sample
+env_staged=$(git diff --cached --name-only --diff-filter=ACM \
+  | grep -E '(^|/)\.env($|\.)' \
+  | grep -vE '\.(example|sample|template)$' || true)
+if [ -n "$env_staged" ]; then
+  echo "${RED}✗ พยายาม commit ไฟล์ .env ที่มีค่าจริง:${NC}"
+  echo "$env_staged" | sed 's/^/    /'
+  echo "  → ถอดออกด้วย: git rm --cached <file>  (ค่าจริงต้องอยู่ใน .env ที่ gitignore เท่านั้น)"
+  fail=1
+fi
+
+# 2) สแกน staged diff หา secret pattern (เฉพาะบรรทัดที่ + เพิ่มเข้ามา)
+added=$(git diff --cached --no-color -U0 --diff-filter=ACM \
+  | grep -E '^\+' | grep -vE '^\+\+\+' || true)
+
+scan() { # $1=regex  $2=label
+  local hits
+  hits=$(printf '%s\n' "$added" | grep -nE "$1" || true)
+  if [ -n "$hits" ]; then
+    echo "${RED}✗ พบ $2 ใน staged diff:${NC}"
+    printf '%s\n' "$hits" | sed 's/^/    /'
+    fail=1
+  fi
+}
+
+# Telegram bot token: <digits>:AA<35+ chars>
+scan '[0-9]{8,10}:AA[A-Za-z0-9_-]{30,}' 'Telegram bot token'
+# hardcoded Flask secret (literal hex >=16) — getenv ไม่โดน เพราะไม่มี quote+hex ติดกัน
+scan "(SECRET_KEY|FLASK_SECRET_KEY)[^=]*=[^O]*['\"][0-9a-fA-F]{16,}['\"]" 'hardcoded SECRET_KEY'
+# generic: ตัวแปรชื่อ *TOKEN/*SECRET/*PASSWORD ตามด้วย = '<ยาว>' (ไม่ใช่ os.getenv)
+scan "(TOKEN|SECRET|PASSWORD|API_KEY)\s*=\s*['\"][A-Za-z0-9_/+-]{16,}['\"]" 'hardcoded credential'
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "${YEL}commit ถูกบล็อก — ย้ายค่าไป .env แล้วอ่านผ่าน os.getenv()${NC}"
+  echo "${YEL}ถ้าเป็น false positive จริงๆ ข้ามด้วย: git commit --no-verify${NC}"
+  exit 1
+fi
+exit 0

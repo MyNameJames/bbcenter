@@ -21,7 +21,8 @@
     {% include '_sidebar.html' %}
 
     <main class="main-content vc-scope">
-        {% set page_title = 'อนุมัติการจองรถ' %}
+        {% set page_section = 'ผู้ดูแลระบบ' %}
+        {% set page_title = 'อนุมัติรถ' %}
         {% include '_header.html' %}
 
         <div class="container-xxl px-3 pt-2">
@@ -37,73 +38,35 @@
                 {% endif %}
             {% endwith %}
 
-            {# ── Page Header ────────────────────────────── #}
-            <div class="va-page-header d-flex align-items-end justify-content-between flex-wrap gap-3 mb-4 pt-3">
-                <div class="va-page-header-text">
-                    <span class="va-page-eyebrow">Admin · Approval Queue</span>
-                    <h1 class="va-page-title">อนุมัติการจองรถ</h1>
-                    <p class="va-page-subtitle">ตรวจสอบ · มอบหมายรถ-คนขับ · ติดตามการเดินทาง</p>
-                </div>
-                <div class="va-page-header-actions"></div>
-            </div>
-
-            {# ────────────────────────────────────────────────
-               KPI STRIP — 4 cells
-               รออนุมัติ · ส่ง Approver · อนุมัติแล้ว · ปฏิเสธ
-            ──────────────────────────────────────────────── #}
-            <div class="vc-card va-kpi-card mb-4 d-md-block d-none">
-                <div class="vc-kpi-group va-kpi-4">
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="clock" class="vc-icon-sm"></i>
-                            รออนุมัติ
-                        </p>
-                        <p class="vc-kpi-value">
-                            <span id="kpiPending">0</span><span class="vc-kpi-unit">รายการ</span>
-                        </p>
-                        <p class="vc-kpi-meta">รอ admin อนุมัติ + จัดสรรรถ</p>
-                    </div>
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="user-check" class="vc-icon-sm"></i>
-                            ส่ง Approver
-                        </p>
-                        <p class="vc-kpi-value vc-kpi-value--muted">
-                            <span id="kpiApprover">0</span><span class="vc-kpi-unit">รายการ</span>
-                        </p>
-                        <p class="vc-kpi-meta">รอ approver แผนกอนุมัติงบ</p>
-                    </div>
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="circle-check" class="vc-icon-sm"></i>
-                            อนุมัติแล้ว
-                        </p>
-                        <p class="vc-kpi-value vc-kpi-value--success">
-                            <span id="kpiApproved">0</span><span class="vc-kpi-unit">รายการ</span>
-                        </p>
-                        <p class="vc-kpi-meta">พร้อมเดินทาง · แจ้งผู้ใช้แล้ว</p>
-                    </div>
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="circle-x" class="vc-icon-sm"></i>
-                            ปฏิเสธ
-                        </p>
-                        <p class="vc-kpi-value vc-kpi-value--muted">
-                            <span id="kpiRejected">0</span><span class="vc-kpi-unit">รายการ</span>
-                        </p>
-                        <p class="vc-kpi-meta">ถูกปฏิเสธ · คืนงบเรียบร้อย</p>
-                    </div>
-
+                        {# ── Page Header ────────────────────────────── #}
+            <div class="fuel-header flex-wrap gap-3 mb-2 pt-3">
+                <div>
+                    <h1 class="fuel-title">อนุมัติรถ</h1>
+                    <p class="fuel-subtitle">เลือกคนขับรถ · รถ · ประเภทงาน</p>
                 </div>
             </div>
 
-            {# ── Week Navigator (page-specific dark active) ── #}
-            <div class="vc-card va-week-card mb-4">
-                <div class="va-week-bar">
+            {# ── Week Navigator (Phase 3 hero — meta row + week strip + date picker) ── #}
+            <div class="va-week-card mb-4">
+                <div class="va-week-meta px-4 py-3 d-flex align-items-center justify-content-between">
+                    <h2 class="va-week-selected" id="selDateHeading"></h2>
+                    <div class="va-week-meta-right">
+                        <button type="button" class="va-week-today" id="weekTodayBtn" title="กลับไปวันนี้">วันนี้</button>
+                        <div class="va-week-picker">
+                            <button type="button" class="va-week-picker-btn" id="weekPickerBtn" aria-expanded="false" aria-haspopup="dialog" title="เลือกวันที่จากปฏิทิน">
+                                <i data-lucide="calendar" class="vc-icon-sm"></i>
+                                <span>เลือกวันที่</span>
+                                <i data-lucide="chevron-down" class="vc-icon-sm va-week-picker-caret"></i>
+                            </button>
+                            <div class="va-week-picker-pop" id="weekPickerPop" role="dialog" aria-label="เลือกวันที่" hidden>
+                                <label class="va-week-picker-label" for="weekPickerInput">เลือกวันที่</label>
+                                <input type="date" class="vc-input va-week-picker-input" id="weekPickerInput">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="va-week-bar px-2 d-flex align-items-center justify-content-center gap-2 mb-2">
                     <button type="button" class="va-week-nav" onclick="shiftWeek(-1)" aria-label="สัปดาห์ก่อนหน้า" title="สัปดาห์ก่อนหน้า">
                         <i data-lucide="chevron-left" class="vc-icon-sm"></i>
                     </button>
@@ -111,9 +74,6 @@
                     <button type="button" class="va-week-nav" onclick="shiftWeek(1)" aria-label="สัปดาห์ถัดไป" title="สัปดาห์ถัดไป">
                         <i data-lucide="chevron-right" class="vc-icon-sm"></i>
                     </button>
-                </div>
-                <div class="va-week-heading">
-                    <span id="selDateHeading"></span>
                 </div>
             </div>
 
@@ -124,12 +84,11 @@
                 <div class="col-12 col-lg-8">
                     <div class="d-flex flex-column gap-4">
 
-                        {# Booking section (ก่อน) #}
-                        <div class="vc-card" id="sectionBefore">
+                        {# Booking section (ก่อน) — flat (ไม่มีกรอบ card) #}
+                        <div class="va-flat" id="sectionBefore">
                             <div class="vc-card-head d-flex align-items-center justify-content-between">
-                                <h3 class="vc-card-head-title col">
-                                    <i data-lucide="clipboard-list" class="vc-icon-sm"></i>
-                                    รายละเอียด
+                                <h3 class="vc-card-head-title col">รายการจอง
+                                    <span class="vc-card-head-meta" id="beforeCount"></span>
                                 </h3>
                                 <div class="vc-card-head-actions d-inline-flex col-auto" id="beforeHeaderRight">
                                     <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="btnMerge" onclick="toggleGroupMode()" title="รวมหลายงานในเที่ยวเดียว">
@@ -138,7 +97,7 @@
                                     </button>
                                     <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="btnNotify" onclick="toggleNotifyMode()" title="แจ้งผ่าน Telegram">
                                         <i data-lucide="send" class="vc-icon-sm"></i>
-                                        แจ้ง Telegram
+                                        แจ้งเตือน
                                     </button>
                                     <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="btnMergeCancel" onclick="cancelGroupMode()" style="display:none" title="ยกเลิกการรวมงาน">ยกเลิก</button>
                                     <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="btnMergeConfirm" onclick="confirmMerge()" style="display:none" disabled title="ยืนยันรวมงานที่เลือก">
@@ -153,19 +112,9 @@
                                 </div>
                             </div>
 
-                            {# Collapsed state — when all approved #}
-                            <div class="va-collapsed-bar" id="beforeCollapsed" style="display:none">
-                                <i data-lucide="circle-check" class="vc-icon-sm"></i>
-                                <span id="beforeCollapsedText">อนุมัติแล้ว 0/0 รายการ</span>
-                                <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm ms-auto" onclick="toggleBeforeExpand()" title="ขยายแสดงทุกรายการ">
-                                    ดูรายละเอียด
-                                    <i data-lucide="chevron-down" class="vc-icon-sm"></i>
-                                </button>
-                            </div>
-
-                            {# Expanded #}
+                            {# Booking list — แสดงทุกรายการเสมอ (เลิกใช้ collapsed state) #}
                             <div id="beforeExpanded">
-                                <div class="va-filter-tabs">
+                                <div class="va-filter-tabs pt-2">
                                     <button class="ftab active" data-filter="all" onclick="setFilter('all',this)" title="แสดงทั้งหมด">
                                         ทั้งหมด <span class="ftab-cnt" id="cnt-all">0</span>
                                     </button>
@@ -224,7 +173,7 @@
    MODAL: Approve & Assign Resources
    ════════════════════════════════════════════════ #}
 <div class="modal fade vc-modal" id="assignModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
             <div class="modal-header">
@@ -457,6 +406,7 @@ window.BOOKINGS_DATA = [
     expType:     {{ (b.expense_type or '') | tojson }},
     expSub:      {{ (b.central_category or b.trip_department or '') | tojson }},
     deptName:    {{ (b.trip_department or (b.user.department or '')) | tojson }},
+    isAdHoc:     {{ 'true' if b.is_ad_hoc else 'false' }},
     assignUrl:   {{ url_for('vehicle.admin_assign', booking_id=b.id) | tojson }},
     mergeUrl:    {{ url_for('vehicle.admin_merge') | tojson }},
     revertUrl:   {{ url_for('vehicle.admin_revert_booking', booking_id=b.id) | tojson }},

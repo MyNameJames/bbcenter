@@ -1,6 +1,6 @@
 # BBCenter V2 — Project Rules
 
-> **อัปเดตล่าสุด:** 2026-05-18 (admin_fuel: KPI group A → 4 cells (+`จ่ายเอง` tracker); `_depletes_reserve` → `transfer` only (`self` ไม่หัก reserve); year dropdown ดึงจาก DB; label "เงินโอน" → "เงินสด"; เพิ่ม `vc-kpi-group--4` modifier)
+> **อัปเดตล่าสุด:** 2026-06-02 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](docs/notes/CHANGELOG.md)
 
 ## 📖 Reading Strategy
 
@@ -74,19 +74,21 @@ Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + 
 ## Gotchas — สิ่งที่ลืมบ่อย
 
 **Business logic**
-- Budget mutation: ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` / `is_active` ตรงๆ — ทุก mutation ต้องผ่าน `app/services/budget_service.py` (เพื่อ ledger + idempotency)
+- Budget mutation: ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` / `is_active` ตรงๆ — ทุก mutation ต้องผ่าน `app/views/vehicle/vehicle_budget_service.py` (vehicle domain service — ย้ายจาก `services/` 2026-06-07; core = util ข้าม domain เท่านั้น เพื่อ ledger + idempotency)
   - **Deduct/override** 4 call sites: `mileage_log()`, `driver_mileage()`, `override_fuel()`, `budget_manage()` POST
   - **Refund** (`refund_for_booking()`) 5 call sites: `delete_booking()` (ก่อน cascade), `cancel_booking()` (Phase 9, 2026-05-22 — soft cancel), `approve_booking()` admin reject + approver reject, `admin_assign()` reject
   - **`set_active(budget, active)`** (2026-05-18) — toggle ปิด/เปิดใช้งาน → log `set_active`/`set_inactive`; `is_active=False` block `approve_booking` (admin + approver paths ผ่าน `_lookup_budget_for_booking()`) + `top_up` + `manual_adjust`; ไม่ block mileage deduct/refund (booking เก่าปิดทริปได้); KPI sum filter `is_active=True`
+- **งบช่วงเวลา (active period, 2026-06-06):** การหางบ "เลิกใช้ year/month" — `_lookup_budget_for_booking(booking, on_date=None)` หางบ `is_active=True AND start_date <= on_date <= end_date` (default on_date = วันเริ่ม booking; ตอนหักงบส่งวันปิดทริป). overlap → start_date ล่าสุด. ใช้ร่วม approve + 3 จุดหักงบ (mileage_log/driver_mileage/override_fuel). `approve_booking` block ถ้าคืน `None`. `budget_manage` แยกงบ active-for-month vs `archived_budgets` (section "คลังงบ") + action `extend_period` (ตั้ง start–end ใหม่ + เปิด is_active). `year`/`month` = anchor (UniqueConstraint + set_budget); pivot×เดือน ดึงจาก `vehicle_budget_log.created_at`
 - Mileage formula: `fuel_cost = (distance / vehicle.fuel_rate) * fuel_price` (override ถ้า `mileage.fuel_cost` มีค่า)
 - Fuel reserve depletion (2026-05-18): `_depletes_reserve(method)` = `method == 'transfer'` (เงินสด เบิกจากกองกลาง) **เท่านั้น** — `card`=บัตรส่วนกลาง, `self`=ผู้โดยสารจ่ายเอง (เก็บประวัติ ไม่หัก reserve). กระทบ `reserve_used` + `balance_after` ใน admin_fuel.html
 - `is_vehicle_admin()` = `role_vehicle=='admin' OR is_superadmin`; approver เห็นเฉพาะแผนกตัวเอง
-- ห้ามจองข้ามวัน — validate ใน `book_vehicle_simple()` ([vehicle_view.py:83](app/views/vehicle_view.py#L83))
-- Thai time: `get_bkk_time()` = UTC+7 ([models.py:8](app/models.py#L8))
+- ห้ามจองข้ามวัน — validate ใน `book_vehicle_simple()` ([views/vehicle/vehicle_booking.py](app/views/vehicle/vehicle_booking.py))
+- Thai time: `get_bkk_time()` = UTC+7 ([models/base.py:8](app/models/base.py#L8))
+- **models เป็น package แล้ว (2026-06-07):** `models.py` แตกเป็น `models/` ตาม domain (base/user/common/repair/maintenance/room/vehicle/vehicle_budget/vehicle_ot/vehicle_fuel). `db` + `get_bkk_time` อยู่ `base.py`; `__init__.py` re-export ครบ → `from models import X` เดิมใช้ได้ทุกตัว แก้/เพิ่ม model → ไปไฟล์ domain ที่ตรง แล้วเพิ่มชื่อใน `__init__.py __all__`
 
 **DB**
 - ไม่มี migration tool → `db.create_all()` (ตารางใหม่) / ALTER manual ผ่าน `.sql`
-- `EXPENSE_CATEGORIES` ต้น vehicle_view.py — แก้ที่เดียวอัปเดต dropdown
+- `EXPENSE_CATEGORIES` ใน `views/vehicle/vehicle_common.py` — แก้ที่เดียวอัปเดต dropdown
 - `snap_*` ใน vehicle_booking — ป้องกันข้อมูลหายเมื่อแก้ master
 
 **Misc**
@@ -99,7 +101,7 @@ msg_id = _send(text)
 booking.telegram_message_id = msg_id; db.session.commit()
 ```
 
-**In-app notify:** `from views.notification_service import notify_*` — commit ทำใน `_create()`
+**In-app notify:** `from views.core.notification_service import notify_*` — commit ทำใน `_create()`
 
 ---
 
@@ -121,8 +123,8 @@ booking.telegram_message_id = msg_id; db.session.commit()
 | Agent | Spawn เมื่อ |
 |---|---|
 | `checker` | หลังแก้ code ก่อน `จบงาน` — verify Maintenance Protocol |
-| `db-helper` | ก่อนแก้ `models.py` — gen migration + sync DB docs |
-| `guide-vehicle` | หา symbol ใน `vehicle_view.py` (~1900 lines) — return `file:line` แทนโหลดเต็ม |
+| `db-helper` | ก่อนแก้ `models/` (เดิม `models.py`) — gen migration + sync DB docs |
+| `guide-vehicle` | หา symbol ใน `views/vehicle/` controllers (ตัดจาก vehicle_view.py ขั้น 3 — แต่ละไฟล์ 200-700 LOC). หา controller จาก [INDEX §Blueprints](docs/notes/INDEX.md#-blueprints) mapping ก่อน; spawn เมื่อต้องเจาะไฟล์ใหญ่ (notification/budget/admin) |
 <!-- | `notifee` | แก้ booking/approve/mileage/budget — audit `notify_*` + Telegram pattern | -->
 
 ถ้า INDEX.md ตอบได้แล้ว → ไม่ต้อง spawn `guide-vehicle`. Subagent ไม่เห็น conversation — prompt ต้องครบ

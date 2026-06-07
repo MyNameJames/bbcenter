@@ -39,8 +39,8 @@
     gap: var(--vc-space-4);
     flex-wrap: wrap;
     padding-bottom: var(--vc-space-5);
-    margin-bottom: var(--vc-space-6);
-    border-bottom: 1px solid var(--vc-border);
+    /* margin-bottom: var(--vc-space-6); */
+    /* border-bottom: 1px solid var(--vc-border); */
 }
 
 .budget-title {
@@ -870,17 +870,17 @@ button.budget-personal-status:disabled {
 }
 .budget-row--inactive {
     opacity: 0.58;
-    background: repeating-linear-gradient(
+    /* background: repeating-linear-gradient(
         135deg,
         transparent 0,
         transparent 6px,
         var(--vc-bg-subtle) 6px,
         var(--vc-bg-subtle) 7px
-    );
+    ); */
 }
-.budget-row--inactive td:first-child {
+/* .budget-row--inactive td:first-child {
     border-left: 2px solid var(--vc-border-strong, #d4d4d4);
-}
+} */
 
 .budget-row-name {
     display: inline-flex;

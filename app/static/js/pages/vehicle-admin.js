@@ -11,13 +11,16 @@ const TH_DAYS_S = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 const TH_DAYS_F = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const TH_MON_F  = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MON_S  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
+                   'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
+/* STATUS_ICON — merged map (Phase A 2026-05-24 extended `.cls` for `.bl-icon--*`) */
 const STATUS_ICON = {
-    pending:          { dot:'pending',  icon:'clock' },
-    waiting_approver: { dot:'approver', icon:'send' },
-    forwarded:        { dot:'approver', icon:'send' },
-    approved:         { dot:'approved', icon:'check-circle' },
-    rejected:         { dot:'rejected', icon:'x-circle' },
+    pending:          { dot:'pending',  icon:'clock',        cls:'bl-icon--pending' },
+    waiting_approver: { dot:'approver', icon:'send',         cls:'bl-icon--approver' },
+    forwarded:        { dot:'approver', icon:'send',         cls:'bl-icon--approver' },
+    approved:         { dot:'approved', icon:'circle-check', cls:'bl-icon--approved' },
+    rejected:         { dot:'rejected', icon:'x-circle',     cls:'bl-icon--rejected' },
 };
 
 const STATUS_BADGE = {
@@ -38,10 +41,10 @@ const fuelPrice = window.FUEL_PRICE     || 0;
 const serverNow = window.SERVER_NOW ? new Date(window.SERVER_NOW) : new Date();
 const today     = new Date(serverNow.getFullYear(), serverNow.getMonth(), serverNow.getDate());
 
-/* ── KPI count-up animation (Phase 2 polish, 2026-05-22)
-   นับ 0→target ด้วย ease-out cubic, 600ms. ใช้แทน .textContent= */
-const _kpiRaf = new Map();
-function setKpi(id, target) {
+/* ── Number count-up animation (Phase 1 redesign, 2026-05-24)
+   นับ 0→target ด้วย ease-out cubic, 600ms. ใช้กับ inline stat ใน page header */
+const _statRaf = new Map();
+function setStat(id, target) {
     const el = document.getElementById(id);
     if (!el) return;
     const start = parseInt(el.textContent, 10) || 0;
@@ -51,7 +54,7 @@ function setKpi(id, target) {
         el.textContent = target;
         return;
     }
-    if (_kpiRaf.has(id)) cancelAnimationFrame(_kpiRaf.get(id));
+    if (_statRaf.has(id)) cancelAnimationFrame(_statRaf.get(id));
     const t0 = performance.now();
     const dur = 600;
     const diff = target - start;
@@ -59,14 +62,17 @@ function setKpi(id, target) {
         const t = Math.min(1, (now - t0) / dur);
         const eased = 1 - Math.pow(1 - t, 3);
         el.textContent = Math.round(start + diff * eased);
-        if (t < 1) _kpiRaf.set(id, requestAnimationFrame(tick));
-        else _kpiRaf.delete(id);
+        if (t < 1) _statRaf.set(id, requestAnimationFrame(tick));
+        else _statRaf.delete(id);
     };
-    _kpiRaf.set(id, requestAnimationFrame(tick));
+    _statRaf.set(id, requestAnimationFrame(tick));
 }
 
+// let weekStart = new Date(today);
+// weekStart.setDate(today.getDate() - (today.getDay() + 6) % 7);
+
 let weekStart = new Date(today);
-weekStart.setDate(today.getDate() - (today.getDay() + 6) % 7);
+weekStart.setDate(today.getDate() - today.getDay());
 
 let selDate    = new Date(today);
 let curFilter  = 'all';
@@ -74,7 +80,6 @@ let groupMode  = false;
 let groupSel   = new Set();
 let notifyMode = false;
 let notifySel  = new Set();
-let beforeExpanded = true;
 
 let activeBookingId  = null;
 let activeGroupName  = null;
@@ -93,11 +98,6 @@ function toDateStr(d) {
 
 function isToday(d) {
     return d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate();
-}
-
-function isPastOrToday(d) {
-    const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    return s <= today;
 }
 
 function fmtBaht(n) { return '฿' + Number(n).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:0}); }
@@ -139,39 +139,173 @@ function findConflict(b, resourceKey, resourceId) {
 /* ══════════════════════════════════════════════════
    WEEK NAVIGATION
 ══════════════════════════════════════════════════ */
+// function renderWeekNav() {
+//     const strip = document.getElementById('wnStrip');
+//     strip.innerHTML = '';
+
+//     for (let i = 0; i < 7; i++) {
+//         const d     = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+//         const ds    = toDateStr(d);
+//         const cnt   = bookings.filter(b => b.startIso.startsWith(ds)).length;
+//         const isTd  = isToday(d);
+//         const isSel = d.toDateString() === selDate.toDateString();
+
+//         let dotCls = 'va-week-day-dot';
+//         if (cnt >= 4)      dotCls += ' va-week-day-dot--lg';
+//         else if (cnt >= 2) dotCls += ' va-week-day-dot--md';
+//         else if (cnt === 1) dotCls += ' va-week-day-dot--sm';
+
+//         const el = document.createElement('div');
+//         el.className = `va-week-day${isTd?' va-week-day-today':''}${isSel?' va-week-day-active':''}`;
+//         el.style.setProperty('--va-i', i);
+//         el.innerHTML = `
+//             <span class="va-week-day-name">${TH_DAYS_S[d.getDay()]}</span>
+//             <span class="va-week-day-num">${d.getDate()}</span>
+//             <div class="${dotCls}"${cnt>0?` title="${cnt} รายการ"`:''}></div>`;
+//         el.addEventListener('click', () => {
+//             selDate = new Date(d);
+//             renderAll();
+//         });
+//         strip.appendChild(el);
+//     }
+// }
+
 function renderWeekNav() {
     const strip = document.getElementById('wnStrip');
     strip.innerHTML = '';
 
     for (let i = 0; i < 7; i++) {
-        const d     = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+
         const ds    = toDateStr(d);
         const cnt   = bookings.filter(b => b.startIso.startsWith(ds)).length;
         const isTd  = isToday(d);
         const isSel = d.toDateString() === selDate.toDateString();
 
         let dotCls = 'va-week-day-dot';
-        if (cnt >= 4)      dotCls += ' va-week-day-dot--lg';
-        else if (cnt >= 2) dotCls += ' va-week-day-dot--md';
+        if (cnt >= 4)       dotCls += ' va-week-day-dot--lg';
+        else if (cnt >= 2)  dotCls += ' va-week-day-dot--md';
         else if (cnt === 1) dotCls += ' va-week-day-dot--sm';
 
+        const dayOfWeek = d.getDay();
+
+        let textClass = '';
+        if (dayOfWeek === 0) {
+            textClass = ' text-danger';   // อาทิตย์
+        } else if (dayOfWeek === 6) {
+            textClass = ' text-primary';  // เสาร์
+        }
+
         const el = document.createElement('div');
-        el.className = `va-week-day${isTd?' va-week-day-today':''}${isSel?' va-week-day-active':''}`;
+        el.className = `va-week-day${isTd ? ' va-week-day-today' : ''}${isSel ? ' va-week-day-active' : ''}`;
+        el.style.setProperty('--va-i', i);
+
         el.innerHTML = `
-            <span class="va-week-day-name">${TH_DAYS_S[d.getDay()]}</span>
+            <span class="va-week-day-name${textClass} pb-2">${TH_DAYS_S[dayOfWeek]}</span>
             <span class="va-week-day-num">${d.getDate()}</span>
-            <div class="${dotCls}"${cnt>0?` title="${cnt} รายการ"`:''}></div>`;
+            <div class="${dotCls}"${cnt > 0 ? ` title="${cnt} รายการ"` : ''}></div>
+        `;
+
         el.addEventListener('click', () => {
             selDate = new Date(d);
             renderAll();
         });
+
         strip.appendChild(el);
     }
+}
+
+function renderWeekMeta() {
+    const dow = selDate.getDay();
+    // heading สั้น: "อา. 7 มิ.ย. 2569" — today มี dot บน strip อยู่แล้ว ไม่ต้องมี tag
+    const dayLine = `${TH_DAYS_S[dow]}. ${selDate.getDate()} ${TH_MON_S[selDate.getMonth()+1]} ${selDate.getFullYear()+543}`;
+    const h2 = document.getElementById('selDateHeading');
+    if (h2) h2.textContent = dayLine;
 }
 
 function shiftWeek(dir) {
     weekStart.setDate(weekStart.getDate() + dir * 7);
     renderWeekNav();
+    renderWeekMeta();
+}
+
+/* ── Date picker popover ─────────────────────────── */
+function _alignWeekStartTo(date) {
+    // Monday-based: weekStart = date - ((dow + 6) % 7)
+    const d = new Date(date);
+    d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+    weekStart = d;
+}
+
+function openWeekPicker() {
+    const pop = document.getElementById('weekPickerPop');
+    const btn = document.getElementById('weekPickerBtn');
+    const inp = document.getElementById('weekPickerInput');
+    if (!pop || !btn) return;
+    pop.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    if (inp) {
+        inp.value = toDateStr(selDate);
+        setTimeout(() => inp.focus(), 30);
+    }
+}
+function closeWeekPicker() {
+    const pop = document.getElementById('weekPickerPop');
+    const btn = document.getElementById('weekPickerBtn');
+    if (!pop || !btn) return;
+    pop.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+}
+function bindWeekControls() {
+    const todayBtn  = document.getElementById('weekTodayBtn');
+    const pickerBtn = document.getElementById('weekPickerBtn');
+    const pickerInp = document.getElementById('weekPickerInput');
+    const pickerPop = document.getElementById('weekPickerPop');
+
+    if (todayBtn) {
+        todayBtn.addEventListener('click', () => {
+            selDate = new Date(today);
+            _alignWeekStartTo(today);
+            closeWeekPicker();
+            renderAll();
+        });
+    }
+    if (pickerBtn) {
+        pickerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const expanded = pickerBtn.getAttribute('aria-expanded') === 'true';
+            if (expanded) closeWeekPicker(); else openWeekPicker();
+        });
+    }
+    if (pickerInp) {
+        pickerInp.addEventListener('change', (e) => {
+            const v = e.target.value; // "YYYY-MM-DD"
+            if (!v) return;
+            const [yy, mm, dd] = v.split('-').map(Number);
+            const picked = new Date(yy, mm - 1, dd);
+            if (isNaN(picked.getTime())) return;
+            selDate = picked;
+            _alignWeekStartTo(picked);
+            closeWeekPicker();
+            renderAll();
+        });
+    }
+    // click outside
+    document.addEventListener('click', (e) => {
+        if (pickerPop && !pickerPop.hidden) {
+            if (!pickerPop.contains(e.target) && !pickerBtn.contains(e.target)) {
+                closeWeekPicker();
+            }
+        }
+    });
+    // Esc
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && pickerPop && !pickerPop.hidden) {
+            closeWeekPicker();
+            pickerBtn?.focus();
+        }
+    });
 }
 
 /* ══════════════════════════════════════════════════
@@ -195,25 +329,14 @@ function renderBefore() {
     document.getElementById('cnt-approved').textContent = cnt.approved;
     document.getElementById('cnt-rejected').textContent = cnt.rejected;
 
-    setKpi('kpiPending',  cnt.pending);
-    setKpi('kpiApprover', cnt.waiting_approver);
-    setKpi('kpiApproved', cnt.approved);
-    setKpi('kpiRejected', cnt.rejected);
-
-    const shouldCollapse = isPastOrToday(selDate);
-    const collapsedEl  = document.getElementById('beforeCollapsed');
-    const expandedEl   = document.getElementById('beforeExpanded');
-
-    if (shouldCollapse && !beforeExpanded) {
-        collapsedEl.style.display = 'flex';
-        expandedEl.style.display  = 'none';
-        document.getElementById('beforeCollapsedText').textContent =
-            `อนุมัติแล้ว ${cnt.approved}/${cnt.all} รายการ`;
-        return;
-    } else {
-        collapsedEl.style.display = 'none';
-        expandedEl.style.display  = 'block';
+    const headerCountEl = document.getElementById('beforeCount');
+    if (headerCountEl) {
+        headerCountEl.textContent = cnt.all > 0 ? `${cnt.all} รายการ` : '';
     }
+
+    setStat('statPending',  cnt.pending);
+    setStat('statApprover', cnt.waiting_approver);
+    setStat('statApproved', cnt.approved);
 
     let filtered = [...allDay];
     if (curFilter !== 'all') {
@@ -247,62 +370,93 @@ function renderBefore() {
         }
     });
 
-    list.innerHTML = items.map(item =>
+    list.innerHTML = items.map((item, i) =>
         item.type === 'group'
-            ? renderGroupRow(item.name, item.members)
-            : renderSingleRow(item.booking)
+            ? renderGroupRow(item.name, item.members, i)
+            : renderSingleRow(item.booking, i)
     ).join('');
     initIcons();
 }
 
-const STATUS_LICON = {
-    pending:          { icon:'clock',        cls:'bl-licon--pending'  },
-    waiting_approver: { icon:'send',         cls:'bl-licon--approver' },
-    forwarded:        { icon:'send',         cls:'bl-licon--approver' },
-    approved:         { icon:'circle-check', cls:'bl-licon--approved' },
-    rejected:         { icon:'circle-x',     cls:'bl-licon--rejected' },
-};
+/* งบที่อนุมัติ → label "ประเภท-หมวด" (null = ยังไม่จัดสรร) */
+function budgetLabel(b) {
+    if (b.expType === 'department') return b.expSub ? `ส่วนกอง-${b.expSub}` : 'ส่วนกอง';
+    if (b.expType === 'central')    return b.expSub ? `ส่วนกลาง-${b.expSub}` : 'ส่วนกลาง';
+    if (b.expType === 'personal')   return 'ส่วนตัว';
+    return null;
+}
 
-function renderSingleRow(b) {
-    const sb = STATUS_BADGE[b.status] || STATUS_BADGE.pending;
-    const li = STATUS_LICON[b.status]  || STATUS_LICON.pending;
+function renderSingleRow(b, idx = 0) {
+    const sb  = STATUS_BADGE[b.status] || STATUS_BADGE.pending;
 
     const isSelectable       = groupMode  && b.status === 'pending';
     const isNotifySelectable = notifyMode && b.status === 'approved';
     const isSel       = groupSel.has(b.id);
     const isNotifySel = notifySel.has(b.id);
 
-    const badgeEl = (!isSelectable && !isNotifySelectable)
-        ? `<span class="vc-badge ${sb.cls}">${sb.label}</span>` : '';
-
     const actions = buildRowActions(b);
     const defaultClick = !groupMode && !notifyMode
-        ? `onclick="openAdminBookingDetail(${b.id})" style="cursor:pointer"` : '';
+        ? `onclick="openAdminBookingDetail(${b.id})"` : '';
 
-    const titleText = esc(b.booker || '—');
-    const metaParts = [
-        `<i data-lucide="users" class="vc-icon-sm bl-meta-ico"></i>${b.pax}`,
-        b.start,
-        esc(b.dest),
-    ];
+    /* Phase 14 (2026-06-07): 3-line layout —
+       head(ชื่อผู้จอง | status) + trip(purpose → dest) + foot(badges scroll-x | actions) */
+    const bookerName  = esc(b.booker || '—');
+    const purposeText = esc(b.purpose || '—');
+    const destText    = esc(b.dest || '—');
+
+    const statusBadge = `<span class="bl-status vc-badge ${sb.cls}">${sb.label}</span>`;
+
+    /* badge 1 — ผู้โดยสาร */
+    const paxBadge = `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="users" class="vc-icon-sm"></i>${b.pax || 0}</span>`;
+
+    /* badge 2 — งบที่อนุมัติ (ยังไม่จัดสรร → amber เตือน) */
+    const budget = budgetLabel(b);
+    const budgetBadge = budget
+        ? `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="wallet" class="vc-icon-sm"></i>${esc(budget)}</span>`
+        : `<span class="vc-badge vc-badge-warning bl-badge"><i data-lucide="wallet" class="vc-icon-sm"></i>ยังไม่ได้จัดสรรงบ</span>`;
+
+    /* badge 3 — งานนอกระบบ (driver เพิ่มเอง) → ม่วง subtle */
+    const adhocBadge = b.isAdHoc
+        ? `<span class="vc-badge bl-badge bl-badge-adhoc"><i data-lucide="user-plus" class="vc-icon-sm"></i>งานนอกระบบ</span>`
+        : '';
+
+    const actionsZone = actions
+        ? `<div class="bl-actions" onclick="event.stopPropagation()">${actions}</div>` : '';
+
+    /* Phase B — checkbox slot (visible only on selectable rows; placeholder keeps grid aligned) */
+    const checkboxSlot = isSelectable
+        ? `<input type="checkbox" class="bl-sel-check form-check-input" ${isSel?'checked':''} onclick="event.stopPropagation();toggleGroupSel(${b.id})" aria-label="เลือกเพื่อรวมงาน">`
+        : isNotifySelectable
+        ? `<input type="checkbox" class="bl-sel-check bl-sel-check--notify form-check-input" ${isNotifySel?'checked':''} onclick="event.stopPropagation();toggleNotifySel(${b.id})" aria-label="เลือกเพื่อแจ้ง">`
+        : (groupMode || notifyMode)
+        ? `<span class="bl-sel-slot" aria-hidden="true"></span>`
+        : '';
 
     return `
-    <div class="bl-card${isSel?' bl-selected':''}${isNotifySel?' bl-notify-selected':''}${isSelectable?' bl-group-mode':''}${isNotifySelectable?' bl-notify-mode':''}"
+    <div class="bl-card${b.status==='approved'?' bl-card--done':''}${isSel?' bl-selected':''}${isNotifySel?' bl-notify-selected':''}${isSelectable?' bl-group-mode':''}${isNotifySelectable?' bl-notify-mode':''}"
          id="blrow-${b.id}"
+         style="--va-i:${idx}"
          ${isSelectable ? `onclick="toggleGroupSel(${b.id})"` : isNotifySelectable ? `onclick="toggleNotifySel(${b.id})"` : defaultClick}>
-        <div class="bl-licon ${li.cls}">
-            <i data-lucide="${li.icon}" class="vc-icon-sm"></i>
-        </div>
-        <div class="bl-content">
-            <div class="bl-title-row">
-                <span class="bl-title">${titleText}</span>
-
+        ${checkboxSlot}
+        <div class="bl-body">
+            <div class="bl-head">
+                <span class="bl-title">${bookerName}</span>
+                ${statusBadge}
             </div>
-            <div class="bl-meta">
-                ${metaParts.join('<span class="bl-meta-dot">·</span>')}
+            <div class="bl-trip">
+                <span class="bl-trip-purpose">${purposeText}</span>
+                <i data-lucide="arrow-right" class="vc-icon-sm bl-trip-arrow"></i>
+                <span class="bl-trip-dest">${destText}</span>
+            </div>
+            <div class="bl-foot">
+                <div class="bl-badges">
+                    ${paxBadge}
+                    ${budgetBadge}
+                    ${adhocBadge}
+                </div>
+                ${actionsZone}
             </div>
         </div>
-        ${actions ? `<div class="bl-actions" onclick="event.stopPropagation()">${actions}</div>` : ''}
     </div>`;
 }
 
@@ -311,19 +465,27 @@ function buildRowActions(b) {
     const stop = 'event.stopPropagation();';
     switch (b.status) {
         case 'pending':
+            /* Desktop: approve (pencil icon) + reject pair; mobile: reject hidden via .bl-action-secondary */
             return `
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" title="อนุมัติ" onclick="${stop}openAssignModal(${b.id},'approve')">
-                    อนุมัติ
+                <button type="button" class="vc-btn vc-btn-primary vc-btn-icon vc-btn-sm" title="อนุมัติ" onclick="${stop}openAssignModal(${b.id},'approve')">
+                    <i data-lucide="pencil" class="vc-icon-sm"></i>
+                </button>
+                <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon vc-btn-sm bl-action-secondary" title="ปฏิเสธ" onclick="${stop}openAssignModal(${b.id},'reject')">
+                    <i data-lucide="circle-x" class="vc-icon-sm"></i>
                 </button>`;
         case 'waiting_approver':
         case 'forwarded':
-            return `<span class="bl-status-text">รอ Approver</span>`;
+            /* Admin can edit assignment at any status — even after forwarding to approver */
+            return `
+                <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="แก้ไข" onclick="${stop}openAssignModal(${b.id},'edit')">
+                    <i data-lucide="pencil" class="vc-icon-sm"></i>
+                </button>`;
         case 'approved':
             return `
                 <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="แก้ไข" onclick="${stop}openAssignModal(${b.id},'edit')">
                     <i data-lucide="pencil" class="vc-icon-sm"></i>
                 </button>
-                <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="ย้อนสถานะ" onclick="${stop}openRevertModal(${b.id})">
+                <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm bl-action-secondary" title="ย้อนสถานะ" onclick="${stop}openRevertModal(${b.id})">
                     <i data-lucide="rotate-cw" class="vc-icon-sm"></i>
                 </button>`;
         case 'rejected':
@@ -333,7 +495,7 @@ function buildRowActions(b) {
     }
 }
 
-function renderGroupRow(grpName, members) {
+function renderGroupRow(grpName, members, idx = 0) {
     const totalPax = members.reduce((s,b)=>s+b.pax,0);
     const times    = [...new Set(members.map(b=>b.start))].join(', ');
     const rep      = members[0];
@@ -344,71 +506,72 @@ function renderGroupRow(grpName, members) {
     const isGrpNotifySelectable = notifyMode && approvedMembers.length > 0;
     const isGrpNotifySel        = isGrpNotifySelectable && approvedMembers.every(b => notifySel.has(b.id));
 
-    const titleBadge = isGrpNotifySelectable
-        ? `<input type="checkbox" class="bl-sel-check bl-sel-check--notify form-check-input"
-               ${isGrpNotifySel ? 'checked' : ''}
-               onclick="event.stopPropagation();toggleGroupNotifySel('${grpName}')">`
-        : `<span class="vc-badge vc-badge-success vc-badge-dot">${members.length} งานรวม</span>`;
+    /* Phase B — group title badge คงเดิม ("N งานรวม"); checkbox ย้ายไปเป็น leftmost slot */
+    const titleBadge = `<span class="bl-status vc-badge vc-badge-success vc-badge-dot">${members.length} งานรวม</span>`;
+    const grpCheckboxSlot = isGrpNotifySelectable
+        ? `<input type="checkbox" class="bl-sel-check bl-sel-check--notify form-check-input" ${isGrpNotifySel?'checked':''} onclick="event.stopPropagation();toggleGroupNotifySel('${grpName}')" aria-label="เลือกกลุ่มเพื่อแจ้ง">`
+        : (groupMode || notifyMode)
+        ? `<span class="bl-sel-slot" aria-hidden="true"></span>`
+        : '';
 
-    const subItems = members.map(b => {
-        const sb = STATUS_BADGE[b.status] || STATUS_BADGE.pending;
-        return `
+    /* Phase A: sub-rows = destination title + meta (pax · time · booker), no per-row ungroup (header only) */
+    const subItems = members.map(b => `
         <div class="bl-group-sub">
             <div class="bl-group-sub-info">
                 <div class="bl-group-sub-head">
-                    <span class="bl-group-sub-name">${esc(b.booker)}</span>
-                    <span class="vc-badge ${sb.cls}">${sb.label}</span>
+                    <span class="bl-group-sub-name">${esc(b.dest || b.booker)}</span>
                 </div>
                 <div class="bl-group-sub-meta">
-                    <i data-lucide="users" class="vc-icon-sm bl-meta-ico"></i>${b.pax}
+                    <span><i data-lucide="users" class="vc-icon-sm bl-meta-ico"></i>${b.pax}</span>
                     <span class="bl-meta-dot">·</span>
-                    <i data-lucide="clock" class="vc-icon-sm bl-meta-ico"></i>${b.start}
+                    <span>${esc(b.start)}</span>
                     <span class="bl-meta-dot">·</span>
-                    <span class="bl-group-sub-dest">${esc(b.dest)}</span>
+                    <span class="bl-group-sub-dest">${esc(b.booker)}</span>
                 </div>
             </div>
-            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="แยกออกจากกลุ่ม" onclick="splitBooking(${b.id},'${grpName}')">
-                <i data-lucide="shuffle" class="vc-icon-sm"></i>
-            </button>
-        </div>`;
-    }).join('');
+        </div>`).join('');
 
     return `
     <div class="bl-card bl-card--group${isGrpNotifySel?' bl-notify-selected':''}${isGrpNotifySelectable?' bl-notify-mode':''}"
          id="blgrp-${grpName}"
-         ${isGrpNotifySelectable ? `onclick="toggleGroupNotifySel('${grpName}')" style="cursor:pointer"` : ''}>
-        <div class="bl-licon bl-licon--group">
-            <i data-lucide="merge" class="vc-icon-sm"></i>
-        </div>
-        <div class="bl-content">
-            <div class="bl-title-row">
-                <span class="bl-title">${esc(vLabel)}</span>
+         style="--va-i:${idx}"
+         ${isGrpNotifySelectable ? `onclick="toggleGroupNotifySel('${grpName}')"` : ''}>
+        ${grpCheckboxSlot}
+        <div class="bl-body">
+            <div class="bl-head">
+                <div class="bl-head-text">
+                    <span class="bl-title">${esc(vLabel)}</span>
+                    <span class="bl-desc">${members.length} งานในเที่ยวเดียว · ${totalPax} คน</span>
+                </div>
+                <div class="bl-due">
+                    <span class="bl-due-label">เวลาเดินทาง</span>
+                    <span class="bl-due-value">${times}</span>
+                </div>
+            </div>
+            <div class="bl-foot">
                 ${titleBadge}
+                <div class="bl-foot-right">
+                    <div class="bl-actions" onclick="event.stopPropagation()">
+                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" onclick="ungroupAll('${grpName}')" title="แยกงานทั้งหมด">
+                            <i data-lucide="shuffle" class="vc-icon-sm"></i>
+                        </button>
+                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" onclick="openAssignModal(null,'group','${grpName}')" title="แก้ไขกลุ่ม">
+                            <i data-lucide="pencil" class="vc-icon-sm"></i>
+                        </button>
+                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm bl-grp-chev"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#${colId}"
+                                aria-expanded="false"
+                                onclick="event.stopPropagation()"
+                                title="ขยาย/ย่อ">
+                            <i data-lucide="chevron-down" class="vc-icon-sm"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="bl-meta">
-                <i data-lucide="users" class="vc-icon-sm bl-meta-ico"></i>${totalPax} คน
-                <span class="bl-meta-dot">·</span>
-                <i data-lucide="clock" class="vc-icon-sm bl-meta-ico"></i>${times}
+            <div class="collapse bl-grp-collapse" id="${colId}">
+                ${subItems}
             </div>
-        </div>
-        <div class="bl-actions" onclick="event.stopPropagation()">
-            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" onclick="ungroupAll('${grpName}')" title="แยกงานทั้งหมด">
-                <i data-lucide="shuffle" class="vc-icon-sm"></i>
-            </button>
-            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" onclick="openAssignModal(null,'group','${grpName}')" title="แก้ไขกลุ่ม">
-                <i data-lucide="pencil" class="vc-icon-sm"></i>
-            </button>
-            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm bl-grp-chev"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#${colId}"
-                    aria-expanded="false"
-                    onclick="event.stopPropagation()"
-                    title="ขยาย/ย่อ">
-                <i data-lucide="chevron-down" class="vc-icon-sm"></i>
-            </button>
-        </div>
-        <div class="collapse bl-grp-collapse" id="${colId}">
-            ${subItems}
         </div>
     </div>`;
 }
@@ -420,11 +583,6 @@ function setFilter(f, el) {
     renderBefore();
 }
 
-function toggleBeforeExpand() {
-    beforeExpanded = !beforeExpanded;
-    renderBefore();
-}
-
 /* ── Group Mode ───────────────────────────────── */
 function toggleGroupMode() {
     groupMode = true; groupSel.clear();
@@ -432,6 +590,7 @@ function toggleGroupMode() {
     document.getElementById('btnNotify').style.display       = 'none';
     document.getElementById('btnMergeCancel').style.display  = 'inline-flex';
     document.getElementById('btnMergeConfirm').style.display = 'inline-flex';
+    document.getElementById('bookingList')?.classList.add('va-list--selecting');
     updateMergeBtn();
     renderBefore();
 }
@@ -442,6 +601,7 @@ function cancelGroupMode() {
     document.getElementById('btnNotify').style.display       = '';
     document.getElementById('btnMergeCancel').style.display  = 'none';
     document.getElementById('btnMergeConfirm').style.display = 'none';
+    document.getElementById('bookingList')?.classList.remove('va-list--selecting');
     renderBefore();
 }
 
@@ -471,6 +631,7 @@ function toggleNotifyMode() {
     document.getElementById('btnNotify').style.display        = 'none';
     document.getElementById('btnNotifyCancel').style.display  = 'inline-flex';
     document.getElementById('btnNotifyConfirm').style.display = 'inline-flex';
+    document.getElementById('bookingList')?.classList.add('va-list--selecting');
     updateNotifyBtn();
     renderBefore();
 }
@@ -481,6 +642,7 @@ function cancelNotifyMode() {
     document.getElementById('btnNotify').style.display        = '';
     document.getElementById('btnNotifyCancel').style.display  = 'none';
     document.getElementById('btnNotifyConfirm').style.display = 'none';
+    document.getElementById('bookingList')?.classList.remove('va-list--selecting');
     renderBefore();
 }
 
@@ -749,7 +911,7 @@ function openAssignModal(bookingId, action, groupName) {
 
     const b = bookingId ? bookings.find(x=>x.id===bookingId) : null;
 
-    let title = 'Approve & Assign Resources';
+    let title = 'อนุมัติการจอง (เลือกคนขับและรถ)';
     let sub   = '';
     if (action==='reject')    title = 'Reject Booking';
     if (action==='edit')      title = 'Edit Assignment';
@@ -1225,11 +1387,7 @@ function esc(s) {
 ══════════════════════════════════════════════════ */
 function renderAll() {
     renderWeekNav();
-    const dow = selDate.getDay();
-    const isTd = isToday(selDate);
-    document.getElementById('selDateHeading').textContent =
-        `วัน${TH_DAYS_F[dow]}ที่ ${selDate.getDate()} ${TH_MON_F[selDate.getMonth()+1]} ${selDate.getFullYear()+543}${isTd ? '  (วันนี้)' : ''}`;
-    beforeExpanded = !isPastOrToday(selDate);
+    renderWeekMeta();
     renderBefore();
     renderDuring();
     renderAfter();
@@ -1240,7 +1398,7 @@ function renderAll() {
 Object.assign(window, {
     shiftWeek, toggleGroupMode, cancelGroupMode, confirmMerge,
     toggleNotifyMode, cancelNotifyMode, confirmNotify,
-    toggleBeforeExpand, setFilter,
+    setFilter,
     toggleGroupSel, toggleNotifySel, toggleGroupNotifySel,
     openAssignModal, openRevertModal, openAdminBookingDetail,
     openSwapModal, openRepairModal,
@@ -1250,4 +1408,5 @@ Object.assign(window, {
     selectSwapVehicle, markPaid, notifyDept,
 });
 
+bindWeekControls();
 renderAll();

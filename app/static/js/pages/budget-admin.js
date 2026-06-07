@@ -61,6 +61,13 @@ wireModal('budgetAdjustModal', {
     dept_label:   'dept',
     current_used: 'used',
 });
+// extendBudgetModal — นำงบจากคลังกลับมาใช้ (pre-fill budget_id + ช่วง start/end เดิม)
+wireModal('extendBudgetModal', {
+    budget_id:  'bid',
+    dept_label: 'dept',
+    start_date: 'start',
+    end_date:   'end',
+});
 
 // ── setBudgetModal: swap datalist + approver pre-select + retitle ──
 const setBudgetModal = document.getElementById('setBudgetModal');

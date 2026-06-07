@@ -1,0 +1,4 @@
+# Dev/test dependencies — ติดตั้งเพิ่มจาก requirements.txt
+# pip install -r requirements-dev.txt
+-r requirements.txt
+pytest==9.0.3

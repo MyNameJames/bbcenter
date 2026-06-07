@@ -8,7 +8,7 @@
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle.css') }}">
     <style>
         /* ═══════════════════════════════════════════════════════
@@ -549,7 +549,8 @@
     {% include '_sidebar.html' %}
 
     <main class="main-content">
-        {% set page_title = 'ประวัติการจองรถ' %}
+        {% set page_section = 'เมนู' %}
+        {% set page_title = 'ประวัติการจอง' %}
         {% include '_header.html' %}
 
         <div class="view-section active" style="overflow-y:auto;">

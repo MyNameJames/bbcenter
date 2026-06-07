@@ -1,8 +1,8 @@
 # BBCenter V2 — System Architecture
 
-> **อัปเดตล่าสุด:** 2026-04-24
+> **อัปเดตล่าสุด:** 2026-06-02
 > Symbol/route/model lookup → [INDEX.md](INDEX.md)
-> Schema detail → [database/schema-current.md](database/schema-current.md)
+> Schema detail → [database/schema.md](database/schema.md)
 
 ---
 
@@ -38,8 +38,8 @@ BBCenter V2 = Internal Portal ขององค์กร, Flask monolithic, 4 �
 └──────────────────┬──────────────────────┘
                    │
 ┌──────────────────▼──────────────────────┐
-│  Layer 3.5: Business Services           │
-│  app/services/budget_service.py         │
+│  Layer 3.5: Vehicle Domain Service      │
+│  views/vehicle/vehicle_budget_service.py│
 │    • ledger ของ VehicleBudget — ทุก     │
 │      mutation ผ่านที่นี่เท่านั้น        │
 └──────────────────┬──────────────────────┘
@@ -47,7 +47,7 @@ BBCenter V2 = Internal Portal ขององค์กร, Flask monolithic, 4 �
 ┌──────────────────▼──────────────────────┐
 │  Layer 4: Data                          │
 │  SQLite (app/instance/portal.db)        │
-│  models.py → 17 Tables                  │
+│  models/ → 27 Tables (domain pkg)       │
 │  static/uploads/ (รูปภาพ)               │
 │  migrations/ (manual .sql)              │
 └──────────────────┬──────────────────────┘
@@ -85,10 +85,12 @@ Browser
 | `auth_bp` | `auth_view.py` | login/logout/dashboard + user mgmt |
 | `repair_bp` | `repair_view.py` | แจ้งซ่อม IT |
 | `maintenance_bp` | `maintenance_view.py` | แจ้งซ่อมอาคาร + Excel export |
-| `vehicle_bp` | `vehicle_view.py` | จองรถ + admin approve + notification API |
-| `adminfleet_bp` | `vehicle_view.py` | จัดการรถ + งบ + personal reimbursement |
-| `admincost_bp` | `vehicle_view.py` | สรุปค่าใช้จ่าย + export |
-| `driver_bp` | `vehicle_view.py` | หน้าคนขับ + บันทึกไมล์ |
+| `vehicle_bp` | `views/vehicle/` | จองรถ + admin approve + notification API |
+| `adminfleet_bp` | `views/vehicle/` | จัดการรถ + งบ + personal reimbursement |
+| `admincost_bp` | `views/vehicle/` | สรุปค่าใช้จ่าย + export |
+| `driver_bp` | `views/vehicle/` | หน้าคนขับ + บันทึกไมล์ |
+
+> ขั้น 3 (2026-06-07): blueprints 4 ตัว def ใน `views/vehicle/vehicle_common.py`, routes กระจายตาม controller (booking/notification/history/admin/mileage/cost/budget/driver) — mapping เต็มที่ [INDEX §Blueprints](INDEX.md#-blueprints)
 | `room_bp` | `room_view.py` | จองห้องประชุม |
 
 ---
@@ -168,7 +170,7 @@ db.session.commit()
 ### 2. In-app Notification
 **Pattern:**
 ```python
-from views.notification_service import notify_*
+from views.core.notification_service import notify_*
 notify_xxx(booking, ...)  # commit อยู่ใน _create()
 ```
 ครอบคลุมเฉพาะ Vehicle (16+ functions ใน notification_service.py — Event #16 `notify_user_cancelled` เพิ่ม Phase 9, 2026-05-22 สำหรับ multi-recipient cancel-after-approve)
@@ -184,19 +186,28 @@ bbcenter/
 ├── CLAUDE.md                    ← rules + reading strategy (auto-loaded)
 ├── app/
 │   ├── app.py                   ← entry, register blueprints, init scheduler
-│   ├── models.py                ← 17 tables
+│   ├── models/                  ← 27 tables แตกตาม domain (base/user/common/repair/
+│   │                              maintenance/room/vehicle/vehicle_budget/vehicle_ot/
+│   │                              vehicle_fuel) — __init__.py re-export ครบ
 │   ├── ad_utils.py
 │   ├── instance/portal.db       ← SQLite (gitignored)
-│   ├── migrations/              ← manual .sql
+│   ├── migrations/              ← manual .sql + migrations-index.md
 │   ├── views/
 │   │   ├── auth_view.py
 │   │   ├── repair_view.py
 │   │   ├── maintenance_view.py
-│   │   ├── vehicle_view.py      ← 4 blueprints (~1900 lines)
 │   │   ├── room_view.py
-│   │   ├── telegram_service.py
-│   │   ├── notification_service.py
-│   │   └── notification_cron.py
+│   │   ├── fuel_view.py
+│   │   ├── core/               ← util ข้าม domain (ย้ายมา 2026-06-07)
+│   │   │   ├── telegram_service.py
+│   │   │   ├── notification_service.py
+│   │   │   └── notification_cron.py
+│   │   └── vehicle/            ← vehicle domain (ตัดจาก vehicle_view.py ขั้น 3, 2026-06-07)
+│   │       ├── vehicle_common.py    ← blueprints(4) + helpers/constants กลาง
+│   │       ├── vehicle_booking.py · vehicle_notification.py · vehicle_history.py
+│   │       ├── vehicle_admin.py · vehicle_mileage.py · vehicle_cost.py
+│   │       ├── vehicle_budget.py · vehicle_driver.py    ← controllers ต่อ feature
+│   │       └── vehicle_budget_service.py  ← ย้ายจาก services/ (services/ ถูกลบ)
 │   ├── templates/
 │   │   ├── _sidebar.html, _header.html
 │   │   ├── _notification_panel.html, _notification_toast.html
@@ -206,7 +217,7 @@ bbcenter/
 │   │       ├── admin/ (5 pages)
 │   │       └── driver_home.html
 │   └── static/
-│       ├── css/design-system.css    ← --ds-* tokens
+│       ├── css/design-system.css    ← --vc-* tokens (canonical; --ds-* retired)
 │       ├── css/vehicle.css, vehicle_admin.css, notification.css
 │       ├── js/vehicle.js, notification.js
 │       ├── js/core/{icons,format,http}.js         ← shared ES modules (Phase 4.0)
@@ -216,20 +227,55 @@ bbcenter/
 │       └── vendor/
 └── docs/
     ├── design/                  ← wireframes, prototypes
+    ├── mockups/                 ← canonical mockups
     └── notes/
         ├── INDEX.md             ← symbol/route lookup (Claude entry)
-        ├── file-map.md          ← path → purpose
         ├── architecture.md      ← ไฟล์นี้
         ├── design_system.md
         ├── future_features.md
+        ├── task-lifecycle.md    ← template + สรุป/จบงาน flow
+        ├── CHANGELOG.md         ← ประวัติ phase (ย้ายจากหัว INDEX/CLAUDE)
         ├── database/
-        │   ├── schema-current.md
-        │   ├── evolution.md
-        │   └── migrations-index.md
+        │   └── schema.md        ← Part 1 ปัจจุบัน + Part 2 history
         ├── doc/                 ← completed tasks
         ├── log/                 ← in-progress
         └── skills/
 ```
+
+---
+
+## Configuration (.env)
+
+config ทั้งหมดอ่านจาก `app/.env` (gitignored) ผ่าน `python-dotenv` — template อยู่ที่ `app/.env.example` (commit ได้, ไม่มีค่าจริง)
+
+| Key | จำเป็น | ใช้ที่ | หมายเหตุ |
+|-----|--------|--------|----------|
+| `FLASK_SECRET_KEY` | ✅ **fail-fast** | `app.py` | ไม่มี → `raise RuntimeError` (แอปไม่ boot) — ห้าม fallback ค่า default อีก |
+| `FLASK_DEBUG` | — | `app.py` | `1`=เปิด (dev), `0`/ไม่ตั้ง=ปิด (prod) |
+| `AD_SERVER` / `AD_DOMAIN` / `SEARCH_BASE` | ✅ | `ad_utils.py` | LDAP auth |
+| `DEV_BYPASS` | — | `auth_view.py` | `1`=เปิด `/dev/login/<user>` (ห้าม prod) |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_GROUP_CHAT_ID` | — | `telegram_service.py` | ไม่มี → ข้าม notify เงียบๆ (graceful skip). **ถ้ารั่วต้อง revoke ผ่าน BotFather** |
+
+⚠️ ห้าม hardcode secret ใน source — ทุกค่าผ่าน `os.getenv()` เท่านั้น
+
+**Secret guard (pre-commit hook):** `tools/git-hooks/pre-commit` บล็อก commit ถ้าเจอ secret pattern (Telegram token / hardcoded SECRET_KEY / credential) หรือเผลอ stage ไฟล์ `.env`
+- เปิดใช้ครั้งเดียวต่อ clone: `git config core.hooksPath tools/git-hooks`
+- ข้ามกรณีฉุกเฉิน: `git commit --no-verify`
+
+---
+
+## Testing
+
+pytest + in-memory SQLite — รัน: `.venv/bin/python -m pytest` (deps: `requirements-dev.txt`)
+
+| ไฟล์ | คลุม |
+|------|------|
+| `tests/conftest.py` | fixtures: in-memory DB + request context (current_user=anonymous) + factory `make_budget`/`make_mileage` |
+| `tests/test_budget_service.py` | `views/vehicle/vehicle_budget_service.py` — deduct(+idempotency), refund(+no-double), rededuct, refund_for_booking, set_budget, manual_adjust, set_active, verify_cache_integrity + invariant `used_amount == SUM(log≠set_budget)` |
+
+config: `pytest.ini` (`pythonpath=app`, `testpaths=tests`)
+
+> ส่วนอื่นยังไม่มี test — เพิ่ม service/view ใหม่ที่แตะเงิน/สถานะ ควรเพิ่ม test คู่กัน
 
 ---
 
@@ -240,6 +286,7 @@ bbcenter/
 - เปลี่ยน auth flow → Layer 2
 - เปลี่ยน notification pattern → Notification Architecture
 - เพิ่ม external service → Layer 5
+- เพิ่ม/เปลี่ยน env var → Configuration (.env) table
 - เปลี่ยนโครงสร้าง folder → File Structure
 
 **ไม่ต้อง sync ที่นี่ (ไปที่ INDEX.md แทน):**

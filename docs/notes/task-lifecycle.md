@@ -25,11 +25,11 @@
 
 ## Docs sync checklist (ก่อน `จบงาน`)
 - [ ] INDEX.md
-- [ ] schema-current.md (ถ้าแก้ model)
-- [ ] evolution.md (ถ้าแก้ model — ต้องมีเหตุผล)
+- [ ] schema.md Part 1 (ถ้าแก้ model)
+- [ ] schema.md Part 2 (ถ้าแก้ model — ต้องมีเหตุผล)
 - [ ] migrations-index.md (ถ้ามี .sql ใหม่)
 - [ ] architecture.md (ถ้ากระทบ system-level)
-- [ ] file-map.md (ถ้าเพิ่ม/ลบไฟล์)
+- [ ] INDEX.md § File Map (ถ้าเพิ่ม/ลบไฟล์)
 ```
 
 ---
@@ -60,7 +60,7 @@
 
 ### 5. Docs Sync Check
 - [ ] INDEX.md (ถ้าเพิ่ม route/function/template)
-- [ ] schema-current.md + evolution.md (ถ้าแก้ model)
+- [ ] schema.md Part 1 + Part 2 (ถ้าแก้ model)
 - [ ] log file มี decision + ไฟล์ที่เปลี่ยน
 
 ### 6. รายงานผลรวม
@@ -104,6 +104,6 @@ Template สรุปท้าย log:
 
 ### Docs sync
 - [x] INDEX.md
-- [x] schema-current.md (ถ้าแก้ model)
+- [x] schema.md (ถ้าแก้ model)
 - ...
 ```

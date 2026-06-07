@@ -35,7 +35,7 @@
     flex-wrap: wrap;
     padding-bottom: var(--vc-space-5);
     margin-bottom: var(--vc-space-6);
-    border-bottom: 1px solid var(--vc-border);
+    /* border-bottom: 1px solid var(--vc-border); */
 }
 
 .fuel-title {

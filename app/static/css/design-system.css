@@ -43,9 +43,29 @@
 @import url('./components/sidebar.css');
 @import url('./components/pivot.css');
 
+/* Sarabun = font เดียวของระบบ. กันหน้าที่ไม่ได้ตั้ง body font เองตกไป system font */
+body {
+    font-family: var(--vc-font-sans);
+}
+
 /* Reserve scrollbar gutter to prevent layout shift when content height changes */
 html {
     scrollbar-gutter: stable;
+}
+
+/* Modal × scrollbar-gutter:stable fix —
+   html จอง gutter (~15px) ไว้ตลอด ปกติ scrollbar นั่งทับเลยไม่เห็น
+   พอเปิด modal: BS สั่ง body overflow:hidden → scrollbar หาย แต่ gutter ยัง stable
+   → 15px ว่างโผล่เป็นแถบขาวขอบขวา (backdrop 100vw ก็คลุมไม่ถึง เพราะ fixed นับ ICB ที่หัก gutter)
+   แก้: ตอน modal เปิด (body.modal-open) สั่ง html เลิกจอง gutter → ไม่มีแถบว่าง +
+   backdrop คลุมเต็มจริง; การชดเชย scrollbar BS ทำผ่าน body padding-right ให้แล้ว (ไม่ shift)
+   global = ทุก modal (ปัจจุบัน + อนาคต) ไม่ต้อง list ID */
+html:has(body.modal-open) {
+    scrollbar-gutter: auto;
+}
+.modal-backdrop {
+    width: 100vw;
+    height: 100dvh;
 }
 
 .main-content {
@@ -460,7 +480,7 @@ html {
     color: #fff;
     border-color: var(--vc-fg);
 }
-.ds-btn-primary:hover { background: #27272A; border-color: #27272A; }
+.ds-btn-primary:hover { background: var(--vc-primary-hover); border-color: var(--vc-primary-hover); }
 
 /* Accent — Indigo fill */
 .ds-btn-accent {
@@ -714,7 +734,7 @@ html {
     font-variant-numeric: tabular-nums;
 }
 
-/* Tight tracking for display text (Geist signature) */
+/* Tight tracking for display text */
 .vc-tracking-tight   { letter-spacing: var(--vc-tracking-tight); }
 .vc-tracking-tighter { letter-spacing: var(--vc-tracking-tighter); }
 

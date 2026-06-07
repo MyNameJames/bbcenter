@@ -4,6 +4,8 @@
    Optional: active_menu = 'vehicle' | 'history' | 'repair' | 'room' | 'dashboard' | 'admin' | 'mileage' | 'fleet' | 'cost' | 'budget' | 'fuel' | 'approver'
    Icons: Lucide (data-lucide) — โหลดผ่าน _header.html
 #}
+{% set vehicle_admin_active = active_menu in ['admin', 'mileage', 'fleet', 'budget', 'cost', 'fuel'] %}
+{% set has_vehicle_pending = (pending_count is defined and pending_count > 0) %}
 <aside class="sidebar" id="sidebar">
 
     {# ── Brand ───────────────────────────────── #}
@@ -11,7 +13,6 @@
         <a class="sb-logo" href="{{ url_for('auth.dashboard') }}">
              <span class="sb-logo-icon"><span class="sb-icon text-white"><i data-lucide="building-2"></i></span></span>
             <span class="sb-logo-text">BBcenter</span>
-            <!-- <span class="sb-logo-icon"><i class="fa-solid fa-b fs-3 ps-1"></i><i class="fa-solid fa-b pt-2 fs-5 pe-1"></i></span> -->
         </a>
         <button type="button" class="sb-close d-xl-none" id="closeSidebar" onclick="bbCloseSidebar()">
             <i data-lucide="x"></i>
@@ -63,48 +64,54 @@
             <span class="sb-label">แจ้งซ่อมทั่วไป</span>
         </a>
 
-        {# ─ ผู้ดูแลระบบ ─────────────────────────────── #}
+        {# ─ ผู้ดูแลระบบ — collapsible group by domain ───────── #}
         {% if current_user.role_vehicle == 'admin' or current_user.is_superadmin %}
         <div class="sb-section-label">ผู้ดูแลระบบ</div>
 
-        <a class="sb-item {% if active_menu == 'admin' %}active{% endif %}"
-            href="{{ url_for('vehicle.admin_trips') }}">
-            <span class="sb-icon"><i data-lucide="blocks"></i></span>
-            <span class="sb-label">อนุมัติการจอง</span>
-            {% if pending_count is defined and pending_count > 0 %}
-            <span class="sb-badge">{{ pending_count }}</span>
-            {% endif %}
-        </a>
-
-        <a class="sb-item {% if active_menu == 'mileage' %}active{% endif %}"
-            href="{{ url_for('vehicle.mileage_log') }}">
-            <span class="sb-icon"><i data-lucide="gauge"></i></span>
-            <span class="sb-label">บันทึกเลขไมล์</span>
-        </a>
-
-        <a class="sb-item {% if active_menu == 'fleet' %}active{% endif %}"
-            href="{{ url_for('adminfleet.manage_fleet') }}">
-            <span class="sb-icon"><i data-lucide="sliders-horizontal"></i></span>
-            <span class="sb-label">จัดการรถและทีม</span>
-        </a>
-
-        <a class="sb-item {% if active_menu == 'budget' %}active{% endif %}"
-            href="{{ url_for('adminfleet.budget_manage') }}">
-            <span class="sb-icon"><i data-lucide="wallet"></i></span>
-            <span class="sb-label">จัดการงบประมาณ</span>
-        </a>
-
-        <a class="sb-item {% if active_menu == 'cost' %}active{% endif %}"
-            href="{{ url_for('admincost.cost_summary') }}">
-            <span class="sb-icon"><i data-lucide="pie-chart"></i></span>
-            <span class="sb-label">จัดการค่าล่วงเวลา (OT)</span>
-        </a>
-
-        <a class="sb-item {% if active_menu == 'fuel' %}active{% endif %}"
-            href="{{ url_for('fuel.admin_fuel') }}">
-            <span class="sb-icon"><i data-lucide="fuel"></i></span>
-            <span class="sb-label">จัดการค่าน้ำมัน</span>
-        </a>
+        <div class="sb-group{% if vehicle_admin_active %} has-active-child is-open{% endif %}{% if has_vehicle_pending %} has-pending{% endif %}"
+             data-group="vehicle-admin">
+            <button type="button"
+                    class="sb-item sb-group-toggle"
+                    aria-expanded="{{ 'true' if vehicle_admin_active else 'false' }}"
+                    aria-controls="sb-group-vehicle-admin">
+                <span class="sb-icon"><i data-lucide="car"></i></span>
+                <span class="sb-label">จัดการรถ</span>
+                <span class="sb-chevron"><i data-lucide="chevron-down"></i></span>
+            </button>
+            <div class="sb-group-body" id="sb-group-vehicle-admin" role="region">
+                <div class="sb-group-inner">
+                    <div class="sb-sub">
+                        <a class="sb-item sb-item--sub{% if active_menu == 'admin' %} active{% endif %} vc-badge-dot"
+                           href="{{ url_for('vehicle.admin_trips') }}">
+                            <span class="sb-label ps-1 ">อนุมัติรถ</span>
+                            {% if has_vehicle_pending %}
+                            <span class="sb-badge">{{ pending_count }}</span>
+                            {% endif %}
+                        </a>
+                        <a class="sb-item sb-item--sub{% if active_menu == 'mileage' %} active{% endif %} vc-badge-dot"
+                           href="{{ url_for('vehicle.mileage_log') }}">
+                            <span class="sb-label ps-1 ">บันทึกเลขไมล์</span>
+                        </a>
+                        <a class="sb-item sb-item--sub{% if active_menu == 'fleet' %} active{% endif %} vc-badge-dot"
+                           href="{{ url_for('adminfleet.manage_fleet') }}">
+                            <span class="sb-label ps-1 ">รถและคนขับ</span>
+                        </a>
+                        <a class="sb-item sb-item--sub{% if active_menu == 'budget' %} active{% endif %} vc-badge-dot"
+                           href="{{ url_for('adminfleet.budget_manage') }}">
+                            <span class="sb-label ps-1 ">งบประมาณ</span>
+                        </a>
+                        <a class="sb-item sb-item--sub{% if active_menu == 'cost' %} active{% endif %} vc-badge-dot"
+                           href="{{ url_for('admincost.cost_summary') }}">
+                            <span class="sb-label ps-1 ">ค่าล่วงเวลา</span>
+                        </a>
+                        <a class="sb-item sb-item--sub{% if active_menu == 'fuel' %} active{% endif %} vc-badge-dot"
+                           href="{{ url_for('fuel.admin_fuel') }}">
+                            <span class="sb-label ps-1 ">ค่าน้ำมัน</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         {% if is_budget_approver %}
         <div class="sb-section-label">ผู้อนุมัติ</div>
@@ -150,3 +157,36 @@
     </div>
 
 </aside>
+
+{# ── Sidebar group toggle (collapsible admin sections) ─────────
+   localStorage key: bb-sb-groups (Array<string> of open group ids)
+   has-active-child → force open on render; user can still collapse
+#}
+<script>
+(function () {
+    var STORAGE_KEY = 'bb-sb-groups';
+    var openSet;
+    try { openSet = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
+    catch (e) { openSet = new Set(); }
+
+    document.querySelectorAll('.sb-group').forEach(function (g) {
+        var id = g.dataset.group;
+        var toggle = g.querySelector('.sb-group-toggle');
+        if (!toggle) return;
+
+        if (openSet.has(id) && !g.classList.contains('is-open')) {
+            g.classList.add('is-open');
+            toggle.setAttribute('aria-expanded', 'true');
+        }
+
+        toggle.addEventListener('click', function () {
+            var willOpen = !g.classList.contains('is-open');
+            g.classList.toggle('is-open', willOpen);
+            toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            if (willOpen) openSet.add(id); else openSet.delete(id);
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify([].concat.apply([], [Array.from(openSet)]))); }
+            catch (e) { /* ignore quota */ }
+        });
+    });
+})();
+</script>

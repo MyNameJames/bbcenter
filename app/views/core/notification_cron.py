@@ -28,7 +28,7 @@ def _calc_fuel_cost(mileage, booking, fuel_price):
 def check_payment_escalation(app):
     """วนเช็ค VehicleMileage ที่เป็น personal + ปิดงานแล้ว + ยังไม่ paid"""
     from models import db, User, VehicleBooking, VehicleMileage, SystemConfig, get_bkk_time
-    from views.notification_service import (
+    from views.core.notification_service import (
         notify_payment_reminder_user,
         notify_payment_overdue_admin,
     )
