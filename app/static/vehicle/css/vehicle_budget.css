@@ -747,6 +747,10 @@
     min-width: 88px;
     background-position: right 8px center;
 }
+/* month/year filters enhanced as .vc-dd dropdowns: the trigger carries
+   this class for sizing but renders a real chevron element, so drop the
+   right padding reserved for the native background-chevron (2026-06-08). */
+.budget-summary-filter .vc-dd-trigger { padding-right: 8px; }
 @media (max-width: 575.98px) {
     .budget-summary-head {
         flex-direction: column;

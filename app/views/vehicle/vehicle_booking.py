@@ -345,10 +345,8 @@ def detail_booking(booking_id):
         flash('คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้', 'danger')
         return redirect(url_for('vehicle.index'))
 
-    drivers = Driver.query.filter_by(is_active=True).all()
-    return render_template('vehicle/vehicle_detail.html',
-                           booking=booking, drivers=drivers,
-                           is_dept_approver=_is_dept_approver)
+    # detail page ถูกลบ (2026-06-07) → redirect ไปปฏิทิน + เปิด detail modal ผ่าน ?detail=
+    return redirect(url_for('vehicle.index', detail=booking_id))
 
 
 # ─────────────────────────────────────────────

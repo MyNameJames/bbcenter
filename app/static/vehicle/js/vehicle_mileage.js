@@ -159,21 +159,42 @@ document.getElementById('feRefuel').addEventListener('change', function () {
     document.querySelectorAll('.mlg-status-chips .mlg-chip').forEach(btn => {
         btn.addEventListener('click', () => {
             hidden.value = btn.dataset.status || '';
-            form.submit();
+            // update active state ทันที (ไม่ reload → server ไม่ได้ render ให้)
+            document.querySelectorAll('.mlg-status-chips .mlg-chip')
+                .forEach(c => c.classList.toggle('is-active', c === btn));
+            runFilter();
         });
     });
 })();
 
-/* ── Toolbar: advanced filter toggle ──────────── */
+/* ── Toolbar: advanced filter popover ──────────── */
 (function bindAdvToggle() {
     const btn   = document.getElementById('advFilterBtn');
     const sheet = document.getElementById('advSheet');
     if (!btn || !sheet) return;
-    btn.addEventListener('click', () => {
-        const open = !sheet.hasAttribute('hidden');
-        if (open) sheet.setAttribute('hidden', '');
-        else sheet.removeAttribute('hidden');
-        btn.setAttribute('aria-expanded', String(!open));
+
+    const isOpen = () => !sheet.hasAttribute('hidden');
+    function setOpen(open) {
+        if (open) sheet.removeAttribute('hidden');
+        else sheet.setAttribute('hidden', '');
+        btn.setAttribute('aria-expanded', String(open));
+    }
+
+    // stopPropagation: keep our own outside-click handler from closing
+    // immediately on the same click that opened it.
+    btn.addEventListener('click', e => { e.stopPropagation(); setOpen(!isOpen()); });
+
+    // close on click outside (clicks inside the popover — incl. its
+    // vc-dd dropdowns, which are descendants — keep it open)
+    document.addEventListener('click', e => {
+        if (!isOpen()) return;
+        if (sheet.contains(e.target) || btn.contains(e.target)) return;
+        setOpen(false);
+    });
+
+    // close on Esc
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && isOpen()) { setOpen(false); btn.focus(); }
     });
 })();
 
@@ -228,8 +249,138 @@ document.getElementById('feRefuel').addEventListener('change', function () {
             dEnd.value = fmt(today());
             if (showAll) showAll.value = '';
         }
-        form.submit();
+        runFilter();
     });
+})();
+
+/* ── Toolbar: custom date-range calendar pickers (แทน native date input) ──
+   2 instance (start/end) ใช้ .va-cal popover (style จาก vehicle_admin.css).
+   คลิกปุ่ม → ปฏิทินเปิด → คลิกวัน → set hidden input + submit form ทันที. */
+(function bindDateRangePickers() {
+    const form    = document.getElementById('filterForm');
+    const pickers = document.querySelectorAll('#dateRangeGroup [data-datepick]');
+    if (!form || !pickers.length) return;
+
+    const TH_DAYS_S = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+    const TH_MON_F  = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const TH_MON_S  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
+                       'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const showAll = document.getElementById('showAllInput');
+
+    const pad2  = n => String(n).padStart(2, '0');
+    const toISO = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const sameDay = (a, b) => a.getFullYear() === b.getFullYear() &&
+                             a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    function parseISO(v) {
+        if (!v) return null;
+        const [y, m, d] = v.split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    const instances = [];
+    function closeAll(except) {
+        instances.forEach(i => { if (i.root !== except) i.close(); });
+    }
+
+    pickers.forEach(root => {
+        const btn      = root.querySelector('[data-datepick-btn]');
+        const labelEl  = root.querySelector('[data-datepick-label]');
+        const input    = root.querySelector('[data-datepick-input]');
+        const pop      = root.querySelector('[data-datepick-pop]');
+        const dowWrap  = root.querySelector('[data-cal-dow]');
+        const daysWrap = root.querySelector('[data-cal-days]');
+        const titleEl  = root.querySelector('[data-cal-title]');
+        const prevBtn  = root.querySelector('[data-cal-prev]');
+        const nextBtn  = root.querySelector('[data-cal-next]');
+        if (!btn || !input || !pop) return;
+
+        const placeholder = labelEl.textContent.trim();
+        let cursor = parseISO(input.value) || new Date(today);
+
+        function syncLabel() {
+            const sel = parseISO(input.value);
+            if (sel) {
+                labelEl.textContent = `${sel.getDate()} ${TH_MON_S[sel.getMonth()]} ${sel.getFullYear() + 543}`;
+                btn.classList.add('mlg-date-btn--filled');
+            } else {
+                labelEl.textContent = placeholder;
+                btn.classList.remove('mlg-date-btn--filled');
+            }
+        }
+
+        function render() {
+            const y = cursor.getFullYear(), m = cursor.getMonth();
+            titleEl.textContent = `${TH_MON_F[m]} ${y + 543}`;
+            if (!dowWrap.childElementCount) {
+                dowWrap.innerHTML = TH_DAYS_S.map((d, i) => {
+                    const c = i === 0 ? ' va-cal-dow-cell--sun' : i === 6 ? ' va-cal-dow-cell--sat' : '';
+                    return `<span class="va-cal-dow-cell${c}">${d}</span>`;
+                }).join('');
+            }
+            const sel = parseISO(input.value);
+            const startPad = new Date(y, m, 1).getDay();
+            const days = new Date(y, m + 1, 0).getDate();
+            let cells = '';
+            for (let i = 0; i < startPad; i++) cells += `<span class="va-cal-cell va-cal-cell--empty"></span>`;
+            for (let dn = 1; dn <= days; dn++) {
+                const d = new Date(y, m, dn), dow = d.getDay();
+                let cls = 'va-cal-cell';
+                if (sel && sameDay(d, sel)) cls += ' va-cal-cell--active';
+                if (sameDay(d, today))      cls += ' va-cal-cell--today';
+                if (dow === 0)      cls += ' va-cal-cell--sun';
+                else if (dow === 6) cls += ' va-cal-cell--sat';
+                cells += `<button type="button" class="${cls}" data-date="${toISO(d)}">${dn}</button>`;
+            }
+            daysWrap.innerHTML = cells;
+        }
+
+        function open() {
+            closeAll(root);
+            cursor = parseISO(input.value) || new Date(today);
+            render();
+            pop.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
+        }
+        function close() {
+            pop.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
+        }
+
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            if (pop.hidden) open(); else close();
+        });
+        prevBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
+            render();
+        });
+        nextBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+            render();
+        });
+        daysWrap.addEventListener('click', e => {
+            const cell = e.target.closest('[data-date]');
+            if (!cell) return;
+            input.value = cell.dataset.date;
+            if (showAll) showAll.value = '';
+            syncLabel();
+            close();
+            runFilter();
+        });
+
+        syncLabel();
+        instances.push({ root, close });
+    });
+
+    document.addEventListener('click', e => {
+        instances.forEach(i => { if (!i.root.contains(e.target)) i.close(); });
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(null); });
 })();
 
 /* ── Budget filter: sub-options follow type (pattern: updateExpSubDropdown) ── */
@@ -259,17 +410,15 @@ document.getElementById('feRefuel').addEventListener('change', function () {
     updateBudgetSubDropdown();
 })();
 
-/* ── Selection / Summary ──────────────────────── */
-const $checkAll = document.getElementById('checkAll');
-const $modeAll  = document.getElementById('modeAll');
-const $modeSel  = document.getElementById('modeSelected');
-const $strip    = document.getElementById('summaryStrip');
+/* ── Selection / Summary (re-bindable หลัง AJAX swap) ── */
+let $checkAll, $modeAll, $modeSel, $strip;
 
 function getRows() {
     return Array.from(document.querySelectorAll('tr.mlg-row'));
 }
 
 function recalcSummary() {
+    if (!$strip) return;
     const rows = getRows();
     const selected = rows.filter(r => {
         const cb = r.querySelector('.mlg-row-check');
@@ -294,6 +443,7 @@ function recalcSummary() {
         $strip.classList.remove('is-selected');
     }
 
+    if (!$checkAll) return;
     const enabled = rows.filter(r => {
         const cb = r.querySelector('.mlg-row-check');
         return cb && !cb.disabled;
@@ -325,50 +475,126 @@ function calcAllSummary() {
     if (elC) elC.textContent = fmt(c);
 }
 
-if ($checkAll) {
-    $checkAll.addEventListener('change', function () {
-        const checked = this.checked;
-        getRows().forEach(r => {
-            const cb = r.querySelector('.mlg-row-check');
-            if (cb && !cb.disabled) cb.checked = checked;
-        });
-        recalcSummary();
-    });
-}
-
-document.querySelectorAll('.mlg-row-check').forEach(cb => {
-    cb.addEventListener('change', recalcSummary);
-});
-
 function clearSelection() {
     document.querySelectorAll('.mlg-row-check').forEach(cb => { cb.checked = false; });
     if ($checkAll) { $checkAll.checked = false; $checkAll.indeterminate = false; }
     recalcSummary();
 }
 
-document.querySelectorAll('tr.mlg-row').forEach(row => {
-    row.addEventListener('click', function (e) {
-        if (e.target.closest('button, input, a')) return;
-        const cb = row.querySelector('.mlg-row-check');
-        if (cb && !cb.disabled) {
-            cb.checked = !cb.checked;
-            recalcSummary();
-        }
-    });
-});
+/* (re)grab refs ภายใน #mlgResults + bind listeners — เรียกตอน init + หลังทุก swap */
+function bindResults() {
+    $checkAll = document.getElementById('checkAll');
+    $modeAll  = document.getElementById('modeAll');
+    $modeSel  = document.getElementById('modeSelected');
+    $strip    = document.getElementById('summaryStrip');
 
-/* ── Export link: sync with current filter ────── */
-(function syncExport() {
+    if ($checkAll) {
+        $checkAll.addEventListener('change', function () {
+            const checked = this.checked;
+            getRows().forEach(r => {
+                const cb = r.querySelector('.mlg-row-check');
+                if (cb && !cb.disabled) cb.checked = checked;
+            });
+            recalcSummary();
+        });
+    }
+    document.querySelectorAll('.mlg-row-check').forEach(cb => {
+        cb.addEventListener('change', recalcSummary);
+    });
+    document.querySelectorAll('tr.mlg-row').forEach(row => {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('button, input, a')) return;
+            const cb = row.querySelector('.mlg-row-check');
+            if (cb && !cb.disabled) {
+                cb.checked = !cb.checked;
+                recalcSummary();
+            }
+        });
+    });
+    calcAllSummary();
+    recalcSummary();
+}
+
+/* ══════════════════════════════════════════════════
+   AJAX FILTERING — กรองโดยไม่ reload หน้า (โดยเฉพาะกรองวัน)
+   fetch URL เดิม (GET) → parse #mlgResults → swap + rebind
+══════════════════════════════════════════════════ */
+function mlgInitIcons(scope) {
+    const l = window.lucide;
+    if (!l || !l.createIcons) return;
+    try {
+        const opts = { icons: l.icons || l };
+        if (scope instanceof Element) opts.root = scope;
+        l.createIcons(opts);
+    } catch (e) { /* lucide not ready */ }
+}
+
+function buildFilterURL() {
+    const form = document.getElementById('filterForm');
+    const params = new URLSearchParams();
+    new FormData(form).forEach((v, k) => {
+        if (v !== '' && v != null) params.append(k, v);
+    });
+    const base = (form.getAttribute('action') || window.location.pathname).split('?')[0];
+    const qs = params.toString();
+    return base + (qs ? '?' + qs : '');
+}
+
+function syncExportLink(url) {
     const link = document.getElementById('exportLink');
     if (!link) return;
-    const params = new URLSearchParams(window.location.search);
-    const qs = params.toString();
-    if (qs) link.href = link.href + (link.href.includes('?') ? '&' : '?') + qs;
+    const qs   = url.split('?')[1] || '';
+    const base = link.getAttribute('href').split('?')[0];
+    link.setAttribute('href', base + (qs ? '?' + qs : ''));
+}
+
+let _mlgReqToken = 0;
+async function runFilter(push = true) {
+    const results = document.getElementById('mlgResults');
+    const form    = document.getElementById('filterForm');
+    if (!results || !form) { if (form) form.submit(); return; }
+
+    const url   = buildFilterURL();
+    const token = ++_mlgReqToken;
+    results.classList.add('is-loading');
+    try {
+        const res = await fetch(url, {
+            headers: { 'X-Requested-With': 'fetch' },
+            credentials: 'same-origin'
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const text = await res.text();
+        if (token !== _mlgReqToken) return;            // มี request ใหม่กว่า → ทิ้งผลเก่า
+        const doc   = new DOMParser().parseFromString(text, 'text/html');
+        const fresh = doc.getElementById('mlgResults');
+        if (!fresh) throw new Error('no #mlgResults in response');
+        results.innerHTML = fresh.innerHTML;
+        mlgInitIcons(results);
+        bindResults();
+        if (push) history.pushState({ mlg: true }, '', url);
+        syncExportLink(url);
+    } catch (e) {
+        window.location.href = url;                     // fallback: full nav
+    } finally {
+        if (token === _mlgReqToken) results.classList.remove('is-loading');
+    }
+}
+
+/* back/forward → reload ให้ server render state ตาม URL (ตรงเสมอ) */
+window.addEventListener('popstate', () => { window.location.reload(); });
+
+/* intercept native submit (ปุ่ม "นำไปใช้" ใน adv-sheet) → AJAX */
+(function bindFilterFormAjax() {
+    const form = document.getElementById('filterForm');
+    if (!form) return;
+    form.addEventListener('submit', e => { e.preventDefault(); runFilter(); });
 })();
+
+/* ── Export link: sync กับ filter ปัจจุบันตอนโหลด ── */
+syncExportLink(window.location.href);
 
 /* ── Expose to window for legacy onclick handlers ── */
 Object.assign(window, { openMileage, goEditEnd, clearSelection });
 
 /* ── Init ─────────────────────────────────────── */
-calcAllSummary();
-recalcSummary();
+bindResults();

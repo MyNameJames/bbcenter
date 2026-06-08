@@ -41,14 +41,12 @@
     font-size: 11px;
     font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: var(--vc-tracking-wide);
     color: var(--vc-fg-muted);
-    line-height: 1;
 }
 
 .vc-filter-select {
     height: var(--vc-h-input-sm);
-    padding: 0 28px 0 10px;
+    padding: 15px 10px;
     font-family: inherit;
     font-size: var(--vc-text-xs);
     color: var(--vc-fg);

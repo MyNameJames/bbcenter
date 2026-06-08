@@ -100,9 +100,28 @@
     align-items: center;
     gap: 6px;
 }
-.mlg-date-input { min-width: 130px; background-image: none; }
 .mlg-date-sep { color: var(--vc-fg-subtle); font-size: var(--vc-text-sm); }
 .mlg-date-range[hidden] { display: none; }
+
+/* AJAX filter — dim results region ระหว่าง fetch (กรองไม่ reload หน้า) */
+#mlgResults { transition: opacity var(--vc-dur-fast) var(--vc-ease-snap); }
+#mlgResults.is-loading { opacity: 0.55; pointer-events: none; }
+
+/* Date picker trigger button + calendar popover (.va-cal style จาก vehicle_admin.css) */
+.mlg-datepick { position: relative; }
+.mlg-date-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 150px;
+    text-align: left;
+    background-image: none;          /* ลบ caret ของ vc-filter-select */
+    color: var(--vc-fg);
+}
+.mlg-date-btn .vc-icon-sm { color: var(--vc-fg-subtle); flex-shrink: 0; }
+.mlg-date-btn[aria-expanded="true"] { border-color: var(--vc-fg); }
+.mlg-date-btn-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mlg-date-btn:not(.mlg-date-btn--filled) .mlg-date-btn-label { color: var(--vc-fg-subtle); }
 
 /* Status chips */
 .mlg-status-chips {
@@ -136,7 +155,10 @@
 }
 .mlg-chip.is-active:hover { background: var(--vc-fg); }
 
-/* Advanced filter button — active dot */
+/* Advanced filter — anchor wrapper for popover */
+.mlg-adv { position: relative; display: inline-flex; }
+
+/* Advanced filter button — active state: accent border + red dot */
 .mlg-adv-btn { position: relative; }
 .mlg-adv-btn.is-active { border-color: var(--vc-accent, #4F46E5); color: var(--vc-accent, #4F46E5); }
 .mlg-adv-dot {
@@ -146,15 +168,26 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--vc-accent, #4F46E5);
+    background: var(--vc-red);
 }
 
-/* Advanced filter sheet */
+/* Advanced filter popover — anchored under button, ชิดขวา.
+   Floating-menu styling mirrors .vc-dd-panel (core/css/components/dropdown.css)
+   so it reads as the same dropdown family. */
 .mlg-adv-sheet {
-    border: 1px solid var(--vc-border);
-    border-radius: 8px;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 1000;
+    width: 560px;
+    max-width: calc(100vw - 2 * var(--vc-space-4));
     padding: var(--vc-space-4);
     background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    /* DESIGN-OVERRIDE: floating menu needs separation from content —
+       same precedent as .vc-dd-panel. — 2026-06-08 */
+    box-shadow: 0 4px 16px rgba(17, 24, 39, .08);
 }
 .mlg-adv-sheet[hidden] { display: none; }
 
@@ -170,6 +203,13 @@
     gap: 6px;
 }
 .mlg-range-pair input { min-width: 0; flex: 1; }
+/* number inputs styled like text — strip spinner arrows, keep numeric-only entry */
+.mlg-range-pair input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.mlg-range-pair input[type="number"]::-webkit-outer-spin-button,
+.mlg-range-pair input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
 .mlg-range-sep { color: var(--vc-fg-subtle); font-size: var(--vc-text-sm); }
 
 .mlg-adv-actions {
@@ -191,7 +231,8 @@
     .mlg-status-chips { flex: 1 1 100%; overflow-x: auto; }
     .mlg-toolbar-right { flex: 1 1 100%; justify-content: flex-end; }
     .mlg-adv-grid { grid-template-columns: 1fr; }
-    .mlg-date-input { flex: 1; min-width: 0; }
+    .mlg-datepick { flex: 1; min-width: 0; }
+    .mlg-date-btn { width: 100%; min-width: 0; }
     .mlg-date-range { flex: 1 1 100%; }
 }
 

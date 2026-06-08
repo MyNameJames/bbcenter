@@ -75,6 +75,7 @@ let weekStart = new Date(today);
 weekStart.setDate(today.getDate() - today.getDay());
 
 let selDate    = new Date(today);
+let calCursor  = new Date(today.getFullYear(), today.getMonth(), 1);  // เดือนที่ปฏิทินกำลังแสดง
 let curFilter  = 'all';
 let groupMode  = false;
 let groupSel   = new Set();
@@ -238,17 +239,64 @@ function _alignWeekStartTo(date) {
     weekStart = d;
 }
 
+/* ปฏิทินเดือน — กดวันเดียวเลือกได้เลย (ไม่ต้องเปิด native date input ซ้ำ) */
+function renderCalendar() {
+    const dowWrap  = document.getElementById('calDow');
+    const daysWrap = document.getElementById('calDays');
+    const titleEl  = document.getElementById('calTitle');
+    if (!daysWrap) return;
+
+    const y = calCursor.getFullYear();
+    const m = calCursor.getMonth();
+    if (titleEl) titleEl.textContent = `${TH_MON_F[m + 1]} ${y + 543}`;
+
+    // หัวตาราง (Su..Sa) — render ครั้งเดียว
+    if (dowWrap && !dowWrap.childElementCount) {
+        dowWrap.innerHTML = TH_DAYS_S.map((d, i) => {
+            const c = i === 0 ? ' va-cal-dow-cell--sun' : i === 6 ? ' va-cal-dow-cell--sat' : '';
+            return `<span class="va-cal-dow-cell${c}">${d}</span>`;
+        }).join('');
+    }
+
+    const startPad     = new Date(y, m, 1).getDay();        // Sunday-first
+    const daysInMonth  = new Date(y, m + 1, 0).getDate();
+
+    let cells = '';
+    for (let i = 0; i < startPad; i++) {
+        cells += `<span class="va-cal-cell va-cal-cell--empty"></span>`;
+    }
+    for (let dnum = 1; dnum <= daysInMonth; dnum++) {
+        const d     = new Date(y, m, dnum);
+        const ds    = toDateStr(d);
+        const cnt   = bookings.filter(b => b.startIso.startsWith(ds)).length;
+        const dow   = d.getDay();
+        const isSel = d.toDateString() === selDate.toDateString();
+
+        let cls = 'va-cal-cell';
+        if (isSel)        cls += ' va-cal-cell--active';
+        if (isToday(d))   cls += ' va-cal-cell--today';
+        if (dow === 0)    cls += ' va-cal-cell--sun';
+        else if (dow === 6) cls += ' va-cal-cell--sat';
+
+        const dot = cnt > 0 ? `<span class="va-cal-dot pt-1" title="${cnt} รายการ"></span>` : '';
+        cells += `<button type="button" class="${cls}" data-date="${ds}">${dnum}${dot}</button>`;
+    }
+    daysWrap.innerHTML = cells;
+}
+
+function shiftCalMonth(dir) {
+    calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + dir, 1);
+    renderCalendar();
+}
+
 function openWeekPicker() {
     const pop = document.getElementById('weekPickerPop');
     const btn = document.getElementById('weekPickerBtn');
-    const inp = document.getElementById('weekPickerInput');
     if (!pop || !btn) return;
+    calCursor = new Date(selDate.getFullYear(), selDate.getMonth(), 1);
+    renderCalendar();
     pop.hidden = false;
     btn.setAttribute('aria-expanded', 'true');
-    if (inp) {
-        inp.value = toDateStr(selDate);
-        setTimeout(() => inp.focus(), 30);
-    }
 }
 function closeWeekPicker() {
     const pop = document.getElementById('weekPickerPop');
@@ -260,8 +308,10 @@ function closeWeekPicker() {
 function bindWeekControls() {
     const todayBtn  = document.getElementById('weekTodayBtn');
     const pickerBtn = document.getElementById('weekPickerBtn');
-    const pickerInp = document.getElementById('weekPickerInput');
     const pickerPop = document.getElementById('weekPickerPop');
+    const prevBtn   = document.getElementById('calPrevBtn');
+    const nextBtn   = document.getElementById('calNextBtn');
+    const daysWrap  = document.getElementById('calDays');
 
     if (todayBtn) {
         todayBtn.addEventListener('click', () => {
@@ -278,15 +328,16 @@ function bindWeekControls() {
             if (expanded) closeWeekPicker(); else openWeekPicker();
         });
     }
-    if (pickerInp) {
-        pickerInp.addEventListener('change', (e) => {
-            const v = e.target.value; // "YYYY-MM-DD"
-            if (!v) return;
-            const [yy, mm, dd] = v.split('-').map(Number);
-            const picked = new Date(yy, mm - 1, dd);
-            if (isNaN(picked.getTime())) return;
-            selDate = picked;
-            _alignWeekStartTo(picked);
+    if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftCalMonth(-1); });
+    if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftCalMonth(1); });
+
+    if (daysWrap) {
+        daysWrap.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-date]');
+            if (!btn) return;
+            const [yy, mm, dd] = btn.dataset.date.split('-').map(Number);
+            selDate = new Date(yy, mm - 1, dd);
+            _alignWeekStartTo(selDate);
             closeWeekPicker();
             renderAll();
         });
@@ -473,8 +524,9 @@ function buildRowActions(b) {
         case 'pending':
             /* Desktop: approve (pencil icon) + reject pair; mobile: reject hidden via .bl-action-secondary */
             return `
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-icon vc-btn-sm" title="อนุมัติ" onclick="${stop}openAssignModal(${b.id},'approve')">
+                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" title="อนุมัติ" onclick="${stop}openAssignModal(${b.id},'approve')">
                     <i data-lucide="pencil" class="vc-icon-sm"></i>
+                    อนุมัติ
                 </button>
                 <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon vc-btn-sm bl-action-secondary" title="ปฏิเสธ" onclick="${stop}openAssignModal(${b.id},'reject')">
                     <i data-lucide="circle-x" class="vc-icon-sm"></i>
@@ -1153,7 +1205,7 @@ async function submitAssign() {
         showToast(e.message && e.message !== 'server error' ? e.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         isSaving = false;
         btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="send" class="vc-icon-sm"></i> Confirm & Notify via Telegram';
+        btn.innerHTML = '<i data-lucide="check" class="vc-icon-sm"></i> ยืนยันการอนุมัติ';
         initIcons(btn);
     }
 }
@@ -1230,9 +1282,10 @@ function openSwapModal(bookingId) {
             const statusLabel = isCurrent ? '<span class="swap-veh-status vc-badge vc-badge-blue vc-badge-dot">ปัจจุบัน</span>'
                               : usedIds.has(v.id) ? '<span class="swap-veh-status vc-badge vc-badge-neutral vc-badge-dot">จองแล้ว</span>'
                               : '<span class="swap-veh-status vc-badge vc-badge-success vc-badge-dot">ว่าง</span>';
-            return `<div class="swap-veh-item" onclick="selectSwapVehicle(${v.id},this)">
-                <div class="swap-veh-radio"></div>
-                <div>
+            return `<div class="swap-veh-item${isCurrent?' swap-veh-item--current':''}" onclick="selectSwapVehicle(${v.id},this)">
+                <span class="swap-veh-radio"></span>
+                <span class="swap-veh-ico"><i data-lucide="car" class="vc-icon-sm"></i></span>
+                <div class="swap-veh-info">
                     <div class="swap-veh-label">${esc(v.brand+' '+v.model)}</div>
                     <div class="swap-veh-plate">${esc(v.plate)}</div>
                 </div>
@@ -1244,6 +1297,7 @@ function openSwapModal(bookingId) {
     document.getElementById('swapConfirmBtn').disabled = true;
     bsSwapModal = bsSwapModal || new bootstrap.Modal(document.getElementById('swapModal'));
     bsSwapModal.show();
+    initIcons();
 }
 
 function selectSwapVehicle(id, el) {

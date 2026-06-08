@@ -125,7 +125,6 @@ booking.telegram_message_id = msg_id; db.session.commit()
 | `checker` | หลังแก้ code ก่อน `จบงาน` — verify Maintenance Protocol |
 | `db-helper` | ก่อนแก้ `models/` (เดิม `models.py`) — gen migration + sync DB docs |
 | `guide-vehicle` | หา symbol ใน `views/vehicle/` controllers (ตัดจาก vehicle_view.py ขั้น 3 — แต่ละไฟล์ 200-700 LOC). หา controller จาก [INDEX §Blueprints](docs/notes/INDEX.md#-blueprints) mapping ก่อน; spawn เมื่อต้องเจาะไฟล์ใหญ่ (notification/budget/admin) |
-<!-- | `notifee` | แก้ booking/approve/mileage/budget — audit `notify_*` + Telegram pattern | -->
 
 ถ้า INDEX.md ตอบได้แล้ว → ไม่ต้อง spawn `guide-vehicle`. Subagent ไม่เห็น conversation — prompt ต้องครบ
 

@@ -42,6 +42,7 @@
 @import url('./components/modal_shell.css');
 @import url('./components/sidebar.css');
 @import url('./components/pivot.css');
+@import url('./components/dropdown.css');
 
 /* Sarabun = font เดียวของระบบ. กันหน้าที่ไม่ได้ตั้ง body font เองตกไป system font */
 body {

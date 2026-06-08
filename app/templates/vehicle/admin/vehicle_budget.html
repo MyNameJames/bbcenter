@@ -70,12 +70,12 @@
                     </h2>
                     {# Phase 3A (2026-05-22): filter inline ใน summary head #}
                     <form method="GET" class="budget-summary-filter" id="filterForm">
-                        <select name="month" class="vc-filter-select budget-summary-filter-select" onchange="this.form.submit()" title="เลือกเดือน">
+                        <select name="month" class="vc-filter-select budget-summary-filter-select" onchange="this.form.submit()" title="เลือกเดือน" data-dropdown>
                             {% for m in range(1, 13) %}
                             <option value="{{ m }}" {% if m == sel_month %}selected{% endif %}>{{ TH_MONTHS_FULL[m] }}</option>
                             {% endfor %}
                         </select>
-                        <select name="year" class="vc-filter-select budget-summary-filter-select" onchange="this.form.submit()" title="เลือกปี (พ.ศ.)">
+                        <select name="year" class="vc-filter-select budget-summary-filter-select" onchange="this.form.submit()" title="เลือกปี (พ.ศ.)" data-dropdown>
                             {% for y in range(now.year - 1, now.year + 2) %}
                             <option value="{{ y }}" {% if y == sel_year %}selected{% endif %}>{{ y + 543 }}</option>
                             {% endfor %}
@@ -1187,5 +1187,6 @@
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_budget.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>
 </body>
 </html>

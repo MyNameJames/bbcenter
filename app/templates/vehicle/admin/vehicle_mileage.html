@@ -66,17 +66,61 @@
 
                     {# Left: date preset + custom range #}
                     <div class="mlg-toolbar-left">
-                        <select id="datePreset" class="vc-filter-select mlg-date-preset" aria-label="ช่วงเวลา">
-                            <option value="month">เดือนนี้</option>
-                            <option value="7d">7 วันล่าสุด</option>
-                            <option value="30d">30 วันล่าสุด</option>
-                            <option value="all" {% if f.show_all %}selected{% endif %}>ทั้งหมด</option>
-                            <option value="custom">กำหนดเอง</option>
+                        <select id="datePreset" class="vc-filter-select mlg-date-preset" aria-label="ช่วงเวลา" data-dropdown>
+                            <optgroup label="presets">
+                                <option value="month">เดือนนี้</option>
+                                <option value="7d">7 วันล่าสุด</option>
+                                <option value="30d">30 วันล่าสุด</option>
+                                <option value="all" {% if f.show_all %}selected{% endif %}>ทั้งหมด</option>
+                            </optgroup>
+                            <optgroup label="custom">
+                                <option value="custom">กำหนดเอง</option>
+                            </optgroup>
                         </select>
                         <div class="mlg-date-range" id="dateRangeGroup">
-                            <input type="date" name="date_start" value="{{ f.date_start }}" class="vc-filter-select mlg-date-input" aria-label="จากวันที่">
+                            {# Start date picker — calendar popover (คลิกเดียวเลือกวัน) #}
+                            <div class="mlg-datepick" data-datepick>
+                                <button type="button" class="vc-filter-select mlg-date-btn" data-datepick-btn aria-haspopup="dialog" aria-expanded="false" aria-label="จากวันที่">
+                                    <i data-lucide="calendar" class="vc-icon-sm"></i>
+                                    <span class="mlg-date-btn-label" data-datepick-label>จากวันที่</span>
+                                </button>
+                                <input type="hidden" name="date_start" value="{{ f.date_start }}" data-datepick-input>
+                                <div class="va-cal" data-datepick-pop role="dialog" aria-label="เลือกจากวันที่" hidden>
+                                    <div class="va-cal-head">
+                                        <button type="button" class="va-cal-nav" data-cal-prev aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
+                                            <i data-lucide="chevron-left" class="vc-icon-sm"></i>
+                                        </button>
+                                        <span class="va-cal-title" data-cal-title></span>
+                                        <button type="button" class="va-cal-nav" data-cal-next aria-label="เดือนถัดไป" title="เดือนถัดไป">
+                                            <i data-lucide="chevron-right" class="vc-icon-sm"></i>
+                                        </button>
+                                    </div>
+                                    <div class="va-cal-grid va-cal-dow" data-cal-dow></div>
+                                    <div class="va-cal-grid" data-cal-days></div>
+                                </div>
+                            </div>
                             <span class="mlg-date-sep">–</span>
-                            <input type="date" name="date_end" value="{{ f.date_end }}" class="vc-filter-select mlg-date-input" aria-label="ถึงวันที่">
+                            {# End date picker #}
+                            <div class="mlg-datepick" data-datepick>
+                                <button type="button" class="vc-filter-select mlg-date-btn" data-datepick-btn aria-haspopup="dialog" aria-expanded="false" aria-label="ถึงวันที่">
+                                    <i data-lucide="calendar" class="vc-icon-sm"></i>
+                                    <span class="mlg-date-btn-label" data-datepick-label>ถึงวันที่</span>
+                                </button>
+                                <input type="hidden" name="date_end" value="{{ f.date_end }}" data-datepick-input>
+                                <div class="va-cal" data-datepick-pop role="dialog" aria-label="เลือกถึงวันที่" hidden>
+                                    <div class="va-cal-head">
+                                        <button type="button" class="va-cal-nav" data-cal-prev aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
+                                            <i data-lucide="chevron-left" class="vc-icon-sm"></i>
+                                        </button>
+                                        <span class="va-cal-title" data-cal-title></span>
+                                        <button type="button" class="va-cal-nav" data-cal-next aria-label="เดือนถัดไป" title="เดือนถัดไป">
+                                            <i data-lucide="chevron-right" class="vc-icon-sm"></i>
+                                        </button>
+                                    </div>
+                                    <div class="va-cal-grid va-cal-dow" data-cal-dow></div>
+                                    <div class="va-cal-grid" data-cal-days></div>
+                                </div>
+                            </div>
                         </div>
                         <input type="hidden" name="show_all" id="showAllInput" value="{{ '1' if f.show_all else '' }}">
                     </div>
@@ -95,19 +139,18 @@
                         <a href="{{ url_for('vehicle.mileage_export') }}" id="exportLink" class="vc-btn vc-btn-secondary vc-btn-sm">
                             <i data-lucide="download" class="vc-icon-sm"></i> Export
                         </a>
-                        <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm mlg-adv-btn {% if has_adv_filter %}is-active{% endif %}" id="advFilterBtn" aria-expanded="{{ 'true' if has_adv_filter else 'false' }}" aria-controls="advSheet">
-                            <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i> Filter
-                            {% if has_adv_filter %}<span class="mlg-adv-dot" aria-hidden="true"></span>{% endif %}
-                        </button>
-                    </div>
-                </div>
+                        <div class="mlg-adv">
+                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm mlg-adv-btn {% if has_adv_filter %}is-active{% endif %}" id="advFilterBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="advSheet">
+                                <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i> Filter
+                                {% if has_adv_filter %}<span class="mlg-adv-dot" aria-hidden="true"></span>{% endif %}
+                            </button>
 
-                {# Row 2: advanced filter sheet (collapsible) #}
-                <div class="mlg-adv-sheet" id="advSheet" {% if not has_adv_filter %}hidden{% endif %}>
+                            {# advanced filter popover (anchored to button, ชิดขวา) — เริ่มปิดเสมอ #}
+                            <div class="mlg-adv-sheet" id="advSheet" role="dialog" aria-label="ตัวกรองขั้นสูง" hidden>
                     <div class="mlg-adv-grid">
                         <div class="vc-filter-group">
                             <span class="vc-filter-label">รถ</span>
-                            <select name="vehicle_id" class="vc-filter-select">
+                            <select name="vehicle_id" class="vc-filter-select" data-dropdown>
                                 <option value="">ทั้งหมด</option>
                                 {% for v in vehicles_all %}
                                 <option value="{{ v.id }}" {% if f.vehicle_id == v.id %}selected{% endif %}>
@@ -118,7 +161,7 @@
                         </div>
                         <div class="vc-filter-group">
                             <span class="vc-filter-label">คนขับ</span>
-                            <select name="driver_id" class="vc-filter-select">
+                            <select name="driver_id" class="vc-filter-select" data-dropdown>
                                 <option value="">ทั้งหมด</option>
                                 {% for d in drivers_all %}
                                 <option value="{{ d.id }}" {% if f.driver_id == d.id %}selected{% endif %}>{{ d.name }}</option>
@@ -128,7 +171,7 @@
                         <div class="vc-filter-group">
                             <span class="vc-filter-label">ผู้จอง</span>
                             <input type="text" name="booker_q" value="{{ f.booker_q }}" list="bookersList"
-                                   class="vc-filter-select" placeholder="ค้นหาชื่อ…">
+                                   class="vc-filter-select" placeholder="ค้นหาชื่อ…" data-autocomplete>
                             <datalist id="bookersList">
                                 {% for u in bookers_all %}
                                 <option value="{{ u.full_name or u.username }}"></option>
@@ -137,7 +180,7 @@
                         </div>
                         <div class="vc-filter-group">
                             <span class="vc-filter-label">งบ</span>
-                            <select name="budget_type" id="filterBudgetType" class="vc-filter-select">
+                            <select name="budget_type" id="filterBudgetType" class="vc-filter-select" data-dropdown>
                                 <option value="">ทั้งหมด</option>
                                 <option value="central"    {% if f.budget_type=='central'    %}selected{% endif %}>ส่วนกลาง</option>
                                 <option value="department" {% if f.budget_type=='department' %}selected{% endif %}>ส่วนกอง</option>
@@ -146,7 +189,7 @@
                         </div>
                         <div class="vc-filter-group" id="filterBudgetSubWrap">
                             <span class="vc-filter-label">หมวด/กอง</span>
-                            <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select">
+                            <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select" data-dropdown>
                                 <option value="">ทั้งหมด</option>
                             </select>
                         </div>
@@ -167,8 +210,14 @@
                             <i data-lucide="check" class="vc-icon-sm"></i> นำไปใช้
                         </button>
                     </div>
-                </div>
+                            </div>{# /advSheet #}
+                        </div>{# /mlg-adv #}
+                    </div>{# /mlg-toolbar-right #}
+                </div>{# /mlg-toolbar-row #}
             </form>
+
+            {# ── Results region (summary + table) — AJAX swap target ── #}
+            <div id="mlgResults">
 
             {# ── Summary Strip ──────────────────────────── #}
             <div class="vc-card mlg-summary-strip" id="summaryStrip">
@@ -364,6 +413,8 @@
                 </div>
                 {% endif %}
             </div>
+
+            </div>{# end #mlgResults #}
 
         </div>
     </main>
@@ -686,5 +737,6 @@
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_mileage.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>
 </body>
 </html>

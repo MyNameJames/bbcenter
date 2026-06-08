@@ -204,7 +204,7 @@ bbcenter/
 │   │   │   └── notification_cron.py
 │   │   └── vehicle/            ← vehicle domain (ตัดจาก vehicle_view.py ขั้น 3, 2026-06-07)
 │   │       ├── vehicle_common.py    ← blueprints(4) + helpers/constants กลาง
-│   │       ├── vehicle_booking.py · vehicle_notification.py · vehicle_history.py
+│   │       ├── vehicle_booking.py · vehicle_notification.py
 │   │       ├── vehicle_admin.py · vehicle_mileage.py · vehicle_cost.py
 │   │       ├── vehicle_budget.py · vehicle_driver.py    ← controllers ต่อ feature
 │   │       └── vehicle_budget_service.py  ← ย้ายจาก services/ (services/ ถูกลบ)

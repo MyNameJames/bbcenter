@@ -7,7 +7,6 @@ views.vehicle — vehicle domain (controller + service)
                          TH_MONTHS, _fmt_date_th)
 - vehicle_booking        จอง/แก้/ลบ/cancel/detail/approve/approver  (vehicle_bp)
 - vehicle_notification   api_notifications/read/payment_report        (vehicle_bp)
-- vehicle_history        booking_history/feed + history helpers       (vehicle_bp)
 - vehicle_admin          admin_trips/assign/merge/manage_fleet/...  (vehicle_bp+adminfleet_bp)
 - vehicle_mileage        mileage_log/export                           (vehicle_bp)
 - vehicle_cost           cost_summary/export/override_fuel/ot_*       (admincost_bp)
@@ -23,7 +22,6 @@ from .vehicle_common import vehicle_bp, adminfleet_bp, admincost_bp, driver_bp
 from . import (
     vehicle_booking,
     vehicle_notification,
-    vehicle_history,
     vehicle_admin,
     vehicle_mileage,
     vehicle_cost,

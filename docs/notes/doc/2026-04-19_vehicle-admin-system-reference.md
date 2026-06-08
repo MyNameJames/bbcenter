@@ -23,9 +23,9 @@ Vehicle Admin Dashboard (`/vehicle/admin`) แบ่งเป็น 3 section:
 
 | # | Feature | ผลลัพธ์ |
 |---|---------|---------|
-| 1 | **Approve single booking** | status → `approved`, Telegram แจ้งผู้จอง |
-| 2 | **Reject single booking** | status → `rejected`, Telegram แจ้งผู้จอง |
-| 3 | **Forward single booking** | status → `waiting_approver`, Telegram แจ้ง approver แผนก |
+| 1 | **Approve single booking** | status → `approved`, in-app only (Telegram ผ่าน btnNotify เท่านั้น — 2026-06-07) |
+| 2 | **Reject single booking** | status → `rejected`, in-app only |
+| 3 | **Forward single booking** | status → `waiting_approver`, in-app only |
 | 4 | **Merge / Create new group** | สร้าง `trip_group` ใหม่ (TRP-xxx), bookings ทั้งกลุ่ม → `approved` |
 | 5 | **Edit existing group** | แก้รถ/คนขับ/expense ของกลุ่มที่มีอยู่ |
 | 6 | **Edit single booking** | แก้รถ/คนขับ/expense ของรายการเดี่ยว |

@@ -172,10 +172,12 @@ Admin เข้าหน้า `/vehicle/admin` → เห็น booking ทั�
 
 | ปุ่ม | action value | ผลลัพธ์ |
 |------|-------------|---------|
-| **✅ อนุมัติ** | `approve` | status → `approved` + notify_approved() → Telegram |
-| **⏩ ส่งต่อ Approver** | `forward` | status → `waiting_approver` + notify_forwarded_to_approver() → Telegram |
-| **❌ ปฏิเสธ** | `reject` | status → `rejected` + notify_rejected() → Telegram |
+| **✅ อนุมัติ** | `approve` | status → `approved` + in-app only (Telegram ไม่ส่งตอน confirm) |
+| **⏩ ส่งต่อ Approver** | `forward` | status → `waiting_approver` + in-app only |
+| **❌ ปฏิเสธ** | `reject` | status → `rejected` + in-app only |
 | **นำออกจากกลุ่ม** | `ungroup` | ล้าง trip_group, vehicle, vehicle2 |
+
+> **Telegram (2026-06-07):** confirm action ใน admin_assign/admin_merge ไม่ส่ง Telegram แล้ว — ส่งเฉพาะ in-app. Telegram ส่งผ่านปุ่ม `btnNotify` (`POST /vehicle/admin/booking/<id>/notify` → `notify_approved`) เท่านั้น
 
 POST ไปที่ `/vehicle/admin/assign/<id>`
 
@@ -218,10 +220,10 @@ delete_old_message(booking.telegram_message_id)  ← ลบข้อความ
 
 | Function | เรียกเมื่อ |
 |---------|-----------|
-| `notify_approved(booking)` | Admin อนุมัติตรง |
-| `notify_forwarded_to_approver(booking)` | Admin ส่งต่อ Approver |
+| `notify_approved(booking)` | กดปุ่ม `btnNotify` (manual) เท่านั้น — **ไม่ใช่ตอน admin confirm** (2026-06-07) |
+| `notify_forwarded_to_approver(booking)` | (เลิกเรียกจาก admin_assign/merge — in-app only) |
 | `notify_approver_approved(booking, user)` | Approver อนุมัติ |
-| `notify_rejected(booking, user)` | ใครก็ตาม reject |
+| `notify_rejected(booking, user)` | (เลิกเรียกจาก admin reject — in-app only) |
 
 **In-App Notification** (นอกจาก Telegram):
 - สร้าง `Notification` record ให้ user ผู้จองทุกครั้ง

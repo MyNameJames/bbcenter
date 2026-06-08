@@ -1,0 +1,150 @@
+/* ============================================================
+   Component: Dropdown (vc-dd) + Autocomplete (vc-ac)
+   ─────────────────────────────────────────────────────────────
+   cmdk-style menus — progressive enhancement over native form
+   controls. No icons inside menu rows, sections split by a
+   divider line (not text headers), keyboard up/down + Enter.
+
+   Two variants:
+     1. vc-dd  — non-searchable. Enhances <select data-dropdown>.
+     2. vc-ac  — searchable autocomplete. Enhances
+                 <input data-autocomplete list="…">.
+
+   JS hook: core/js/dropdown.js (builds DOM, keeps the native
+   control as source of truth so existing form/JS contracts
+   keep working).
+   Created: 2026-06-08
+   ============================================================ */
+
+/* ── Shared popover panel ─────────────────────── */
+.vc-dd,
+.vc-ac { position: relative; }
+
+/* dropdown sits inline in a toolbar row → size to content */
+.vc-dd { display: inline-flex; }
+
+/* autocomplete sits in a column filter-group → fill the group width */
+.vc-ac { display: flex; }
+.vc-ac > input { flex: 1 1 auto; width: 100%; min-width: 0; }
+
+.vc-dd-native { display: none !important; }
+
+.vc-dd-panel,
+.vc-ac-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1000;
+    min-width: 100%;
+    max-height: 280px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--vc-space-1);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    /* DESIGN-OVERRIDE: floating menus need separation from content;
+       follows the gentle-shadow precedent set by budget .vc-dropdown-menu
+       (budget_manage Phase 3D). — 2026-06-08 */
+    box-shadow: 0 4px 16px rgba(17, 24, 39, .08);
+}
+
+.vc-dd-panel[hidden],
+.vc-ac-panel[hidden] { display: none; }
+
+/* thin, quiet scrollbar */
+.vc-dd-panel::-webkit-scrollbar,
+.vc-ac-panel::-webkit-scrollbar { width: 8px; }
+.vc-dd-panel::-webkit-scrollbar-thumb,
+.vc-ac-panel::-webkit-scrollbar-thumb {
+    background: var(--vc-border);
+    border: 2px solid var(--vc-bg);
+    border-radius: var(--vc-radius-full);
+}
+
+/* ── Option rows ──────────────────────────────── */
+.vc-dd-option,
+.vc-ac-option {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 8px 10px;
+    font-size: var(--vc-text-sm);
+    line-height: 1.3;
+    color: var(--vc-fg);
+    background: transparent;
+    border: 0;
+    border-radius: var(--vc-radius-sm);
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+/* keyboard / hover highlight — the cmdk light-gray rounded row */
+.vc-dd-option.is-active,
+.vc-ac-option.is-active {
+    background: var(--vc-bg-hover);
+}
+
+/* current selection — no icon, weight only */
+.vc-dd-option[aria-selected="true"] {
+    font-weight: 600;
+}
+
+/* ── Divider (replaces text section headers) ──── */
+.vc-dd-divider,
+.vc-ac-divider {
+    height: 1px;
+    margin: var(--vc-space-1) 6px;
+    background: var(--vc-border);
+}
+
+/* ── Empty state (autocomplete: no match) ─────── */
+.vc-ac-empty {
+    padding: 10px;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-subtle);
+    text-align: center;
+}
+
+/* ── Trigger button (vc-dd) — mirrors .vc-filter-select ── */
+.vc-dd-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    height: var(--vc-h-input-sm);
+    padding: 15px 10px;
+    font-family: inherit;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    cursor: pointer;
+    transition: border-color var(--vc-transition);
+    min-width: 80px;
+}
+
+.vc-dd-trigger:hover { border-color: var(--vc-border-hover); }
+.vc-dd-trigger:focus-visible {
+    outline: none;
+    border-color: var(--vc-fg);
+}
+.vc-dd.is-open .vc-dd-trigger { border-color: var(--vc-fg); }
+
+.vc-dd-value {
+    flex: 1 1 auto;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vc-dd-chevron {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--vc-fg-subtle);
+    transition: transform var(--vc-transition);
+}
+.vc-dd.is-open .vc-dd-chevron { transform: rotate(180deg); }

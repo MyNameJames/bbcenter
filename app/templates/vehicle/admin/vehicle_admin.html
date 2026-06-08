@@ -58,9 +58,18 @@
                                 <span>เลือกวันที่</span>
                                 <i data-lucide="chevron-down" class="vc-icon-sm va-week-picker-caret"></i>
                             </button>
-                            <div class="va-week-picker-pop" id="weekPickerPop" role="dialog" aria-label="เลือกวันที่" hidden>
-                                <label class="va-week-picker-label" for="weekPickerInput">เลือกวันที่</label>
-                                <input type="date" class="vc-input va-week-picker-input" id="weekPickerInput">
+                            <div class="va-cal" id="weekPickerPop" role="dialog" aria-label="เลือกวันที่" hidden>
+                                <div class="va-cal-head">
+                                    <button type="button" class="va-cal-nav" id="calPrevBtn" aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
+                                        <i data-lucide="chevron-left" class="vc-icon-sm"></i>
+                                    </button>
+                                    <span class="va-cal-title" id="calTitle"></span>
+                                    <button type="button" class="va-cal-nav" id="calNextBtn" aria-label="เดือนถัดไป" title="เดือนถัดไป">
+                                        <i data-lucide="chevron-right" class="vc-icon-sm"></i>
+                                    </button>
+                                </div>
+                                <div class="va-cal-grid va-cal-dow" id="calDow"></div>
+                                <div class="va-cal-grid" id="calDays"></div>
                             </div>
                         </div>
                     </div>
@@ -189,29 +198,27 @@
 
                 <div class="vc-form-row vc-form-row-2">
                     <div class="vc-form-group">
-                        <label class="vc-label" for="modalVehSel">
-                            <i data-lucide="car" class="vc-icon-sm"></i> เลือกรถ
-                        </label>
+                        <label class="vc-label" for="modalVehSel">เลือกรถ</label>
                         <select class="vc-select" id="modalVehSel" onchange="checkAssignReady()">
                             <option value="">— เลือกรถ —</option>
                         </select>
-                        <div class="va-conflict-warn" id="vehConflictWarn" hidden>
-                            <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
-                            <span data-conflict-text></span>
-                        </div>
                     </div>
                     <div class="vc-form-group">
-                        <label class="vc-label" for="modalDrvSel">
-                            <i data-lucide="user" class="vc-icon-sm"></i> เลือกคนขับ
-                        </label>
+                        <label class="vc-label" for="modalDrvSel">เลือกคนขับ</label>
                         <select class="vc-select" id="modalDrvSel" onchange="checkAssignReady()">
                             <option value="">— เลือกคนขับ —</option>
                         </select>
-                        <div class="va-conflict-warn" id="drvConflictWarn" hidden>
-                            <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
-                            <span data-conflict-text></span>
-                        </div>
                     </div>
+                </div>
+
+                {# conflict warnings — full width ใต้ select grid #}
+                <div class="va-conflict-warn" id="vehConflictWarn" hidden>
+                    <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
+                    <span data-conflict-text></span>
+                </div>
+                <div class="va-conflict-warn p-2" id="drvConflictWarn" hidden>
+                    <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
+                    <span data-conflict-text></span>
                 </div>
 
                 <div class="va-modal-section">ประเภทค่าใช้จ่าย</div>
@@ -251,10 +258,9 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="assignConfirmBtn" onclick="submitAssign()" disabled title="อนุมัติและส่งแจ้ง Telegram">
-                    <i data-lucide="send" class="vc-icon-sm"></i>
-                    ยืนยันและแจ้ง Telegram
+                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="vc-btn vc-btn-primary" id="assignConfirmBtn" onclick="submitAssign()" disabled title="ยืนยันการอนุมัติ">
+                    ยืนยันการอนุมัติ
                 </button>
             </div>
 
@@ -286,10 +292,9 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="swapConfirmBtn" onclick="submitSwap()" disabled title="ยืนยันเปลี่ยนรถ">
-                    <i data-lucide="check" class="vc-icon-sm"></i>
-                    ยืนยัน Swap
+                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="vc-btn vc-btn-primary" id="swapConfirmBtn" onclick="submitSwap()" disabled title="ยืนยันเปลี่ยนรถ">
+                ยืนยันเปลี่ยนรถ
                 </button>
             </div>
 
@@ -329,8 +334,8 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" onclick="submitRepair()" title="บันทึกการส่งซ่อม">
+                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="vc-btn vc-btn-primary" onclick="submitRepair()" title="บันทึกการส่งซ่อม">
                     <i data-lucide="check" class="vc-icon-sm"></i>
                     บันทึกการส่งซ่อม
                 </button>
@@ -364,8 +369,8 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-danger vc-btn-sm" onclick="submitRevert()" title="ย้อนสถานะกลับเป็นรออนุมัติ">
+                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="vc-btn vc-btn-danger" onclick="submitRevert()" title="ย้อนสถานะกลับเป็นรออนุมัติ">
                     <i data-lucide="rotate-ccw" class="vc-icon-sm"></i>
                     ย้อนเป็นรออนุมัติ
                 </button>

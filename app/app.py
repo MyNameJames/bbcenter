@@ -117,17 +117,6 @@ def index():
     return redirect(url_for('auth.login'))           # ยังไม่ login → ไปหน้า login
 
 # ==========================================
-# Design System Reference (superadmin only)
-# ==========================================
-@app.route('/design-system')
-@login_required
-def design_system_reference():
-    if not current_user.is_superadmin:
-        return redirect(url_for('auth.dashboard'))
-    return render_template('design_system_reference.html')
-
-
-# ==========================================
 # Notification Scheduler (APScheduler)
 # ==========================================
 # เริ่ม scheduler เฉพาะ process หลัก (ไม่ใช่ reloader child)

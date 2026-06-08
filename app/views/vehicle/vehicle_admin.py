@@ -184,8 +184,20 @@ def admin_trips():
                   .filter_by(is_disable=0).order_by(VehicleDepartment.name).all()]
 
     now = datetime.utcnow() + timedelta(hours=7)
-    budget_rows = VehicleBudget.query.filter_by(year=now.year, month=now.month).all()
-    budget_map  = {br.department_id: br for br in budget_rows}
+    # งบ active period (2026-06-06): เลิกผูก year/month — ดึงงบ is_active ที่ช่วง
+    # start_date–end_date ครอบวันนี้ (mirror _lookup_budget_for_booking).
+    # overlap หลายก้อนต่อแผนก → เอา start_date ล่าสุด (specific สุด)
+    today_d = now.date()
+    active_budget_rows = (VehicleBudget.query.filter(
+        VehicleBudget.is_active.is_(True),
+        VehicleBudget.start_date.isnot(None),
+        VehicleBudget.end_date.isnot(None),
+        VehicleBudget.start_date <= today_d,
+        VehicleBudget.end_date >= today_d,
+    ).order_by(VehicleBudget.start_date.desc(), VehicleBudget.id.desc()).all())
+    budget_map = {}
+    for br in active_budget_rows:
+        budget_map.setdefault(br.department_id, br)
 
     all_depts = VehicleDepartment.query.filter_by(is_disable=0)\
                     .order_by(VehicleDepartment.name).all()
@@ -372,18 +384,17 @@ def admin_merge():
     print(f'[DEBUG admin_merge] commit OK', file=sys.stderr, flush=True)
 
     # แจ้งเตือน (Telegram + In-app) ทุก booking ใน group
+    # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07) — merge confirm ส่งแค่ in-app
     if new_status == 'waiting_approver':
         for bid in booking_ids:
             b = VehicleBooking.query.get(int(bid))
             if b:
-                notify_forwarded_to_approver(b)        # Telegram
                 _n_merged(b, trip_group)               # In-app Event #7
                 _n_forwarded(b)                        # In-app Event #4
     else:
         for bid in booking_ids:
             b = VehicleBooking.query.get(int(bid))
             if b:
-                notify_approved(b)                     # Telegram
                 _n_merged(b, trip_group)               # In-app Event #7
                 _n_admin_approved(b)                   # In-app Event #3
     db.session.commit()
@@ -453,7 +464,7 @@ def admin_assign(booking_id):
                 booking,
                 note=f'reject by admin {current_user.username} (assign): {booking.reject_reason or "—"}',
             )
-            notify_rejected(booking, current_user)                 # Telegram
+            # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07) — confirm/reject ไม่ส่ง
             _n_rejected(booking, current_user, by_approver=False)  # In-app Event #6
             db.session.commit()
         else:
@@ -463,12 +474,12 @@ def admin_assign(booking_id):
             if booking.expense_type == 'department':
                 booking.status = 'waiting_approver'
                 db.session.flush()
-                notify_forwarded_to_approver(booking)              # Telegram
+                # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07)
                 _n_forwarded(booking)                              # In-app Event #4
             else:
                 booking.status = 'approved'
                 db.session.flush()
-                notify_approved(booking)                           # Telegram
+                # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07)
                 _n_admin_approved(booking)                         # In-app Event #3
             db.session.commit()
 

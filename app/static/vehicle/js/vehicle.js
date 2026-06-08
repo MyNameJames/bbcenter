@@ -816,14 +816,16 @@ Object.assign(window, {
 Object.defineProperty(window, 'eventDetailModal', { get: () => eventDetailModal, configurable: true });
 Object.defineProperty(window, 'moreEventsModal',  { get: () => moreEventsModal,  configurable: true });
 
-/* ── ?pay=<booking_id> deep-link from notification ── */
-(function handlePayDeeplink() {
-    const pay = new URLSearchParams(window.location.search).get('pay');
-    if (!pay) return;
-    const id = parseInt(pay, 10);
+/* ── ?pay= / ?detail=<booking_id> deep-link (notification + detail_booking redirect) ── */
+(function handleBookingDeeplink() {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('pay') || params.get('detail');
+    if (!raw) return;
+    const id = parseInt(raw, 10);
     if (!id) return;
     openEventDetail(id);
     const url = new URL(window.location.href);
     url.searchParams.delete('pay');
+    url.searchParams.delete('detail');
     history.replaceState(null, '', url.toString());
 })();

@@ -116,8 +116,13 @@
     border-radius: var(--vc-radius-md);
     background: var(--vc-bg);
     overflow: hidden;
+    /* BFC ถาวร — กัน margin-bottom ของ .va-week-bar collapse ออกนอก card
+       ตอน :has() สลับ overflow:visible (ไม่งั้น card หด ~8px = กระตุก) */
+    display: flow-root;
     /* padding: var(--vc-space-5); */
 }
+/* ปฏิทิน popover โผล่นอก card ได้ — ปลด clip เฉพาะตอนเปิด */
+.va-week-card:has(.va-cal:not([hidden])) { overflow: visible; }
 
 /* Meta row — selected-date heading + ghost actions */
 .va-week-meta {
@@ -163,6 +168,125 @@
     color: var(--vc-fg);
 }
 .va-week-picker-caret { color: var(--vc-fg-subtle); }
+
+/* ── Inline month calendar popover (คลิกเดียวเลือกวัน) ── */
+.va-cal {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: var(--vc-z-dropdown);
+    width: 280px;
+    max-width: calc(100vw - 32px);
+    padding: var(--vc-space-3);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-lg);
+    box-shadow: 0 8px 24px rgba(17,24,39,.10), 0 2px 6px rgba(17,24,39,.06);
+    transform-origin: top right;
+    animation: vaCalIn var(--vc-dur-fast) var(--vc-ease-out);
+}
+.va-cal[hidden] { display: none; }
+@keyframes vaCalIn {
+    from { opacity: 0; transform: translateY(-4px) scale(.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.va-cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--vc-space-2);
+}
+.va-cal-title {
+    font-size: var(--vc-text-base);
+    font-weight: 600;
+    color: var(--vc-fg);
+}
+.va-cal-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: var(--vc-radius-sm);
+    color: var(--vc-fg-muted);
+    cursor: pointer;
+    transition: background var(--vc-dur-fast) var(--vc-ease-snap),
+                color var(--vc-dur-fast) var(--vc-ease-snap);
+}
+.va-cal-nav:hover { background: var(--vc-bg-hover); color: var(--vc-fg); }
+.va-cal-nav:active { transform: scale(0.92); }
+
+.va-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.va-cal-dow { margin-bottom: 2px; }
+.va-cal-dow-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    color: var(--vc-fg-subtle);
+}
+.va-cal-dow-cell--sun { color: var(--vc-red); }
+.va-cal-dow-cell--sat { color: var(--vc-blue); }
+
+.va-cal-cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    background: transparent;
+    border: none;
+    border-radius: var(--vc-radius-full);
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg);
+    cursor: pointer;
+    transition: background var(--vc-dur-fast) var(--vc-ease-snap),
+                color var(--vc-dur-fast) var(--vc-ease-snap);
+}
+.va-cal-cell--empty { cursor: default; }
+.va-cal-cell--sun { color: var(--vc-red); }
+.va-cal-cell--sat { color: var(--vc-blue); }
+.va-cal-cell:not(.va-cal-cell--empty):hover { background: var(--vc-bg-hover); }
+.va-cal-cell:not(.va-cal-cell--empty):active { transform: scale(0.92); }
+
+/* วันนี้ (ยังไม่ถูกเลือก) — ring บางๆ */
+.va-cal-cell--today:not(.va-cal-cell--active) {
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px var(--vc-border-strong);
+}
+
+/* วันที่เลือก — วงกลมทึบดำ (ตามภาพ reference) */
+.va-cal-cell--active,
+.va-cal-cell--active:hover {
+    background: var(--vc-primary);
+    color: var(--vc-on-primary);
+    font-weight: 700;
+}
+.va-cal-cell--active.va-cal-cell--sun,
+.va-cal-cell--active.va-cal-cell--sat { color: var(--vc-on-primary); }
+
+/* จุดบอกว่ามีงานจองในวันนั้น */
+.va-cal-dot {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--vc-accent);
+}
+.va-cal-cell--active .va-cal-dot { background: var(--vc-on-primary); }
 
 .va-week-bar {
     display: flex;
@@ -608,12 +732,14 @@
     transition: all var(--vc-transition);
 }
 .adm-exp-tab:hover { background: var(--vc-bg-hover); color: var(--vc-fg); }
+/* selected = outline เข้ม + icon/text เข้ม ไม่มี bg fill */
 .adm-exp-tab.active {
-    background: var(--vc-fg);
-    color: var(--vc-bg);
+    background: transparent;
+    color: var(--vc-fg);
     border-color: var(--vc-fg);
 }
 .adm-exp-tab i { display: block; font-size: 1.1rem; margin-bottom: 4px; opacity: 0.8; }
+.adm-exp-tab.active i { opacity: 1; }
 
 .va-exp-sub-group { margin-top: var(--vc-space-3); margin-bottom: 0; }
 
@@ -683,8 +809,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-top: 6px;
-    padding: 6px 10px;
     background: var(--vc-amber-bg);
     border: 1px solid var(--vc-amber-border);
     border-radius: var(--vc-radius-sm);
@@ -713,27 +837,55 @@
     flex-shrink: 0;
 }
 
-/* Swap list */
-.va-swap-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+/* Swap list (redesign 2026-06-07) — radio + icon chip + info + status badge */
+.va-swap-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-2);
+    margin-top: var(--vc-space-3);
+    max-height: 360px;
+    overflow-y: auto;
+}
 .swap-veh-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-4);
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-md);
     cursor: pointer;
-    transition: all var(--vc-transition);
+    transition: border-color var(--vc-transition), background var(--vc-transition);
 }
-.swap-veh-item:hover { background: var(--vc-bg-subtle); }
+.swap-veh-item:hover { background: var(--vc-bg-subtle); border-color: var(--vc-fg-subtle); }
 .swap-veh-item.selected { border-color: var(--vc-fg); background: var(--vc-bg-subtle); }
 
-.swap-veh-radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--vc-border); flex-shrink: 0; }
-.selected .swap-veh-radio { border-width: 5px; border-color: var(--vc-fg); }
+.swap-veh-radio {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--vc-border);
+    flex-shrink: 0;
+    transition: border var(--vc-transition);
+}
+.swap-veh-item.selected .swap-veh-radio { border-width: 5px; border-color: var(--vc-fg); }
 
+.swap-veh-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: var(--vc-radius-md);
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    color: var(--vc-fg-muted);
+    flex-shrink: 0;
+}
+.swap-veh-item:hover .swap-veh-ico,
+.swap-veh-item.selected .swap-veh-ico { color: var(--vc-fg); }
+
+.swap-veh-info { min-width: 0; }
 .swap-veh-label { font-size: 13px; font-weight: 700; color: var(--vc-fg); }
 .swap-veh-plate { font-size: 11px; color: var(--vc-fg-muted); }
-.swap-veh-status { margin-left: auto; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+.swap-veh-status { margin-left: auto; flex-shrink: 0; }
 
 
 /* ─────────────────────────────────────────────
@@ -1127,25 +1279,7 @@
 }
 
 
-/* ── Modal entry animation (Phase C polish) ────────
-   Scoped to 4 modals in this page only — ห้าม leak
-   ไป vc-modal ของหน้าอื่น (fuel_admin, manage_fleet ฯลฯ) */
-#assignModal.fade .modal-dialog,
-#swapModal.fade .modal-dialog,
-#repairModal.fade .modal-dialog,
-#revertModal.fade .modal-dialog {
-    transform: translateY(16px) scale(0.97);
-    opacity: 0;
-    transition: transform var(--vc-dur-slow) var(--vc-ease-out),
-                opacity var(--vc-dur-slow) var(--vc-ease-out);
-}
-#assignModal.fade.show .modal-dialog,
-#swapModal.fade.show .modal-dialog,
-#repairModal.fade.show .modal-dialog,
-#revertModal.fade.show .modal-dialog {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-}
+/* Modal entry animation — ใช้ bootstrap default (.modal.fade) ไม่ override (2026-06-07) */
 
 
 /* Reduce motion preference */
@@ -1155,10 +1289,6 @@
     .bl-card,
     .bl-selected,
     .bl-notify-selected,
-    .vs-btn,
-    #assignModal.fade .modal-dialog,
-    #swapModal.fade .modal-dialog,
-    #repairModal.fade .modal-dialog,
-    #revertModal.fade .modal-dialog { transition: none !important; transform: none !important; }
+    .vs-btn { transition: none !important; transform: none !important; }
     .vs-btn { opacity: 1 !important; }
 }
