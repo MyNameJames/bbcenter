@@ -74,11 +74,13 @@ Browser
   → Jinja2 Render / JSON Response
 ```
 
+> Error logging (2026-06-11): ทุก `except Exception` ใน route → `current_app.logger.exception('<route> failed')` + flash ข้อความกลาง (ห้าม flash `str(e)`) → `app/logs/app.log` (rotate 1MB×5, config ใน app.py)
+
 ---
 
 ## Blueprints
 
-รายละเอียด route ทั้งหมด → [INDEX.md § Routes](INDEX.md#-routes-all-paths)
+รายละเอียด route ทั้งหมด → [INDEX_routes.md](INDEX_routes.md)
 
 | Blueprint | File | หน้าที่ |
 |-----------|------|---------|
@@ -109,24 +111,19 @@ Browser
 
 ## Vehicle Booking Status Flow
 
-```
-                    ┌─────────┐
-                    │ pending │
-                    └────┬────┘
-                         │ Admin approve
-            ┌────────────┴────────────┐
-            │ expense_type=personal   │ expense_type=central/department
-            ▼                         ▼
-       ┌──────────┐          ┌────────────────────┐
-       │ approved │          │ waiting_approver   │
-       └──────────┘          └─────────┬──────────┘
-                                       │ Approver (แผนกตัวเอง)
-                                ┌──────┴──────┐
-                                ▼             ▼
-                           ┌──────────┐  ┌──────────┐
-                           │ approved │  │ rejected │
-                           └──────────┘  └──────────┘
-```
+> 2026-06-11 (workflow review): เปลี่ยนเป็นตาราง transition ให้ตรง code จริง — เดิม diagram บอก central → waiting_approver ซึ่งผิด (เฉพาะ department เท่านั้นที่ผ่าน approver)
+
+| จาก | ไป | ใคร / เงื่อนไข | Code path |
+|---|---|---|---|
+| pending | waiting_approver | admin approve + `expense_type=department` | `approve_booking` และ `admin_assign` (2 path ซ้ำ) |
+| pending | approved | admin approve + central/personal | `approve_booking` (เช็กงบ active) / `admin_assign` (⚠ ไม่เช็กงบ) |
+| pending | rejected | admin reject (+refund no-op) | ทั้ง 2 path |
+| waiting_approver | approved / rejected | approver เฉพาะแผนกตัวเอง (เช็กงบ active) | `approve_booking` |
+| pending/waiting/approved | cancelled | owner/admin ก่อน `start_datetime` (+refund +notify cascade) | `cancel_booking` |
+| ทุกสถานะ (ยกเว้น rejected/cancelled) | cancelled | admin ผ่าน `budget_manage` action `refund_booking` (⚠ ไม่มี time guard / ไม่ notify) | `vehicle_budget.py` |
+| ทุกสถานะ | pending | admin revert (⚠ ไม่มี guard / ไม่ refund / ไม่ notify) | `admin_revert_booking` |
+
+สถานะย่อยของทริป (ไม่อยู่ใน `status`): `VehicleMileage.actual_start/actual_end` = กำลังเดินทาง/ปิดทริป → ปิดทริปจึงหักงบ. ⚠ = gap ที่พบจาก workflow review 2026-06-11 — แผน formalize อยู่ใน [future_features.md](future_features.md)
 
 ---
 

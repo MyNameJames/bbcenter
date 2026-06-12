@@ -14,6 +14,31 @@
     font-size: .88rem;
 }
 
+/* ── Page Header (match admin fuel-header) ── */
+.approver-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+    flex-wrap: wrap;
+    padding-bottom: var(--vc-space-5);
+    margin-bottom: var(--vc-space-1);
+}
+.approver-title {
+    font-size: var(--vc-text-xl);
+    font-weight: 600;
+    letter-spacing: var(--vc-tracking-tight);
+    color: var(--vc-fg);
+    line-height: 1.2;
+    margin: 0;
+}
+.approver-subtitle {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    margin: 6px 0 0 0;
+    line-height: 1.4;
+}
+
 /* ── Budget Card ─────────────────────── */
 .budget-card {
     background: var(--vc-bg);
@@ -136,11 +161,42 @@
     letter-spacing: 0.02em;
 }
 .ac-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
     font-size: 0.78rem;
     color: var(--vc-fg-subtle);
 }
 .ac-meta-sep {
     margin: 0 4px;
+}
+/* ── Meta badges (driver · time · booker) ── */
+.ac-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-xs);
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    line-height: 1.6;
+}
+.ac-badge .vc-icon-sm {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--vc-fg-subtle);
+}
+.ac-badge-plain {
+    background: transparent;
+    border-color: transparent;
+    padding-left: 2px;
+    color: var(--vc-fg);
+    font-weight: 600;
 }
 .ac-chevron {
     color: var(--vc-fg-muted);
@@ -152,37 +208,6 @@
     border-top: 1px solid var(--vc-border);
     padding: 16px;
 }
-
-/* ── Field grid ─────────────────────────── */
-.ac-fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px 14px;
-    margin-bottom: 16px;
-}
-.ac-field-full { grid-column: 1 / -1; }
-.ac-field-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.74rem;
-    font-weight: 500;
-    color: var(--vc-fg-subtle);
-    margin-bottom: 4px;
-}
-.ac-field-label .vc-icon-sm {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-}
-.ac-field-value {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--vc-fg);
-    line-height: 1.35;
-    word-break: break-word;
-}
-.ac-reject-reason { color: var(--vc-red); }
 
 /* ── Action row (2 buttons side-by-side) ── */
 .ac-action-row {
@@ -262,6 +287,131 @@
     border-color: var(--vc-red-hover);
 }
 
+/* ── Fuel badge (header-right) ─────────── */
+.ac-fuel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--vc-radius-full);
+    background: var(--vc-amber-bg);
+    border: 1px solid var(--vc-amber-border);
+    color: var(--vc-amber);
+    font-family: var(--vc-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+.ac-fuel-badge .vc-icon-sm {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--vc-amber);
+}
+
+/* ── Detail card (driver-detail-card layout) ── */
+.ac-detail-card {
+    background: var(--vc-bg-subtle);
+    border-radius: var(--vc-radius-md);
+    padding: var(--vc-space-3) var(--vc-space-4);
+}
+.ac-detail-card:not(:last-child) { margin-bottom: var(--vc-space-4); }
+.ac-detail__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vc-space-3);
+}
+.ac-detail__requester {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vc-fg);
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ac-detail__requester .vc-icon-sm { color: var(--vc-fg-subtle); flex-shrink: 0; }
+.ac-detail__pax {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 2px 10px;
+    border-radius: var(--vc-radius-full);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    font-family: var(--vc-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg);
+}
+.ac-detail__pax .vc-icon-sm { color: var(--vc-fg-subtle); }
+
+.ac-detail__datetime {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+}
+.ac-detail__date,
+.ac-detail__time {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg);
+    font-variant-numeric: tabular-nums;
+}
+.ac-detail__date .vc-icon-sm,
+.ac-detail__time .vc-icon-sm { color: var(--vc-fg-subtle); flex-shrink: 0; }
+
+.ac-detail__trip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: var(--vc-text-base);
+    color: var(--vc-fg);
+}
+.ac-detail__purpose { color: var(--vc-fg-muted); }
+.ac-detail__dest    { font-weight: 600; }
+.ac-detail__arrow   { color: var(--vc-fg-subtle); }
+
+.ac-detail__pickup {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+}
+.ac-detail__pickup .vc-icon-sm { color: var(--vc-fg-subtle); flex-shrink: 0; }
+
+/* ── Reject reason note (rejected tab) ── */
+.ac-reject-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-red-bg);
+    border: 1px solid var(--vc-red-border);
+    color: var(--vc-red);
+    font-size: var(--vc-text-sm);
+    line-height: 1.4;
+}
+.ac-reject-note .vc-icon-sm { flex-shrink: 0; margin-top: 2px; }
+
 /* ── Empty state (lucide icon inside vc-empty) ── */
 .vc-empty .vc-icon-sm {
     width: 20px;
@@ -270,8 +420,7 @@
 
 /* ── Responsive tweaks ────────────────── */
 @media (max-width: 380px) {
-    .ac-fields { gap: 14px 10px; }
-    .ac-field-value { font-size: 0.875rem; }
+    .ac-detail__datetime { gap: 4px 12px; }
     .btn-approve-action,
     .btn-reject-action {
         font-size: 0.82rem;

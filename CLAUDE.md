@@ -11,7 +11,10 @@
 **ห้าม glob/grep หา function/route ก่อน** — เปิด INDEX.md ก่อน ถ้าไม่มี = INDEX outdated → อัปเดตหลังค้นเจอ
 
 **Entry docs (เปิดเฉพาะที่จำเป็น):**
-- Routes/symbols/models/templates/CSS-JS → [INDEX.md](docs/notes/INDEX.md)
+- Nav hub (blueprints + file map) → [INDEX.md](docs/notes/INDEX.md)
+- Routes ทุก path → [INDEX_routes.md](docs/notes/INDEX_routes.md)
+- Functions + DB models → [INDEX_code.md](docs/notes/INDEX_code.md)
+- Templates + Design System → [INDEX_ui.md](docs/notes/INDEX_ui.md)
 - DB schema + history → [schema.md](docs/notes/database/schema.md) (Part 1=ปัจจุบัน, Part 2=history+เหตุผล)
 - Migration .sql → [migrations-index.md](app/migrations/migrations-index.md)
 - System flows → [architecture.md](docs/notes/architecture.md)
@@ -28,13 +31,13 @@
 
 | เมื่อแก้ | ต้องอัปเดต |
 |---|---|
-| route ใหม่ | INDEX.md § Routes |
-| function สำคัญ | INDEX.md § Key Functions |
-| model/column | schema.md (Part 1 ตาราง + Part 2 เหตุผล) + INDEX.md § Database Models |
+| route ใหม่ | INDEX_routes.md |
+| function สำคัญ | INDEX_code.md § Key Functions |
+| model/column | schema.md (Part 1 ตาราง + Part 2 เหตุผล) + INDEX_code.md § Database Models |
 | SQL migration | `app/migrations/YYYY-MM-DD_<slug>.sql` + `app/migrations/migrations-index.md` + schema.md Part 2 |
 | blueprint | INDEX.md § Blueprints + architecture.md |
-| template | INDEX.md § Templates |
-| CSS/JS file | INDEX.md § Design System |
+| template | INDEX_ui.md § Templates |
+| CSS/JS file | INDEX_ui.md § Design System |
 | auth/notification pattern | architecture.md |
 | folder ระดับโครงสร้าง | INDEX.md § File Map + architecture.md |
 | doc โต / โครงสร้าง doc เปลี่ยน | run `bash tools/doc-stats.sh` ถ้าเกิน budget → split section ที่โตที่สุด |
@@ -83,7 +86,7 @@ Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + 
 - Fuel reserve depletion (2026-05-18): `_depletes_reserve(method)` = `method == 'transfer'` (เงินสด เบิกจากกองกลาง) **เท่านั้น** — `card`=บัตรส่วนกลาง, `self`=ผู้โดยสารจ่ายเอง (เก็บประวัติ ไม่หัก reserve). กระทบ `reserve_used` + `balance_after` ใน admin_fuel.html
 - `is_vehicle_admin()` = `role_vehicle=='admin' OR is_superadmin`; approver เห็นเฉพาะแผนกตัวเอง
 - ห้ามจองข้ามวัน — validate ใน `book_vehicle_simple()` ([views/vehicle/vehicle_booking.py](app/views/vehicle/vehicle_booking.py))
-- Thai time: `get_bkk_time()` = UTC+7 ([models/base.py:8](app/models/base.py#L8))
+- Thai time: `get_bkk_time()` = UTC+7, คืน naive datetime ([models/base.py:9](app/models/base.py#L9))
 - **models เป็น package แล้ว (2026-06-07):** `models.py` แตกเป็น `models/` ตาม domain (base/user/common/repair/maintenance/room/vehicle/vehicle_budget/vehicle_ot/vehicle_fuel). `db` + `get_bkk_time` อยู่ `base.py`; `__init__.py` re-export ครบ → `from models import X` เดิมใช้ได้ทุกตัว แก้/เพิ่ม model → ไปไฟล์ domain ที่ตรง แล้วเพิ่มชื่อใน `__init__.py __all__`
 
 **DB**

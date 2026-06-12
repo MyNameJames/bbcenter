@@ -136,80 +136,81 @@
 
                     {# Right: export + advanced filter #}
                     <div class="mlg-toolbar-right">
-                        <a href="{{ url_for('vehicle.mileage_export') }}" id="exportLink" class="vc-btn vc-btn-secondary vc-btn-sm">
+                        <a href="{{ url_for('vehicle.mileage_export') }}" id="exportLink" class="vc-btn vc-btn-secondary ">
                             <i data-lucide="download" class="vc-icon-sm"></i> Export
                         </a>
                         <div class="mlg-adv">
-                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm mlg-adv-btn {% if has_adv_filter %}is-active{% endif %}" id="advFilterBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="advSheet">
+                            <button type="button" class="vc-btn vc-btn-secondary mlg-adv-btn {% if has_adv_filter %}is-active{% endif %}" id="advFilterBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="advSheet">
                                 <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i> Filter
                                 {% if has_adv_filter %}<span class="mlg-adv-dot" aria-hidden="true"></span>{% endif %}
                             </button>
 
                             {# advanced filter popover (anchored to button, ชิดขวา) — เริ่มปิดเสมอ #}
                             <div class="mlg-adv-sheet" id="advSheet" role="dialog" aria-label="ตัวกรองขั้นสูง" hidden>
-                    <div class="mlg-adv-grid">
-                        <div class="vc-filter-group">
-                            <span class="vc-filter-label">รถ</span>
-                            <select name="vehicle_id" class="vc-filter-select" data-dropdown>
-                                <option value="">ทั้งหมด</option>
-                                {% for v in vehicles_all %}
-                                <option value="{{ v.id }}" {% if f.vehicle_id == v.id %}selected{% endif %}>
-                                    {{ v.license_plate }} · {{ v.brand }} {{ v.model }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="vc-filter-group">
-                            <span class="vc-filter-label">คนขับ</span>
-                            <select name="driver_id" class="vc-filter-select" data-dropdown>
-                                <option value="">ทั้งหมด</option>
-                                {% for d in drivers_all %}
-                                <option value="{{ d.id }}" {% if f.driver_id == d.id %}selected{% endif %}>{{ d.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="vc-filter-group">
-                            <span class="vc-filter-label">ผู้จอง</span>
-                            <input type="text" name="booker_q" value="{{ f.booker_q }}" list="bookersList"
-                                   class="vc-filter-select" placeholder="ค้นหาชื่อ…" data-autocomplete>
-                            <datalist id="bookersList">
-                                {% for u in bookers_all %}
-                                <option value="{{ u.full_name or u.username }}"></option>
-                                {% endfor %}
-                            </datalist>
-                        </div>
-                        <div class="vc-filter-group">
-                            <span class="vc-filter-label">งบ</span>
-                            <select name="budget_type" id="filterBudgetType" class="vc-filter-select" data-dropdown>
-                                <option value="">ทั้งหมด</option>
-                                <option value="central"    {% if f.budget_type=='central'    %}selected{% endif %}>ส่วนกลาง</option>
-                                <option value="department" {% if f.budget_type=='department' %}selected{% endif %}>ส่วนกอง</option>
-                                <option value="personal"   {% if f.budget_type=='personal'   %}selected{% endif %}>ส่วนตัว</option>
-                            </select>
-                        </div>
-                        <div class="vc-filter-group" id="filterBudgetSubWrap">
-                            <span class="vc-filter-label">หมวด/กอง</span>
-                            <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select" data-dropdown>
-                                <option value="">ทั้งหมด</option>
-                            </select>
-                        </div>
-                        <div class="vc-filter-group">
-                            <span class="vc-filter-label">ค่าน้ำมัน (฿)</span>
-                            <div class="mlg-range-pair">
-                                <input type="number" name="cost_min" value="{{ f.cost_min }}" min="0" step="10"
-                                       class="vc-filter-select" placeholder="ต่ำสุด">
-                                <span class="mlg-range-sep">–</span>
-                                <input type="number" name="cost_max" value="{{ f.cost_max }}" min="0" step="10"
-                                       class="vc-filter-select" placeholder="สูงสุด">
+                            <div class="mlg-adv-grid">
+                                <div class="vc-filter-group mlg-adv-col-full">
+                                    <span class="vc-filter-label">ค่าน้ำมัน (฿)</span>
+                                    <div class="mlg-range-pair">
+                                        <input type="number" name="cost_min" value="{{ f.cost_min }}" min="0" step="10"
+                                            class="vc-filter-select" placeholder="ต่ำสุด">
+                                        <span class="mlg-range-sep">–</span>
+                                        <input type="number" name="cost_max" value="{{ f.cost_max }}" min="0" step="10"
+                                            class="vc-filter-select" placeholder="สูงสุด">
+                                    </div>
+                                </div>
+                                <div class="vc-filter-group">
+                                    <span class="vc-filter-label">รถ</span>
+                                    <select name="vehicle_id" class="vc-filter-select" data-dropdown>
+                                        <option value="">ทั้งหมด</option>
+                                        {% for v in vehicles_all %}
+                                        <option value="{{ v.id }}" {% if f.vehicle_id == v.id %}selected{% endif %}>
+                                            {{ v.license_plate }} · {{ v.brand }} {{ v.model }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="vc-filter-group">
+                                    <span class="vc-filter-label">คนขับ</span>
+                                    <select name="driver_id" class="vc-filter-select" data-dropdown>
+                                        <option value="">ทั้งหมด</option>
+                                        {% for d in drivers_all %}
+                                        <option value="{{ d.id }}" {% if f.driver_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="vc-filter-group mlg-adv-col-full">
+                                    <span class="vc-filter-label">ผู้จอง</span>
+                                    <input type="text" name="booker_q" value="{{ f.booker_q }}" list="bookersList"
+                                        class="vc-filter-select" placeholder="ค้นหาชื่อ…" data-autocomplete>
+                                    <datalist id="bookersList">
+                                        {% for u in bookers_all %}
+                                        <option value="{{ u.full_name or u.username }}"></option>
+                                        {% endfor %}
+                                    </datalist>
+                                </div>
+                                <div class="vc-filter-group{% if f.budget_type not in ['central','department'] %} mlg-adv-col-full{% endif %}" id="filterBudgetTypeWrap">
+                                    <span class="vc-filter-label">งบ</span>
+                                    <select name="budget_type" id="filterBudgetType" class="vc-filter-select" data-dropdown>
+                                        <option value="">ทั้งหมด</option>
+                                        <option value="central"    {% if f.budget_type=='central'    %}selected{% endif %}>ส่วนกลาง</option>
+                                        <option value="department" {% if f.budget_type=='department' %}selected{% endif %}>ส่วนกอง</option>
+                                        <option value="personal"   {% if f.budget_type=='personal'   %}selected{% endif %}>ส่วนตัว</option>
+                                    </select>
+                                </div>
+                                <div class="vc-filter-group" id="filterBudgetSubWrap"{% if f.budget_type not in ['central','department'] %} style="display:none"{% endif %}>
+                                    <span class="vc-filter-label">หมวด/กอง</span>
+                                    <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select" data-dropdown>
+                                        <option value="">ทั้งหมด</option>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="mlg-adv-actions">
-                        <a href="{{ url_for('vehicle.mileage_log') }}" class="vc-btn vc-btn-ghost vc-btn-sm">ล้างทั้งหมด</a>
-                        <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
-                            <i data-lucide="check" class="vc-icon-sm"></i> นำไปใช้
-                        </button>
-                    </div>
+                            <div class="mlg-adv-actions">
+                                <a href="{{ url_for('vehicle.mileage_log') }}" class="vc-btn vc-btn-ghost vc-btn-sm">ล้างทั้งหมด</a>
+                                <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
+                                    นำไปใช้
+                                </button>
+                            </div>
                             </div>{# /advSheet #}
                         </div>{# /mlg-adv #}
                     </div>{# /mlg-toolbar-right #}
@@ -422,7 +423,7 @@
 
 {# ── Modal: Mileage Entry ───────────────────── #}
 <div class="modal fade" id="mileageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content vc-modal mlg-modal">
             <div class="modal-header" style="border-bottom:1px solid var(--vc-border); padding: var(--vc-space-4) var(--vc-space-5); align-items:center;">
                 <div style="display:flex; align-items:center; gap: var(--vc-space-3); flex:1; min-width:0;">
@@ -447,28 +448,28 @@
                             border-radius: 6px; padding: var(--vc-space-3) var(--vc-space-4);
                             margin-bottom: var(--vc-space-4);">
                     <div class="mlg-info-item" style="display:flex; align-items:flex-start; gap: var(--vc-space-2);">
-                        <i data-lucide="user" class="vc-icon-sm" style="color:var(--vc-fg-subtle); margin-top:3px; flex-shrink:0;"></i>
+                        <i data-lucide="user" class="vc-icon" style="color:var(--vc-fg-subtle); margin-top:3px; flex-shrink:0;"></i>
                         <div style="min-width:0;">
                             <label style="display:block; font-size:var(--vc-text-xs); color:var(--vc-fg-subtle); margin:0;">ผู้จอง</label>
                             <div id="mmUser" style="font-size:var(--vc-text-sm); color:var(--vc-fg); font-weight:500;">—</div>
                         </div>
                     </div>
                     <div class="mlg-info-item" style="display:flex; align-items:flex-start; gap: var(--vc-space-2);">
-                        <i data-lucide="clock" class="vc-icon-sm" style="color:var(--vc-fg-subtle); margin-top:3px; flex-shrink:0;"></i>
+                        <i data-lucide="clock" class="vc-icon" style="color:var(--vc-fg-subtle); margin-top:3px; flex-shrink:0;"></i>
                         <div style="min-width:0;">
                             <label style="display:block; font-size:var(--vc-text-xs); color:var(--vc-fg-subtle); margin:0;">เวลา</label>
                             <div id="mmTime" style="font-size:var(--vc-text-sm); color:var(--vc-fg); font-weight:500; font-family:var(--vc-font-mono);">—</div>
                         </div>
                     </div>
                     <div class="mlg-info-item" style="display:flex; align-items:flex-start; gap: var(--vc-space-2);">
-                        <i data-lucide="car" class="vc-icon-sm" style="color:var(--vc-fg-subtle); margin-top:3px; flex-shrink:0;"></i>
+                        <i data-lucide="car" class="vc-icon" style="color:var(--vc-fg-subtle); margin-top:3px; flex-shrink:0;"></i>
                         <div style="min-width:0;">
                             <label style="display:block; font-size:var(--vc-text-xs); color:var(--vc-fg-subtle); margin:0;">รถ</label>
                             <div id="mmVehicle" style="font-size:var(--vc-text-sm); color:var(--vc-fg); font-weight:500;">—</div>
                         </div>
                     </div>
                     <div class="mlg-info-item" style="display:flex; align-items:flex-start; gap: var(--vc-space-2);">
-                        <i data-lucide="map-pin" class="vc-icon-sm" style="color:var(--vc-fg-subtle); margin-top:3px; flex-shrink:0;"></i>
+                        <i data-lucide="map-pin" class="vc-icon" style="color:var(--vc-fg-subtle); margin-top:3px; flex-shrink:0;"></i>
                         <div style="min-width:0;">
                             <label style="display:block; font-size:var(--vc-text-xs); color:var(--vc-fg-subtle); margin:0;">ปลายทาง</label>
                             <div id="mmDest" style="font-size:var(--vc-text-sm); color:var(--vc-fg); font-weight:500;">—</div>

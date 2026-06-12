@@ -54,7 +54,7 @@
                 </div>
                 <div class="fuel-header-actions">
                     <button type="button" class="vc-btn vc-btn-secondary" data-fuel-action="price-open" title="ตั้งค่าราคาน้ำมัน/ลิตร">
-                        <i data-lucide="banknote" class="vc-icon-sm"></i>
+                        <i data-lucide="banknote" class="vc-icon"></i>
                         ตั้งค่าราคา
                     </button>
                     <button type="button" class="vc-btn vc-btn-primary" data-fuel-action="bill-create" title="กรอกบิลใหม่">
@@ -193,7 +193,7 @@
             <form method="get" action="{{ url_for('fuel.admin_fuel') }}" class="vc-filter-bar" id="filterForm">
                 <div class="vc-filter-group">
                     <span class="vc-filter-label">ปี</span>
-                    <select name="year" class="vc-filter-select">
+                    <select name="year" class="vc-filter-select" data-dropdown>
                         {% for y in available_years %}
                         <option value="{{ y }}" {% if y == f_year %}selected{% endif %}>{{ y + 543 }}</option>
                         {% endfor %}
@@ -201,7 +201,7 @@
                 </div>
                 <div class="vc-filter-group">
                     <span class="vc-filter-label">เดือน</span>
-                    <select name="month" class="vc-filter-select">
+                    <select name="month" class="vc-filter-select" data-dropdown>
                         <option value="0" {% if f_month == 0 %}selected{% endif %}>ทั้งปี</option>
                         {% for m in range(1, 13) %}
                         <option value="{{ m }}" {% if m == f_month %}selected{% endif %}>{{ TH_MONTHS[m-1] }}</option>
@@ -210,7 +210,7 @@
                 </div>
                 <div class="vc-filter-group">
                     <span class="vc-filter-label">รถ</span>
-                    <select name="vehicle_id" class="vc-filter-select">
+                    <select name="vehicle_id" class="vc-filter-select" data-dropdown>
                         <option value="">ทั้งหมด</option>
                         {% for v in vehicles %}
                         <option value="{{ v.id }}" {% if f_veh == v.id %}selected{% endif %}>{{ v.license_plate }}</option>
@@ -219,7 +219,7 @@
                 </div>
                 <div class="vc-filter-group">
                     <span class="vc-filter-label">คนขับ</span>
-                    <select name="driver_id" class="vc-filter-select">
+                    <select name="driver_id" class="vc-filter-select" data-dropdown>
                         <option value="">ทั้งหมด</option>
                         {% for d in drivers %}
                         <option value="{{ d.id }}" {% if f_drv == d.id %}selected{% endif %}>{{ d.name }}</option>
@@ -332,14 +332,12 @@
                 <div class="vc-card" id="billsCard">
                     <div class="vc-card-head">
                         <h3 class="vc-card-head-title">
-                            <i data-lucide="receipt-text" class="vc-icon-sm"></i>
                             บิลเบิก
                             <span class="vc-card-head-meta">{{ bills|length }} รายการ</span>
                         </h3>
                         <div class="vc-card-head-actions">
-                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="mergeBillsBtn"
-                                    disabled title="เลือกบิล 'รอเบิก' อย่างน้อย 1 ใบก่อน">
-                                <i data-lucide="combine" class="vc-icon-sm"></i>
+                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="mergeBillsBtn" disabled title="เลือกบิล 'รอเบิก' อย่างน้อย 1 ใบก่อน">
+                                <i data-lucide="list-filter" class="vc-icon-sm"></i>
                                 รวมบิลที่เลือก<span id="selectedCount" class="vc-card-head-meta"></span>
                             </button>
                             <a href="{{ url_for('fuel.export_excel', year=f_year, month=(f_month or ''), vehicle_id=(f_veh or ''), driver_id=(f_drv or '')) }}"
@@ -614,5 +612,6 @@
 
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_fuel.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>
 </body>
 </html>

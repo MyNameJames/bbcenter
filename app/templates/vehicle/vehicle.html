@@ -153,6 +153,7 @@ window.DRIVERS = [
 ];
 
 window.TOTAL_VEHICLES = {{ total_vehicles }};
+window.OT_RATES = {{ ot_rates | tojson }};
 window.BOOKINGS = [
 {% for b in bookings %}
 {
@@ -180,7 +181,7 @@ window.BOOKINGS = [
     isOwner:    {{ 'true' if b.user_id == current_user.id else 'false' }},
     isPending:  {{ 'true' if b.status == 'pending' else 'false' }},
     {# Phase 9 (2026-05-22) — cancel button gate: owner/admin AND status ∈ cancellable AND ก่อน start_datetime #}
-    canCancel:  {{ 'true' if (b.status in ('pending', 'waiting_approver', 'approved') and b.start_datetime > now and (b.user_id == current_user.id or is_vehicle_admin)) else 'false' }},
+    canCancel:  {{ 'true' if (b.start_datetime > now and ((b.user_id == current_user.id and b.status in ('pending', 'waiting_approver')) or (is_vehicle_admin and b.status in ('pending', 'waiting_approver', 'approved')))) else 'false' }},
     expenseType:     {{ (b.expense_type or '') | tojson }},
     centralCategory: {{ (b.central_category or '') | tojson }},
     tripDepartment:  {{ (b.trip_department or '') | tojson }},

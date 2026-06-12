@@ -29,15 +29,16 @@
     --vc-border-strong:  #666666;
 
     /* ── Foreground / Text ───────────────────── */
-    --vc-fg:             #111827;
+    /* font หลัก = กรมท่า/navy (2026-06-10, เดิม #111827 เกือบดำ) */
+    --vc-fg:             #1C2E4A;
     --vc-fg-muted:       #6B7280;
     --vc-fg-subtle:      #9CA3AF;
     --vc-fg-disabled:    #BBBBBB;
     --vc-fg-inverted:    #FFFFFF;
 
-    /* ── Primary action (gray-900) ───────────── */
-    --vc-primary:        #111827;
-    --vc-primary-hover:  #1F2937;
+    /* ── Primary action (กรมท่า/navy — ปุ่มดำเดิม, 2026-06-10) ─ */
+    --vc-primary:        #1C2E4A;
+    --vc-primary-hover:  #26405F;
     --vc-on-primary:     #FFFFFF;
 
     /* ── Accent (Indigo — focus ring, sidebar active, secondary CTA)

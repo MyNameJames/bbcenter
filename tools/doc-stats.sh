@@ -19,7 +19,10 @@ cd "$ROOT"
 # file:budget pairs (bash 3.2 compatible, no associative array)
 ENTRIES="
 CLAUDE.md|2000
-docs/notes/INDEX.md|6000
+docs/notes/INDEX.md|3000
+docs/notes/INDEX_routes.md|4000
+docs/notes/INDEX_code.md|6000
+docs/notes/INDEX_ui.md|50000
 docs/notes/database/schema.md|8000
 docs/notes/architecture.md|4000
 docs/notes/design_system.md|4000

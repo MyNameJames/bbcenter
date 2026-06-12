@@ -3,7 +3,7 @@
    reserve_logs ส่งมาจาก view (latest 20)
 #}
 <div class="modal fade vc-modal" id="fuelReserveModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
         <div class="modal-content">
             <form method="POST" action="{{ url_for('fuel.adjust_reserve') }}">
 
@@ -102,9 +102,8 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
-                        <i data-lucide="check" class="vc-icon-sm"></i>
+                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="vc-btn vc-btn-primary ">
                         บันทึกการปรับ
                     </button>
                 </div>

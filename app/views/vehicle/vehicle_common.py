@@ -110,6 +110,14 @@ def _lookup_budget_for_booking(booking, on_date=None):
 # อนุมัติ / ปฏิเสธ
 # ─────────────────────────────────────────────
 
+def next_ot_number(yr):
+    """รหัส OT ถัดไปของปี yr → 'OT-2026-0001' — ใช้ทั้ง auto_generate_ot + manual ot_create"""
+    last = DriverOT.query.filter(DriverOT.ot_number.like(f'OT-{yr}-%')) \
+                         .order_by(DriverOT.id.desc()).first()
+    seq  = (int(last.ot_number.split('-')[-1]) + 1) if last else 1
+    return f'OT-{yr}-{seq:04d}'
+
+
 def auto_generate_ot(booking, mileage):
     """Auto-generate DriverOT + DriverOTSlots เมื่อปิดงาน (entry_type='end').
     Idempotent — ถ้า DriverOT สำหรับ booking นี้มีอยู่แล้วจะ skip ทันที"""
@@ -167,19 +175,14 @@ def auto_generate_ot(booking, mileage):
     if not new_slots:
         return
 
-    yr   = mileage.actual_end.year
-    last = DriverOT.query.filter(DriverOT.ot_number.like(f'OT-{yr}-%')) \
-                         .order_by(DriverOT.id.desc()).first()
-    seq  = (int(last.ot_number.split('-')[-1]) + 1) if last else 1
-
     ot = DriverOT(
         booking_id   =booking.id,
         driver_id    =booking.driver_id,
-        ot_number    =f'OT-{yr}-{seq:04d}',
+        ot_number    =next_ot_number(mileage.actual_end.year),
         date         =mileage.actual_end.date(),
         total_hours  =round(sum(float(s.hours)  for s in new_slots), 2),
         total_amount =round(sum(float(s.amount) for s in new_slots), 2),
-        status       ='pending',
+        status       ='unpaid',
         created_at   =get_bkk_time(),
         created_by_id=current_user.id,
     )

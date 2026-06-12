@@ -385,9 +385,10 @@ document.getElementById('feRefuel').addEventListener('change', function () {
 
 /* ── Budget filter: sub-options follow type (pattern: updateExpSubDropdown) ── */
 (function bindBudgetFilter() {
-    const typeSel = document.getElementById('filterBudgetType');
-    const subSel  = document.getElementById('filterBudgetSub');
-    const subWrap = document.getElementById('filterBudgetSubWrap');
+    const typeSel  = document.getElementById('filterBudgetType');
+    const subSel   = document.getElementById('filterBudgetSub');
+    const subWrap  = document.getElementById('filterBudgetSubWrap');
+    const typeWrap = document.getElementById('filterBudgetTypeWrap');
     if (!typeSel || !subSel || !subWrap) return;
 
     const cats = window.EXPENSE_CATS || { central: [], department: [] };
@@ -398,9 +399,13 @@ document.getElementById('feRefuel').addEventListener('change', function () {
         if (t !== 'central' && t !== 'department') {
             subWrap.style.display = 'none';
             subSel.innerHTML = '<option value="">ทั้งหมด</option>';
+            // ไม่มีหมวด/กอง → "งบ" ขยายเต็ม 2 col
+            if (typeWrap) typeWrap.classList.add('mlg-adv-col-full');
             return;
         }
         subWrap.style.display = '';
+        // มีหมวด/กอง → "งบ" เหลือ 1 col, sub อยู่ข้างๆ
+        if (typeWrap) typeWrap.classList.remove('mlg-adv-col-full');
         const list    = cats[t] || [];
         const prevKey = subSel.value || initialSub;
         subSel.innerHTML = '<option value="">ทั้งหมด</option>' +
@@ -587,7 +592,16 @@ window.addEventListener('popstate', () => { window.location.reload(); });
 (function bindFilterFormAjax() {
     const form = document.getElementById('filterForm');
     if (!form) return;
-    form.addEventListener('submit', e => { e.preventDefault(); runFilter(); });
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        // ปิด adv-filter popover — runFilter swap แค่ #mlgResults
+        // (popover อยู่นอก region นั้น เลยไม่ปิดเองหลังกด "นำไปใช้")
+        const sheet = document.getElementById('advSheet');
+        const advBtn = document.getElementById('advFilterBtn');
+        if (sheet) sheet.setAttribute('hidden', '');
+        if (advBtn) advBtn.setAttribute('aria-expanded', 'false');
+        runFilter();
+    });
 })();
 
 /* ── Export link: sync กับ filter ปัจจุบันตอนโหลด ── */

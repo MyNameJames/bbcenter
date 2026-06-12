@@ -5,7 +5,7 @@
    - edit:   action = /admin/fuel/bill/<id>/edit, also shows delete button
 #}
 <div class="modal fade vc-modal" id="fuelBillModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
         <div class="modal-content">
             <form id="fuelBillForm" method="POST" action="{{ url_for('fuel.create_bill') }}">
 
@@ -90,7 +90,7 @@
                         <div class="vc-form-group">
                             <label class="vc-label" for="bill_mileage">
                                 เลขไมล์
-                                <span class="vc-label-meta">optional · ใช้ match บิล ↔ การเดินทาง</span>
+                                <span class="vc-label-meta">ใช้ match บิล ↔ การเดินทาง</span>
                             </label>
                             <input type="number" min="0" class="vc-input" id="bill_mileage" name="mileage" placeholder="—">
                         </div>
@@ -106,16 +106,15 @@
 
                 <div class="modal-footer">
                     {# Delete button — only shown in edit mode (JS toggles) #}
-                    <button type="button" class="vc-btn vc-btn-danger vc-btn-sm me-auto"
+                    <button type="button" class="vc-btn vc-btn-danger me-auto"
                             id="fuelBillDeleteBtn" style="display:none;">
                         <i data-lucide="trash-2" class="vc-icon-sm"></i>
                         ลบบิลนี้
                     </button>
-                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-bs-dismiss="modal">
+                    <button type="button" class="vc-btn vc-btn-secondary " data-bs-dismiss="modal">
                         ยกเลิก
                     </button>
-                    <button type="submit" class="vc-btn vc-btn-primary vc-btn-sm">
-                        <i data-lucide="check" class="vc-icon-sm"></i>
+                    <button type="submit" class="vc-btn vc-btn-primary ">
                         <span id="fuelBillSubmitLabel">บันทึก</span>
                     </button>
                 </div>

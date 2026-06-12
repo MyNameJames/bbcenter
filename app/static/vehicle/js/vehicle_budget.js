@@ -93,7 +93,11 @@ if (setBudgetModal) {
         if (activeList && srcList) activeList.innerHTML = srcList.innerHTML;
 
         const sel = document.getElementById('sbApprover');
-        if (sel) sel.value = approverId;
+        if (sel) {
+            sel.value = approverId;
+            // notify the vc-ac autocomplete to refresh its visible label
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
         const approverRow = document.getElementById('approverRow');
         if (approverRow) approverRow.hidden = isCentral;
@@ -213,3 +217,160 @@ if (refundModal) {
         if (form) form.querySelector('[name="booking_id"]').value = '';
     });
 }
+
+/* ── Date pickers (va-cal) — แทน native type="date" ในทุก modal ──
+   ปุ่ม trigger → .va-cal popover → คลิกวัน → set hidden input (ISO) + sync label.
+   ไม่ submit เอง (ค่าอยู่ในฟอร์มจน submit). pre-fill จาก modal show → sync label
+   ตอน shown.bs.modal. required (extend modal) ตรวจตอน submit. */
+(function initBudgetDatepickers() {
+    const roots = document.querySelectorAll('[data-datepick]');
+    if (!roots.length) return;
+
+    const TH_DAYS_S = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+    const TH_MON_F  = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    const TH_MON_S  = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                       'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+    const pad2  = n => String(n).padStart(2, '0');
+    const toISO = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const sameDay = (a, b) => a.getFullYear() === b.getFullYear() &&
+                              a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    function parseISO(v) {
+        if (!v) return null;
+        const [y, m, d] = String(v).split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    const instances = [];
+    const closeAll = except => instances.forEach(i => { if (i.root !== except) i.close(); });
+
+    roots.forEach(root => {
+        const btn      = root.querySelector('[data-datepick-btn]');
+        const labelEl  = root.querySelector('[data-datepick-label]');
+        const input    = root.querySelector('[data-datepick-input]');
+        const pop       = root.querySelector('[data-datepick-pop]');
+        const dowWrap  = root.querySelector('[data-cal-dow]');
+        const daysWrap = root.querySelector('[data-cal-days]');
+        const titleEl  = root.querySelector('[data-cal-title]');
+        const prevBtn  = root.querySelector('[data-cal-prev]');
+        const nextBtn  = root.querySelector('[data-cal-next]');
+        if (!btn || !input || !pop) return;
+
+        const placeholder = labelEl.textContent.trim();
+        let cursor = parseISO(input.value) || new Date(today);
+
+        function syncLabel() {
+            const sel = parseISO(input.value);
+            if (sel) {
+                labelEl.textContent = `${sel.getDate()} ${TH_MON_S[sel.getMonth()]} ${sel.getFullYear() + 543}`;
+                btn.classList.add('budget-date-btn--filled');
+            } else {
+                labelEl.textContent = placeholder;
+                btn.classList.remove('budget-date-btn--filled');
+            }
+            root.classList.remove('is-invalid');
+        }
+
+        function render() {
+            const y = cursor.getFullYear(), m = cursor.getMonth();
+            titleEl.textContent = `${TH_MON_F[m]} ${y + 543}`;
+            if (!dowWrap.childElementCount) {
+                dowWrap.innerHTML = TH_DAYS_S.map((d, i) => {
+                    const c = i === 0 ? ' va-cal-dow-cell--sun' : i === 6 ? ' va-cal-dow-cell--sat' : '';
+                    return `<span class="va-cal-dow-cell${c}">${d}</span>`;
+                }).join('');
+            }
+            const sel = parseISO(input.value);
+            const startPad = new Date(y, m, 1).getDay();
+            const days = new Date(y, m + 1, 0).getDate();
+            let cells = '';
+            for (let i = 0; i < startPad; i++) cells += `<span class="va-cal-cell va-cal-cell--empty"></span>`;
+            for (let dn = 1; dn <= days; dn++) {
+                const d = new Date(y, m, dn), dow = d.getDay();
+                let cls = 'va-cal-cell';
+                if (sel && sameDay(d, sel)) cls += ' va-cal-cell--active';
+                if (sameDay(d, today))      cls += ' va-cal-cell--today';
+                if (dow === 0)      cls += ' va-cal-cell--sun';
+                else if (dow === 6) cls += ' va-cal-cell--sat';
+                cells += `<button type="button" class="${cls}" data-date="${toISO(d)}">${dn}</button>`;
+            }
+            daysWrap.innerHTML = cells;
+        }
+
+        function open() {
+            closeAll(root);
+            cursor = parseISO(input.value) || new Date(today);
+            render();
+            pop.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
+        }
+        function close() {
+            pop.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
+        }
+
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            if (pop.hidden) open(); else close();
+        });
+        prevBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
+            render();
+        });
+        nextBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+            render();
+        });
+        daysWrap.addEventListener('click', e => {
+            const cell = e.target.closest('[data-date]');
+            if (!cell) return;
+            input.value = cell.dataset.date;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            syncLabel();
+            close();
+        });
+
+        syncLabel();
+        instances.push({ root, input, close, syncLabel });
+    });
+
+    document.addEventListener('click', e => {
+        instances.forEach(i => { if (!i.root.contains(e.target)) i.close(); });
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(null); });
+
+    // pre-fill จาก modal show เสร็จแล้ว → sync label (ค่าถูก set ก่อนหน้านี้)
+    document.addEventListener('shown.bs.modal', e => {
+        instances.forEach(i => { if (e.target.contains(i.root)) i.syncLabel(); });
+    });
+    // ปิด popover ที่ค้างเมื่อ modal ปิด
+    document.addEventListener('hidden.bs.modal', e => {
+        instances.forEach(i => { if (e.target.contains(i.root)) i.close(); });
+    });
+
+    // required (hidden input ไม่ trigger HTML5 validation) → ตรวจตอน submit
+    document.addEventListener('submit', e => {
+        const form = e.target;
+        if (!form.querySelector) return;
+        let firstMissing = null;
+        form.querySelectorAll('[data-datepick-required]').forEach(inp => {
+            const root = inp.closest('[data-datepick]');
+            if (!inp.value) {
+                root.classList.add('is-invalid');
+                if (!firstMissing) firstMissing = root;
+            } else {
+                root.classList.remove('is-invalid');
+            }
+        });
+        if (firstMissing) {
+            e.preventDefault();
+            const trigger = firstMissing.querySelector('[data-datepick-btn]');
+            if (trigger) trigger.focus();
+        }
+    }, true);
+})();

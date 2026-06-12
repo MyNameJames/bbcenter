@@ -5,13 +5,11 @@ BudgetService — ทุก mutation ของ vehicle_budget.used_amount / budg
 ใช้ร่วมกับตาราง: vehicle_budget, vehicle_budget_log, vehicle_mileage
 Migration: 2026-05-06_add-vehicle-budget-log.sql
 
-จุดเรียกใช้ (วาง TODO ไว้ในแต่ละจุด):
-- mileage_log()        : deduct_for_mileage()        # vehicle_view.py:~1138
-- driver_mileage()     : deduct_for_mileage()        # vehicle_view.py:~1854
-- override_fuel()      : rededuct_for_mileage()      # vehicle_view.py:~1531
-- approve_booking()    : refund_for_booking()  (path reject/cancel หลัง mileage แล้ว)
-- delete_booking()     : refund_for_booking()
-- budget_manage() POST : set_budget_amount()         # vehicle_view.py:~1874
+จุดเรียกใช้:
+- mileage_log()        : deduct_for_mileage()
+- driver_mileage()     : deduct_for_mileage()
+- override_fuel()      : rededuct_for_mileage()
+- budget_manage() POST : set_budget_amount()
 """
 from decimal import Decimal
 from sqlalchemy import func
@@ -134,15 +132,6 @@ def rededuct_for_mileage(mileage: VehicleMileage, budget: VehicleBudget,
     refund_for_mileage(mileage, note=note or 'rededuct: reverse old')
     return deduct_for_mileage(mileage, budget, new_amount, snap=snap,
                               note=note or 'rededuct: new amount')
-
-
-def refund_for_booking(booking: VehicleBooking, *, note: str = ''):
-    """cancel/reject/delete booking — refund ทุก mileage ที่ผูกอยู่"""
-    refunds = []
-    for m in booking.mileage:
-        r = refund_for_mileage(m, note=note or f'booking #{booking.id} cancelled')
-        if r: refunds.append(r)
-    return refunds
 
 
 def manual_adjust(budget: VehicleBudget, amount, *, note: str):

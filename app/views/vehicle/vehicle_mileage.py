@@ -112,7 +112,7 @@ def mileage_log():
         if entry_type == 'end':
             m2         = VehicleMileage.query.filter_by(booking_id=booking_id).first()
             distance   = (m2.odometer_end - m2.odometer_start) if (m2 and m2.odometer_end and m2.odometer_start) else None
-            target_date = m2.actual_end.date() if (m2 and m2.actual_end) else date.today()
+            target_date = m2.actual_end.date() if (m2 and m2.actual_end) else get_bkk_time().date()
             fuel_price = FuelPrice.get_for_date(target_date) or float(SystemConfig.get('fuel_price', '40') or 40)
             trip_cost  = float(m2.fuel_cost) if (m2 and m2.fuel_cost and float(m2.fuel_cost) > 0) else \
                          (round((distance / float(booking.assigned_vehicle.fuel_rate)) * fuel_price, 2)
@@ -166,8 +166,8 @@ def mileage_log():
         return redirect(url_for('vehicle.mileage_log'))
 
     # ── GET: Admin mileage dashboard ────────────────────────────
-    today      = date.today()
-    now        = datetime.now()
+    today      = get_bkk_time().date()
+    now        = get_bkk_time()
     fuel_price = FuelPrice.get_for_date(today) or float(SystemConfig.get('fuel_price', '40') or 40)
 
     # Filter params
@@ -349,12 +349,25 @@ def mileage_log():
     booker_ids   = [uid for (uid,) in db.session.query(VehicleBooking.user_id).distinct().all()]
     bookers_all  = User.query.filter(User.id.in_(booker_ids)).order_by(User.full_name).all() if booker_ids else []
 
-    # Budget sub-list: ดึงเฉพาะค่าที่ปรากฎจริงใน bookings ของหน้านี้
-    seen_central = {b.central_category for b in bookings if b.expense_type == 'central' and b.central_category}
-    seen_dept    = {b.trip_department  for b in bookings if b.expense_type == 'department' and b.trip_department}
+    # Budget sub-list: ดึง distinct ค่าที่มีจริงใน DB (approved ทั้งหมด ไม่ผูก filter หน้านี้)
+    # label จาก EXPENSE_CATEGORIES ถ้ามี ไม่มี (เช่น 'งานโภชนาการ') ใช้ key เป็น label
+    _central_labels = {c['key']: c['label'] for c in EXPENSE_CATEGORIES['central']}
+    _dept_labels    = {c['key']: c['label'] for c in EXPENSE_CATEGORIES['department']}
+    central_keys = [k for (k,) in db.session.query(VehicleBooking.central_category)
+                    .filter(VehicleBooking.status == 'approved',
+                            VehicleBooking.expense_type == 'central',
+                            VehicleBooking.central_category.isnot(None),
+                            VehicleBooking.central_category != '')
+                    .distinct().order_by(VehicleBooking.central_category).all()]
+    dept_keys = [k for (k,) in db.session.query(VehicleBooking.trip_department)
+                 .filter(VehicleBooking.status == 'approved',
+                         VehicleBooking.expense_type == 'department',
+                         VehicleBooking.trip_department.isnot(None),
+                         VehicleBooking.trip_department != '')
+                 .distinct().order_by(VehicleBooking.trip_department).all()]
     budget_subs = {
-        'central':    [c for c in EXPENSE_CATEGORIES['central']    if c['key'] in seen_central],
-        'department': [c for c in EXPENSE_CATEGORIES['department'] if c['key'] in seen_dept],
+        'central':    [{'key': k, 'label': _central_labels.get(k, k)} for k in central_keys],
+        'department': [{'key': k, 'label': _dept_labels.get(k, k)} for k in dept_keys],
     }
 
     breakdown        = {v.id: [0.0]*12 for v in vehicles_all}
@@ -429,7 +442,7 @@ def mileage_export():
         return redirect(url_for('vehicle.mileage_log'))
 
     from flask import send_file
-    today          = date.today()
+    today          = get_bkk_time().date()
     fallback_price = float(SystemConfig.get('fuel_price', '40') or 40)
 
     f_date_start = request.args.get('date_start', '').strip()

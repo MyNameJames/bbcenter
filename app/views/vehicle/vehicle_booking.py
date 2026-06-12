@@ -40,17 +40,25 @@ def index():
                  .order_by(VehicleBooking.created_at.desc()).all())
     vehicles  = Vehicle.query.filter_by(status='active').order_by(Vehicle.id).all()
     drivers   = Driver.query.filter_by(is_active=True).order_by(Driver.id).all()
+    # OT rate config → ใช้คำนวณคำเตือนค่าล่วงเวลาสารถีใน booking modal (frontend)
+    ot_rates  = [
+        {'label': c.label, 'start': c.start_time, 'end': c.end_time,
+         'rate': float(c.rate), 'dow': c.day_of_week}
+        for c in OTRateConfig.query.filter_by(is_active=True)
+                                   .order_by(OTRateConfig.sort_order).all()
+    ]
     return render_template(
         'vehicle/vehicle.html',
         bookings=bookings,
         vehicles=vehicles,
         drivers=drivers,
+        ot_rates=ot_rates,
         expense_categories=EXPENSE_CATEGORIES,
         total_vehicles=len(vehicles),
         page_section='บริการ',
         page_title='ปฏิทินการจองรถ',
         # Phase 9 (2026-05-22) — `canCancel` gating needs admin + now
-        now=datetime.now(),
+        now=get_bkk_time(),
         is_vehicle_admin=is_vehicle_admin(),
     )
 
@@ -78,7 +86,7 @@ def book_vehicle_simple():
         need_driver      = request.form.get('need_driver') == 'on'
         pickup_location  = request.form.get('pickup_location', '').strip()
 
-        if start_dt < datetime.now():
+        if start_dt < get_bkk_time():
             flash('ไม่สามารถจองย้อนหลังได้ กรุณาเลือกวันเวลาในอนาคต', 'warning')
             return redirect(url_for('vehicle.index'))
 
@@ -107,9 +115,10 @@ def book_vehicle_simple():
         _n_booking_created(new_booking)
         db.session.commit()
         flash(f'ส่งคำขอจองรถเรียบร้อยแล้ว (#{ new_booking.id }) รอ Admin พิจารณา', 'success')
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        flash(f'เกิดข้อผิดพลาด: {str(e)}', 'danger')
+        current_app.logger.exception('book_vehicle_simple failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
     return redirect(url_for('vehicle.index'))
 
@@ -146,9 +155,10 @@ def edit_booking(booking_id):
             db.session.commit()
             flash('อัปเดตข้อมูลการจองเรียบร้อยแล้ว', 'success')
             return redirect(url_for('vehicle.index'))
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            flash(f'เกิดข้อผิดพลาด: {str(e)}', 'danger')
+            current_app.logger.exception('edit_booking failed')
+            flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
     start_str = booking.start_datetime.strftime('%Y-%m-%dT%H:%M')
     end_str   = booking.end_datetime.strftime('%Y-%m-%dT%H:%M')
@@ -173,17 +183,15 @@ def delete_booking(booking_id):
         flash('ไม่สามารถลบคำขอที่อยู่ในระหว่างดำเนินการหรืออนุมัติแล้วได้ กรุณาติดต่อ Admin', 'warning')
         return redirect(url_for('vehicle.index'))
 
+    # ห้ามลบถ้ามีการหักงบแล้ว (ป้องกัน ledger ชี้ row ที่หายไป)
+    if any(m.budget_deducted_at for m in booking.mileage):
+        flash('ไม่สามารถลบการจองที่หักงบแล้ว — ติดต่อ Admin หากต้องการยกเลิก', 'warning')
+        return redirect(url_for('vehicle.index'))
+
     try:
         # ถ้า admin ลบของคนอื่น → แจ้งเตือน user (Event #15)
         should_notify = is_vehicle_admin() and current_user.id != booking.user_id
         snap = (booking.id, booking.user_id, booking.destination)
-
-        # คืนงบก่อนลบ (อ่าน booking.mileage ได้ก่อน cascade) — no-op ถ้ายังไม่เคยหัก
-        budget_svc.refund_for_booking(
-            booking,
-            note=f'delete booking #{booking.id} by {current_user.username}',
-        )
-        db.session.flush()
 
         db.session.delete(booking)
         db.session.flush()
@@ -191,9 +199,10 @@ def delete_booking(booking_id):
             _n_admin_deleted(snap[0], snap[1], snap[2], current_user)
         db.session.commit()
         flash('ยกเลิกและลบรายการจองเรียบร้อยแล้ว', 'success')
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        flash(f'เกิดข้อผิดพลาดในการลบ: {str(e)}', 'danger')
+        current_app.logger.exception('delete_booking failed')
+        flash('ลบรายการไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
 
     return redirect(url_for('vehicle.index'))
 
@@ -217,25 +226,21 @@ def cancel_booking(booking_id):
         flash('คุณไม่มีสิทธิ์ยกเลิกการจองนี้', 'danger')
         return redirect(url_for('vehicle.index'))
 
-    # Status guard
+    # Status guard — owner: pending/waiting_approver เท่านั้น; admin: +approved
+    if not is_admin and booking.status not in ('pending', 'waiting_approver'):
+        flash(f'ยกเลิกไม่ได้ — สถานะปัจจุบันคือ {booking.status}', 'warning')
+        return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
     if booking.status not in ('pending', 'waiting_approver', 'approved'):
         flash(f'ยกเลิกไม่ได้ — สถานะปัจจุบันคือ {booking.status}', 'warning')
         return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
 
     # Time guard — block หลัง trip start
-    if datetime.now() >= booking.start_datetime:
+    if get_bkk_time() >= booking.start_datetime:
         flash('ทริปเริ่มแล้ว ไม่สามารถยกเลิกได้ — ติดต่อ Admin หากจำเป็น', 'warning')
         return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
 
     try:
         prev_status = booking.status
-
-        # ── Refund budget (idempotent — no-op ถ้ายังไม่เคยหัก)
-        refunds = budget_svc.refund_for_booking(
-            booking,
-            note=f'cancel booking #{booking.id} by {current_user.username}',
-        )
-        db.session.flush()
 
         # ── Build recipient sets BEFORE status flip
         # Priority cascade (highest → lowest): owner > admin > approver > driver > mate
@@ -315,13 +320,11 @@ def cancel_booking(booking_id):
 
         db.session.commit()
 
-        if refunds:
-            flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย · คืนงบ {len(refunds)} รายการ', 'success')
-        else:
-            flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย', 'success')
-    except Exception as e:
+        flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย', 'success')
+    except Exception:
         db.session.rollback()
-        flash(f'ยกเลิกไม่สำเร็จ: {e}', 'danger')
+        current_app.logger.exception('cancel_booking failed')
+        flash('ยกเลิกไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
 
     return redirect(url_for('vehicle.index'))
 
@@ -383,17 +386,41 @@ def approver_inbox():
 
     from models import get_bkk_time
     today = get_bkk_time().date()
+    # งบช่วงเวลา (active period) — year/month เป็น anchor เลิกใช้กรองตรงๆ
+    # ต้องกรอง is_active + start_date<=today<=end_date (mirror _lookup_budget_for_booking)
     budgets = (VehicleBudget.query
                .filter(
                    VehicleBudget.approver_id == current_user.id,
-                   VehicleBudget.year == today.year,
-                   VehicleBudget.month == today.month
+                   VehicleBudget.is_active.is_(True),
+                   VehicleBudget.start_date.isnot(None),
+                   VehicleBudget.end_date.isnot(None),
+                   VehicleBudget.start_date <= today,
+                   VehicleBudget.end_date >= today,
                )
                .all())
 
+    # ── ค่าน้ำมันต่อ booking (override ถ้า fuel_cost มีค่า, ไม่งั้นคำนวณ
+    #    (distance / fuel_rate) * fuel_price — mirror mileage/driver views) ──
+    fuel_costs = {}
+    for bk in (pending + history):
+        m = bk.mileage[0] if bk.mileage else None
+        cost = 0
+        if m and m.odometer_start is not None and m.odometer_end is not None:
+            override = float(m.fuel_cost or 0)
+            if override > 0:
+                cost = override
+            else:
+                veh  = bk.assigned_vehicle
+                rate = float(veh.fuel_rate) if veh and veh.fuel_rate else 0
+                if rate > 0:
+                    fp = (FuelPrice.get_for_date(bk.start_datetime.date())
+                          or float(SystemConfig.get('fuel_price', '40') or 40))
+                    cost = round(((m.odometer_end - m.odometer_start) / rate) * fp, 2)
+        fuel_costs[bk.id] = cost
+
     return render_template('vehicle/vehicle_approver.html',
                            pending=pending, history=history,
-                           budgets=budgets,
+                           budgets=budgets, fuel_costs=fuel_costs,
                            active_menu='approver')
 
 
@@ -500,11 +527,6 @@ def approve_booking(booking_id):
                 booking.status = 'rejected'
                 booking.reject_reason = request.form.get('reject_reason', '').strip() or None
                 db.session.flush()
-                # คืนงบถ้า mileage เคยปิด+หักไปแล้ว (no-op ถ้ายังไม่เคยหัก)
-                budget_svc.refund_for_booking(
-                    booking,
-                    note=f'reject by admin {current_user.username}: {booking.reject_reason or "—"}',
-                )
                 notify_rejected(booking, current_user)       # Telegram
                 _n_rejected(booking, current_user, by_approver=False)  # In-app Event #6
                 db.session.commit()
@@ -544,20 +566,16 @@ def approve_booking(booking_id):
                 booking.updated_by = current_user.id
                 booking.reject_reason = request.form.get('reject_reason', '').strip() or None
                 db.session.flush()
-                # คืนงบถ้า mileage เคยปิด+หักไปแล้ว (no-op ถ้ายังไม่เคยหัก)
-                budget_svc.refund_for_booking(
-                    booking,
-                    note=f'reject by approver {current_user.username}: {booking.reject_reason or "—"}',
-                )
                 notify_rejected(booking, current_user)            # Telegram
                 _n_rejected(booking, current_user, by_approver=True)  # In-app Event #6
                 db.session.commit()
                 flash('ปฏิเสธการเดินทางนี้แล้ว', 'danger')
         else:
             flash('คุณไม่มีสิทธิ์ทำรายการนี้', 'danger')
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        flash(f'เกิดข้อผิดพลาด: {str(e)}', 'danger')
+        current_app.logger.exception('approve_booking failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
     if acted_as_approver:
         return redirect(url_for('vehicle.approver_inbox'))

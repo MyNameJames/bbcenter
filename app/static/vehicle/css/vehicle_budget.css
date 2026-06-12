@@ -1147,6 +1147,219 @@ button.budget-row-approver--missing .vc-icon-sm { color: currentColor; }
 
 
 /* ─────────────────────────────────────────────
+   17. SUMMARY STACKED BAR (2026-06-08 redesign)
+   ─────────────────────────────────────────────
+   storage-bar style: track เทา = งบเหลือ, segment indigo = ส่วนกลาง/กอง ใช้ไป.
+   เฉด indigo เท่านั้น (brand) — ไม่ใช้สีรุ้ง. personal = legend แยก
+───────────────────────────────────────────── */
+.budget-summary-stack {
+    display: flex;
+    gap: 2px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--vc-bg-subtle);
+    overflow: hidden;
+}
+.budget-summary-seg {
+    height: 100%;
+    transition: width 480ms var(--bm-ease-out);
+}
+.budget-summary-seg--central { background: var(--vc-accent, #4F46E5); }
+.budget-summary-seg--dept    { background: #818cf8; }
+.budget-summary-stack--danger .budget-summary-seg--central { background: var(--vc-red, #dc2626); }
+.budget-summary-stack--danger .budget-summary-seg--dept    { background: #f87171; }
+
+.budget-summary-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+}
+.budget-summary-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: var(--vc-fg-muted);
+}
+.budget-summary-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+.budget-summary-legend-dot--central  { background: var(--vc-accent, #4F46E5); }
+.budget-summary-legend-dot--dept     { background: #818cf8; }
+.budget-summary-legend-dot--free     { background: var(--vc-border-strong, #d4d4d4); }
+.budget-summary-legend-dot--personal { background: var(--vc-green, #16a34a); }
+.budget-summary-legend-val {
+    color: var(--vc-fg);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+/* personal = แยกกลุ่ม (income ไม่ใช่เพดานงบ) → ดันไปขวาสุด */
+.budget-summary-legend-item--aside { margin-left: auto; }
+@media (max-width: 575.98px) {
+    .budget-summary-legend-item--aside { margin-left: 0; }
+}
+
+
+/* ─────────────────────────────────────────────
+   18. PIVOT — default 3 สรุปแถว + กดขยายรายเดือน (2026-06-08)
+   ─────────────────────────────────────────────
+   แทน <details> เดียว (matrix-always-on) → 1 card + 3 <details.budget-pivot-cat>
+───────────────────────────────────────────── */
+.budget-pivot-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--vc-space-3);
+    flex-wrap: wrap;
+    /* padding: 0 0 var(--vc-space-3); */
+}
+.budget-pivot-title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--vc-fg);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.budget-pivot-title .vc-icon-sm { color: var(--vc-fg-subtle); }
+.budget-pivot-hint {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-subtle);
+}
+
+.budget-pivot-rows {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--vc-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.budget-pivot-cat { border-bottom: 1px solid var(--vc-border); }
+.budget-pivot-cat:last-child { border-bottom: 0; }
+
+.budget-pivot-cat-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    cursor: pointer;
+    list-style: none;
+    transition: background var(--vc-transition);
+}
+.budget-pivot-cat-summary::-webkit-details-marker { display: none; }
+.budget-pivot-cat-summary::marker { content: ''; }
+.budget-pivot-cat-summary:hover { background: var(--vc-bg-subtle); }
+
+.budget-pivot-cat-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.budget-pivot-cat-chevron {
+    color: var(--vc-fg-subtle);
+    flex-shrink: 0;
+    transition: transform var(--bm-dur-fast) var(--bm-ease-out);
+}
+.budget-pivot-cat[open] .budget-pivot-cat-chevron { transform: rotate(90deg); }
+.budget-pivot-cat-icon { color: var(--vc-fg-muted); flex-shrink: 0; }
+.budget-pivot-cat-name {
+    font-weight: 600;
+    color: var(--vc-fg);
+    font-size: 0.9375rem;
+}
+.budget-pivot-cat-count {
+    font-size: 0.78125rem;
+    color: var(--vc-fg-subtle);
+}
+.budget-pivot-cat-figures {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    flex-shrink: 0;
+}
+.budget-pivot-cat-cap {
+    font-size: 0.875rem;
+    color: var(--vc-fg-muted);
+    font-weight: 500;
+}
+.budget-pivot-cat-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.budget-pivot-cat-badge--ok {
+    background: var(--vc-green-bg, #ecfdf5);
+    color: var(--vc-green, #16a34a);
+}
+.budget-pivot-cat-badge--warn {
+    background: var(--vc-bg-warn-subtle, #fffbeb);
+    color: var(--vc-amber, #b45309);
+}
+.budget-pivot-cat-badge--danger {
+    background: var(--vc-bg-danger-subtle, #fef2f2);
+    color: var(--vc-red, #b91c1c);
+}
+.budget-pivot-cat .vc-pivot-scroll { border-top: 1px solid var(--vc-border); }
+
+@media (max-width: 575.98px) {
+    .budget-pivot-cat-cap { display: none; }
+    .budget-pivot-cat-summary { padding: var(--vc-space-3); gap: var(--vc-space-2); }
+}
+
+
+/* ─────────────────────────────────────────────
+   19. BIN BUTTON (soft delete = ปิดใช้งาน) + approver subline (2026-06-08)
+───────────────────────────────────────────── */
+.budget-bin-form { display: inline-block; margin: 0; }
+.budget-bin-btn .vc-icon-sm {
+    color: var(--vc-fg-subtle);
+    transition: color var(--vc-transition);
+}
+.budget-bin-btn:hover { background: var(--vc-red-bg, #fef2f2); }
+.budget-bin-btn:hover .vc-icon-sm { color: var(--vc-red, #dc2626); }
+
+/* approver ย้ายมาเป็น sub-line ใต้ชื่อกอง (col align กับ central) */
+.budget-row-sub--approver { color: var(--vc-fg-muted); }
+.budget-row-sub--approver .vc-icon-sm { color: var(--vc-fg-subtle); }
+button.budget-row-sub--approver-missing {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin-top: 2px;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--vc-red, #b91c1c);
+    transition: color var(--bm-dur-fast) var(--bm-ease-out);
+}
+button.budget-row-sub--approver-missing:hover { color: var(--vc-red, #991b1b); text-decoration: underline; }
+button.budget-row-sub--approver-missing .vc-icon-sm {
+    width: 11px;
+    height: 11px;
+    color: currentColor;
+}
+
+
+/* ─────────────────────────────────────────────
    16. PHASE 4e — REDUCED MOTION
    ─────────────────────────────────────────────
    Respect user preference — disable enter/stagger/fill animation
@@ -1159,3 +1372,58 @@ button.budget-row-approver--missing .vc-icon-sm { color: currentColor; }
         animation: none;
     }
 }
+
+
+/* ─────────────────────────────────────────────
+   17. DATE PICKER (va-cal) — แทน native type="date"
+   ─────────────────────────────────────────────
+   ปุ่ม trigger หน้าตาเหมือน .vc-input → คลิกเปิด .va-cal popover
+   (style จาก vehicle_admin.css). hidden input ถือค่า ISO ให้ form submit.
+───────────────────────────────────────────── */
+.budget-datepick {
+    position: relative;
+}
+
+/* ปุ่มเปิดปฏิทิน — ใช้ .vc-input เป็นฐาน เพิ่ม layout ของปุ่ม */
+.budget-date-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+.budget-date-btn .vc-icon-sm {
+    flex: 0 0 auto;
+    color: var(--vc-fg-subtle);
+}
+
+/* label: placeholder (ยังไม่เลือก) vs filled */
+.budget-date-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--vc-fg-disabled);
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+}
+.budget-date-btn--filled .budget-date-label {
+    color: var(--vc-fg);
+}
+.budget-date-btn--filled .vc-icon-sm {
+    color: var(--vc-fg-muted);
+}
+.budget-date-btn[aria-expanded="true"] {
+    border-color: var(--vc-fg);
+    box-shadow: var(--vc-accent-ring);
+}
+
+/* required + empty หลัง submit fail */
+.budget-datepick.is-invalid .budget-date-btn {
+    border-color: var(--vc-red);
+}
+
+/* alignment ของ popover ใน 2-col form row (กันล้นขอบ modal) */
+.va-cal--start { left: 0; right: auto; transform-origin: top left; }
+.va-cal--end   { right: 0; left: auto; transform-origin: top right; }

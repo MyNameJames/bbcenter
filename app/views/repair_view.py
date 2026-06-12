@@ -5,7 +5,7 @@ from calendar import month_name
 from werkzeug.utils import secure_filename
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, RepairTicket
+from models import db, RepairTicket, get_bkk_time
 from sqlalchemy import extract
 
 repair_bp = Blueprint('repair', __name__)
@@ -18,7 +18,7 @@ def is_repair_admin():
 
 def get_repair_summary():
     """คำนวณ summary ของเดือนปัจจุบันสำหรับ admin"""
-    now = datetime.now()
+    now = get_bkk_time()
     month_tickets = RepairTicket.query.filter(
         extract('year',  RepairTicket.created_at) == now.year,
         extract('month', RepairTicket.created_at) == now.month
@@ -161,7 +161,7 @@ def update_status(id):
 
         ticket.status = 'done'
         ticket.resolved_note = resolved_note
-        ticket.resolved_at = datetime.now()
+        ticket.resolved_at = get_bkk_time()
         flash(f'ปิดงาน #{ ticket.id } เรียบร้อยแล้ว', 'success')
 
     else:

@@ -22,17 +22,20 @@ class OTRateConfig(db.Model):
 class DriverOT(db.Model):
     __tablename__ = 'driver_ot'
     id             = db.Column(db.Integer, primary_key=True)
-    booking_id     = db.Column(db.Integer, db.ForeignKey('vehicle_booking.id'), nullable=False)
+    booking_id     = db.Column(db.Integer, db.ForeignKey('vehicle_booking.id'), nullable=True)  # NULL = manual standalone OT (เพิ่มเอง ไม่ผูก booking/งบ, 2026-06-09)
     driver_id      = db.Column(db.Integer, db.ForeignKey('driver.id'), nullable=False)
     ot_number      = db.Column(db.String(20), nullable=False, unique=True)  # "OT-2026-0001"
     date           = db.Column(db.Date, nullable=False)
     total_hours    = db.Column(db.Numeric(6, 2), default=0)
     total_amount   = db.Column(db.Numeric(10, 2), default=0)
-    status         = db.Column(db.String(20), default='pending')  # pending|approved|paid
-    approved_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    approved_at    = db.Column(db.DateTime, nullable=True)
+    status         = db.Column(db.String(20), default='unpaid')  # unpaid|paid (2026-06-08: เลิกใช้ pending/approved — ตัด step อนุมัติ)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # legacy — เลิกใช้หลังตัด approval (2026-06-08)
+    approved_at    = db.Column(db.DateTime, nullable=True)                            # legacy
     paid_by_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     paid_at        = db.Column(db.DateTime, nullable=True)
+    no_receipt     = db.Column(db.Boolean, default=False)  # True = OT ที่ไม่ต้องออกใบเสร็จ ("ผู้ใช้จ่ายเอง" tab) (2026-06-08)
+    is_deleted     = db.Column(db.Boolean, default=False)  # soft delete → tab "ลบ" (2026-06-08)
+    deleted_at     = db.Column(db.DateTime, nullable=True)
     note           = db.Column(db.String(500), nullable=True)
     created_at     = db.Column(db.DateTime, default=get_bkk_time)
     created_by_id  = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)

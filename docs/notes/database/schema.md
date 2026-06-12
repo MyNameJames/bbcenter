@@ -124,7 +124,7 @@
 | `repair_note` | Text | |
 | `repair_started_at` | DateTime | |
 
-### `driver` — [models.py:154](../../../app/models.py#L154)
+### `driver` — [models/vehicle.py:27](../../../app/models/vehicle.py#L27)
 | Field | Type | Note |
 |-------|------|------|
 | `id` | Integer PK | |
@@ -132,6 +132,14 @@
 | `phone` | String(20) | |
 | `is_active` | Boolean | |
 | `user_id` | FK → user | ผูก User account (optional) |
+| `national_id` | String(20) | เลขบัตรประชาชน (2026-06-08) |
+| `addr_line` | String(200) | บ้านเลขที่/หมู่/ถนน (2026-06-08) |
+| `addr_subdistrict` | String(100) | ตำบล/แขวง (2026-06-08) |
+| `addr_district` | String(100) | อำเภอ/เขต (2026-06-08) |
+| `addr_province` | String(100) | จังหวัด (2026-06-08) |
+| `addr_postal` | String(10) | รหัสไปรษณีย์ (2026-06-08) |
+| `id_card_image` | String(255) | ไฟล์รูปบัตร ปชช. → `static/uploads/driver/` (2026-06-08) |
+| `avatar_image` | String(255) | ไฟล์รูปโปรไฟล์ → `static/uploads/driver/` (2026-06-08) |
 
 ### `vehicle_booking` ⭐ — [models.py:167](../../../app/models.py#L167)
 | Field | Type | Note |
@@ -302,17 +310,20 @@
 | Field | Type | Note |
 |-------|------|------|
 | `id` | Integer PK | |
-| `booking_id` | FK → vehicle_booking | 1 OT record ต่อ 1 booking |
+| `booking_id` | FK → vehicle_booking **nullable** | auto-OT: 1 record ต่อ 1 booking · NULL = manual standalone OT (v2.16) |
 | `driver_id` | FK → driver | |
 | `ot_number` | String(20) unique | running number เช่น "OT-2026-0001" |
 | `date` | Date | วันที่เกิด OT |
 | `total_hours` | Numeric(6,2) | ผลรวมจาก slots |
 | `total_amount` | Numeric(10,2) | ผลรวมเงินจาก slots |
-| `status` | String(20) | `pending` / `approved` / `paid` |
-| `approved_by_id` | FK → user nullable | |
-| `approved_at` | DateTime nullable | |
+| `status` | String(20) | `unpaid` / `paid` (v2.15 — เลิกใช้ pending/approved) |
+| `approved_by_id` | FK → user nullable | legacy — เลิกใช้หลังตัด approval (v2.15) |
+| `approved_at` | DateTime nullable | legacy |
 | `paid_by_id` | FK → user nullable | |
 | `paid_at` | DateTime nullable | |
+| `no_receipt` | Boolean default False | True = OT ไม่ต้องออกใบเสร็จ (tab "ผู้ใช้จ่ายเอง") (v2.15) |
+| `is_deleted` | Boolean default False | soft delete → tab "ลบ" (v2.15) |
+| `deleted_at` | DateTime nullable | (v2.15) |
 | `note` | String(500) nullable | |
 | `created_at` | DateTime | |
 | `created_by_id` | FK → user nullable | |
@@ -708,9 +719,11 @@ UNIQUE(budget_type_id, department_id, year, month)
 | `driver_id` FK | ระบุคนขับที่ได้รับ OT |
 | `ot_number` unique | running number สำหรับอ้างอิงในเอกสาร/การเงิน ("OT-2026-0001") |
 | `total_hours`, `total_amount` | denormalized sum จาก slots — เพื่อ query เร็วโดยไม่ต้อง aggregate ทุกครั้ง |
-| `status` (pending/approved/paid) | approval workflow — เดิม `calc_ot()` ไม่มี state นี้ |
-| `approved_by_id`, `approved_at` | audit trail การอนุมัติ |
+| `status` (unpaid/paid) | จ่าย/ยังไม่จ่าย — v2.15 ตัด step อนุมัติ (เดิม pending/approved/paid) |
+| `approved_by_id`, `approved_at` | **legacy** — audit trail การอนุมัติ; เลิกใช้ v2.15 (ไม่ลบ คอลัมน์เก็บประวัติเก่า) |
 | `paid_by_id`, `paid_at` | audit trail การจ่ายเงิน |
+| `no_receipt` | v2.15 — OT ที่ไม่ต้องออกใบเสร็จ (tab "ผู้ใช้จ่ายเอง") |
+| `is_deleted`, `deleted_at` | v2.15 — soft delete (tab "ลบ") กู้คืนได้ |
 | `created_by_id`, `created_at` | audit trail การสร้าง record |
 
 #### `driver_ot_slot`
@@ -904,6 +917,53 @@ Migration สร้าง row `event_type='adjust'` 1 row ต่อ vehicle_budg
 | `year`/`month` → anchor (คงไว้) | เลิกใช้ใน lookup แต่ไม่ลบ — ยังเป็น UniqueConstraint(type,dept,year,month) (SQLite drop constraint ต้อง recreate table — เลี่ยง) + `set_budget` ยังตั้งงบรายเดือนตาม anchor. `used_amount` กลายเป็นยอดสะสมทั้งช่วง (ข้ามเดือน) — pivot×เดือน เลยดึงจาก `vehicle_budget_log.created_at` แทน used_amount |
 
 **App-layer (ไม่ใช่ schema):** `_lookup_budget_for_booking(booking, on_date=None)` + 3 จุดหักงบใช้ helper ร่วม; `approve_booking` block ถ้า lookup คืน None; `budget_manage` GET แยก active-for-month vs `archived_budgets` + POST action `extend_period`; `_build_budget_pivot` ดึงจาก ledger. ดู [INDEX.md](../INDEX.md) § Key Functions
+
+---
+
+## v2.14 — Driver profile fields (2026-06-08)
+
+*Migration: [2026-06-08_driver-profile-fields.sql](../../../app/migrations/2026-06-08_driver-profile-fields.sql)*
+
+**บริบทธุรกิจ:** ตาราง `driver` เดิมเก็บแค่ ชื่อ/เบอร์/สถานะ/ผูก user — ไม่พอสำหรับออกใบเสร็จ/เอกสารค่าตอบแทนคนขับ (ต้องมีเลขบัตร ปชช. + ที่อยู่ตามทะเบียนบ้าน). หน้า `vehicle_fleet.html` redesign ฝั่งคนขับให้กดดู/แก้ profile เต็มได้ → เพิ่ม 8 column
+
+| Field | เหตุผล |
+|-------|--------|
+| `national_id` String(20) | เลขบัตรประชาชน — header ใบเสร็จ. String ไม่ใช่ int (รักษาเลข 0 นำหน้า + ไม่ใช่ตัวเลขคำนวณ) |
+| `addr_line` / `addr_subdistrict` / `addr_district` / `addr_province` / `addr_postal` | ที่อยู่แบบ **structured** (ไม่ใช่ text ก้อนเดียว) เพื่อ render ใบเสร็จที่แยกช่อง ต./อ./จ./ไปรษณีย์ ได้ตรง layout |
+| `id_card_image` String(255) | ชื่อไฟล์รูปบัตร ปชช. เก็บใน `static/uploads/driver/` (pattern เดียวกับ mileage upload) |
+| `avatar_image` String(255) | ชื่อไฟล์รูปโปรไฟล์ — แสดงเป็น avatar ใน list (fallback = ตัวอักษรย่อ) |
+
+ทุก column **nullable** — คนขับเดิมไม่ต้อง backfill, ไม่กระทบ logic จอง/หักงบ. App: `add_driver`/`edit_driver` ใน `vehicle_admin.py` รับ field + `_save_driver_image()` helper
+
+---
+
+## v2.15 — Driver OT paid/soft-delete (2026-06-08)
+
+*Migration: [2026-06-08_driver-ot-paid-softdelete.sql](../../../app/migrations/2026-06-08_driver-ot-paid-softdelete.sql)*
+
+**บริบทธุรกิจ:** หน้า OT (`admincost` / `vehicle_cost.html`) เดิม workflow = `pending → approved → paid` (3 step ผ่าน admin อนุมัติก่อนจ่าย). แต่จริง ๆ admin ที่จ่ายเงิน = คนเดียวกับที่อนุมัติ → step อนุมัติซ้ำซ้อน. ตัดทิ้งเหลือ **จ่าย/ยังไม่จ่าย** + เพิ่ม 2 มิติใหม่: OT ที่ไม่ต้องออกใบเสร็จ และ soft delete (กู้คืนได้)
+
+| Field | เหตุผล |
+|-------|--------|
+| `status` (เปลี่ยนความหมาย) | `pending`/`approved` → รวมเป็น `unpaid`; `paid` คงเดิม. backfill ใน migration. `approved_by_id`/`approved_at` กลายเป็น legacy (ไม่ลบ — SQLite DROP COLUMN ยุ่งยาก + เก็บประวัติเก่า) |
+| `no_receipt` Boolean | tab "ผู้ใช้จ่ายเอง" = OT ที่ไม่ต้องออกใบเสร็จ. orthogonal กับ paid/unpaid — เป็น bucket แยก, filter ตัวเอง |
+| `is_deleted` Boolean + `deleted_at` | soft delete → tab "ลบ" กู้คืนได้. `ot_delete` เปลี่ยนจาก hard delete เป็น set flag; ทุก tab ปกติ filter `is_deleted=False` |
+
+App: `vehicle_cost.py` — `cost_summary` filter ตาม tab, KPI = ยอดรวม/ยังไม่จ่าย/จ่ายแล้ว (ไม่นับ deleted); `ot_mark_paid` จ่ายตรงจาก unpaid (ไม่ต้อง approved ก่อน); `ot_toggle_no_receipt` + `ot_restore` routes ใหม่; `auto_generate_ot` (vehicle_common.py) สร้างด้วย `status='unpaid'`. `ot_approve` route เลิกใช้
+
+---
+
+## v2.16 — Driver OT standalone (manual create) (2026-06-09)
+
+*Migration: [2026-06-09_driver-ot-standalone.sql](../../../app/migrations/2026-06-09_driver-ot-standalone.sql)*
+
+**บริบทธุรกิจ:** เดิม `DriverOT` สร้างได้ทางเดียว = auto ตอนคนขับปิดงาน (มี `booking` + งบเสมอ). เพิ่มปุ่ม **"เพิ่ม OT"** หน้า `admincost`/`vehicle_cost.html` ให้ admin สร้าง OT เองได้ (เช่น OT ที่ไม่ได้ผูกกับ booking ในระบบ) → **standalone** ไม่ผูก booking/ไม่หักงบ
+
+| Field | เหตุผล |
+|-------|--------|
+| `booking_id` (NOT NULL → nullable) | manual OT ไม่มี booking ต้นทาง → `booking_id=None`. SQLite ไม่รองรับ drop-NOT-NULL ผ่าน ALTER → migration ใช้ table rebuild (create new + copy + drop + rename). ข้อมูลเดิมมี booking_id ครบ — copy ตรง ไม่มี data loss |
+
+App: `vehicle_cost.py` — route `ot_create` (POST `/admin/ot/create`, standalone, AJAX/JSON); helper `_parse_ot_slots(form)` (แชร์กับ `ot_edit`); `next_ot_number(yr)` (vehicle_common.py — factor ออกจาก `auto_generate_ot`). `_ot_budget_label(None)` คืน `('—','')` อยู่แล้ว → template null-safe. UI: ปุ่ม `#addOtBtn` + modal `#addOtModal` (layout เหมือน edit), date เป็น va-cal datepicker, slot rows แบบ header (`cost-slot-head`)
 
 ---
 

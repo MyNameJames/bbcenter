@@ -1,4 +1,6 @@
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 from flask import Flask, redirect, url_for, render_template
 from flask_login import LoginManager, current_user, login_required
@@ -22,6 +24,19 @@ app.config['SECRET_KEY'] = _secret_key
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{BASE_DIR}/instance/portal.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)  # หมดใน 8 ชั่วโมง
+
+# ── Logging กลาง (2026-06-11): error ทุก route → logs/app.log (rotate 1MB×5) + console
+# ใช้คู่ pattern ใน except block: current_app.logger.exception('<route> failed')
+_log_dir = os.path.join(BASE_DIR, 'logs')
+os.makedirs(_log_dir, exist_ok=True)
+_file_handler = RotatingFileHandler(
+    os.path.join(_log_dir, 'app.log'),
+    maxBytes=1_000_000, backupCount=5, encoding='utf-8',
+)
+_file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s [%(module)s] %(message)s'))
+logging.basicConfig(level=logging.INFO,
+                    handlers=[_file_handler, logging.StreamHandler()])
 
 # ผูก Database เข้ากับแอป
 db.init_app(app)

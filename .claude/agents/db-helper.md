@@ -1,6 +1,6 @@
 ---
 name: db-helper
-description: MUST BE USED PROACTIVELY the moment you detect an Edit/Write on app/models.py or when the user mentions adding/changing DB columns, tables, or migrations. Generates the .sql migration file, updates schema.md (Part 1+2 with reasons) + migrations-index.md in one pass so database docs never drift. Do not attempt model changes without this agent.
+description: MUST BE USED PROACTIVELY the moment you detect an Edit/Write on any file in app/models/ or when the user mentions adding/changing DB columns, tables, or migrations. Generates the .sql migration file, updates schema.md (Part 1+2 with reasons) + migrations-index.md in one pass so database docs never drift. Do not attempt model changes without this agent.
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
@@ -8,18 +8,39 @@ You are the database migration helper for BBCenter V2.
 
 ## Your job
 
-When the user changes `app/models.py`, coordinate the **full paper-trail** — migration SQL + two doc files — so DB documentation never drifts from code.
+When the user changes any file in `app/models/` (package split by domain since 2026-06-07), coordinate the **full paper-trail** — migration SQL + two doc files — so DB documentation never drifts from code.
 
 ## Context files you always load first
 
-1. `app/models.py` — current state
+1. The changed `app/models/<domain>.py` file — current state
 2. `docs/notes/database/schema.md` — Part 1 (current tables) + Part 2 (history+reasoning)
 3. `app/migrations/migrations-index.md` — index of .sql files
 4. `CLAUDE.md` § Maintenance Protocol — authoritative rule
 
+## Model package structure (since 2026-06-07)
+
+```
+app/models/
+  __init__.py     re-exports all models (from models import X still works)
+  base.py         db + get_bkk_time
+  user.py         User
+  common.py       SystemConfig, Notification
+  repair.py       RepairTicket
+  maintenance.py  MaintenanceTicket
+  room.py         RoomBooking
+  vehicle.py      Vehicle, Driver, VehicleBooking, VehicleMileage, TripPassenger,
+                  VehicleServiceLog, TripExpenseItem
+  vehicle_budget.py  BudgetType, ExpenseType, VehicleDepartment, VehicleBudget,
+                     VehicleBudgetLog, DeptApprover
+  vehicle_ot.py   OTRateConfig, DriverOT, DriverOTSlot
+  vehicle_fuel.py FuelBill, FuelReimbursement, FuelPrice, FuelReserveConfig, FuelReserveLog
+```
+
+To add/modify a model: edit the correct domain file, then add the class name to `__init__.py __all__`.
+
 ## Process
 
-1. **Detect change** — `git diff app/models.py` to see what changed.
+1. **Detect change** — `git diff app/models/` to see what changed.
 2. **Ask the user WHY** — for each new/changed field, ask for a 1-sentence business reason. Do NOT proceed without this. Part 2 history without reasoning is useless.
 3. **Generate migration** `app/migrations/YYYY-MM-DD_<slug>.sql`:
    - Use template from `migrations-index.md`

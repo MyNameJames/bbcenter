@@ -62,76 +62,53 @@ document.querySelectorAll('[data-upload-input]').forEach(input => {
 });
 
 /* ══════════════════════════════════════════════════
-   Ad-hoc modal — open/close
+   Ad-hoc — collapse panel (แทน modal เดิม)
+   เปิด = กางลงมา, ยกเลิก/toggle = หุบ + reset form
 ══════════════════════════════════════════════════ */
-const adhocModal = document.getElementById('adhocModal');
+const adhocBtn   = document.querySelector('[data-adhoc-toggle]');
+const adhocPanel = document.querySelector('[data-adhoc-panel]');
+const adhocForm  = adhocPanel ? adhocPanel.querySelector('form') : null;
 
 function openAdhoc() {
-    if (!adhocModal) return;
-    adhocModal.hidden = false;
-    adhocModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    initIcons(adhocModal);
+    if (!adhocPanel) return;
+    adhocPanel.hidden = false;
+    if (adhocBtn) adhocBtn.classList.add('is-open');
+    initIcons(adhocPanel);
+    adhocPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeAdhoc() {
-    if (!adhocModal) return;
-    adhocModal.hidden = true;
-    adhocModal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    if (!adhocPanel) return;
+    adhocPanel.hidden = true;
+    if (adhocBtn) adhocBtn.classList.remove('is-open');
+    if (adhocForm) {
+        adhocForm.reset();
+        // reset visual states (upload zone + odo hint)
+        adhocForm.querySelectorAll('.driver-upload.has-file').forEach(z => z.classList.remove('has-file'));
+        const odoHint = adhocPanel.querySelector('[data-adhoc-odo-hint]');
+        if (odoHint) odoHint.hidden = true;
+    }
 }
 
-document.querySelectorAll('[data-open-adhoc]').forEach(btn => {
-    btn.addEventListener('click', openAdhoc);
-});
+if (adhocBtn) {
+    adhocBtn.addEventListener('click', () => (adhocPanel.hidden ? openAdhoc() : closeAdhoc()));
+}
+document.querySelectorAll('[data-adhoc-cancel]').forEach(btn => btn.addEventListener('click', closeAdhoc));
 
-document.querySelectorAll('[data-close-adhoc]').forEach(btn => {
-    btn.addEventListener('click', closeAdhoc);
-});
-
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && adhocModal && !adhocModal.hidden) closeAdhoc();
-});
-
-/* ══════════════════════════════════════════════════
-   Combo — searchable user dropdown
-   - typing filters list + clears hidden user_id
-   - clicking option locks selection (hidden user_id set, list closes)
-══════════════════════════════════════════════════ */
-document.querySelectorAll('[data-combo]').forEach(combo => {
-    const input  = combo.querySelector('[data-combo-input]');
-    const hidden = combo.querySelector('[data-combo-user-id]');
-    const list   = combo.querySelector('[data-combo-list]');
-    const items  = Array.from(combo.querySelectorAll('[data-combo-option]'));
-
-    const showList = () => { list.hidden = false; };
-    const hideList = () => { list.hidden = true; };
-
-    input.addEventListener('focus', showList);
-
-    input.addEventListener('input', () => {
-        hidden.value = '';                    // typing = free-text mode
-        const q = input.value.trim().toLowerCase();
-        let anyVisible = false;
-        items.forEach(it => {
-            const name = (it.dataset.userName || '').toLowerCase();
-            const match = !q || name.includes(q);
-            it.hidden = !match;
-            if (match) anyVisible = true;
-        });
-        list.hidden = !anyVisible;
+/* ── Ad-hoc vehicle change → อัปเดต hint เลขไมล์ล่าสุด + min ── */
+const adhocVehicle = document.querySelector('[data-adhoc-vehicle]');
+if (adhocVehicle && adhocPanel) {
+    adhocVehicle.addEventListener('change', () => {
+        const opt  = adhocVehicle.selectedOptions[0];
+        const last = opt ? (opt.dataset.lastOdo || '') : '';
+        const hint = adhocPanel.querySelector('[data-adhoc-odo-hint]');
+        const odo  = adhocPanel.querySelector('[data-odo-input]');
+        if (last) {
+            if (hint) { hint.textContent = 'เลขไมล์ล่าสุด: ' + Number(last).toLocaleString() + ' km'; hint.hidden = false; }
+            if (odo)  odo.min = last;
+        } else {
+            if (hint) hint.hidden = true;
+            if (odo)  odo.min = 0;
+        }
     });
-
-    items.forEach(it => {
-        it.addEventListener('mousedown', e => {
-            e.preventDefault();               // ป้องกัน input blur ก่อน click
-            input.value  = it.dataset.userName;
-            hidden.value = it.dataset.userId;
-            hideList();
-        });
-    });
-
-    document.addEventListener('click', e => {
-        if (!combo.contains(e.target)) hideList();
-    });
-});
+}

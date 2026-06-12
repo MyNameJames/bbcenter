@@ -910,21 +910,20 @@ function renderTripRow(group) {
         ? `<span class="vc-badge vc-badge-neutral va-trip-badge"><i data-lucide="user" class="vc-icon-sm"></i>${esc(b.driverLabel)}</span>`
         : '';
 
+    const otH = Number(bm.otHours)  || 0;
+    const otA = Number(bm.otAmount) || 0;
+
     const isPast = new Date(b.endIso) < serverNow;
     let stCls, stIcon, stLabel;
-    if (hasOdo)       { stCls = 'vc-badge-success'; stIcon = 'flag';       stLabel = 'สิ้นสุดการเดินทาง'; }
+    if (hasOdo)       { stCls = 'vc-badge-success'; stIcon = 'clock';       stLabel = `เสร็จสิ้น : ${fmtBaht(total + otA)}`; }
     else if (started) { stCls = 'vc-badge-blue';    stIcon = 'navigation'; stLabel = 'เริ่มเดินทาง'; }
     else if (isPast)  { stCls = 'vc-badge-neutral'; stIcon = 'circle-x';   stLabel = 'ยกเลิก (ไม่บันทึกไมล์)'; }
     else              { stCls = 'vc-badge-warning'; stIcon = 'clock';      stLabel = 'รอเดินทาง'; }
-    const statusBadge = `<span class="vc-badge ${stCls} va-trip-badge"><i data-lucide="${stIcon}" class="vc-icon-sm"></i>${stLabel}</span>`;
-
-    // const rateBadge = `<span class="vc-badge vc-badge-neutral va-trip-badge"><i data-lucide="fuel" class="vc-icon-sm"></i>${fmtNum(fuelPrice)}฿/ลิตร</span>`;
+    const statusBadge = `<span class="vc-badge ${stCls} va-trip-badge">${stLabel}</span>`;
 
     const fuelBadge = hasOdo
         ? `<span class="vc-badge va-trip-badge ${isCharge ? 'vc-badge-warning' : 'vc-badge-neutral'}"><i data-lucide="fuel" class="vc-icon-sm"></i>${fmtBaht(total)} (${budgetTag}) | ${fmtNum(fuelPrice)}฿/ลิตร </span>`
         : '';
-    const otH = Number(bm.otHours)  || 0;
-    const otA = Number(bm.otAmount) || 0;
     const otBadge = otA > 0
         ? `<span class="vc-badge va-trip-badge ${isCharge ? 'vc-badge-warning' : 'va-trip-badge--ot'}"><i data-lucide="clock" class="vc-icon-sm"></i>OT +${fmtNum(otH)} ชม. · ${fmtBaht(otA)} (${budgetTag})</span>`
         : '';
@@ -1224,7 +1223,13 @@ async function submitRevert() {
     if (!revertBookingId) return;
     const b = bookings.find(x=>x.id===revertBookingId);
     try {
-        await fetch(b.revertUrl, { method:'POST' });
+        const res = await fetch(b.revertUrl, { method:'POST' });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+            showToast(data.msg || 'ย้อนสถานะไม่ได้');
+            bsRevertModal.hide();
+            return;
+        }
         patchBooking(revertBookingId, { status:'pending', vehicleId:null, vehicleLabel:null, driverId:null });
         showToast('✓ ย้อนสถานะแล้ว');
         bsRevertModal.hide();

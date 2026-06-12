@@ -126,9 +126,10 @@ def budget_manage():
             except ValueError as e:
                 db.session.rollback()
                 flash(f'เพิ่มงบไม่สำเร็จ: {e}', 'danger')
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                flash(f'เกิดข้อผิดพลาด: {e}', 'danger')
+                current_app.logger.exception('budget_manage:top_up failed')
+                flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
         elif action == 'manual_adjust':
             try:
@@ -149,9 +150,10 @@ def budget_manage():
             except ValueError as e:
                 db.session.rollback()
                 flash(f'ปรับยอดไม่สำเร็จ: {e}', 'danger')
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                flash(f'เกิดข้อผิดพลาด: {e}', 'danger')
+                current_app.logger.exception('budget_manage:manual_adjust failed')
+                flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
         elif action == 'toggle_active':
             try:
@@ -169,9 +171,10 @@ def budget_manage():
                     flash(f'เปิดใช้งานงบ "{budget.department.name}" เรียบร้อย', 'success')
                 else:
                     flash(f'ปิดใช้งานงบ "{budget.department.name}" — booking ใหม่จะถูกบล็อก', 'warning')
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                flash(f'เปลี่ยนสถานะไม่สำเร็จ: {e}', 'danger')
+                current_app.logger.exception('budget_manage:toggle_active failed')
+                flash('เปลี่ยนสถานะไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
 
         elif action == 'extend_period':
             # นำงบจาก "คลังงบ" กลับมาใช้ — แก้ช่วง start–end + เปิด is_active (+ เพิ่มเงิน optional)
@@ -213,33 +216,29 @@ def budget_manage():
             except ValueError as e:
                 db.session.rollback()
                 flash(f'นำงบกลับมาใช้ไม่สำเร็จ: {e}', 'danger')
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                flash(f'เกิดข้อผิดพลาด: {e}', 'danger')
+                current_app.logger.exception('budget_manage:extend_period failed')
+                flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
-        elif action == 'refund_booking':
+        elif action == 'cancel_booking':
             try:
                 bk_id   = int(request.form.get('booking_id'))
                 booking = VehicleBooking.query.get_or_404(bk_id)
-                refunds = budget_svc.refund_for_booking(
-                    booking,
-                    note=f'cancel + refund booking #{bk_id} by {current_user.username}')
                 if booking.status not in ('rejected', 'cancelled'):
                     booking.status = 'cancelled'
                 db.session.commit()
-                if refunds:
-                    flash(f'ยกเลิก booking #{bk_id} + คืนงบ {len(refunds)} รายการ', 'success')
-                else:
-                    flash(f'ยกเลิก booking #{bk_id} (ยังไม่เคยหักงบ ไม่ต้องคืน)', 'info')
-            except Exception as e:
+                flash(f'ยกเลิก booking #{bk_id} เรียบร้อย', 'success')
+            except Exception:
                 db.session.rollback()
-                flash(f'ยกเลิก booking ไม่สำเร็จ: {e}', 'danger')
+                current_app.logger.exception('budget_manage:cancel_booking failed')
+                flash('ยกเลิก booking ไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
 
         return redirect(url_for('adminfleet.budget_manage',
                                 year=request.form.get('year') or '',
                                 month=request.form.get('month') or ''))
 
-    now       = datetime.now()
+    now       = get_bkk_time()
     sel_year  = int(request.args.get('year', now.year))
     sel_month = int(request.args.get('month', now.month))
 
@@ -502,7 +501,12 @@ def _build_budget_pivot(fiscal_year_start_ad):
         'dept_max':       float,
         'personal':       { month_num: total_received },   # 1 row across fiscal year
         'personal_max':   float,
-        'fiscal_months':  [(month, year_ad), ...]   # ordered Mar→Feb (12 tuples)
+        'fiscal_months':  [(month, year_ad), ...],  # ordered Mar→Feb (12 tuples)
+        'summary': {                                 # 2026-06-08: default pivot view
+          'central':  {'budget','used','pct','count'},   # เพดาน+ใช้ไป รวมทั้งปีงบ
+          'dept':     {'budget','used','pct','count'},
+          'personal': {'used'},                          # ไม่มีเพดาน
+        }
       }
     """
     fiscal_months = [(m, fiscal_year_start_ad) for m in range(3, 13)] \
@@ -564,6 +568,46 @@ def _build_budget_pivot(fiscal_year_start_ad):
 
     max_p = max((v for v in personal.values() if v > 0), default=0)
 
+    # ── Fiscal-year summary per category (2026-06-08 redesign):
+    #    default pivot view = 3 สรุปแถว (ส่วนกลาง/กอง/ส่วนตัว) เพดานรวม + ใช้ไป%
+    #    used = sum ยอดหักจริงต่อเดือนทั้งปีงบ (จาก cells ที่ build ด้านบน)
+    #    budget = sum เพดานของ VehicleBudget ที่ (year, month) อยู่ในปีงบนี้ ตามประเภท
+    central_used_fy = sum(v for row in central.values() for v in row.values())
+    dept_used_fy    = sum(v for row in dept.values()    for v in row.values())
+    personal_used_fy = sum(personal.values())
+
+    fy_set = set(fiscal_months)  # {(month, year_ad), ...}
+    cap_rows = (db.session.query(VehicleBudget.budget_amount,
+                                 VehicleBudget.year, VehicleBudget.month,
+                                 BudgetType.name)
+                .join(BudgetType, VehicleBudget.budget_type_id == BudgetType.id)
+                .all())
+    central_cap_fy = dept_cap_fy = 0.0
+    for amt, yr, mo, btname in cap_rows:
+        if (mo, yr) in fy_set:
+            if btname == 'central':
+                central_cap_fy += float(amt or 0)
+            elif btname == 'department':
+                dept_cap_fy += float(amt or 0)
+
+    summary = {
+        'central': {
+            'budget': central_cap_fy,
+            'used':   central_used_fy,
+            'pct':    (central_used_fy / central_cap_fy * 100) if central_cap_fy > 0 else 0,
+            'count':  len(central),
+        },
+        'dept': {
+            'budget': dept_cap_fy,
+            'used':   dept_used_fy,
+            'pct':    (dept_used_fy / dept_cap_fy * 100) if dept_cap_fy > 0 else 0,
+            'count':  len(dept),
+        },
+        'personal': {
+            'used':   personal_used_fy,
+        },
+    }
+
     return {
         'central':        central,
         'central_labels': labels_c,
@@ -574,6 +618,7 @@ def _build_budget_pivot(fiscal_year_start_ad):
         'personal':       personal,
         'personal_max':   max_p,
         'fiscal_months':  fiscal_months,
+        'summary':        summary,
     }
 
 
@@ -588,7 +633,7 @@ def budget_personal():
         flash('คุณไม่มีสิทธิ์', 'danger')
         return redirect(url_for('vehicle.index'))
 
-    now       = datetime.now()
+    now       = get_bkk_time()
     sel_year  = int(request.args.get('year',  now.year))
     sel_month = int(request.args.get('month', now.month))
     status_filter = request.args.get('status', 'all')  # all | pending | paid
@@ -662,7 +707,7 @@ def budget_personal_mark_paid():
     m = VehicleMileage.query.get_or_404(mileage_id)
 
     m.personal_status     = 1
-    m.personal_paid_at    = datetime.now()
+    m.personal_paid_at    = get_bkk_time()
     m.personal_paid_by_id = current_user.id
 
     # ปิด sticky payment notifications ที่ค้างของ booking นี้ (ทั้งของ user และ admin)

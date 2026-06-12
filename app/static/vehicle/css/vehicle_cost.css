@@ -203,16 +203,54 @@
     color: var(--vc-fg);
 }
 
-/* ── Edit modal — slot row ───────────────────────── */
+/* ── Edit/Add modal — slot row (header แถวเดียว + input เหมือน td, mirror cost-rate) ─── */
+/* grid template ใช้ร่วมกับ .cost-slot-head เพื่อให้ column align กัน */
+.cost-slot-head,
 .cost-slot-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1.6fr 1fr 1fr 32px;
     gap: var(--vc-space-2);
-    align-items: end;
-    padding: var(--vc-space-3);
-    background: var(--vc-bg-subtle);
+    align-items: center;
+}
+.cost-slot-head {
+    padding: 0 var(--vc-space-2) var(--vc-space-1);
+    margin-bottom: var(--vc-space-1);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--vc-fg-subtle);
+}
+.cost-slot-row {
+    padding: var(--vc-space-2);
+    background: transparent;
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-md);
+}
+/* label เก็บไว้สำหรับ a11y + mobile แต่ซ่อนใน desktop (header แทน) */
+.cost-slot-row .vc-label {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+/* input/select แบบ td — flat, โผล่ border เมื่อ hover/focus */
+.cost-slot-row .vc-input,
+.cost-slot-row .vc-select {
+    background: transparent;
+    border-color: transparent;
+}
+.cost-slot-row .vc-input:hover,
+.cost-slot-row .vc-select:hover {
+    border-color: var(--vc-border);
+}
+.cost-slot-row .vc-input:focus,
+.cost-slot-row .vc-select:focus {
+    background: var(--vc-bg);
+    border-color: var(--vc-accent);
 }
 .cost-slot-row-field { min-width: 0; }
 .cost-slot-row-remove {
@@ -222,7 +260,6 @@
     width: 32px;
     height: 32px;
     padding: 0;
-    margin-bottom: 1px;
 }
 .cost-slot-row-hint {
     grid-column: 1 / -1;
@@ -231,21 +268,113 @@
     margin: 0;
 }
 .cost-slot-row-hint.is-invalid { color: var(--vc-red); }
+
 @media (max-width: 575px) {
-    .cost-slot-row { grid-template-columns: 1fr 1fr auto; }
+    /* mobile → กลับเป็น stacked + โชว์ label */
+    .cost-slot-head { display: none; }
+    .cost-slot-row {
+        grid-template-columns: 1fr 1fr auto;
+        padding: var(--vc-space-3);
+        background: var(--vc-bg-subtle);
+        align-items: end;
+    }
+    .cost-slot-row .vc-label {
+        position: static;
+        width: auto; height: auto;
+        margin: 0; clip: auto;
+        overflow: visible;
+    }
+    .cost-slot-row .vc-input,
+    .cost-slot-row .vc-select {
+        background: var(--vc-bg);
+        border-color: var(--vc-border);
+    }
     .cost-slot-row > [data-col-full] { grid-column: 1 / -1; }
 }
 
-/* ── Rate config modal — rate row (label/day/start/end/rate + remove) ─── */
+/* ── Date picker (va-cal) — แทน native type="date" ใน OT modal ──
+   trigger button + wrapper (va-cal core + popover positioning อยู่ vehicle_admin.css) */
+.budget-datepick { position: relative; }
+.budget-date-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+.budget-date-btn .vc-icon-sm {
+    flex: 0 0 auto;
+    color: var(--vc-fg-subtle);
+}
+.budget-date-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--vc-fg-disabled);
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1;
+}
+.budget-date-btn--filled .budget-date-label { color: var(--vc-fg); }
+.budget-date-btn--filled .vc-icon-sm { color: var(--vc-fg-muted); }
+.budget-date-btn[aria-expanded="true"] {
+    border-color: var(--vc-fg);
+    box-shadow: var(--vc-accent-ring);
+}
+.budget-datepick.is-invalid .budget-date-btn { border-color: var(--vc-red); }
+/* alignment ของ popover ใน 2-col form row (กันล้นขอบ modal) */
+.va-cal--start { left: 0; right: auto; transform-origin: top left; }
+.va-cal--end   { right: 0; left: auto; transform-origin: top right; }
+
+/* ── Rate config modal — rate row (header แถวเดียว + input เหมือน td) ─── */
+/* grid template ใช้ร่วมกับ .cost-rate-head เพื่อให้ column align กัน */
+.cost-rate-head,
 .cost-rate-row {
     display: grid;
-    grid-template-columns: 1.3fr 1fr 1fr 1fr .9fr auto;
+    grid-template-columns: 1.3fr 1fr 1fr 1fr .9fr 32px;
     gap: var(--vc-space-2);
-    align-items: end;
-    padding: var(--vc-space-3);
-    background: var(--vc-bg-subtle);
+    align-items: center;
+}
+.cost-rate-head {
+    padding: 0 var(--vc-space-2) var(--vc-space-1);
+    margin-bottom: var(--vc-space-1);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--vc-fg-subtle);
+}
+.cost-rate-row {
+    padding: var(--vc-space-2);
+    background: transparent;
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-md);
+}
+/* label เก็บไว้สำหรับ a11y + mobile แต่ซ่อนใน desktop (header แทน) */
+.cost-rate-row .vc-label {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+/* input/select แบบ td — flat, โผล่ border เมื่อ hover/focus */
+.cost-rate-row .vc-input,
+.cost-rate-row .vc-select {
+    background: transparent;
+    border-color: transparent;
+}
+.cost-rate-row .vc-input:hover,
+.cost-rate-row .vc-select:hover {
+    border-color: var(--vc-border);
+}
+.cost-rate-row .vc-input:focus,
+.cost-rate-row .vc-select:focus {
+    background: var(--vc-bg);
+    border-color: var(--vc-accent);
 }
 .cost-rate-row-day .vc-select { min-width: 0; }
 .cost-rate-row.is-removed {
@@ -260,10 +389,31 @@
     width: 32px;
     height: 32px;
     padding: 0;
-    margin-bottom: 1px;
 }
+/* ลบ = icon bin แดงอย่างเดียว */
+.cost-rate-row-remove .vc-icon-sm { color: var(--vc-red); }
+.cost-rate-row-remove:hover { background: var(--vc-red-bg); }
+
 @media (max-width: 575px) {
-    .cost-rate-row { grid-template-columns: 1fr 1fr auto; }
+    /* mobile → กลับเป็น stacked + โชว์ label */
+    .cost-rate-head { display: none; }
+    .cost-rate-row {
+        grid-template-columns: 1fr 1fr auto;
+        padding: var(--vc-space-3);
+        background: var(--vc-bg-subtle);
+        align-items: end;
+    }
+    .cost-rate-row .vc-label {
+        position: static;
+        width: auto; height: auto;
+        margin: 0; clip: auto;
+        overflow: visible;
+    }
+    .cost-rate-row .vc-input,
+    .cost-rate-row .vc-select {
+        background: var(--vc-bg);
+        border-color: var(--vc-border);
+    }
     .cost-rate-row > [data-col-full] { grid-column: 1 / -1; }
 }
 
@@ -317,78 +467,393 @@
     color: var(--vc-fg-muted);
 }
 
-/* ── Print receipt (hidden — @media print only) ───── */
-.cost-print-receipt { display: none; }
-@media print {
-    body > * { display: none !important; }
-    .cost-print-receipt { display: block !important; }
-    @page { margin: 0; }
+/* ── Receipt preview (modal) + print ──────────────── */
+.cost-receipt-dialog { max-width: 840px; }
+.cost-receipt-scroll {
+    max-height: 76vh;
+    overflow-y: auto;
+    background: var(--vc-bg-subtle);
+    padding: var(--vc-space-4);
 }
-.cost-print-receipt {
+
+.cost-receipt-page {
     font-family: 'Sarabun', sans-serif;
-    max-width: 210mm;
-    margin: 0 auto;
-    padding: 15mm 20mm;
+    background: #fff;
+    color: #18181B;
+    width: 190mm;
+    max-width: 100%;
+    margin: 0 auto var(--vc-space-4);
+    padding: 14mm 16mm;
+    border: 1px solid var(--vc-border);
+    border-radius: 2px;
     font-size: 13px;
-    color: var(--vc-fg);
+    line-height: 1.7;
 }
+.cost-receipt-page:last-child { margin-bottom: 0; }
+
 .cost-print-title {
     text-align: center;
     font-size: 1.4rem;
     font-weight: 700;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--vc-fg);
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #18181B;
 }
-.cost-print-header {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: .85rem;
-    margin-bottom: 8px;
+
+.rcpt-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: .9rem;
+    margin-bottom: 10px;
 }
-.cost-print-header td { padding: 3px 0; }
-.cost-print-header td.label { width: 160px; color: var(--vc-fg-subtle); }
-.cost-print-header td.value { font-weight: 500; }
-.cost-print-intro {
-    margin: 12px 0 8px;
-    font-size: .82rem;
-    color: var(--vc-fg-muted);
+.rcpt-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.rcpt-k { color: #52525B; white-space: nowrap; }
+.rcpt-v {
+    font-weight: 500;
+    border-bottom: 1px dotted #A1A1AA;
+    min-width: 60px;
+    padding: 0 4px;
 }
-.cost-print-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: .85rem;
-}
+.rcpt-v.rcpt-grow { flex: 1; min-width: 120px; }
+
+.cost-print-intro { margin: 12px 0 10px; font-size: .85rem; color: #3F3F46; }
+
+.cost-print-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
 .cost-print-table th {
-    border-top: 1px solid var(--vc-fg);
-    border-bottom: 1px solid var(--vc-fg);
-    padding: 6px 8px;
+    border: 1px solid #18181B;
+    padding: 6px 10px;
     font-weight: 700;
+    background: #F4F4F5;
 }
-.cost-print-table th.desc  { text-align: center; width: 60%; }
-.cost-print-table th.money { text-align: right;  width: 120px; }
-.cost-print-table tfoot td {
-    border-top: 2px solid var(--vc-fg);
-    padding: 10px 8px;
-    font-weight: 700;
-    text-align: right;
+.cost-print-table th.desc  { text-align: center; }
+.cost-print-table th.money { text-align: right; width: 130px; }
+.cost-print-table td { border: 1px solid #D4D4D8; padding: 5px 10px; }
+.cost-print-table td.rcpt-money { text-align: right; font-variant-numeric: tabular-nums; }
+.cost-print-table tfoot td { border: 1px solid #18181B; font-weight: 700; padding: 8px 10px; }
+
+.cost-print-sign { margin-top: 40px; text-align: right; }
+.cost-print-sign-inner { display: inline-block; text-align: center; min-width: 280px; }
+.cost-print-sign-line { padding-top: 6px; font-size: .9rem; }
+.cost-print-sign-name { font-size: .85rem; margin-top: 6px; color: #3F3F46; }
+
+.rcpt-idcard { margin-top: 24px; }
+.rcpt-idcard img {
+    max-width: 280px;
+    height: auto;
+    border: 1px solid var(--vc-border);
+    border-radius: 4px;
 }
-.cost-print-sign {
-    margin-top: 50px;
-    text-align: right;
+
+@media print {
+    body > *:not(#receiptPreviewModal) { display: none !important; }
+    .modal-backdrop { display: none !important; }
+    #receiptPreviewModal {
+        position: static !important;
+        display: block !important;
+        overflow: visible !important;
+        background: #fff;
+    }
+    #receiptPreviewModal .modal-dialog { max-width: none; width: auto; margin: 0; }
+    #receiptPreviewModal .modal-content { border: 0; box-shadow: none; }
+    .rcpt-chrome { display: none !important; }
+    .cost-receipt-scroll {
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+    .cost-receipt-page {
+        border: 0;
+        width: auto;
+        margin: 0;
+        padding: 10mm;
+        page-break-after: always;
+    }
+    .cost-receipt-page:last-child { page-break-after: auto; }
+    @page { margin: 8mm; }
 }
-.cost-print-sign-inner {
-    display: inline-block;
-    text-align: center;
-    min-width: 260px;
+
+
+/* ════════════════════════════════════════════════
+   REDESIGN 2026-06-09 — toolbar / chips / filter popover /
+   summary / rate-ref / slot-list / portal menu  (AJAX page)
+   ════════════════════════════════════════════════ */
+
+/* ── Toolbar: chips (เลื่อน x) + filter button (ชิดขวา) แถวเดียว ── */
+.cost-toolbar { margin-bottom: var(--vc-space-4); }
+.cost-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
 }
-.cost-print-sign-line {
-    border-top: 1px solid var(--vc-fg);
-    padding-top: 6px;
-    font-size: .85rem;
+
+/* status chips — segmented control เลื่อนแนวนอน */
+.cost-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid var(--vc-border);
+    border-radius: 8px;
+    background: var(--vc-bg);
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex: 1 1 auto;
+    min-width: 0;
 }
-.cost-print-sign-name {
-    font-size: .82rem;
-    margin-top: 6px;
+.cost-tabs::-webkit-scrollbar { display: none; }
+.cost-chip {
+    appearance: none;
+    border: 0;
+    background: transparent;
     color: var(--vc-fg-muted);
+    font-family: inherit;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color .15s, color .15s;
+}
+.cost-chip:hover { background: var(--vc-bg-subtle); color: var(--vc-fg); }
+.cost-chip.is-active { background: var(--vc-fg); color: var(--vc-bg); }
+.cost-chip.is-active:hover { background: var(--vc-fg); }
+.cost-chip-cnt { font-size: 11px; font-weight: 600; opacity: .6; }
+.cost-chip.is-active .cost-chip-cnt { opacity: .85; }
+
+/* ── Filter button → popover (4 บรรทัด: คนขับ / จาก / ↓ / ถึง) ── */
+.cost-filter { position: relative; flex: 0 0 auto; }
+.cost-filter-btn { position: relative; }
+.cost-filter-btn.is-active { border-color: var(--vc-accent); color: var(--vc-accent); }
+.cost-filter-dot {
+    position: absolute;
+    top: 4px; right: 5px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--vc-accent);
+}
+.cost-filter-sheet {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 1000;
+    width: 320px;
+    max-width: calc(100vw - 2 * var(--vc-space-4));
+    padding: var(--vc-space-4);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    box-shadow: 0 6px 20px rgba(17, 24, 39, .08);
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+}
+.cost-filter-sheet[hidden] { display: none; }
+
+.cost-filter-field { display: flex; flex-direction: column; gap: 5px; }
+.cost-filter-driver-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    /* letter-spacing: .04em;
+    color: var(--vc-accent); */
+}
+/* .cost-filter-driver-label .vc-icon-sm { color: var(--vc-accent); } */
+.cost-filter-driver-select {
+    /* border-color: var(--vc-accent-border);
+    background-color: var(--vc-accent-light); */
+    font-weight: 500;
+}
+
+/* seg = label + เดือน + ปี (เต็มความกว้าง) */
+.cost-filter-seg {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    width: 100%;
+}
+.cost-filter-seg-label {
+    flex: 0 0 28px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--vc-fg-subtle);
+}
+.cost-filter-arrow-row {
+    display: flex;
+    justify-content: center;
+    color: var(--vc-fg-subtle);
+}
+
+/* selects ในป๊อปโอเวอร์เต็มความกว้าง (driver = 1, seg = 2 ข้างกัน) */
+.cost-filter-sheet .vc-filter-select,
+.cost-filter-sheet .vc-dd,
+.cost-filter-sheet .vc-dd-trigger { width: 100%; }
+.cost-filter-seg .vc-filter-select,
+.cost-filter-seg .vc-dd { flex: 1; width: auto; min-width: 0; }
+
+.cost-filter-sheet-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--vc-space-2);
+    margin-top: var(--vc-space-1);
+    padding-top: var(--vc-space-3);
+    border-top: 1px solid var(--vc-border);
+}
+
+/* ── Summary: ยังไม่จ่าย / จ่ายแล้ว (แทน KPI 3 ใบ) ── */
+.cost-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-5);
+    padding: var(--vc-space-3) var(--vc-space-5);
+    margin-bottom: var(--vc-space-3);
+    flex-wrap: wrap;
+}
+.cost-summary-item { display: flex; align-items: baseline; gap: var(--vc-space-2); }
+.cost-summary-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    align-self: center;
+}
+.cost-summary-dot--unpaid { background: var(--vc-blue); }
+.cost-summary-dot--paid   { background: var(--vc-green); }
+.cost-summary-label { font-size: var(--vc-text-sm); color: var(--vc-fg-muted); }
+.cost-summary-value {
+    font-size: var(--vc-text-lg);
+    font-weight: 700;
+    color: var(--vc-blue);
+    font-variant-numeric: tabular-nums;
+}
+.cost-summary-value--paid { color: var(--vc-green); }
+.cost-summary-value.is-zero { color: var(--vc-fg-subtle); }
+.cost-summary-meta { font-size: var(--vc-text-xs); color: var(--vc-fg-subtle); }
+.cost-summary-sep {
+    width: 1px;
+    align-self: stretch;
+    background: var(--vc-border);
+}
+
+/* ── Rate reference — quiet inline strip (แทน banner สีๆ) ── */
+.cost-rate-ref {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    flex-wrap: wrap;
+    padding: 0 var(--vc-space-1) var(--vc-space-1);
+    margin-bottom: var(--vc-space-3);
+}
+.cost-rate-ref-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--vc-fg-subtle);
+}
+.cost-rate-ref-label .vc-icon-sm { color: var(--vc-fg-subtle); width: 13px; height: 13px; }
+.cost-rate-ref-list {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2) var(--vc-space-4);
+    flex-wrap: wrap;
+}
+.cost-rate-ref-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    font-variant-numeric: tabular-nums;
+}
+.cost-rate-ref-rate { color: var(--vc-accent); font-weight: 600; }
+.cost-rate-ref-day {
+    padding: 1px 6px;
+    border-radius: var(--vc-radius-xs);
+    background: var(--vc-amber-bg);
+    color: var(--vc-amber);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ── Slot tag (table cell) — ชื่อ band เท่านั้น, หลาย band = stack ── */
+.cost-slot-list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+}
+.cost-slot-list .cost-slot-tag { margin: 0; }
+
+/* ── Row action overflow menu — portal-to-body (กัน overflow clip) ── */
+.cost-action-more { display: inline-flex; }
+.cost-action-menu {
+    min-width: 210px;
+    padding: var(--vc-space-1);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .08);
+}
+.cost-action-menu[hidden] { display: none; }
+.cost-action-menu.is-portal { position: fixed; z-index: 1080; }
+.cost-action-menu form { margin: 0; }
+.cost-action-divider { height: 1px; margin: var(--vc-space-1) 0; border: 0; background: var(--vc-border); }
+.cost-action-item {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    width: 100%;
+    padding: var(--vc-space-2) var(--vc-space-3);
+    background: transparent;
+    border: none;
+    border-radius: var(--vc-radius-sm);
+    font-family: inherit;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg);
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.cost-action-item .vc-icon-sm { color: var(--vc-fg-muted); flex: 0 0 auto; }
+.cost-action-item:hover { background: var(--vc-bg-hover); }
+.cost-action-item--danger { color: var(--vc-red); }
+.cost-action-item--danger .vc-icon-sm { color: var(--vc-red); }
+.cost-action-item--danger:hover { background: var(--vc-red-bg); }
+
+/* ── AJAX loading dim ── */
+#costResults { transition: opacity var(--vc-dur-fast) var(--vc-ease-snap); }
+#costResults.is-loading { opacity: .55; pointer-events: none; }
+
+/* ── Rate modal header — subtitle ── */
+.cost-rate-modal-header { align-items: flex-start; }
+.cost-rate-modal-heading { display: flex; flex-direction: column; gap: 2px; }
+.vc-modal-subtitle {
+    margin: 0;
+    font-size: var(--vc-text-xs);
+    font-weight: 400;
+    color: var(--vc-fg-muted);
+}
+
+/* ── Mobile: toolbar wrap, filter sheet เต็มจอ ── */
+@media (max-width: 767.98px) {
+    .cost-toolbar-row { flex-wrap: wrap; gap: var(--vc-space-2); }
+    .cost-tabs { flex: 1 1 100%; }
+    .cost-filter { flex: 1 1 100%; }
+    .cost-filter-btn { width: 100%; justify-content: center; }
+    .cost-filter-sheet { width: 100%; left: 0; right: 0; }
+    .cost-summary { gap: var(--vc-space-3) var(--vc-space-4); }
+    .cost-summary-sep { display: none; }
 }

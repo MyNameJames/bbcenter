@@ -78,6 +78,15 @@ def _display_name(u):
     return u.full_name or u.username
 
 
+def _ot_total(booking):
+    """รวมค่า OT สารถีของ booking — ตัด is_deleted + no_receipt (OT ที่ user จ่ายเอง)"""
+    return sum(
+        float(ot.total_amount or 0)
+        for ot in booking.driver_ots
+        if not ot.is_deleted and not ot.no_receipt
+    )
+
+
 # ═══════════════════════════════════════════════════════════════
 # Events #1-15 (ระบบยานพาหนะ)
 # ═══════════════════════════════════════════════════════════════
@@ -220,7 +229,7 @@ def notify_budget_deducted(booking, fuel_cost, budget_type):
     _create(
         user_id    = booking.user_id,
         booking_id = booking.id,
-        message    = f'ทริป #{booking.id} หักจาก{label} {amount} บาท',
+        message    = f'ทริป #{booking.id} หักจาก{label} {amount}฿',
         ntype      = 'info',
         category   = 'budget',
         icon       = ICON['budget'],
@@ -230,11 +239,14 @@ def notify_budget_deducted(booking, fuel_cost, budget_type):
 
 # #12 — Personal unpaid (ครั้งแรก หลังปิดงาน)
 def notify_payment_required(booking, mileage, fuel_cost):
-    amount = f'{fuel_cost:,.0f}'
+    ot = _ot_total(booking)
+    total = f'{fuel_cost + ot:,.0f}'
+    fuel  = f'{fuel_cost:,.0f}'
+    ot_s  = f'{ot:,.0f}'
     _create(
         user_id    = booking.user_id,
         booking_id = booking.id,
-        message    = f'ทริป #{booking.id} ค่าเดินทาง {amount} บาท กรุณาชำระและกดยืนยัน',
+        message    = f'ทริป #{booking.id} ค่าเดินทาง {total}฿ (ค่าน้ำมัน {fuel}฿ + ค่าล่วงเวลาสารถี {ot_s}฿) กรุณาชำระและกดยืนยัน',
         ntype      = 'warning',
         category   = 'payment',
         icon       = ICON['payment'],
@@ -246,11 +258,14 @@ def notify_payment_required(booking, mileage, fuel_cost):
 
 # #13a — Reminder ให้ user (day 3+)
 def notify_payment_reminder_user(booking, mileage, fuel_cost, days_overdue):
-    amount = f'{fuel_cost:,.0f}'
+    ot = _ot_total(booking)
+    total = f'{fuel_cost + ot:,.0f}'
+    fuel  = f'{fuel_cost:,.0f}'
+    ot_s  = f'{ot:,.0f}'
     _create(
         user_id    = booking.user_id,
         booking_id = booking.id,
-        message    = f'เตือน: ทริป #{booking.id} ยังค้างชำระ {amount} บาท (เกินกำหนด {days_overdue} วัน)',
+        message    = f'เตือน: ทริป #{booking.id} ยังค้างชำระค่าเดินทาง {total}฿ (ค่าน้ำมัน {fuel}฿ + ค่าล่วงเวลาสารถี {ot_s}฿) เกินกำหนด {days_overdue} วัน',
         ntype      = 'warning',
         category   = 'payment',
         icon       = ICON['reminder'],
@@ -263,11 +278,14 @@ def notify_payment_reminder_user(booking, mileage, fuel_cost, days_overdue):
 # #13b — Escalation ให้ admin (day 7+)
 def notify_payment_overdue_admin(admin_user_id, booking, mileage, fuel_cost, days_overdue):
     user_name = _display_name(booking.user)
-    amount = f'{fuel_cost:,.0f}'
+    ot = _ot_total(booking)
+    total = f'{fuel_cost + ot:,.0f}'
+    fuel  = f'{fuel_cost:,.0f}'
+    ot_s  = f'{ot:,.0f}'
     _create(
         user_id    = admin_user_id,
         booking_id = booking.id,
-        message    = f'{user_name} ค้างชำระค่าเดินทาง #{booking.id} จำนวน {amount} บาท (เกิน {days_overdue} วัน)',
+        message    = f'{user_name} ค้างชำระค่าเดินทาง #{booking.id} จำนวน {total}฿ (ค่าน้ำมัน {fuel}฿ + ค่าล่วงเวลาสารถี {ot_s}฿) เกิน {days_overdue} วัน',
         ntype      = 'danger',
         category   = 'payment_admin',
         icon       = ICON['reminder'],

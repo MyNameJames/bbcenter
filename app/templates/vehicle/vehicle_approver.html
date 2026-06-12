@@ -25,6 +25,13 @@
     {% set page_title = 'รายการรออนุมัติ' %}
     {% include '_shared/header.html' %}
 
+    {# ── Thai date macro → "พ. 10 มิ.ย. 2569" ── #}
+    {% macro th_date(dt) -%}
+        {%- set th_days = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'] -%}
+        {%- set th_mons = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] -%}
+        {{- th_days[dt.strftime('%w')|int] }} {{ dt.day }} {{ th_mons[dt.month] }} {{ dt.year + 543 -}}
+    {%- endmacro %}
+
     <div class="container-xxl px-3 py-4 approver-wrap">
 
         {# ── Flash messages ──────────────────── #}
@@ -36,6 +43,14 @@
         </div>
         {% endfor %}
         {% endwith %}
+
+        {# ── Page Header (เหมือนหน้า admin) ───── #}
+        <div class="approver-header">
+            <div>
+                <h1 class="approver-title">รายการรออนุมัติ</h1>
+                <p class="approver-subtitle">อนุมัติ/ปฏิเสธ การจองรถของกองที่คุณดูแล</p>
+            </div>
+        </div>
 
         {# ── Budget Cards ────────────────────── #}
         {% for budget in budgets %}
@@ -90,64 +105,53 @@
                      data-bs-target="#card-{{ b.id }}"
                      aria-expanded="false">
                     <div class="ac-header-row">
-                        <span class="ac-ref">BK-{{ '%04d' % b.id }}</span>
+                        <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
                         <div class="ac-header-right">
-                            <span class="vc-badge vc-badge-warning vc-badge-dot">รออนุมัติ</span>
+                            <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
+                                <i data-lucide="fuel" class="vc-icon-sm"></i>
+                                ฿{{ '{:,.0f}'.format(fuel_costs.get(b.id, 0) | float) }}
+                            </span>
                             <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-{{ b.id }}"></i>
                         </div>
                     </div>
-                    <div class="ac-meta">
-                        {{ b.user.full_name or b.user.username }}
-                        <span class="ac-meta-sep">·</span>
-                        {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                    <div class="ac-detail__trip">
+                        <span class="ac-detail__purpose"><i data-lucide="clock" class="vc-icon-sm mb-1 me-1"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}</span>
+                        <i data-lucide="dot" class="vc-icon-sm"></i>
+                        <span class="ac-detail__dest"><i data-lucide="map-pin" class="vc-icon-sm mb-1 me-1"></i>{{ b.destination }}</span>
                     </div>
                 </div>
 
                 <div class="collapse" id="card-{{ b.id }}">
                     <div class="ac-body">
-                        <div class="ac-fields">
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="user" class="vc-icon-sm"></i> ผู้จอง
-                                </div>
-                                <div class="ac-field-value">{{ b.user.full_name or b.user.username }}</div>
+                        {# ── Booking detail (driver-detail-card layout) ── #}
+                        <div class="ac-detail__datetime pb-2 pt-2">
+                            <span class="ac-ref">รายละเอียดการจอง</span>
+                        </div>
+
+                        <div class="ac-detail-card">
+                            <div class="ac-detail__head">
+                                <span class="ac-detail__requester">
+                                    {{ b.user.full_name or b.user.username }}
+                                </span>
+                                <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
+                                    <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
+                                </span>
                             </div>
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="calendar" class="vc-icon-sm"></i> วันที่
-                                </div>
-                                <div class="ac-field-value">{{ b.start_datetime.strftime('%Y-%m-%d') }}</div>
+                            <div class="ac-detail__trip border-bottom pb-2 mb-2">
+                                <span class="ac-detail__purpose">{{ b.purpose }}</span>
+                                <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
+                                <span class="ac-detail__dest">{{ b.destination }}</span>
                             </div>
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="clock" class="vc-icon-sm"></i> เวลา
-                                </div>
-                                <div class="ac-field-value">
-                                    {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
-                                </div>
+                            <div class="ac-detail__pickup pt-2">
+                                คนขับรถ : {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
                             </div>
-                            <div class="ac-field ac-field-full">
-                                <div class="ac-field-label">
-                                    <i data-lucide="map-pin" class="vc-icon-sm"></i> ปลายทาง
-                                </div>
-                                <div class="ac-field-value">{{ b.destination }}</div>
-                            </div>
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="target" class="vc-icon-sm"></i> วัตถุประสงค์
-                                </div>
-                                <div class="ac-field-value">{{ b.purpose }}</div>
-                            </div>
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="users" class="vc-icon-sm"></i> ผู้โดยสาร
-                                </div>
-                                <div class="ac-field-value">{{ b.passenger_count }} คน</div>
+                            <div class="ac-detail__pickup">
+                                ขึ้นรถ: {{ b.pickup_location or '—' }}
                             </div>
                         </div>
 
                         {# Action buttons #}
-                        <div id="action-btns-{{ b.id }}" class="ac-action-row">
+                        <div id="action-btns-{{ b.id }}" class="ac-action-row pt-2">
                             <button type="button"
                                     class="btn-reject-action"
                                     onclick="showRejectForm({{ b.id }})"
@@ -217,46 +221,55 @@
                      data-bs-target="#hist-{{ b.id }}"
                      aria-expanded="false">
                     <div class="ac-header-row">
-                        <span class="ac-ref">BK-{{ '%04d' % b.id }}</span>
+                        <span class="ac-ref">{{ b.trip_department or '—' }}{% if b.central_category %}-{{ b.central_category }}{% endif %}</span>
                         <div class="ac-header-right">
+                            <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
+                                <i data-lucide="fuel" class="vc-icon-sm"></i>
+                                ฿{{ '{:,.0f}'.format(fuel_costs.get(b.id, 0) | float) }}
+                            </span>
                             <span class="vc-badge vc-badge-success vc-badge-dot">อนุมัติแล้ว</span>
                             <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-hist-{{ b.id }}"></i>
                         </div>
                     </div>
-                    <div class="ac-meta">
-                        {{ b.user.full_name or b.user.username }}
-                        <span class="ac-meta-sep">·</span>
-                        {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                    <div class="ac-meta pt-1">
+                        <span class="ac-badge">
+                            <i data-lucide="user" class="vc-icon-sm"></i>
+                            {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
+                        </span>
+                        <span class="ac-badge">
+                            <i data-lucide="clock" class="vc-icon-sm"></i>
+                            {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                        </span>
+                        <span class="ac-badge">{{ b.user.full_name or b.user.username }}</span>
                     </div>
                 </div>
                 <div class="collapse" id="hist-{{ b.id }}">
                     <div class="ac-body">
-                        <div class="ac-fields">
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="user" class="vc-icon-sm"></i> ผู้จอง
-                                </div>
-                                <div class="ac-field-value">{{ b.user.full_name or b.user.username }}</div>
+                        <div class="ac-detail-card">
+                            <div class="ac-detail__head">
+                                <span class="ac-detail__requester">
+                                    <i data-lucide="user" class="vc-icon-sm"></i>{{ b.user.full_name or b.user.username }}
+                                </span>
+                                <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
+                                    <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
+                                </span>
                             </div>
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="calendar" class="vc-icon-sm"></i> วันที่
-                                </div>
-                                <div class="ac-field-value">{{ b.start_datetime.strftime('%Y-%m-%d') }}</div>
+                            <div class="ac-detail__datetime">
+                                <span class="ac-detail__date">
+                                    <i data-lucide="calendar" class="vc-icon-sm"></i>{{ th_date(b.start_datetime) }}
+                                </span>
+                                <span class="ac-detail__time">
+                                    <i data-lucide="clock" class="vc-icon-sm"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                                </span>
                             </div>
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="clock" class="vc-icon-sm"></i> เวลา
-                                </div>
-                                <div class="ac-field-value">
-                                    {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
-                                </div>
+                            <div class="ac-detail__trip">
+                                <span class="ac-detail__purpose">{{ b.purpose }}</span>
+                                <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
+                                <span class="ac-detail__dest">{{ b.destination }}</span>
                             </div>
-                            <div class="ac-field ac-field-full">
-                                <div class="ac-field-label">
-                                    <i data-lucide="map-pin" class="vc-icon-sm"></i> ปลายทาง
-                                </div>
-                                <div class="ac-field-value">{{ b.destination }}</div>
+                            <div class="ac-detail__pickup">
+                                <i data-lucide="map-pin" class="vc-icon-sm"></i>
+                                ขึ้นรถ: {{ b.pickup_location or '—' }}
                             </div>
                         </div>
                     </div>
@@ -287,56 +300,63 @@
                      data-bs-target="#rej-{{ b.id }}"
                      aria-expanded="false">
                     <div class="ac-header-row">
-                        <span class="ac-ref">BK-{{ '%04d' % b.id }}</span>
+                        <span class="ac-ref">{{ b.trip_department or '—' }}{% if b.central_category %}-{{ b.central_category }}{% endif %}</span>
                         <div class="ac-header-right">
+                            <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
+                                <i data-lucide="fuel" class="vc-icon-sm"></i>
+                                ฿{{ '{:,.0f}'.format(fuel_costs.get(b.id, 0) | float) }}
+                            </span>
                             <span class="vc-badge vc-badge-danger vc-badge-dot">ปฏิเสธ</span>
                             <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-rej-{{ b.id }}"></i>
                         </div>
                     </div>
-                    <div class="ac-meta">
-                        {{ b.user.full_name or b.user.username }}
-                        <span class="ac-meta-sep">·</span>
-                        {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                    <div class="ac-meta pt-1">
+                        <span class="ac-badge">
+                            <i data-lucide="user" class="vc-icon-sm"></i>
+                            {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
+                        </span>
+                        <span class="ac-badge">
+                            <i data-lucide="clock" class="vc-icon-sm"></i>
+                            {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                        </span>
+                        <span class="ac-badge">{{ b.user.full_name or b.user.username }}</span>
                     </div>
                 </div>
                 <div class="collapse" id="rej-{{ b.id }}">
                     <div class="ac-body">
-                        <div class="ac-fields">
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="user" class="vc-icon-sm"></i> ผู้จอง
-                                </div>
-                                <div class="ac-field-value">{{ b.user.full_name or b.user.username }}</div>
+                        <div class="ac-detail-card">
+                            <div class="ac-detail__head">
+                                <span class="ac-detail__requester">
+                                    <i data-lucide="user" class="vc-icon-sm"></i>{{ b.user.full_name or b.user.username }}
+                                </span>
+                                <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
+                                    <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
+                                </span>
                             </div>
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="calendar" class="vc-icon-sm"></i> วันที่
-                                </div>
-                                <div class="ac-field-value">{{ b.start_datetime.strftime('%Y-%m-%d') }}</div>
+                            <div class="ac-detail__datetime">
+                                <span class="ac-detail__date">
+                                    <i data-lucide="calendar" class="vc-icon-sm"></i>{{ th_date(b.start_datetime) }}
+                                </span>
+                                <span class="ac-detail__time">
+                                    <i data-lucide="clock" class="vc-icon-sm"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
+                                </span>
                             </div>
-                            <div class="ac-field">
-                                <div class="ac-field-label">
-                                    <i data-lucide="clock" class="vc-icon-sm"></i> เวลา
-                                </div>
-                                <div class="ac-field-value">
-                                    {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
-                                </div>
+                            <div class="ac-detail__trip">
+                                <span class="ac-detail__purpose">{{ b.purpose }}</span>
+                                <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
+                                <span class="ac-detail__dest">{{ b.destination }}</span>
                             </div>
-                            <div class="ac-field ac-field-full">
-                                <div class="ac-field-label">
-                                    <i data-lucide="map-pin" class="vc-icon-sm"></i> ปลายทาง
-                                </div>
-                                <div class="ac-field-value">{{ b.destination }}</div>
+                            <div class="ac-detail__pickup">
+                                <i data-lucide="map-pin" class="vc-icon-sm"></i>
+                                ขึ้นรถ: {{ b.pickup_location or '—' }}
                             </div>
-                            {% if b.reject_reason %}
-                            <div class="ac-field ac-field-full">
-                                <div class="ac-field-label">
-                                    <i data-lucide="message-square-x" class="vc-icon-sm"></i> เหตุผลที่ปฏิเสธ
-                                </div>
-                                <div class="ac-field-value ac-reject-reason">{{ b.reject_reason }}</div>
-                            </div>
-                            {% endif %}
                         </div>
+                        {% if b.reject_reason %}
+                        <div class="ac-reject-note">
+                            <i data-lucide="message-square-x" class="vc-icon-sm"></i>
+                            <span>{{ b.reject_reason }}</span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

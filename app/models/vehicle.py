@@ -33,6 +33,16 @@ class Driver(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # ผูกกับ User account
     linked_user = db.relationship('User', foreign_keys=[user_id])
 
+    # ── โปรไฟล์คนขับ (2026-06-08) — ข้อมูลสำหรับออกใบเสร็จ/เอกสาร ──
+    national_id      = db.Column(db.String(20), nullable=True)   # เลขบัตรประชาชน 13 หลัก
+    addr_line        = db.Column(db.String(200), nullable=True)  # บ้านเลขที่/หมู่/ถนน
+    addr_subdistrict = db.Column(db.String(100), nullable=True)  # ตำบล/แขวง
+    addr_district    = db.Column(db.String(100), nullable=True)  # อำเภอ/เขต
+    addr_province    = db.Column(db.String(100), nullable=True)  # จังหวัด
+    addr_postal      = db.Column(db.String(10),  nullable=True)  # รหัสไปรษณีย์
+    id_card_image    = db.Column(db.String(255), nullable=True)  # ไฟล์รูปบัตรประชาชน
+    avatar_image     = db.Column(db.String(255), nullable=True)  # ไฟล์รูปโปรไฟล์คนขับ
+
 
 # ==========================================
 # 5. ตาราง VehicleBooking (ตั๋วการจองรถ/เจ้าภาพทริป)

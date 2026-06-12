@@ -2,7 +2,7 @@
 import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
-from models import db, User, RepairTicket, MaintenanceTicket, RoomBooking, VehicleBooking
+from models import db, User, RepairTicket, MaintenanceTicket, RoomBooking, VehicleBooking, get_bkk_time
 from ad_utils import check_ad_login
 from datetime import datetime, date, timedelta
 
@@ -14,8 +14,6 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username').strip().lower()
         password = request.form.get('password')
-        print("USERNAME:", username)
-        print("PASSWORD:", password)
 
         is_valid, user_info = check_ad_login(username, password)
         # is_valid = True
@@ -82,7 +80,7 @@ def logout():
 @login_required
 def dashboard():
     user_count = User.query.count()
-    today = date.today()
+    today = get_bkk_time().date()
 
     # ---- Stats จริงจาก DB ----
     # ระบบซ่อม IT

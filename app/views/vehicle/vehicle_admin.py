@@ -31,6 +31,18 @@ from views.vehicle.vehicle_common import (
 )
 
 
+def _save_driver_image(field_name, prefix):
+    """รับไฟล์รูปจาก request.files แล้วเซฟลง static/uploads/driver/ คืนชื่อไฟล์ (None ถ้าไม่มี)"""
+    img = request.files.get(field_name)
+    if not (img and img.filename):
+        return None
+    upload_folder = os.path.join('static', 'uploads', 'driver')
+    os.makedirs(upload_folder, exist_ok=True)
+    fname = f"{int(time.time())}_{prefix}_{secure_filename(img.filename)}"
+    img.save(os.path.join(upload_folder, fname))
+    return fname
+
+
 @adminfleet_bp.route('/admin/manage-fleet', methods=['GET', 'POST'])
 @login_required
 def manage_fleet():
@@ -55,11 +67,19 @@ def manage_fleet():
 
         elif action == 'add_driver':
             new_driver = Driver(
-                name      = request.form.get('name'),
-                phone     = request.form.get('phone'),
-                is_active = bool(request.form.get('is_active')),
-                user_id   = request.form.get('user_id') or None
+                name             = request.form.get('name'),
+                phone            = request.form.get('phone'),
+                is_active        = bool(request.form.get('is_active')),
+                user_id          = request.form.get('user_id') or None,
+                national_id      = (request.form.get('national_id') or '').strip() or None,
+                addr_line        = (request.form.get('addr_line') or '').strip() or None,
+                addr_subdistrict = (request.form.get('addr_subdistrict') or '').strip() or None,
+                addr_district    = (request.form.get('addr_district') or '').strip() or None,
+                addr_province    = (request.form.get('addr_province') or '').strip() or None,
+                addr_postal      = (request.form.get('addr_postal') or '').strip() or None,
             )
+            new_driver.avatar_image  = _save_driver_image('avatar_image', 'avatar')
+            new_driver.id_card_image = _save_driver_image('id_card_image', 'idcard')
             db.session.add(new_driver)
             db.session.commit()
             flash(f"เพิ่มพนักงานขับรถ {new_driver.name} สำเร็จ!", 'success')
@@ -98,6 +118,19 @@ def manage_fleet():
             driver.phone     = request.form.get('phone')
             driver.is_active = True if request.form.get('is_active') else False
             driver.user_id   = request.form.get('user_id') or None
+            driver.national_id      = (request.form.get('national_id') or '').strip() or None
+            driver.addr_line        = (request.form.get('addr_line') or '').strip() or None
+            driver.addr_subdistrict = (request.form.get('addr_subdistrict') or '').strip() or None
+            driver.addr_district    = (request.form.get('addr_district') or '').strip() or None
+            driver.addr_province    = (request.form.get('addr_province') or '').strip() or None
+            driver.addr_postal      = (request.form.get('addr_postal') or '').strip() or None
+            # อัปโหลดรูปใหม่ทับของเดิม (ถ้าไม่ส่งมา = เก็บของเดิมไว้)
+            new_avatar = _save_driver_image('avatar_image', 'avatar')
+            if new_avatar:
+                driver.avatar_image = new_avatar
+            new_idcard = _save_driver_image('id_card_image', 'idcard')
+            if new_idcard:
+                driver.id_card_image = new_idcard
             db.session.commit()
             flash(f"อัปเดตข้อมูลคนขับ {driver.name} สำเร็จ!", 'success')
 
@@ -148,7 +181,7 @@ def manage_fleet():
         .group_by(VehicleBooking.assigned_vehicle_id).all())
     vehicle_odometers = {vid: odo for vid, odo in odo_rows}
 
-    now_dt      = datetime.now()
+    now_dt      = get_bkk_time()
     month_start = now_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     job_rows = (db.session.query(VehicleBooking.driver_id, func.count(VehicleBooking.id))
         .filter(VehicleBooking.driver_id.isnot(None),
@@ -162,7 +195,7 @@ def manage_fleet():
                            depts=depts, approvers=approvers,
                            vehicle_odometers=vehicle_odometers,
                            driver_jobs=driver_jobs,
-                           now=datetime.now())
+                           now=get_bkk_time())
 
 
 # ─────────────────────────────────────────────
@@ -183,7 +216,7 @@ def admin_trips():
     users_dept = [d.name for d in VehicleDepartment.query
                   .filter_by(is_disable=0).order_by(VehicleDepartment.name).all()]
 
-    now = datetime.utcnow() + timedelta(hours=7)
+    now = get_bkk_time()
     # งบ active period (2026-06-06): เลิกผูก year/month — ดึงงบ is_active ที่ช่วง
     # start_date–end_date ครอบวันนี้ (mirror _lookup_budget_for_booking).
     # overlap หลายก้อนต่อแผนก → เอา start_date ล่าสุด (specific สุด)
@@ -231,7 +264,7 @@ def admin_trips():
                 'approver': approver_name,
             })
 
-    fuel_price = FuelPrice.get_for_date(date.today()) or float(SystemConfig.get('fuel_price', 0) or 0)
+    fuel_price = FuelPrice.get_for_date(get_bkk_time().date()) or float(SystemConfig.get('fuel_price', 0) or 0)
 
     return render_template('vehicle/admin/vehicle_admin.html',
                            bookings=bookings,
@@ -269,7 +302,13 @@ def admin_revert_booking(booking_id):
     if not is_vehicle_admin():
         return jsonify({'ok': False, 'msg': 'ไม่มีสิทธิ์'}), 403
     b = VehicleBooking.query.get_or_404(booking_id)
+    if any(m.budget_deducted_at for m in b.mileage):
+        return jsonify({'ok': False, 'msg': 'revert ไม่ได้ — มีการหักงบแล้ว'}), 400
+    if b.status not in ('approved', 'waiting_approver', 'rejected'):
+        return jsonify({'ok': False, 'msg': f'revert ไม่ได้จากสถานะ {b.status}'}), 400
     b.status = 'pending'
+    b.reject_reason = None
+    b.updated_by = current_user.id
     db.session.commit()
     return jsonify({'ok': True})
 
@@ -286,7 +325,7 @@ def admin_vehicle_repair(vehicle_id):
     v = Vehicle.query.get_or_404(vehicle_id)
     v.status = 'maintenance'
     v.repair_note = request.form.get('repair_note', '')
-    v.repair_started_at = datetime.utcnow() + timedelta(hours=7)
+    v.repair_started_at = get_bkk_time()
     db.session.commit()
     return jsonify({'ok': True})
 
@@ -459,11 +498,6 @@ def admin_assign(booking_id):
             booking.status = 'rejected'
             booking.reject_reason = request.form.get('reject_reason', '').strip() or None
             db.session.flush()
-            # คืนงบถ้าเคยหักแล้ว (no-op ถ้ายังไม่เคยหัก — ปกติ reject ตอน assign จะยังไม่มี mileage)
-            budget_svc.refund_for_booking(
-                booking,
-                note=f'reject by admin {current_user.username} (assign): {booking.reject_reason or "—"}',
-            )
             # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07) — confirm/reject ไม่ส่ง
             _n_rejected(booking, current_user, by_approver=False)  # In-app Event #6
             db.session.commit()

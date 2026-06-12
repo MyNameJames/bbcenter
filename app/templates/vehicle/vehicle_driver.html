@@ -8,6 +8,7 @@
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/components/dropdown.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_driver.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
@@ -41,29 +42,96 @@
                 <h1 class="driver-title">{{ driver.name }}</h1>
                 <p class="driver-subtitle">บันทึกเลขไมล์ · {{ today_start.strftime('%d/%m/%Y') }}</p>
             </div>
-            <span class="driver-id-chip" title="รหัสคนขับ">
-                <i data-lucide="user" class="vc-icon-sm"></i>
-                D-{{ '%03d' % driver.id }}
-            </span>
         </div>
 
-        {# ── Ad-hoc CTA ── #}
-        <button type="button" class="driver-adhoc-btn" data-open-adhoc title="สร้างงานนอกระบบ">
-            <i data-lucide="plus" class="vc-icon-sm"></i>
+        {# ── Ad-hoc CTA (collapse toggle) ── #}
+        <button type="button" class="driver-adhoc-btn" data-adhoc-toggle title="สร้างงานนอกระบบ">
+            <i data-lucide="plus" class="vc-icon-sm driver-adhoc-btn__icon"></i>
             งานนอกระบบ
         </button>
+
+        {# ── Ad-hoc collapse panel ── #}
+        <div class="driver-adhoc-panel" data-adhoc-panel hidden>
+            <form method="POST" action="{{ url_for('driver.driver_ad_hoc_trip') }}"
+                  enctype="multipart/form-data" class="driver-adhoc-form">
+
+                {# ผู้จอง — autocompleteselect (search + เก็บ user id, strict) #}
+                <div class="driver-field">
+                    <label class="driver-field__label">ผู้จอง / ผู้ติดต่อ</label>
+                    <select name="contact_user_id" class="driver-field__select" data-autocomplete
+                            placeholder="ค้นหาผู้จอง..." required aria-label="ผู้จอง">
+                        <option value="" disabled selected></option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.full_name or u.username }}{% if u.department %} · {{ u.department }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# รถ — vc-dd #}
+                <div class="driver-field">
+                    <label class="driver-field__label">รถที่ใช้</label>
+                    <select name="vehicle_id" data-dropdown required aria-label="รถที่ใช้" data-adhoc-vehicle>
+                        <option value="" disabled selected>เลือกรถ...</option>
+                        {% for v in vehicles %}
+                        <option value="{{ v.id }}" data-last-odo="{{ latest_odo.get(v.id, '') }}">
+                            {{ v.brand }} {{ v.model }} · {{ v.license_plate }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# วัตถุประสงค์ #}
+                <div class="driver-field">
+                    <label class="driver-field__label">วัตถุประสงค์</label>
+                    <input type="text" name="purpose" class="driver-field__input"
+                           placeholder="เช่น รับส่งเอกสาร / รับลูกค้า..." maxlength="200">
+                </div>
+
+                {# สถานที่เดินทางไป #}
+                <div class="driver-field">
+                    <label class="driver-field__label">สถานที่เดินทางไป</label>
+                    <input type="text" name="destination" class="driver-field__input"
+                           placeholder="เช่น ธนาคาร / สาขา..." maxlength="200" required>
+                </div>
+
+                {# บันทึกเลขไมล์ออก #}
+                <div class="driver-adhoc-mileage">
+                    <div class="driver-form__title">
+                        บันทึกเลขไมล์ออก
+                        <span class="driver-form__hint" data-adhoc-odo-hint hidden></span>
+                    </div>
+                    <label class="driver-upload driver-upload--wide">
+                        <input type="file" name="odometer_start_img" accept="image/*" capture="environment" data-upload-input>
+                        <div class="driver-upload__icon"><i data-lucide="upload" class="vc-icon-md"></i></div>
+                        <div class="driver-upload__label">อัปโหลดรูปหน้าปัด</div>
+                        <div class="driver-upload__hint">หรือ <span class="driver-upload__browse">แตะเพื่อเลือก</span> · 4MB</div>
+                    </label>
+                    <input type="number" name="odometer_start" class="form-control driver-odo-input"
+                           inputmode="numeric" min="0" placeholder="เลขไมล์ปัจจุบัน" required data-odo-input>
+                </div>
+
+                <div class="driver-adhoc-foot">
+                    <button type="button" class="driver-modal__btn driver-modal__btn--ghost" data-adhoc-cancel title="ยกเลิก">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="driver-cta driver-adhoc-submit" title="บันทึกเลขไมล์ออก">
+                        <i data-lucide="play" class="vc-icon-sm"></i> บันทึกเลขไมล์ออก
+                    </button>
+                </div>
+            </form>
+        </div>
 
         {# ── Filter trips ── #}
         {% set today_trips    = bookings | selectattr('start_datetime', 'ge', today_start)    | selectattr('start_datetime', 'le', today_end)    | list %}
         {% set tomorrow_trips = bookings | selectattr('start_datetime', 'ge', tomorrow_start) | selectattr('start_datetime', 'le', tomorrow_end) | list %}
 
         {# ── Tabs ── #}
-        <div class="driver-tabs" role="tablist">
-            <button type="button" class="driver-tabs__btn is-active" data-tab="today" role="tab" title="งานวันนี้">
+        <div class="driver-tabs mt-1 mb-2" role="tablist">
+            <button type="button" class="driver-tabs__btn is-active py-2 px-3" data-tab="today" role="tab" title="งานวันนี้">
                 วันนี้
                 <span class="driver-tabs__count">{{ today_trips|length }}</span>
             </button>
-            <button type="button" class="driver-tabs__btn" data-tab="tomorrow" role="tab" title="งานพรุ่งนี้">
+            <button type="button" class="driver-tabs__btn py-2 px-3" data-tab="tomorrow" role="tab" title="งานพรุ่งนี้">
                 พรุ่งนี้
                 <span class="driver-tabs__count">{{ tomorrow_trips|length }}</span>
             </button>
@@ -84,18 +152,19 @@
                         {% set trip_status = 'waiting' %}
                     {% endif %}
                     {% set requester_label = b.contact_name or (b.user.full_name if b.user else '-') %}
+                    {% set last_odo = latest_odo.get(b.assigned_vehicle_id) %}
 
                     <div class="driver-card" data-card>
                         <button type="button" class="driver-card__head" data-card-toggle title="ขยาย/ย่อ">
-                            <span class="driver-card__id">BK-{{ '%04d' % b.id }}</span>
-                            <span class="driver-card__summary">
+                            <span class="driver-card__plate">
+                                {{ b.assigned_vehicle.license_plate if b.assigned_vehicle else 'ยังไม่ระบุรถ' }}
+                            </span>
+                            <span class="driver-card__time">
                                 {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
-                                <span class="dot">·</span>
-                                {{ b.destination }}
                             </span>
                             {% if trip_status == 'done' %}
                                 <span class="driver-pill driver-pill--done">
-                                    <i data-lucide="check" class="vc-icon-sm"></i> เสร็จแล้ว
+                                    เสร็จแล้ว
                                 </span>
                             {% elif trip_status == 'ontrip' %}
                                 <span class="driver-pill driver-pill--ontrip">
@@ -110,46 +179,47 @@
                         </button>
 
                         <div class="driver-card__body">
-                            {# Meta grid #}
-                            <div class="driver-meta">
-                                <div class="driver-meta__item">
-                                    <i data-lucide="clock" class="vc-icon-sm driver-meta__icon"></i>
-                                    <div>
-                                        <div class="driver-meta__label">เวลา</div>
-                                        <div class="driver-meta__value">
-                                            {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
-                                        </div>
+                            {# ── Emergency vehicle swap — waiting only (ก่อนออก) ── #}
+                            {% if trip_status == 'waiting' %}
+                                <form method="POST" action="{{ url_for('driver.driver_change_vehicle') }}" class="pt-2 pb-4">
+                                    <input type="hidden" name="booking_id" value="{{ b.id }}">
+                                    <span class="driver-emergency__label">
+                                        <i data-lucide="clock-alert" class="vc-icon"></i>
+                                        เหตุฉุกเฉิน — เปลี่ยนรถก่อนออก
+                                    </span>
+                                    <div class="driver-emergency__row">
+                                        <select name="vehicle_id" data-dropdown aria-label="เปลี่ยนรถ">
+                                            {% for v in vehicles %}
+                                            <option value="{{ v.id }}" {{ 'selected' if b.assigned_vehicle_id == v.id }}>
+                                                {{ v.brand }} {{ v.model }} · {{ v.license_plate }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="driver-emergency__btn" title="ยืนยันเปลี่ยนรถ">
+                                            เปลี่ยน
+                                        </button>
                                     </div>
+                                </form>
+                            {% endif %}
+
+                            {# ── Booking detail (white card, no border) ── #}
+                            <div class="driver-form__title pb-1">รายละเอียดการจอง</div>
+                            <div class="driver-detail-card">
+                                <div class="driver-detail__head">
+                                    <span class="driver-detail__requester">
+                                        {{ requester_label }}
+                                    </span>
+                                    <span class="driver-detail__pax" title="จำนวนผู้โดยสาร">
+                                        <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
+                                    </span>
                                 </div>
-                                <div class="driver-meta__item">
-                                    <i data-lucide="map-pin" class="vc-icon-sm driver-meta__icon"></i>
-                                    <div>
-                                        <div class="driver-meta__label">ปลายทาง</div>
-                                        <div class="driver-meta__value">{{ b.destination }}</div>
-                                    </div>
+                                <div class="driver-detail__trip border-bottom py-1 pb-2">
+                                    <span class="driver-detail__purpose">{{ b.purpose }}</span>
+                                    <i data-lucide="arrow-right" class="vc-icon-sm driver-detail__arrow"></i>
+                                    <span class="driver-detail__dest">{{ b.destination }}</span>
                                 </div>
-                                <div class="driver-meta__item">
-                                    <i data-lucide="car" class="vc-icon-sm driver-meta__icon"></i>
-                                    <div>
-                                        <div class="driver-meta__label">รถ</div>
-                                        <div class="driver-meta__value">
-                                            {% if b.assigned_vehicle %}
-                                                {{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}
-                                                <span class="driver-plate">
-                                                    ({{ b.assigned_vehicle.license_plate }})
-                                                </span>
-                                            {% else %}
-                                                <span class="driver-unset">ยังไม่ระบุ</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="driver-meta__item">
-                                    <i data-lucide="user" class="vc-icon-sm driver-meta__icon"></i>
-                                    <div>
-                                        <div class="driver-meta__label">ผู้จอง</div>
-                                        <div class="driver-meta__value">{{ requester_label }}</div>
-                                    </div>
+                                <div class="driver-detail__pickup pt-2">
+                                    ขึ้นรถ: {{ b.pickup_location or '—' }}
                                 </div>
                             </div>
 
@@ -170,7 +240,7 @@
                                     </div>
                                 </div>
                                 <div class="driver-done-summary">
-                                    <i data-lucide="check-circle-2" class="vc-icon-sm"></i> ปิดงานเรียบร้อย
+                                    ปิดงานเรียบร้อย
                                 </div>
 
                             {# ── State: ontrip → กรอกไมล์กลับ ── #}
@@ -193,20 +263,21 @@
                                     <input type="hidden" name="entry_type" value="end">
                                     <input type="hidden" name="actual_end" data-actual-now>
 
-                                    <div class="driver-form__title">บันทึกเลขไมล์กลับ</div>
-                                    <input type="number" name="odometer_end" class="form-control"
-                                           inputmode="numeric" min="{{ m.odometer_start + 1 }}"
-                                           placeholder="เลขไมล์กลับ" required>
+                                    <div class="driver-form__title pt-2">บันทึกเลขไมล์กลับ</div>
 
-                                    <label class="driver-upload">
+                                    <label class="driver-upload driver-upload--wide mt-2">
                                         <input type="file" name="odometer_end_img" accept="image/*" capture="environment" data-upload-input>
                                         <div class="driver-upload__icon"><i data-lucide="upload" class="vc-icon-md"></i></div>
                                         <div class="driver-upload__label">รูปหน้าปัด (ไมล์กลับ)</div>
                                         <div class="driver-upload__hint">แตะเพื่ออัปโหลด</div>
                                     </label>
 
+                                     <input type="number" name="odometer_end" class="form-control driver-odo-input"
+                                           inputmode="numeric" min="{{ m.odometer_start + 1 }}"
+                                           placeholder="เลขไมล์กลับ" required data-odo-input>
+
                                     <button type="submit" class="driver-cta" title="บันทึกเลขไมล์กลับ">
-                                        <i data-lucide="check" class="vc-icon-sm"></i> บันทึกเลขไมล์กลับ
+                                        บันทึกเลขไมล์กลับ
                                     </button>
                                 </form>
 
@@ -217,20 +288,26 @@
                                     <input type="hidden" name="entry_type" value="start">
                                     <input type="hidden" name="actual_start" data-actual-now>
 
-                                    <div class="driver-form__title">บันทึกเลขไมล์ออก</div>
-                                    <input type="number" name="odometer_start" class="form-control"
-                                           inputmode="numeric" min="0"
-                                           placeholder="เลขไมล์ปัจจุบัน" required>
+                                    <div class="driver-form__title pt-2">
+                                        บันทึกเลขไมล์ออก
+                                        {% if last_odo %}
+                                        <span class="driver-form__hint">เลขไมล์ล่าสุด: {{ '{:,}'.format(last_odo) }} km</span>
+                                        {% endif %}
+                                    </div>
 
-                                    <label class="driver-upload">
+                                    <label class="driver-upload driver-upload--wide">
                                         <input type="file" name="odometer_start_img" accept="image/*" capture="environment" data-upload-input>
                                         <div class="driver-upload__icon"><i data-lucide="upload" class="vc-icon-md"></i></div>
-                                        <div class="driver-upload__label">รูปหน้าปัด (ไมล์ออก)</div>
-                                        <div class="driver-upload__hint">แตะเพื่ออัปโหลด</div>
+                                        <div class="driver-upload__label">อัปโหลดรูปหน้าปัด</div>
+                                        <div class="driver-upload__hint">หรือ <span class="driver-upload__browse">แตะเพื่อเลือก</span> · 4MB</div>
                                     </label>
 
+                                    <input type="number" name="odometer_start" class="form-control driver-odo-input"
+                                           inputmode="numeric" min="{{ last_odo or 0 }}"
+                                           placeholder="เลขไมล์ปัจจุบัน" required data-odo-input>
+
                                     <button type="submit" class="driver-cta" title="บันทึกเลขไมล์ออก">
-                                        <i data-lucide="play" class="vc-icon-sm"></i> บันทึกเลขไมล์ออก
+                                         บันทึกเลขไมล์ออก
                                     </button>
                                 </form>
                             {% endif %}
@@ -251,11 +328,11 @@
                     {% set requester_label = b.contact_name or (b.user.full_name if b.user else '-') %}
                     <div class="driver-card driver-card--readonly" data-card>
                         <button type="button" class="driver-card__head" data-card-toggle title="ขยาย/ย่อ">
-                            <span class="driver-card__id">BK-{{ '%04d' % b.id }}</span>
-                            <span class="driver-card__summary">
+                            <span class="driver-card__plate">
+                                {{ b.assigned_vehicle.license_plate if b.assigned_vehicle else 'ยังไม่ระบุรถ' }}
+                            </span>
+                            <span class="driver-card__time">
                                 {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
-                                <span class="dot">·</span>
-                                {{ b.destination }}
                             </span>
                             <span class="driver-pill driver-pill--upcoming">
                                 <i data-lucide="calendar" class="vc-icon-sm"></i> พรุ่งนี้
@@ -264,45 +341,24 @@
                         </button>
 
                         <div class="driver-card__body">
-                            <div class="driver-meta">
-                                <div class="driver-meta__item">
-                                    <i data-lucide="clock" class="vc-icon-sm driver-meta__icon"></i>
-                                    <div>
-                                        <div class="driver-meta__label">เวลา</div>
-                                        <div class="driver-meta__value">
-                                            {{ b.start_datetime.strftime('%H:%M') }} — {{ b.end_datetime.strftime('%H:%M') }}
-                                        </div>
-                                    </div>
+                            <div class="driver-detail-card">
+                                <div class="driver-detail__label">รายละเอียดการจอง</div>
+                                <div class="driver-detail__head">
+                                    <span class="driver-detail__requester">
+                                        <i data-lucide="user" class="vc-icon-sm"></i>{{ requester_label }}
+                                    </span>
+                                    <span class="driver-detail__pax" title="จำนวนผู้โดยสาร">
+                                        <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
+                                    </span>
                                 </div>
-                                <div class="driver-meta__item">
-                                    <i data-lucide="map-pin" class="vc-icon-sm driver-meta__icon"></i>
-                                    <div>
-                                        <div class="driver-meta__label">ปลายทาง</div>
-                                        <div class="driver-meta__value">{{ b.destination }}</div>
-                                    </div>
+                                <div class="driver-detail__trip">
+                                    <span class="driver-detail__purpose">{{ b.purpose }}</span>
+                                    <i data-lucide="arrow-right" class="vc-icon-sm driver-detail__arrow"></i>
+                                    <span class="driver-detail__dest">{{ b.destination }}</span>
                                 </div>
-                                <div class="driver-meta__item">
-                                    <i data-lucide="car" class="vc-icon-sm driver-meta__icon"></i>
-                                    <div>
-                                        <div class="driver-meta__label">รถ</div>
-                                        <div class="driver-meta__value">
-                                            {% if b.assigned_vehicle %}
-                                                {{ b.assigned_vehicle.brand }} {{ b.assigned_vehicle.model }}
-                                                <span class="driver-plate">
-                                                    ({{ b.assigned_vehicle.license_plate }})
-                                                </span>
-                                            {% else %}
-                                                <span class="driver-unset">ยังไม่ระบุ</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="driver-meta__item">
-                                    <i data-lucide="user" class="vc-icon-sm driver-meta__icon"></i>
-                                    <div>
-                                        <div class="driver-meta__label">ผู้จอง</div>
-                                        <div class="driver-meta__value">{{ requester_label }}</div>
-                                    </div>
+                                <div class="driver-detail__pickup">
+                                    <i data-lucide="map-pin" class="vc-icon-sm"></i>
+                                    ขึ้นรถ: {{ b.pickup_location or '—' }}
                                 </div>
                             </div>
 
@@ -321,85 +377,9 @@
     </div>
 </main>
 
-{# ====================================================
-   Modal: งานนอกระบบ (ad-hoc trip)
-   ==================================================== #}
-<div class="driver-modal" id="adhocModal" hidden aria-hidden="true" role="dialog" aria-labelledby="adhocModalTitle">
-    <div class="driver-modal__backdrop" data-close-adhoc></div>
-    <div class="driver-modal__dialog" role="document">
-        <form method="POST" action="{{ url_for('driver.driver_ad_hoc_trip') }}" class="driver-modal__form">
-            <header class="driver-modal__head">
-                <h2 class="driver-modal__title" id="adhocModalTitle">
-                    <i data-lucide="sparkles" class="vc-icon-sm"></i>
-                    งานนอกระบบ
-                </h2>
-                <button type="button" class="driver-modal__close" data-close-adhoc title="ปิด">
-                    <i data-lucide="x" class="vc-icon-sm"></i>
-                </button>
-            </header>
-
-            <div class="driver-modal__body">
-                {# ── Contact: search dropdown + free text ── #}
-                <div class="driver-field">
-                    <label class="driver-field__label" for="adhocContactSearch">ชื่อผู้จอง / ผู้ติดต่อ</label>
-                    <div class="driver-combo" data-combo>
-                        <input type="hidden" name="contact_user_id" data-combo-user-id>
-                        <input type="text" id="adhocContactSearch" name="contact_name"
-                               class="driver-combo__input" placeholder="ค้นหา หรือพิมพ์ชื่อใหม่..."
-                               autocomplete="off" data-combo-input>
-                        <i data-lucide="chevron-down" class="vc-icon-sm driver-combo__chevron"></i>
-                        <ul class="driver-combo__list" data-combo-list hidden>
-                            {% for u in users %}
-                            <li class="driver-combo__item"
-                                data-combo-option
-                                data-user-id="{{ u.id }}"
-                                data-user-name="{{ u.full_name or u.username }}">
-                                <span class="driver-combo__name">{{ u.full_name or u.username }}</span>
-                                <span class="driver-combo__role">{{ u.department or '—' }}</span>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-
-                {# ── Vehicle ── #}
-                <div class="driver-field">
-                    <label class="driver-field__label" for="adhocVehicle">รถที่ใช้</label>
-                    <select class="driver-field__select" id="adhocVehicle" name="vehicle_id" required>
-                        <option value="" disabled selected>เลือกรถ...</option>
-                        {% for v in vehicles %}
-                        <option value="{{ v.id }}">{{ v.brand }} {{ v.model }} · {{ v.license_plate }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                {# ── Destination ── #}
-                <div class="driver-field">
-                    <label class="driver-field__label" for="adhocDestination">ปลายทาง</label>
-                    <input type="text" id="adhocDestination" name="destination"
-                           class="driver-field__input" placeholder="เช่น ธนาคาร / ตลาด / สาขา..."
-                           maxlength="200" required>
-                </div>
-
-                <p class="driver-modal__note">
-                    เวลาออกจะถูกบันทึกอัตโนมัติตอนกดสร้าง · บันทึกเลขไมล์/รูปหน้าปัด ในการ์ดงานเหมือนงานปกติ
-                </p>
-            </div>
-
-            <footer class="driver-modal__foot">
-                <button type="button" class="driver-modal__btn driver-modal__btn--ghost" data-close-adhoc title="ยกเลิก">
-                    ยกเลิก
-                </button>
-                <button type="submit" class="driver-modal__btn driver-modal__btn--primary" title="สร้างงาน">
-                    <i data-lucide="plus" class="vc-icon-sm"></i> สร้างงาน
-                </button>
-            </footer>
-        </form>
-    </div>
-</div>
-
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_driver.js') }}"></script>
 </body>
 </html>

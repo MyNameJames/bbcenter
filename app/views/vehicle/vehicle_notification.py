@@ -643,7 +643,7 @@ def payment_report_paid(mileage_id):
         return jsonify({'ok': False, 'msg': 'ชำระแล้ว'}), 400
 
     m.user_reported_paid = True
-    m.user_reported_at   = datetime.now()
+    m.user_reported_at   = get_bkk_time()
     db.session.commit()
     return jsonify({'ok': True, 'msg': 'แจ้งสำเร็จ — รอ Admin ยืนยัน'})
 
@@ -671,7 +671,7 @@ def payment_report_paid_by_booking(booking_id):
         return jsonify({'ok': False, 'msg': 'ไม่พบรายการค้างชำระ'}), 404
 
     m.user_reported_paid = True
-    m.user_reported_at   = datetime.now()
+    m.user_reported_at   = get_bkk_time()
     db.session.commit()
     return jsonify({'ok': True, 'msg': 'แจ้งสำเร็จ — รอ Admin ยืนยัน', 'mileage_id': m.id})
 

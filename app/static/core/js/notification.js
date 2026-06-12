@@ -205,7 +205,7 @@ function bootNotifications() {
                          ดูรายการทั้งหมด ${lucideIcon('arrow-right')}
                        </a>`
                     : `<button class="notif-btn-primary" data-act="report-paid" data-booking="${n.booking_id}">
-                         ${lucideIcon('check')} ฉันจ่ายแล้ว
+                          ฉันจ่ายแล้ว
                        </button>`
                 }
             </div>
@@ -257,7 +257,7 @@ function bootNotifications() {
                         ${rChip ? `<span class="notif-role-chip">${escapeHtml(rChip)}</span>` : ''}
                     </div>
                     <div class="notif-group-preview">
-                        ${lucideIcon(groupIcon)}${escapeHtml(latest.message || '')}
+                        ${escapeHtml(latest.message || '')}
                     </div>
                     <div class="notif-group-meta">${escapeHtml(latest.created_rel || '')}</div>
                 </div>

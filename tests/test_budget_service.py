@@ -2,7 +2,7 @@
 Tests สำหรับ views/vehicle/vehicle_budget_service.py — core money/ledger logic
 
 คลุม: deduct (+idempotency), refund (+no-double-refund), rededuct,
-refund_for_booking, set_budget_amount, manual_adjust, set_active,
+set_budget_amount, manual_adjust, set_active,
 verify_cache_integrity และ invariant: used_amount == SUM(log ที่ไม่ใช่ set_budget)
 """
 from decimal import Decimal
@@ -122,20 +122,6 @@ def test_rededuct_replaces_amount(make_budget, make_mileage):
     assert m.budget_deducted_at is not None
     # ledger: deduct(+350), refund(-350), deduct(+500) → sum 500
     assert ledger_sum(b) == D(500)
-
-
-# ──────────────────────────────────────────────────────────────
-# refund_for_booking
-# ──────────────────────────────────────────────────────────────
-def test_refund_for_booking_refunds_all_mileage(make_budget, make_mileage):
-    b = make_budget(used_amount=0)
-    bk, m = make_mileage()
-    bs.deduct_for_mileage(m, b, 200, snap=SNAP)
-
-    refunds = bs.refund_for_booking(bk)
-
-    assert len(refunds) == 1
-    assert D(b.used_amount) == D(0)
 
 
 # ──────────────────────────────────────────────────────────────

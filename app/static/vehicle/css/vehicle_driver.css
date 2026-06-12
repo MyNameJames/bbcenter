@@ -127,9 +127,9 @@
     display: inline-flex;
     background: var(--vc-bg);
     border: 1px solid var(--vc-border);
-    border-radius: var(--vc-radius-sm);
+    border-radius: var(--vc-radius-md);
     padding: 4px;
-    margin-bottom: var(--vc-space-5);
+    /* margin-bottom: var(--vc-space-5); */
 }
 
 .driver-tabs__btn {
@@ -138,7 +138,7 @@
     gap: 6px;
     border: 0;
     background: transparent;
-    padding: 6px 14px;
+    /* padding: 6px 14px; */
     font-size: var(--vc-text-sm);
     font-weight: 500;
     color: var(--vc-fg-muted);
@@ -163,8 +163,8 @@
     font-variant-numeric: tabular-nums;
     background: var(--vc-bg-hover);
     color: var(--vc-fg-muted);
-    padding: 1px 6px;
-    border-radius: var(--vc-radius-full);
+    padding: 3px 6px;
+    border-radius: var(--vc-radius-xs);
     font-size: 11px;
     font-weight: 500;
     border: 1px solid var(--vc-border);
@@ -351,7 +351,6 @@
     font-size: var(--vc-text-base);
     font-weight: 500;
     color: var(--vc-fg);
-    margin-bottom: 10px;
 }
 
 .driver-form .form-control {
@@ -842,6 +841,277 @@
 
 
 /* ─────────────────────────────────────────────
+   16. CARD HEAD — plate + time (req#1 reorder)
+───────────────────────────────────────────── */
+.driver-card__plate {
+    font-family: var(--vc-font-mono);
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    font-weight: 600;
+    color: var(--vc-fg);
+    font-size: var(--vc-text-sm);
+    letter-spacing: var(--vc-tracking-tight);
+    flex-shrink: 0;
+}
+
+.driver-card__time {
+    flex: 1;
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-sm);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* ─────────────────────────────────────────────
+   17. DETAIL CARD — booking detail (white, no border)
+───────────────────────────────────────────── */
+.driver-detail-card {
+    background: var(--vc-bg-subtle);
+    border-radius: var(--vc-radius-md);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    margin-bottom: var(--vc-space-4);
+}
+
+.driver-detail__label {
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    margin-bottom: 10px;
+}
+
+.driver-detail__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vc-space-3);
+}
+
+.driver-detail__requester {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vc-fg);
+    line-height: 1.35;
+    color: var(--vc-fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;  
+}
+
+.bl-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vc-fg);
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.driver-detail__requester .vc-icon-sm { color: var(--vc-fg-subtle); flex-shrink: 0; }
+
+.driver-detail__pax {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 2px 10px;
+    border-radius: var(--vc-radius-full);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    font-family: var(--vc-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg);
+}
+
+.driver-detail__pax .vc-icon-sm { color: var(--vc-fg-subtle); }
+
+.driver-detail__trip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: var(--vc-text-base);
+    color: var(--vc-fg);
+    line-height: 1.4;
+}
+
+.driver-detail__purpose { color: var(--vc-fg-muted); }
+.driver-detail__dest    { font-weight: 600; }
+.driver-detail__arrow   { color: var(--vc-fg-subtle); }
+
+.driver-detail__pickup {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+}
+
+.driver-detail__pickup .vc-icon-sm { color: var(--vc-fg-subtle); flex-shrink: 0; }
+
+
+/* ─────────────────────────────────────────────
+   18. EMERGENCY — เปลี่ยนรถก่อนออก (red label)
+───────────────────────────────────────────── */
+.driver-emergency {
+    margin-bottom: var(--vc-space-4);
+    padding: var(--vc-space-3);
+    border: 1px solid var(--vc-red-border);
+    border-radius: var(--vc-radius-md);
+    background: var(--vc-red-bg);
+}
+
+.driver-emergency__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    color: var(--vc-red);
+}
+
+.driver-emergency__row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--vc-space-2);
+}
+
+.driver-emergency__row .vc-dd { flex: 1; min-width: 0; }
+.driver-emergency__row .vc-dd-trigger { width: 100%; height: var(--vc-h-input-md); }
+
+.driver-emergency__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    height: var(--vc-h-input-md);
+    padding: 0 14px;
+    border: 1px solid var(--vc-red);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-red);
+    color: #fff;
+    font-family: inherit;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--vc-transition), border-color var(--vc-transition);
+}
+
+.driver-emergency__btn:hover {
+    background: var(--vc-red-hover);
+    border-color: var(--vc-red-hover);
+}
+
+
+/* ─────────────────────────────────────────────
+   19. FORM HINT + WIDE UPLOAD (req#2 บ.6–8)
+───────────────────────────────────────────── */
+.driver-form__hint {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: var(--vc-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--vc-text-xs);
+    font-weight: 400;
+    color: var(--vc-fg-muted);
+}
+
+.driver-upload--wide {
+    width: 100%;
+    padding: var(--vc-space-6) var(--vc-space-4);
+    box-sizing: border-box;
+}
+
+.driver-upload--wide .driver-upload__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 10px;
+    border-radius: var(--vc-radius-full);
+    background: var(--vc-bg-hover);
+    color: var(--vc-fg-muted);
+}
+
+.driver-upload__browse { color: var(--vc-accent); font-weight: 500; }
+
+.driver-odo-input { margin-top: 10px; }
+
+
+/* ─────────────────────────────────────────────
+   20. AD-HOC — collapse panel (แทน modal)
+───────────────────────────────────────────── */
+.driver-adhoc-panel[hidden] { display: none; }
+
+.driver-adhoc-panel {
+    margin-top: calc(-1 * var(--vc-space-2));   /* ชิดปุ่มด้านบน */
+    margin-bottom: var(--vc-space-4);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    background: var(--vc-bg);
+    padding: var(--vc-space-4);
+    animation: driver-adhoc-in var(--vc-transition) ease-out;
+}
+
+@keyframes driver-adhoc-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.driver-adhoc-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+}
+
+/* enhanced controls fill the field width */
+.driver-adhoc-form .vc-dd,
+.driver-adhoc-form .vc-ac { display: flex; width: 100%; }
+.driver-adhoc-form .vc-dd-trigger,
+.driver-adhoc-form .vc-ac > input {
+    width: 100%;
+    height: var(--vc-h-input-md);
+    font-size: var(--vc-text-sm);
+}
+
+.driver-adhoc-mileage {
+    padding-top: var(--vc-space-3);
+    border-top: 1px solid var(--vc-border);
+}
+
+.driver-adhoc-foot {
+    display: flex;
+    gap: var(--vc-space-2);
+    margin-top: var(--vc-space-1);
+}
+
+.driver-adhoc-foot .driver-modal__btn--ghost { flex-shrink: 0; }
+.driver-adhoc-foot .driver-adhoc-submit { flex: 1; margin-top: 0; }
+
+/* toggle button open state — rotate + into icon */
+.driver-adhoc-btn.is-open {
+    border-style: solid;
+    border-color: var(--vc-fg);
+    background: var(--vc-bg-hover);
+}
+.driver-adhoc-btn__icon { transition: transform var(--vc-transition); }
+.driver-adhoc-btn.is-open .driver-adhoc-btn__icon { transform: rotate(45deg); }
+
+
+/* ─────────────────────────────────────────────
    15. RESPONSIVE
 ───────────────────────────────────────────── */
 @media (max-width: 575.98px) {
@@ -850,7 +1120,8 @@
         gap: var(--vc-space-3);
     }
 
-    .driver-card__summary {
+    .driver-card__summary,
+    .driver-card__time {
         font-size: var(--vc-text-xs);
     }
 

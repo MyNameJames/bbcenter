@@ -288,6 +288,165 @@ body {
 
 /* ── Modal ─────────────────────────────────────────────────── */
 
+/* ══ Booking modal — date picker (va-cal) + time picker + warning ══
+   2026-06-10: date=ปฏิทิน va-cal คลิกเดียว · time=custom list 00:00–23:30
+   mobile-first: trigger เต็มความกว้าง field, popover absolute ใน field */
+
+/* trigger ปุ่มวันที่ — หน้าตาเหมือน form-control */
+.bk-datepick { position: relative; }
+.bk-datepick-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    cursor: pointer;
+    transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+.bk-datepick-btn:hover { border-color: var(--vc-border-strong); }
+.bk-datepick-btn[aria-expanded="true"] {
+    border-color: var(--vc-primary);
+    box-shadow: 0 0 0 3px var(--vc-primary-ring, rgba(79,70,229,.15));
+}
+.bk-datepick-lead { color: var(--vc-fg-subtle); flex-shrink: 0; }
+.bk-datepick-val { flex: 1; text-align: left; }
+.bk-datepick-val--empty { color: var(--vc-fg-subtle); }
+.bk-datepick-caret { color: var(--vc-fg-subtle); flex-shrink: 0; transition: transform 150ms ease-out; }
+.bk-datepick-btn[aria-expanded="true"] .bk-datepick-caret { transform: rotate(180deg); }
+
+/* ปฏิทินใน modal — span เต็ม field กันล้นขอบบนมือถือ */
+.bk-cal {
+    left: 0;
+    right: auto;
+    width: 100%;
+    max-width: none;
+    transform-origin: top center;
+}
+
+/* time picker */
+.bk-timepick { position: relative; }
+.bk-timepick-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 42px;
+    padding: 0 10px;
+    font-size: var(--vc-text-base);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--vc-fg);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    cursor: pointer;
+    transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+.bk-timepick-btn:hover { border-color: var(--vc-border-strong); }
+.bk-timepick-btn[aria-expanded="true"] {
+    border-color: var(--vc-primary);
+    box-shadow: 0 0 0 3px var(--vc-primary-ring, rgba(79,70,229,.15));
+}
+.bk-timepick-btn.bk-ot-active {
+    border-color: var(--vc-amber-border);
+    color: var(--vc-amber);
+}
+.bk-timepick-caret { color: var(--vc-fg-subtle); flex-shrink: 0; transition: transform 150ms ease-out; }
+.bk-timepick-btn[aria-expanded="true"] .bk-timepick-caret { transform: rotate(180deg); }
+.bk-time-sep { color: var(--vc-fg-subtle); display: flex; align-items: center; }
+
+.bk-timepick-pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: var(--vc-z-dropdown);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-lg);
+    box-shadow: 0 8px 24px rgba(17,24,39,.10), 0 2px 6px rgba(17,24,39,.06);
+    overflow: hidden;
+    animation: vaCalIn var(--vc-dur-fast) var(--vc-ease-out);
+}
+.bk-timepick-pop[hidden] { display: none; }
+.bk-timepick-list {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 4px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+.bk-timepick-opt {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    color: var(--vc-fg);
+    background: transparent;
+    border: none;
+    border-radius: var(--vc-radius-sm);
+    cursor: pointer;
+    transition: background 120ms ease-out;
+}
+.bk-timepick-opt:hover { background: var(--vc-bg-hover); }
+.bk-timepick-opt--ot { color: var(--vc-amber); }
+.bk-timepick-opt--active,
+.bk-timepick-opt--active:hover {
+    background: var(--vc-primary);
+    color: var(--vc-on-primary);
+    font-weight: 700;
+}
+
+/* ระยะเวลา (X ชม. Y นาที) */
+.bk-duration-preview {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-subtle);
+    text-align: center;
+    min-height: 1em;
+}
+
+/* คำเตือนค่าล่วงเวลา */
+.bk-ot-warn {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 10px 12px;
+    font-size: var(--vc-text-sm);
+    line-height: 1.5;
+    color: var(--vc-amber);
+    background: var(--vc-amber-bg);
+    border: 1px solid var(--vc-amber-border);
+    border-radius: var(--vc-radius-sm);
+    animation: vaCalIn var(--vc-dur-fast) var(--vc-ease-out);
+}
+.bk-ot-warn[hidden] { display: none; }
+.bk-ot-warn-icon { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+.bk-ot-warn-text strong { font-weight: 700; }
+
+/* error inline (วันที่ยังไม่เลือก) */
+.bk-inline-err {
+    margin-top: 4px;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-red);
+}
+.bk-inline-err[hidden] { display: none; }
+
+/* number input — ซ่อน spinner arrow (ทั้ง desktop + mobile) */
+.bk-noarrow { -moz-appearance: textfield; appearance: textfield; }
+.bk-noarrow::-webkit-outer-spin-button,
+.bk-noarrow::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
 /* ── Mobile List ───────────────────────────────────────────── */
 .mobile-list-section { display: none; }
 .mobile-indicator    { display: none; }
@@ -1139,7 +1298,6 @@ body {
 .bk-duration-preview {
     font-size: .76rem;
     color: var(--vc-fg-subtle);
-    margin-top: 4px;
     min-height: 1em;
 }
 .bk-duration-preview:not(:empty)::before {

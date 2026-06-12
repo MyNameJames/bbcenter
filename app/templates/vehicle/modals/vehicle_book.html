@@ -39,35 +39,70 @@
                 <div class="card-body">
                     <hr class="bk-divider">
 
-                    <div class="mb-2">
-                        <label for="bk_date" class="form-label mb-1"><small>วันที่เดินทาง :</small></label>
-                        <div class="bk-field-wrap">
-                            <input type="date" class="form-control" id="bk_date" required>
-                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                            <div class="invalid-feedback">กรุณาเลือกวันที่เดินทาง</div>
+                    {# วันที่ — ปฏิทิน va-cal (คลิกวันเดียวเลือกได้เลย) #}
+                    <div class="mb-3">
+                        <label class="form-label mb-1"><small>วันที่เดินทาง :</small></label>
+                        <div class="bk-datepick" id="bk_datepick">
+                            <input type="hidden" id="bk_date">
+                            <button type="button" class="bk-datepick-btn" id="bk_datepick_btn" aria-expanded="false" aria-haspopup="dialog">
+                                <i data-lucide="calendar" class="vc-icon-sm bk-datepick-lead"></i>
+                                <span class="bk-datepick-val bk-datepick-val--empty" id="bk_datepick_val">เลือกวันที่เดินทาง</span>
+                                <i data-lucide="chevron-down" class="vc-icon-sm bk-datepick-caret"></i>
+                            </button>
+                            <div class="va-cal bk-cal" id="bk_cal_pop" role="dialog" aria-label="เลือกวันที่เดินทาง" hidden>
+                                <div class="va-cal-head">
+                                    <button type="button" class="va-cal-nav" id="bk_cal_prev" aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
+                                        <i data-lucide="chevron-left" class="vc-icon-sm"></i>
+                                    </button>
+                                    <span class="va-cal-title" id="bk_cal_title"></span>
+                                    <button type="button" class="va-cal-nav" id="bk_cal_next" aria-label="เดือนถัดไป" title="เดือนถัดไป">
+                                        <i data-lucide="chevron-right" class="vc-icon-sm"></i>
+                                    </button>
+                                </div>
+                                <div class="va-cal-grid va-cal-dow" id="bk_cal_dow"></div>
+                                <div class="va-cal-grid" id="bk_cal_days"></div>
+                            </div>
                         </div>
+                        <div class="bk-inline-err" id="bk_date_err" hidden>กรุณาเลือกวันที่เดินทาง</div>
                     </div>
 
-                    <div class="mb-2">
-                        <label class="form-label mb-1"><small>ช่วงเวลาเดินทาง :</small></label>
-                        <div class="row justify-content-between align-items-center gx-2">
-                            <div class="col-5">
-                                <div class="bk-field-wrap">
-                                    <input type="time" id="bk_start_time" class="form-control" required>
-                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                                    <div class="invalid-feedback">กรุณาระบุเวลาออก</div>
+                    {# ช่วงเวลา — time picker 00:00–23:30 (default 08:00–17:00) #}
+                    <div class="mb-3">
+                        <label class="form-label mb-1"><small>ช่วงเวลาเดินทาง :  <div id="bk_duration_preview" class="bk-duration-preview" aria-live="polite"></div></small></label>
+                        <div class="row align-items-center gx-2">
+                            <div class="col">
+                                <input type="hidden" id="bk_start_time">
+                                <div class="bk-timepick" data-target="bk_start_time" data-default="08:00">
+                                    <button type="button" class="bk-timepick-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="เวลาออกเดินทาง">
+                                        <span class="bk-timepick-val"></span>
+                                        <i data-lucide="chevron-down" class="vc-icon-sm bk-timepick-caret"></i>
+                                    </button>
+                                    <div class="bk-timepick-pop" hidden>
+                                        <div class="bk-timepick-list" role="listbox"></div>
+                                    </div>
                                 </div>
                             </div>
-                            <span class="col-auto d-flex align-items-center"><i data-lucide="arrow-right" style="width:16px;height:16px;color:var(--vc-fg-subtle);"></i></span>
-                            <div class="col-5">
-                                <div class="bk-field-wrap">
-                                    <input type="time" id="bk_end_time" class="form-control" required>
-                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                                    <div class="invalid-feedback">กรุณาระบุเวลากลับ</div>
+                            <span class="col-auto bk-time-sep"><i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                            <div class="col">
+                                <input type="hidden" id="bk_end_time">
+                                <div class="bk-timepick" data-target="bk_end_time" data-default="17:00">
+                                    <button type="button" class="bk-timepick-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="เวลากลับ">
+                                        <span class="bk-timepick-val"></span>
+                                        <i data-lucide="chevron-down" class="vc-icon-sm bk-timepick-caret"></i>
+                                    </button>
+                                    <div class="bk-timepick-pop" hidden>
+                                        <div class="bk-timepick-list" role="listbox"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div id="bk_duration_preview" class="bk-duration-preview" aria-live="polite"></div>
+                        
+                    </div>
+
+                    {# คำเตือนค่าล่วงเวลาสารถี — โชว์เมื่อเลือกวันอาทิตย์ / นอกเวลา 08:00–17:00 #}
+                    <div class="bk-ot-warn" id="bk_ot_warn" hidden role="status" aria-live="polite">
+                        <i data-lucide="alert-triangle" class="bk-ot-warn-icon"></i>
+                        <div class="bk-ot-warn-text" id="bk_ot_warn_text"></div>
                     </div>
 
                     <div class="mb-2">
@@ -83,7 +118,7 @@
                             <div class="col-4">
                                 <label for="bk_passenger_count" class="form-label mb-1"><small>จำนวนผู้เดินทาง :</small></label>
                                 <div class="bk-field-wrap">
-                                    <input type="number" name="passenger_count" id="bk_passenger_count" class="form-control pe-5" min="1" value="1" max="10" required>
+                                    <input type="number" name="passenger_count" id="bk_passenger_count" class="form-control pe-5 bk-noarrow" inputmode="numeric" pattern="[0-9]*" min="1" max="10" value="1" required>
                                     <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
                                     <div class="invalid-feedback">กรุณาระบุจำนวน</div>
                                 </div>

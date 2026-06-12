@@ -55,14 +55,14 @@ html {
 }
 
 /* Modal × scrollbar-gutter:stable fix —
-   html จอง gutter (~15px) ไว้ตลอด ปกติ scrollbar นั่งทับเลยไม่เห็น
-   พอเปิด modal: BS สั่ง body overflow:hidden → scrollbar หาย แต่ gutter ยัง stable
-   → 15px ว่างโผล่เป็นแถบขาวขอบขวา (backdrop 100vw ก็คลุมไม่ถึง เพราะ fixed นับ ICB ที่หัก gutter)
-   แก้: ตอน modal เปิด (body.modal-open) สั่ง html เลิกจอง gutter → ไม่มีแถบว่าง +
-   backdrop คลุมเต็มจริง; การชดเชย scrollbar BS ทำผ่าน body padding-right ให้แล้ว (ไม่ shift)
+   html จอง gutter (~15px) ไว้ตลอด → เปิด modal แล้ว layout ไม่ขยับ
+   พอเปิด modal: BS สั่ง body overflow:hidden + ใส่ body padding-right ชดเชย scrollbar
+   ที่หายไป แต่ gutter เราจองไว้แล้ว → padding นั้นกลายเป็นตัวดันให้เนื้อหา "กระตุก" ขวา
+   แก้: ล้าง padding-right ที่ BS ใส่ทิ้ง (gutter stable คุมความกว้างเองอยู่แล้ว = ไม่ shift);
+   ส่วนแถบขอบขวาให้ backdrop 100vw คลุม (ดูด้านล่าง)
    global = ทุก modal (ปัจจุบัน + อนาคต) ไม่ต้อง list ID */
-html:has(body.modal-open) {
-    scrollbar-gutter: auto;
+body.modal-open {
+    padding-right: 0 !important;
 }
 .modal-backdrop {
     width: 100vw;

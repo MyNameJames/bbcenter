@@ -34,7 +34,10 @@
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    z-index: 1000;
+    /* above Bootstrap modal stack (backdrop 1050, modal 1055) so a
+       portalled panel inside a modal isn't covered — e.g. #sbApprover
+       in setBudgetModal. — 2026-06-09 */
+    z-index: 1060;
     min-width: 100%;
     max-height: 280px;
     overflow-y: auto;

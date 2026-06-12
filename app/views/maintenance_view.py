@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
 from sqlalchemy import extract, func
-from models import db, MaintenanceTicket
+from models import db, MaintenanceTicket, get_bkk_time
 
 maintenance_bp = Blueprint('maintenance', __name__)
 
@@ -18,7 +18,7 @@ def is_maintenance_admin():
 
 def get_summary_context():
     """Helper: คำนวณ summary เดือนปัจจุบัน + available_months สำหรับ Export"""
-    now = datetime.now()
+    now = get_bkk_time()
     current_month_tickets = MaintenanceTicket.query.filter(
         extract('year',  MaintenanceTicket.created_at) == now.year,
         extract('month', MaintenanceTicket.created_at) == now.month
@@ -174,7 +174,7 @@ def update_status(id):
 
         ticket.status          = 'done'
         ticket.resolved_note   = resolved_note
-        ticket.resolved_at     = datetime.now()
+        ticket.resolved_at     = get_bkk_time()
         ticket.technician_type = request.form.get('technician_type')
 
         # ค่าใช้จ่าย

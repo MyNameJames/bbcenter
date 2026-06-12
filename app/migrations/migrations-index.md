@@ -21,6 +21,9 @@
 | 2026-05-18 | [2026-05-18_ot-rate-config-day-of-week.sql](2026-05-18_ot-rate-config-day-of-week.sql) | `ot_rate_config` (+day_of_week) | [v2.10](../../docs/notes/database/schema.md#v210--otrateconfig-dayofweek-2026-05-18) |
 | 2026-05-18 | [2026-05-18_vehicle-booking-ad-hoc.sql](2026-05-18_vehicle-booking-ad-hoc.sql) | `vehicle_booking` (+is_ad_hoc, +contact_name) | [v2.11](../../docs/notes/database/schema.md#v211--vehiclebooking-ad-hoc-trip-2026-05-18) |
 | 2026-06-06 | [2026-06-06_budget-active-period-backfill.sql](2026-06-06_budget-active-period-backfill.sql) | `vehicle_budget` (backfill `start_date`/`end_date` จาก year/month + index `ix_vb_active_period`) — ไม่มี schema change | [v2.13](../../docs/notes/database/schema.md#v213--vehiclebudget-active-period-2026-06-06) |
+| 2026-06-08 | [2026-06-08_driver-profile-fields.sql](2026-06-08_driver-profile-fields.sql) | `driver` (+8 fields: national_id, addr_line/subdistrict/district/province/postal, id_card_image, avatar_image) | [v2.14](../../docs/notes/database/schema.md#v214--driver-profile-fields-2026-06-08) |
+| 2026-06-08 | [2026-06-08_driver-ot-paid-softdelete.sql](2026-06-08_driver-ot-paid-softdelete.sql) | `driver_ot` (+`no_receipt`, +`is_deleted`, +`deleted_at`; backfill status pending/approved → unpaid) — ตัด approval, soft delete | [v2.15](../../docs/notes/database/schema.md#v215--driver-ot-paid-softdelete-2026-06-08) |
+| 2026-06-09 | [2026-06-09_driver-ot-standalone.sql](2026-06-09_driver-ot-standalone.sql) | `driver_ot` (`booking_id` NOT NULL → nullable, table rebuild) — รองรับ manual standalone OT | [v2.16](../../docs/notes/database/schema.md#v216--driver-ot-standalone-2026-06-09) |
 
 ---
 

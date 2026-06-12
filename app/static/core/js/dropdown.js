@@ -36,9 +36,67 @@
 
     document.addEventListener('click', e => {
         openInstances.forEach(inst => {
-            if (!inst.root.contains(e.target)) inst.close();
+            // panel is portalled to <body>, so it is NOT inside root —
+            // check both so clicks on the menu itself don't self-close.
+            if (!inst.root.contains(e.target) && !inst.panel.contains(e.target)) {
+                inst.close();
+            }
         });
     });
+
+    /* ── Floating panel: portal to <body> + fixed positioning ──
+       Escapes every `overflow:hidden`/scroll/transform ancestor
+       (cards, filter bars, table wrappers) so the menu is never
+       clipped. Repositions on scroll/resize while open. */
+    function makeFloating(panel, anchor) {
+        const home = panel.parentNode;   // original parent (the .vc-dd/.vc-ac root)
+        let onMove = null;
+
+        function place() {
+            const r = anchor.getBoundingClientRect();
+            const vh = window.innerHeight;
+            const gap = 4, edge = 8;
+            panel.style.position = 'fixed';
+            panel.style.left = r.left + 'px';
+            panel.style.minWidth = r.width + 'px';
+            // measure natural height with constraints reset
+            panel.style.top = '0px';
+            panel.style.maxHeight = '';
+            const ph = panel.offsetHeight;
+            const below = vh - r.bottom - edge;
+            const above = r.top - edge;
+            if (ph <= below || below >= above) {
+                panel.style.top = (r.bottom + gap) + 'px';
+                panel.style.maxHeight = Math.min(280, Math.max(80, below)) + 'px';
+            } else {
+                panel.style.maxHeight = Math.min(280, Math.max(80, above)) + 'px';
+                panel.style.top = Math.max(edge, r.top - Math.min(ph, above) - gap) + 'px';
+            }
+        }
+
+        return {
+            show() {
+                document.body.appendChild(panel);   // portal out of clipping ancestors
+                panel.hidden = false;
+                place();
+                onMove = () => place();
+                window.addEventListener('scroll', onMove, true);
+                window.addEventListener('resize', onMove);
+            },
+            hide() {
+                panel.hidden = true;
+                if (onMove) {
+                    window.removeEventListener('scroll', onMove, true);
+                    window.removeEventListener('resize', onMove);
+                    onMove = null;
+                }
+                home.appendChild(panel);            // return ownership to the root
+                panel.style.position = panel.style.top = panel.style.left = '';
+                panel.style.minWidth = panel.style.maxHeight = '';
+            },
+            reposition() { if (!panel.hidden) place(); }
+        };
+    }
 
     /* ════════════════════════════════════════════
        Component 1 — dropdown  (<select data-dropdown>)
@@ -159,11 +217,12 @@
             trigger.focus();
         }
 
-        const inst = { root, close };
+        const float = makeFloating(panel, trigger);
+        const inst = { root, panel, close };
         function open() {
             if (!panel.hidden) return;
             closeAll(inst);
-            panel.hidden = false;
+            float.show();
             root.classList.add('is-open');
             trigger.setAttribute('aria-expanded', 'true');
             openInstances.add(inst);
@@ -172,7 +231,7 @@
         }
         function close() {
             if (panel.hidden) return;
-            panel.hidden = true;
+            float.hide();
             root.classList.remove('is-open');
             trigger.setAttribute('aria-expanded', 'false');
             if (options[activeIdx]) options[activeIdx].el.classList.remove('is-active');
@@ -250,7 +309,8 @@
         let options = [];     // [{el, value}]
         let activeIdx = -1;
 
-        const inst = { root, close };
+        const float = makeFloating(panel, input);
+        const inst = { root, panel, close };
 
         function render(filter) {
             panel.innerHTML = '';
@@ -311,13 +371,13 @@
             if (!panel.hidden) return;
             closeAll(inst);
             render(input.value);
-            panel.hidden = false;
+            float.show();
             input.setAttribute('aria-expanded', 'true');
             openInstances.add(inst);
         }
         function close() {
             if (panel.hidden) return;
-            panel.hidden = true;
+            float.hide();
             input.setAttribute('aria-expanded', 'false');
             activeIdx = -1;
             openInstances.delete(inst);
@@ -327,6 +387,7 @@
         input.addEventListener('input', () => {
             render(input.value);
             if (panel.hidden) open();
+            else float.reposition();
         });
 
         input.addEventListener('keydown', e => {
@@ -350,10 +411,186 @@
         });
     }
 
+    /* ════════════════════════════════════════════
+       Component 3 — autocompleteselect
+       (<select data-autocomplete>)
+         Searchable like component 2, but the native
+         <select> stays the source of truth: a pick writes
+         select.value + fires 'change', so the SUBMITTED
+         value is the <option> value (e.g. an id), never the
+         typed label. Free text is NOT allowed (strict combobox).
+    ════════════════════════════════════════════ */
+    function enhanceAutocompleteSelect(select) {
+        if (select.dataset.acReady) return;
+        select.dataset.acReady = '1';
+
+        // snapshot options as {value,label}; re-read on external swaps
+        function readOptions() {
+            return Array.from(select.options)
+                .map(o => ({ value: o.value, label: (o.textContent || '').trim() }))
+                .filter(o => o.label);
+        }
+        let source = readOptions();
+
+        const id = 'vcac-' + (++uid);
+
+        const root = document.createElement('div');
+        root.className = 'vc-ac';
+        select.parentNode.insertBefore(root, select);
+        root.appendChild(select);
+
+        // input mirrors the select's own classes (chevron, sizing) so it
+        // looks identical to the control it replaces.
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = select.className;
+        if (select.getAttribute('placeholder')) input.placeholder = select.getAttribute('placeholder');
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-autocomplete', 'list');
+        input.setAttribute('aria-expanded', 'false');
+        input.setAttribute('aria-controls', id);
+        input.setAttribute('autocomplete', 'off');
+        root.appendChild(input);
+
+        // hide the real control but keep it in the form so it submits
+        select.classList.add('vc-dd-native');
+
+        const panel = document.createElement('div');
+        panel.className = 'vc-ac-panel';
+        panel.id = id;
+        panel.setAttribute('role', 'listbox');
+        panel.hidden = true;
+        root.appendChild(panel);
+
+        let options = [];
+        let activeIdx = -1;
+
+        const float = makeFloating(panel, input);
+        const inst = { root, panel, close };
+
+        function syncFromSelect() {
+            const cur = source.find(o => o.value === select.value);
+            input.value = cur ? cur.label : '';
+        }
+
+        function render(filter) {
+            panel.innerHTML = '';
+            options = [];
+            activeIdx = -1;
+            const q = (filter || '').trim().toLowerCase();
+            const matches = q
+                ? source.filter(s => s.label.toLowerCase().includes(q))
+                : source.slice();
+
+            if (!matches.length) {
+                const empty = document.createElement('div');
+                empty.className = 'vc-ac-empty';
+                empty.textContent = 'ไม่พบรายชื่อ';
+                panel.appendChild(empty);
+                return;
+            }
+            matches.forEach(m => {
+                const el = document.createElement('div');
+                el.className = 'vc-ac-option';
+                el.setAttribute('role', 'option');
+                el.textContent = m.label;
+                if (m.value === select.value) el.setAttribute('aria-selected', 'true');
+                const idx = options.length;
+                el.addEventListener('click', () => choose(idx));
+                el.addEventListener('mousemove', () => setActive(idx));
+                panel.appendChild(el);
+                options.push({ el, value: m.value });
+            });
+        }
+
+        function setActive(idx) {
+            if (idx === activeIdx) return;
+            if (options[activeIdx]) options[activeIdx].el.classList.remove('is-active');
+            activeIdx = idx;
+            if (options[activeIdx]) {
+                options[activeIdx].el.classList.add('is-active');
+                options[activeIdx].el.scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        function move(delta) {
+            if (!options.length) return;
+            let i = activeIdx + delta;
+            if (i < 0) i = options.length - 1;
+            if (i >= options.length) i = 0;
+            setActive(i);
+        }
+
+        function choose(idx) {
+            const o = options[idx];
+            if (!o) return;
+            select.value = o.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            syncFromSelect();
+            close();
+        }
+
+        function open() {
+            if (!panel.hidden) return;
+            closeAll(inst);
+            render('');               // focus → show full list, ignore current label
+            float.show();
+            input.setAttribute('aria-expanded', 'true');
+            openInstances.add(inst);
+        }
+        function close() {
+            if (panel.hidden) return;
+            float.hide();
+            input.setAttribute('aria-expanded', 'false');
+            activeIdx = -1;
+            openInstances.delete(inst);
+            syncFromSelect();         // strict: revert any unconfirmed typing
+        }
+
+        input.addEventListener('focus', () => { open(); input.select(); });
+        input.addEventListener('input', () => {
+            render(input.value);
+            if (panel.hidden) {
+                float.show();
+                input.setAttribute('aria-expanded', 'true');
+                openInstances.add(inst);
+            } else {
+                float.reposition();
+            }
+        });
+
+        input.addEventListener('keydown', e => {
+            if (panel.hidden && ['ArrowDown', 'ArrowUp'].includes(e.key)) {
+                e.preventDefault(); open(); return;
+            }
+            switch (e.key) {
+                case 'ArrowDown': e.preventDefault(); move(1); break;
+                case 'ArrowUp':   e.preventDefault(); move(-1); break;
+                case 'Enter':
+                    // strict combobox — never submit a half-typed label
+                    e.preventDefault();
+                    if (!panel.hidden && activeIdx >= 0) choose(activeIdx);
+                    else close();
+                    break;
+                case 'Escape': close(); break;
+            }
+        });
+
+        // keep the input label in sync with programmatic value changes
+        // (e.g. a modal preset writes select.value then fires 'change')
+        select.addEventListener('change', syncFromSelect);
+        // re-read options if the list is swapped externally
+        new MutationObserver(() => { source = readOptions(); syncFromSelect(); })
+            .observe(select, { childList: true });
+
+        syncFromSelect();
+    }
+
     /* ── init ─────────────────────────────────── */
     function init(scope) {
         (scope || document).querySelectorAll('select[data-dropdown]').forEach(enhanceDropdown);
         (scope || document).querySelectorAll('input[data-autocomplete]').forEach(enhanceAutocomplete);
+        (scope || document).querySelectorAll('select[data-autocomplete]').forEach(enhanceAutocompleteSelect);
     }
 
     if (document.readyState === 'loading') {
@@ -363,5 +600,5 @@
     }
 
     // expose for dynamically-injected controls
-    window.VCMenus = { init, enhanceDropdown, enhanceAutocomplete };
+    window.VCMenus = { init, enhanceDropdown, enhanceAutocomplete, enhanceAutocompleteSelect };
 })();

@@ -198,44 +198,63 @@
                         <ul class="vc-list mf-stagger">
                             {% for d in drivers %}
                             <li class="vc-list-item">
-                                <div class="mf-driver-row">
+                                <div class="mf-driver-row"
+                                     data-id="{{ d.id }}"
+                                     data-name="{{ d.name }}"
+                                     data-phone="{{ d.phone or '' }}"
+                                     data-active="{{ 'true' if d.is_active else 'false' }}"
+                                     data-user-id="{{ d.user_id or '' }}"
+                                     data-username="{{ d.linked_user.username if d.linked_user else '' }}"
+                                     data-national-id="{{ d.national_id or '' }}"
+                                     data-addr-line="{{ d.addr_line or '' }}"
+                                     data-addr-subdistrict="{{ d.addr_subdistrict or '' }}"
+                                     data-addr-district="{{ d.addr_district or '' }}"
+                                     data-addr-province="{{ d.addr_province or '' }}"
+                                     data-addr-postal="{{ d.addr_postal or '' }}"
+                                     data-jobs="{{ driver_jobs.get(d.id, 0) }}"
+                                     data-avatar="{{ url_for('static', filename='uploads/driver/' + d.avatar_image) if d.avatar_image else '' }}"
+                                     data-idcard="{{ url_for('static', filename='uploads/driver/' + d.id_card_image) if d.id_card_image else '' }}">
+                                    <div class="mf-avatar">
+                                        {% if d.avatar_image %}
+                                        <img src="{{ url_for('static', filename='uploads/driver/' + d.avatar_image) }}" alt="{{ d.name }}">
+                                        {% else %}
+                                        <span class="mf-avatar-initials">{{ d.name[:1] }}</span>
+                                        {% endif %}
+                                    </div>
                                     <div class="mf-driver-main">
                                         <p class="mf-driver-name">{{ d.name }}</p>
                                         <div class="mf-driver-meta">
-                                            {% if d.is_active %}
-                                                <span class="vc-badge vc-badge-success vc-badge-dot">ใช้งาน</span>
-                                            {% else %}
-                                                <span class="vc-badge vc-badge-neutral vc-badge-dot">ปิด</span>
-                                            {% endif %}
                                             {% if d.phone %}
-                                            <span class="vc-dot-sep">·</span>
                                             <span class="vc-mono">{{ d.phone }}</span>
                                             {% endif %}
                                             {% if d.linked_user %}
-                                            <span class="vc-dot-sep">·</span>
                                             <span class="mf-username-chip">@{{ d.linked_user.username }}</span>
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="mf-driver-jobs" title="งานเดือนนี้">
-                                        <strong>{{ driver_jobs.get(d.id, 0) }}</strong>
-                                        <span>งาน</span>
+                                    <div class="mf-driver-side">
+                                        {% if d.is_active %}
+                                            <span class="vc-badge vc-badge-success vc-badge-dot">ใช้งาน</span>
+                                        {% else %}
+                                            <span class="vc-badge vc-badge-neutral vc-badge-dot">ปิด</span>
+                                        {% endif %}
+                                        <span class="mf-driver-jobs" title="งานเดือนนี้">
+                                            <strong>{{ driver_jobs.get(d.id, 0) }}</strong> งาน
+                                        </span>
                                     </div>
                                     <div class="mf-actions">
-                                        <button type="button" class="mf-icon-btn"
+                                        <button type="button" class="mf-icon-btn mf-driver-view"
+                                                data-bs-toggle="modal" data-bs-target="#driverDetailModal"
+                                                title="ดูข้อมูล">
+                                            <i data-lucide="eye" class="vc-icon-sm"></i>
+                                        </button>
+                                        <button type="button" class="mf-icon-btn mf-driver-edit"
                                                 data-bs-toggle="modal" data-bs-target="#editDriverModal"
-                                                data-id="{{ d.id }}"
-                                                data-name="{{ d.name }}"
-                                                data-phone="{{ d.phone }}"
-                                                data-active="{{ 'true' if d.is_active else 'false' }}"
-                                                data-user-id="{{ d.user_id or '' }}"
                                                 title="แก้ไข">
                                             <i data-lucide="pencil" class="vc-icon-sm"></i>
                                         </button>
-                                        <button type="button" class="mf-icon-btn mf-icon-btn--danger"
+                                        <button type="button" class="mf-icon-btn mf-icon-btn--danger mf-driver-delete"
                                                 data-bs-toggle="modal" data-bs-target="#deleteDriverModal"
-                                                data-id="{{ d.id }}"
-                                                data-name="{{ d.name }}"
                                                 title="ลบ">
                                             <i data-lucide="trash-2" class="vc-icon-sm"></i>
                                         </button>
@@ -376,9 +395,9 @@
 
 {# ── Add Driver ── #}
 <div class="modal fade vc-modal" id="addDriverModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <form action="/admin/manage-fleet" method="POST">
+            <form action="/admin/manage-fleet" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add_driver">
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -388,23 +407,74 @@
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="vc-form-group">
-                        <label class="vc-label">ชื่อ-นามสกุล <span class="vc-required">*</span></label>
-                        <input type="text" class="vc-input" name="name" placeholder="สมชาย ใจดี" required>
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">ชื่อ-นามสกุล <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-input" name="name" placeholder="สมชาย ใจดี" required>
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">เบอร์โทร</label>
+                            <input type="text" class="vc-input" name="phone" placeholder="081-234-5678">
+                        </div>
                     </div>
-                    <div class="vc-form-group">
-                        <label class="vc-label">เบอร์โทร</label>
-                        <input type="text" class="vc-input" name="phone" placeholder="081-234-5678">
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">เลขบัตรประชาชน</label>
+                            <input type="text" class="vc-input" name="national_id" inputmode="numeric" maxlength="13" placeholder="1234567890123">
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">ผูก User Account</label>
+                            <select class="vc-select" name="user_id">
+                                <option value="">— ไม่ผูก —</option>
+                                {% for u in users %}
+                                <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
-                    <div class="vc-form-group">
-                        <label class="vc-label">ผูก User Account</label>
-                        <select class="vc-select" name="user_id">
-                            <option value="">— ไม่ผูก —</option>
-                            {% for u in users %}
-                            <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
-                            {% endfor %}
-                        </select>
+
+                    <div class="vc-form-group mf-form-section">
+                        <p class="mf-form-section-title">
+                            <i data-lucide="map-pin" class="vc-icon-sm"></i>
+                            ที่อยู่ตามบัตรประชาชน
+                        </p>
+                        <div class="vc-form-group">
+                            <label class="vc-label">บ้านเลขที่ / หมู่ / ถนน</label>
+                            <input type="text" class="vc-input" name="addr_line" placeholder="89 ม.7 หมู่บ้านอังกูล">
+                        </div>
+                        <div class="vc-form-row vc-form-row-2">
+                            <div class="vc-form-group">
+                                <label class="vc-label">ตำบล / แขวง</label>
+                                <input type="text" class="vc-input" name="addr_subdistrict" placeholder="ใจดี">
+                            </div>
+                            <div class="vc-form-group">
+                                <label class="vc-label">อำเภอ / เขต</label>
+                                <input type="text" class="vc-input" name="addr_district" placeholder="ขุขันธ์">
+                            </div>
+                        </div>
+                        <div class="vc-form-row vc-form-row-2">
+                            <div class="vc-form-group">
+                                <label class="vc-label">จังหวัด</label>
+                                <input type="text" class="vc-input" name="addr_province" placeholder="ศรีสะเกษ">
+                            </div>
+                            <div class="vc-form-group">
+                                <label class="vc-label">รหัสไปรษณีย์</label>
+                                <input type="text" class="vc-input" name="addr_postal" inputmode="numeric" maxlength="5" placeholder="33140">
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">รูปโปรไฟล์คนขับ</label>
+                            <input type="file" class="vc-input" name="avatar_image" accept="image/*">
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">รูปบัตรประชาชน</label>
+                            <input type="file" class="vc-input" name="id_card_image" accept="image/*">
+                        </div>
+                    </div>
+
                     <div class="vc-form-group">
                         <div class="mf-switch-row">
                             <span class="vc-label" style="margin:0;">สถานะใช้งาน</span>
@@ -541,9 +611,9 @@
 
 {# ── Edit Driver ── #}
 <div class="modal fade vc-modal" id="editDriverModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <form action="/admin/manage-fleet" method="POST">
+            <form action="/admin/manage-fleet" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit_driver">
                 <input type="hidden" name="driver_id" id="ed_id">
                 <div class="modal-header">
@@ -554,23 +624,80 @@
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="vc-form-group">
-                        <label class="vc-label">ชื่อ-นามสกุล <span class="vc-required">*</span></label>
-                        <input type="text" class="vc-input" name="name" id="ed_name" required>
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">ชื่อ-นามสกุล <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-input" name="name" id="ed_name" required>
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">เบอร์โทร</label>
+                            <input type="text" class="vc-input" name="phone" id="ed_phone">
+                        </div>
                     </div>
-                    <div class="vc-form-group">
-                        <label class="vc-label">เบอร์โทร</label>
-                        <input type="text" class="vc-input" name="phone" id="ed_phone">
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">เลขบัตรประชาชน</label>
+                            <input type="text" class="vc-input" name="national_id" id="ed_national_id" inputmode="numeric" maxlength="13">
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">ผูก User Account</label>
+                            <select class="vc-select" name="user_id" id="ed_user_id">
+                                <option value="">— ไม่ผูก —</option>
+                                {% for u in users %}
+                                <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
-                    <div class="vc-form-group">
-                        <label class="vc-label">ผูก User Account</label>
-                        <select class="vc-select" name="user_id" id="ed_user_id">
-                            <option value="">— ไม่ผูก —</option>
-                            {% for u in users %}
-                            <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
-                            {% endfor %}
-                        </select>
+
+                    <div class="vc-form-group mf-form-section">
+                        <p class="mf-form-section-title">
+                            <i data-lucide="map-pin" class="vc-icon-sm"></i>
+                            ที่อยู่ตามบัตรประชาชน
+                        </p>
+                        <div class="vc-form-group">
+                            <label class="vc-label">บ้านเลขที่ / หมู่ / ถนน</label>
+                            <input type="text" class="vc-input" name="addr_line" id="ed_addr_line">
+                        </div>
+                        <div class="vc-form-row vc-form-row-2">
+                            <div class="vc-form-group">
+                                <label class="vc-label">ตำบล / แขวง</label>
+                                <input type="text" class="vc-input" name="addr_subdistrict" id="ed_addr_subdistrict">
+                            </div>
+                            <div class="vc-form-group">
+                                <label class="vc-label">อำเภอ / เขต</label>
+                                <input type="text" class="vc-input" name="addr_district" id="ed_addr_district">
+                            </div>
+                        </div>
+                        <div class="vc-form-row vc-form-row-2">
+                            <div class="vc-form-group">
+                                <label class="vc-label">จังหวัด</label>
+                                <input type="text" class="vc-input" name="addr_province" id="ed_addr_province">
+                            </div>
+                            <div class="vc-form-group">
+                                <label class="vc-label">รหัสไปรษณีย์</label>
+                                <input type="text" class="vc-input" name="addr_postal" id="ed_addr_postal" inputmode="numeric" maxlength="5">
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="vc-form-row vc-form-row-2">
+                        <div class="vc-form-group">
+                            <label class="vc-label">รูปโปรไฟล์คนขับ <span class="vc-label-meta">เว้นว่าง = ใช้รูปเดิม</span></label>
+                            <input type="file" class="vc-input" name="avatar_image" accept="image/*">
+                            <a href="#" id="ed_avatar_current" class="mf-current-file" target="_blank" rel="noopener" style="display:none;">
+                                <i data-lucide="image" class="vc-icon-sm"></i> รูปปัจจุบัน
+                            </a>
+                        </div>
+                        <div class="vc-form-group">
+                            <label class="vc-label">รูปบัตรประชาชน <span class="vc-label-meta">เว้นว่าง = ใช้รูปเดิม</span></label>
+                            <input type="file" class="vc-input" name="id_card_image" accept="image/*">
+                            <a href="#" id="ed_idcard_current" class="mf-current-file" target="_blank" rel="noopener" style="display:none;">
+                                <i data-lucide="image" class="vc-icon-sm"></i> รูปปัจจุบัน
+                            </a>
+                        </div>
+                    </div>
+
                     <div class="vc-form-group">
                         <div class="mf-switch-row">
                             <span class="vc-label" style="margin:0;">สถานะใช้งาน</span>
@@ -588,6 +715,63 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+{# ── Driver Detail (read-only + ปุ่มแก้ไข) ── #}
+<div class="modal fade vc-modal" id="driverDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i data-lucide="id-card" class="vc-icon-sm"></i>
+                    ข้อมูลคนขับ
+                </h5>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mf-detail-head">
+                    <div class="mf-avatar mf-avatar-lg">
+                        <img id="dd_avatar_img" src="" alt="" style="display:none;">
+                        <span id="dd_avatar_initials" class="mf-avatar-initials"></span>
+                    </div>
+                    <div class="mf-detail-headinfo">
+                        <p class="mf-detail-name" id="dd_detail_name"></p>
+                        <div class="mf-detail-headmeta">
+                            <span id="dd_detail_status"></span>
+                            <span class="mf-username-chip" id="dd_detail_username" style="display:none;"></span>
+                        </div>
+                    </div>
+                    <div class="mf-detail-jobs">
+                        <strong id="dd_detail_jobs">0</strong>
+                        <span>งานเดือนนี้</span>
+                    </div>
+                </div>
+
+                <dl class="vc-meta-grid mf-detail-grid">
+                    <dt>เบอร์โทร</dt><dd id="dd_detail_phone">—</dd>
+                    <dt>เลขบัตรประชาชน</dt><dd class="vc-mono" id="dd_detail_nid">—</dd>
+                    <dt>ที่อยู่</dt><dd id="dd_detail_addr">—</dd>
+                </dl>
+
+                <div class="mf-detail-idcard" id="dd_idcard_wrap" style="display:none;">
+                    <p class="mf-form-section-title">
+                        <i data-lucide="credit-card" class="vc-icon-sm"></i>
+                        รูปบัตรประชาชน
+                    </p>
+                    <a href="#" id="dd_idcard_link" target="_blank" rel="noopener">
+                        <img id="dd_idcard_img" src="" alt="บัตรประชาชน">
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                <button type="button" class="vc-btn vc-btn-primary" id="dd_edit_btn" title="แก้ไขข้อมูลคนขับ">
+                    <i data-lucide="pencil" class="vc-icon-sm"></i>
+                    แก้ไข
+                </button>
+            </div>
         </div>
     </div>
 </div>

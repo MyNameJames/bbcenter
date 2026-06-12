@@ -179,8 +179,8 @@
     top: calc(100% + 4px);
     right: 0;
     z-index: 1000;
-    width: 560px;
-    max-width: calc(100vw - 2 * var(--vc-space-4));
+    width: 300px;
+    /* max-width: calc(100vw - 2 * var(--vc-space-4)); */
     padding: var(--vc-space-4);
     background: var(--vc-bg);
     border: 1px solid var(--vc-border);
@@ -193,9 +193,17 @@
 
 .mlg-adv-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--vc-space-3);
 }
+/* ค่าน้ำมัน range — เต็มแถว (บนสุด) */
+.mlg-adv-col-full { grid-column: 1 / -1; }
+/* input / dropdown เต็มความกว้าง col */
+.mlg-adv-grid .vc-filter-select,
+.mlg-adv-grid .vc-dd,
+.mlg-adv-grid .vc-dd-trigger,
+.mlg-adv-grid .vc-ac,
+.mlg-adv-grid .vc-ac > input { width: 100%; }
 
 .mlg-range-pair {
     display: flex;
@@ -219,10 +227,6 @@
     margin-top: var(--vc-space-3);
     padding-top: var(--vc-space-3);
     border-top: 1px solid var(--vc-border);
-}
-
-@media (max-width: 991.98px) {
-    .mlg-adv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 767.98px) {

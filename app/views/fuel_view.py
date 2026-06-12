@@ -17,7 +17,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from sqlalchemy import extract, func
 from models import (
-    db, SystemConfig,
+    db, get_bkk_time, SystemConfig,
     Vehicle, Driver,
     FuelBill, FuelReimbursement, FuelPrice,
     FuelReserveConfig, FuelReserveLog,
@@ -87,7 +87,7 @@ def _parse_decimal(s, default=Decimal('0')):
 
 def _read_filters(args):
     """Return (year, month, vehicle_id, driver_id) parsed from query string."""
-    today = date.today()
+    today = get_bkk_time().date()
     return (
         _parse_int(args.get('year'),  today.year),
         _parse_int(args.get('month'), 0),
@@ -323,7 +323,7 @@ def create_reimbursement():
     _guard()
     rb_no = (request.form.get('reimbursement_no') or '').strip()
     source = (request.form.get('source') or '').strip() or None
-    submitted_at = _parse_date(request.form.get('submitted_at'), date.today())
+    submitted_at = _parse_date(request.form.get('submitted_at'), get_bkk_time().date())
     note = (request.form.get('note') or '').strip() or None
     bill_ids = request.form.getlist('bill_ids')
     bill_ids = [int(x) for x in bill_ids if x.isdigit()]
@@ -373,7 +373,7 @@ def edit_reimbursement(rb_id):
 def receive_reimbursement(rb_id):
     _guard()
     rb = FuelReimbursement.query.get_or_404(rb_id)
-    rb.received_at = _parse_date(request.form.get('received_at'), date.today())
+    rb.received_at = _parse_date(request.form.get('received_at'), get_bkk_time().date())
     db.session.commit()
     flash(f'บันทึกได้เงินคืน ใบเบิก {rb.reimbursement_no}', 'success')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
@@ -527,7 +527,7 @@ def export_excel():
         return redirect(url_for('fuel.admin_fuel'))
     from flask import send_file
 
-    today = date.today()
+    today = get_bkk_time().date()
     f_year, f_month, f_veh, f_drv = _read_filters(request.args)
 
     bills = _filtered_bills_query(f_year, f_month, f_veh, f_drv).all()
