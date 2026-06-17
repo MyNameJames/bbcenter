@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, User, RepairTicket, MaintenanceTicket, RoomBooking, VehicleBooking, get_bkk_time
 from ad_utils import check_ad_login
-from datetime import datetime, date, timedelta
+from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -76,122 +76,104 @@ def logout():
     return redirect(url_for('auth.login'))
 
 
+# ── หน้า Home (Action Hub) ────────────────────────────────────────────────
+# status → (label, vc-badge color suffix)
+_VEHICLE_STATUS = {
+    'pending':          ('รออนุมัติ',    'warning'),
+    'waiting_approver': ('รอผู้อนุมัติ',  'warning'),
+    'approved':         ('อนุมัติแล้ว',   'success'),
+}
+_TICKET_STATUS = {
+    'pending':     ('รอรับเรื่อง',     'warning'),
+    'in_progress': ('กำลังดำเนินการ',  'blue'),
+    'done':        ('เสร็จสิ้น',       'success'),
+}
+
+
+def _build_my_requests(user, limit=12):
+    """รวมคำขอของ user ทุก service → list ของ dict normalized เรียง created_at ใหม่สุดก่อน."""
+    rows = []
+
+    for b in (VehicleBooking.query
+              .filter(VehicleBooking.user_id == user.id,
+                      VehicleBooking.status.notin_(['cancelled', 'rejected']))
+              .order_by(VehicleBooking.created_at.desc()).limit(limit)):
+        label, color = _VEHICLE_STATUS.get(b.status, (b.status, 'neutral'))
+        rows.append({'service': 'vehicle', 'icon': 'car',
+                     'title': b.destination or b.purpose, 'subtitle': b.purpose,
+                     'status_label': label, 'status_color': color,
+                     'created_at': b.created_at,
+                     'repeat_url': url_for('vehicle.index', copy_from=b.id)})
+
+    for t in (RepairTicket.query.filter_by(user_id=user.id)
+              .order_by(RepairTicket.created_at.desc()).limit(limit)):
+        label, color = _TICKET_STATUS.get(t.status, (t.status, 'neutral'))
+        rows.append({'service': 'repair', 'icon': 'desktop',
+                     'title': t.subject, 'subtitle': t.category,
+                     'status_label': label, 'status_color': color,
+                     'created_at': t.created_at,
+                     'repeat_url': url_for('repair.index', copy_from=t.id)})
+
+    for t in (MaintenanceTicket.query.filter_by(user_id=user.id)
+              .order_by(MaintenanceTicket.created_at.desc()).limit(limit)):
+        label, color = _TICKET_STATUS.get(t.status, (t.status, 'neutral'))
+        rows.append({'service': 'maintenance', 'icon': 'building-2',
+                     'title': t.subject, 'subtitle': t.category,
+                     'status_label': label, 'status_color': color,
+                     'created_at': t.created_at,
+                     'repeat_url': url_for('maintenance.index', copy_from=t.id)})
+
+    now = get_bkk_time()
+    for b in (RoomBooking.query.filter_by(user_id=user.id)
+              .order_by(RoomBooking.created_at.desc()).limit(limit)):
+        label, color = ('กำลังจะถึง', 'blue') if b.start_time >= now else ('ผ่านแล้ว', 'neutral')
+        rows.append({'service': 'room', 'icon': 'users',
+                     'title': b.title, 'subtitle': b.room_name,
+                     'status_label': label, 'status_color': color,
+                     'created_at': b.created_at,
+                     'repeat_url': url_for('room.index', copy_from=b.id)})
+
+    rows.sort(key=lambda r: r['created_at'], reverse=True)
+    return rows[:limit]
+
+
+def _build_today_items(user):
+    """รายการของ user ที่มีกำหนดวันนี้ (จองรถอนุมัติแล้ว + จองห้อง) เรียงตามเวลาเริ่ม."""
+    today = get_bkk_time().date()
+    t0 = datetime.combine(today, datetime.min.time())
+    t1 = datetime.combine(today, datetime.max.time())
+    items = []
+
+    for b in (VehicleBooking.query
+              .filter(VehicleBooking.user_id == user.id,
+                      VehicleBooking.status == 'approved',
+                      VehicleBooking.start_datetime >= t0,
+                      VehicleBooking.start_datetime <= t1)
+              .order_by(VehicleBooking.start_datetime.asc())):
+        items.append({'icon': 'car', 'title': b.destination, 'meta': b.purpose,
+                      'sort': b.start_datetime,
+                      'time': f"{b.start_datetime:%H:%M}–{b.end_datetime:%H:%M}"})
+
+    for b in (RoomBooking.query
+              .filter(RoomBooking.user_id == user.id,
+                      RoomBooking.start_time >= t0,
+                      RoomBooking.start_time <= t1)
+              .order_by(RoomBooking.start_time.asc())):
+        items.append({'icon': 'users', 'title': b.title, 'meta': b.room_name,
+                      'sort': b.start_time,
+                      'time': f"{b.start_time:%H:%M}–{b.end_time:%H:%M}"})
+
+    items.sort(key=lambda i: i['sort'])
+    return items
+
+
 @auth_bp.route('/dashboard')
 @login_required
 def dashboard():
-    user_count = User.query.count()
-    today = get_bkk_time().date()
-
-    # ---- Stats จริงจาก DB ----
-    # ระบบซ่อม IT
-    repair_pending     = RepairTicket.query.filter_by(status='pending').count()
-    repair_in_progress = RepairTicket.query.filter_by(status='in_progress').count()
-    repair_done_total  = RepairTicket.query.filter_by(status='done').count()
-
-    # ระบบซ่อมอาคาร
-    maint_pending     = MaintenanceTicket.query.filter_by(status='pending').count()
-    maint_in_progress = MaintenanceTicket.query.filter_by(status='in_progress').count()
-    maint_done_total  = MaintenanceTicket.query.filter_by(status='done').count()
-
-    # ระบบจองยานพาหนะ
-    vehicle_pending     = VehicleBooking.query.filter_by(status='pending').count()
-    vehicle_waiting_approver = VehicleBooking.query.filter_by(status='waiting_approver').count()
-    vehicle_approved  = VehicleBooking.query.filter_by(status='approved').count()
-
-    # งานรอดำเนินการรวม (สำหรับ alert badge)
-    total_pending = repair_pending + maint_pending + vehicle_pending
-
-    # Ticket ของ user คนนี้ที่ยังไม่เสร็จ
-    my_repair_open = RepairTicket.query.filter(
-        RepairTicket.user_id == current_user.id,
-        RepairTicket.status != 'done'
-    ).count()
-    my_maint_open = MaintenanceTicket.query.filter(
-        MaintenanceTicket.user_id == current_user.id,
-        MaintenanceTicket.status != 'done'
-    ).count()
-
-    # ยานพาหนะ — จองรออนุมัติ
-    vehicle_pending          = VehicleBooking.query.filter_by(status='pending').count()
-    vehicle_waiting_approver = VehicleBooking.query.filter_by(status='waiting_approver').count()
-    vehicle_approved         = VehicleBooking.query.filter_by(status='approved').count()
-    my_vehicle_pending       = VehicleBooking.query.filter_by(
-        user_id=current_user.id, status='pending'
-    ).count()
-
-    # vehicle bookings — รายการอนุมัติแล้วที่ start_datetime อยู่ในวันพรุ่งนี้
-    tomorrow         = today + timedelta(days=1)
-    tomorrow_start   = datetime.combine(tomorrow, datetime.min.time())
-    tomorrow_end     = datetime.combine(tomorrow, datetime.max.time())
-    recent_vehicle = VehicleBooking.query.filter(
-        VehicleBooking.status == 'approved',
-        VehicleBooking.start_datetime >= tomorrow_start,
-        VehicleBooking.start_datetime <= tomorrow_end,
-    ).order_by(VehicleBooking.start_datetime.asc()).all()
-
-    # ห้องประชุม — จองวันนี้
-    today_start = datetime.combine(today, datetime.min.time())
-    today_end   = datetime.combine(today, datetime.max.time())
-    room_today  = RoomBooking.query.filter(
-        RoomBooking.start_time >= today_start,
-        RoomBooking.start_time <= today_end
-    ).count()
-
-    # จองของ user วันนี้
-    my_room_today = RoomBooking.query.filter(
-        RoomBooking.user_id    == current_user.id,
-        RoomBooking.start_time >= today_start,
-        RoomBooking.start_time <= today_end
-    ).all()
-
-    # recent room bookings
-    recent_room = RoomBooking.query.order_by(
-        RoomBooking.start_time.asc()
-    ).filter(RoomBooking.start_time >= today_start).limit(5).all()
-    recent_repair = RepairTicket.query.order_by(
-        RepairTicket.created_at.desc()
-    ).limit(5).all()
-    recent_maint = MaintenanceTicket.query.order_by(
-        MaintenanceTicket.created_at.desc()
-    ).limit(5).all()
-
-    stats = {
-        # ภาพรวม
-        'total_pending':      total_pending,
-        'user_count':         user_count,
-
-        # IT Repair
-        'repair_pending':     repair_pending,
-        'repair_in_progress': repair_in_progress,
-        'repair_done_total':  repair_done_total,
-
-        # Maintenance
-        'maint_pending':      maint_pending,
-        'maint_in_progress':  maint_in_progress,
-        'maint_done_total':   maint_done_total,
-
-        # งานของ user ปัจจุบัน
-        'my_repair_open':     my_repair_open,
-        'my_maint_open':      my_maint_open,
-
-        # ยานพาหนะ
-        'vehicle_pending':    vehicle_pending,
-        'vehicle_waiting_approver': vehicle_waiting_approver,
-        'vehicle_approved':   vehicle_approved,
-        'my_vehicle_pending': my_vehicle_pending,
-
-        # ห้องประชุม
-        'room_today':     room_today,
-        'my_room_today':  my_room_today,
-    }
-
     return render_template(
         'dashboard/dashboard.html',
-        stats=stats,
-        recent_repair=recent_repair,
-        recent_maint=recent_maint,
-        recent_room=recent_room,
-        recent_vehicle=recent_vehicle,
+        my_requests=_build_my_requests(current_user),
+        today_items=_build_today_items(current_user),
     )
 
 

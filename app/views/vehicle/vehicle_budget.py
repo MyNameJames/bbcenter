@@ -1,294 +1,253 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app
+from flask import render_template, request, redirect, url_for, flash, jsonify, session, current_app
 from flask_login import login_required, current_user
-from models import db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage, SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment, BudgetType, Notification, DeptApprover, OTRateConfig, DriverOT, DriverOTSlot, FuelPrice, FuelBill, RepairTicket, MaintenanceTicket, RoomBooking
-from sqlalchemy import and_, extract, or_, func
-from datetime import datetime, date, timedelta
-from views.core.telegram_service import (notify_approved, notify_forwarded_to_approver, notify_approver_approved, notify_rejected,
-                                    notify_cancelled            as tg_notify_cancelled)
+from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, VehicleMileage,
+                    SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment,
+                    BudgetType, Notification)
+from sqlalchemy import and_, extract, or_
+from datetime import datetime, date
+from calendar import monthrange
 from views.core.notification_service import (
-    notify_booking_created      as _n_booking_created,
-    notify_admin_assigned       as _n_admin_assigned,
-    notify_admin_approved       as _n_admin_approved,
-    notify_forwarded_to_approver as _n_forwarded,
-    notify_approver_approved    as _n_approver_approved,
-    notify_rejected             as _n_rejected,
-    notify_merged_into_group    as _n_merged,
-    notify_mileage_started      as _n_mileage_start,
-    notify_mileage_ended        as _n_mileage_end,
-    notify_budget_deducted      as _n_budget,
-    notify_payment_required     as _n_payment_required,
-    notify_admin_deleted        as _n_admin_deleted,
     notify_payment_confirmed    as _n_payment_confirmed,
-    notify_user_cancelled       as _n_user_cancelled,
 )
 import views.vehicle.vehicle_budget_service as budget_svc
-import os, time
-from werkzeug.utils import secure_filename
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
     is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
     EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
+    get_fuel_price, calc_fuel_cost,
 )
 
 
-@adminfleet_bp.route('/admin/budget', methods=['GET', 'POST'])
-@login_required
-def budget_manage():
-    if not is_vehicle_admin():
-        flash('คุณไม่มีสิทธิ์', 'danger')
-        return redirect(url_for('vehicle.index'))
- 
-    if request.method == 'POST':
-        action = request.form.get('action')
-        if action == 'set_budget':
-            dept        = request.form.get('department', '').strip()
-            year        = int(request.form.get('year'))
-            month       = int(request.form.get('month'))
-            amount      = float(request.form.get('budget_amount', 0))
-            budget_type = request.form.get('budget_type', 'department')
-            approver_id = request.form.get('approver_id') or None
-            if approver_id:
-                approver_id = int(approver_id)
+def _handle_set_budget():
+    dept        = request.form.get('department', '').strip()
+    year        = int(request.form.get('year'))
+    month       = int(request.form.get('month'))
+    amount      = float(request.form.get('budget_amount', 0))
+    budget_type = request.form.get('budget_type', 'department')
+    approver_id = request.form.get('approver_id') or None
+    if approver_id:
+        approver_id = int(approver_id)
 
-            bt_obj = BudgetType.query.filter_by(name=budget_type).first()
-            if not bt_obj:
-                flash('ไม่พบประเภทงบ กรุณาตรวจสอบข้อมูล', 'danger')
-                return redirect(url_for('adminfleet.budget_manage'))
+    bt_obj = BudgetType.query.filter_by(name=budget_type).first()
+    if not bt_obj:
+        flash('ไม่พบประเภทงบ กรุณาตรวจสอบข้อมูล', 'danger')
+        return
 
-            # หา VehicleDepartment — central: auto-create ถ้าไม่มี
-            dept_obj = VehicleDepartment.query.filter_by(name=dept, budget_type_id=bt_obj.id).first()
-            if not dept_obj:
-                if budget_type == 'central':
-                    dept_obj = VehicleDepartment(name=dept, budget_type_id=bt_obj.id)
-                    db.session.add(dept_obj)
-                    db.session.flush()
-                else:
-                    flash('ไม่พบกอง/แผนก กรุณาตรวจสอบข้อมูล', 'danger')
-                    return redirect(url_for('adminfleet.budget_manage'))
+    dept_obj = VehicleDepartment.query.filter_by(name=dept, budget_type_id=bt_obj.id).first()
+    if not dept_obj:
+        if budget_type == 'central':
+            dept_obj = VehicleDepartment(name=dept, budget_type_id=bt_obj.id)
+            db.session.add(dept_obj)
+            db.session.flush()
+        else:
+            flash('ไม่พบกอง/แผนก กรุณาตรวจสอบข้อมูล', 'danger')
+            return
 
-            budget = VehicleBudget.query.filter_by(
-                department_id=dept_obj.id, year=year, month=month, budget_type_id=bt_obj.id
-            ).first()
+    budget = VehicleBudget.query.filter_by(
+        department_id=dept_obj.id, year=year, month=month, budget_type_id=bt_obj.id
+    ).first()
 
-            # parse date range
-            start_date_str = request.form.get('start_date', '').strip()
-            end_date_str   = request.form.get('end_date', '').strip()
-            from datetime import date as date_cls
-            start_date = date_cls.fromisoformat(start_date_str) if start_date_str else None
-            end_date   = date_cls.fromisoformat(end_date_str)   if end_date_str   else None
+    start_date_str = request.form.get('start_date', '').strip()
+    end_date_str   = request.form.get('end_date', '').strip()
+    start_date = date.fromisoformat(start_date_str) if start_date_str else None
+    end_date   = date.fromisoformat(end_date_str)   if end_date_str   else None
 
-            if budget:
-                # log การเปลี่ยน budget_amount (ผ่าน BudgetService)
-                budget_svc.set_budget_amount(
-                    budget, amount,
-                    note=f'admin {current_user.username}: update budget {budget_type} {dept} {year}-{month:02d} → {amount}',
-                )
-                budget.start_date = start_date
-                budget.end_date   = end_date
-                if budget_type == 'department':
-                    budget.approver_id = approver_id
-            else:
-                budget = VehicleBudget(
-                    department_id=dept_obj.id, year=year, month=month,
-                    budget_amount=amount, budget_type_id=bt_obj.id,
-                    approver_id=approver_id if budget_type == 'department' else None,
-                    start_date=start_date, end_date=end_date
-                )
-                db.session.add(budget)
-                db.session.flush()
-                # log การสร้าง budget ใหม่
-                budget_svc.set_budget_amount(
-                    budget, amount,
-                    note=f'admin {current_user.username}: create budget {budget_type} {dept} {year}-{month:02d} = {amount}',
-                )
-            db.session.commit()
+    if budget:
+        budget_svc.set_budget_amount(
+            budget, amount,
+            note=f'admin {current_user.username}: update budget {budget_type} {dept} {year}-{month:02d} → {amount}',
+        )
+        budget.start_date = start_date
+        budget.end_date   = end_date
+        if budget_type == 'department':
+            budget.approver_id = approver_id
+    else:
+        budget = VehicleBudget(
+            department_id=dept_obj.id, year=year, month=month,
+            budget_amount=amount, budget_type_id=bt_obj.id,
+            approver_id=approver_id if budget_type == 'department' else None,
+            start_date=start_date, end_date=end_date
+        )
+        db.session.add(budget)
+        db.session.flush()
+        budget_svc.set_budget_amount(
+            budget, amount,
+            note=f'admin {current_user.username}: create budget {budget_type} {dept} {year}-{month:02d} = {amount}',
+        )
+    db.session.commit()
+    type_label = "ส่วนกลาง" if budget_type == 'central' else "งานกอง"
+    flash(f'ตั้งงบ{type_label} "{dept}" เดือน {month}/{year} = {amount:,.0f} บาท เรียบร้อย', 'success')
 
-            type_label = "ส่วนกลาง" if budget_type == 'central' else "งานกอง"
-            flash(f'ตั้งงบ{type_label} "{dept}" เดือน {month}/{year} = {amount:,.0f} บาท เรียบร้อย', 'success')
 
-        elif action == 'top_up':
-            try:
-                bid    = int(request.form.get('budget_id'))
-                delta  = float(request.form.get('delta', 0))
-                ntext  = (request.form.get('note') or '').strip()
-                if delta <= 0:
-                    raise ValueError('top-up ต้องเป็นจำนวนบวก')
-                budget = VehicleBudget.query.get_or_404(bid)
-                if not budget.is_active:
-                    raise ValueError(f'งบ "{budget.department.name}" ถูกปิดใช้งานอยู่ — เปิดใช้งานก่อน')
-                new_total = float(budget.budget_amount or 0) + delta
-                budget_svc.set_budget_amount(
-                    budget, new_total,
-                    note=f'top-up +{delta:,.0f} by {current_user.username}'
-                         + (f' | {ntext}' if ntext else ''))
-                db.session.commit()
-                flash(f'เพิ่มงบ "{budget.department.name}" +{delta:,.0f} ฿ เรียบร้อย', 'success')
-            except ValueError as e:
-                db.session.rollback()
-                flash(f'เพิ่มงบไม่สำเร็จ: {e}', 'danger')
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception('budget_manage:top_up failed')
-                flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
+def _handle_top_up():
+    try:
+        bid    = int(request.form.get('budget_id'))
+        delta  = float(request.form.get('delta', 0))
+        ntext  = (request.form.get('note') or '').strip()
+        if delta <= 0:
+            raise ValueError('top-up ต้องเป็นจำนวนบวก')
+        budget = VehicleBudget.query.get_or_404(bid)
+        if not budget.is_active:
+            raise ValueError(f'งบ "{budget.department.name}" ถูกปิดใช้งานอยู่ — เปิดใช้งานก่อน')
+        new_total = float(budget.budget_amount or 0) + delta
+        budget_svc.set_budget_amount(
+            budget, new_total,
+            note=f'top-up +{delta:,.0f} by {current_user.username}'
+                 + (f' | {ntext}' if ntext else ''))
+        db.session.commit()
+        flash(f'เพิ่มงบ "{budget.department.name}" +{delta:,.0f} ฿ เรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'เพิ่มงบไม่สำเร็จ: {e}', 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:top_up failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
-        elif action == 'manual_adjust':
-            try:
-                bid   = int(request.form.get('budget_id'))
-                delta = float(request.form.get('delta', 0))
-                ntext = (request.form.get('note') or '').strip()
-                if not ntext:
-                    raise ValueError('ต้องระบุเหตุผล (note) สำหรับ manual adjust')
-                budget = VehicleBudget.query.get_or_404(bid)
-                if not budget.is_active:
-                    raise ValueError(f'งบ "{budget.department.name}" ถูกปิดใช้งานอยู่ — เปิดใช้งานก่อน')
-                budget_svc.manual_adjust(
-                    budget, delta,
-                    note=f'manual_adjust by {current_user.username}: {ntext}')
-                db.session.commit()
-                sign = '+' if delta >= 0 else ''
-                flash(f'ปรับยอด "{budget.department.name}" {sign}{delta:,.2f} ฿', 'success')
-            except ValueError as e:
-                db.session.rollback()
-                flash(f'ปรับยอดไม่สำเร็จ: {e}', 'danger')
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception('budget_manage:manual_adjust failed')
-                flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
-        elif action == 'toggle_active':
-            try:
-                bid    = int(request.form.get('budget_id'))
-                target = request.form.get('to_active') == '1'
-                budget = VehicleBudget.query.get_or_404(bid)
-                log = budget_svc.set_active(
-                    budget, target,
-                    note=f'{"เปิด" if target else "ปิด"}ใช้งานโดย {current_user.username}',
-                )
-                db.session.commit()
-                if log is None:
-                    flash(f'งบ "{budget.department.name}" อยู่ในสถานะที่ต้องการอยู่แล้ว', 'info')
-                elif target:
-                    flash(f'เปิดใช้งานงบ "{budget.department.name}" เรียบร้อย', 'success')
-                else:
-                    flash(f'ปิดใช้งานงบ "{budget.department.name}" — booking ใหม่จะถูกบล็อก', 'warning')
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception('budget_manage:toggle_active failed')
-                flash('เปลี่ยนสถานะไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
+def _handle_manual_adjust():
+    try:
+        bid   = int(request.form.get('budget_id'))
+        delta = float(request.form.get('delta', 0))
+        ntext = (request.form.get('note') or '').strip()
+        if not ntext:
+            raise ValueError('ต้องระบุเหตุผล (note) สำหรับ manual adjust')
+        budget = VehicleBudget.query.get_or_404(bid)
+        if not budget.is_active:
+            raise ValueError(f'งบ "{budget.department.name}" ถูกปิดใช้งานอยู่ — เปิดใช้งานก่อน')
+        budget_svc.manual_adjust(
+            budget, delta,
+            note=f'manual_adjust by {current_user.username}: {ntext}')
+        db.session.commit()
+        sign = '+' if delta >= 0 else ''
+        flash(f'ปรับยอด "{budget.department.name}" {sign}{delta:,.2f} ฿', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'ปรับยอดไม่สำเร็จ: {e}', 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:manual_adjust failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
-        elif action == 'extend_period':
-            # นำงบจาก "คลังงบ" กลับมาใช้ — แก้ช่วง start–end + เปิด is_active (+ เพิ่มเงิน optional)
-            try:
-                bid       = int(request.form.get('budget_id'))
-                start_str = (request.form.get('start_date') or '').strip()
-                end_str   = (request.form.get('end_date') or '').strip()
-                topup_str = (request.form.get('topup_delta') or '').strip()
-                if not start_str or not end_str:
-                    raise ValueError('ต้องระบุวันเริ่มและวันสิ้นสุดช่วงงบ')
-                from datetime import date as _date_cls
-                new_start = _date_cls.fromisoformat(start_str)
-                new_end   = _date_cls.fromisoformat(end_str)
-                if new_end < new_start:
-                    raise ValueError('วันสิ้นสุดต้องไม่ก่อนวันเริ่ม')
-                budget = VehicleBudget.query.get_or_404(bid)
-                # 1) แก้ช่วงเวลา (start/end แก้ตรงได้ — ไม่ใช่ field ต้องห้าม)
-                budget.start_date = new_start
-                budget.end_date   = new_end
-                # 2) เปิดใช้งานกลับ (ผ่าน BudgetService → log set_active)
-                budget_svc.set_active(
-                    budget, True,
-                    note=f'extend_period {new_start}–{new_end} by {current_user.username}',
-                )
-                # 3) optional: เพิ่มเพดานพร้อมกัน
-                topup = float(topup_str) if topup_str else 0.0
-                if topup > 0:
-                    new_total = float(budget.budget_amount or 0) + topup
-                    budget_svc.set_budget_amount(
-                        budget, new_total,
-                        note=f'extend_period top-up +{topup:,.0f} by {current_user.username}',
-                    )
-                db.session.commit()
-                msg = (f'นำงบ "{budget.department.name}" กลับมาใช้ '
-                       f'({new_start.strftime("%d/%m/%Y")}–{new_end.strftime("%d/%m/%Y")})')
-                if topup > 0:
-                    msg += f' + เพิ่มงบ {topup:,.0f} ฿'
-                flash(msg + ' เรียบร้อย', 'success')
-            except ValueError as e:
-                db.session.rollback()
-                flash(f'นำงบกลับมาใช้ไม่สำเร็จ: {e}', 'danger')
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception('budget_manage:extend_period failed')
-                flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
-        elif action == 'cancel_booking':
-            try:
-                bk_id   = int(request.form.get('booking_id'))
-                booking = VehicleBooking.query.get_or_404(bk_id)
-                if booking.status not in ('rejected', 'cancelled'):
-                    booking.status = 'cancelled'
-                db.session.commit()
-                flash(f'ยกเลิก booking #{bk_id} เรียบร้อย', 'success')
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception('budget_manage:cancel_booking failed')
-                flash('ยกเลิก booking ไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
+def _handle_toggle_active():
+    try:
+        bid    = int(request.form.get('budget_id'))
+        target = request.form.get('to_active') == '1'
+        budget = VehicleBudget.query.get_or_404(bid)
+        log = budget_svc.set_active(
+            budget, target,
+            note=f'{"เปิด" if target else "ปิด"}ใช้งานโดย {current_user.username}',
+        )
+        db.session.commit()
+        if log is None:
+            flash(f'งบ "{budget.department.name}" อยู่ในสถานะที่ต้องการอยู่แล้ว', 'info')
+        elif target:
+            flash(f'เปิดใช้งานงบ "{budget.department.name}" เรียบร้อย', 'success')
+        else:
+            flash(f'ปิดใช้งานงบ "{budget.department.name}" — booking ใหม่จะถูกบล็อก', 'warning')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:toggle_active failed')
+        flash('เปลี่ยนสถานะไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
 
-        return redirect(url_for('adminfleet.budget_manage',
-                                year=request.form.get('year') or '',
-                                month=request.form.get('month') or ''))
 
-    now       = get_bkk_time()
-    sel_year  = int(request.args.get('year', now.year))
-    sel_month = int(request.args.get('month', now.month))
+def _handle_extend_period():
+    try:
+        bid       = int(request.form.get('budget_id'))
+        start_str = (request.form.get('start_date') or '').strip()
+        end_str   = (request.form.get('end_date') or '').strip()
+        topup_str = (request.form.get('topup_delta') or '').strip()
+        if not start_str or not end_str:
+            raise ValueError('ต้องระบุวันเริ่มและวันสิ้นสุดช่วงงบ')
+        new_start = date.fromisoformat(start_str)
+        new_end   = date.fromisoformat(end_str)
+        if new_end < new_start:
+            raise ValueError('วันสิ้นสุดต้องไม่ก่อนวันเริ่ม')
+        budget = VehicleBudget.query.get_or_404(bid)
+        budget.start_date = new_start
+        budget.end_date   = new_end
+        budget_svc.set_active(
+            budget, True,
+            note=f'extend_period {new_start}–{new_end} by {current_user.username}',
+        )
+        topup = float(topup_str) if topup_str else 0.0
+        if topup > 0:
+            new_total = float(budget.budget_amount or 0) + topup
+            budget_svc.set_budget_amount(
+                budget, new_total,
+                note=f'extend_period top-up +{topup:,.0f} by {current_user.username}',
+            )
+        db.session.commit()
+        msg = (f'นำงบ "{budget.department.name}" กลับมาใช้ '
+               f'({new_start.strftime("%d/%m/%Y")}–{new_end.strftime("%d/%m/%Y")})')
+        if topup > 0:
+            msg += f' + เพิ่มงบ {topup:,.0f} ฿'
+        flash(msg + ' เรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'นำงบกลับมาใช้ไม่สำเร็จ: {e}', 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:extend_period failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
-    # ── งบช่วงเวลา (2026-06-06): แสดงตาม active period ไม่ผูก year/month ตรงๆ
-    #    "active ในเดือนที่เลือก" = is_active + ช่วง start_date–end_date overlap เดือนนั้น
-    from calendar import monthrange
+
+def _handle_cancel_booking():
+    try:
+        bk_id   = int(request.form.get('booking_id'))
+        booking = VehicleBooking.query.get_or_404(bk_id)
+        if booking.status not in ('rejected', 'cancelled'):
+            booking.status = 'cancelled'
+        db.session.commit()
+        flash(f'ยกเลิก booking #{bk_id} เรียบร้อย', 'success')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:cancel_booking failed')
+        flash('ยกเลิก booking ไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
+
+
+def _load_budget_rows(sel_year, sel_month):
     month_start = date(sel_year, sel_month, 1)
     month_end   = date(sel_year, sel_month, monthrange(sel_year, sel_month)[1])
 
     raw_budgets = VehicleBudget.query.join(VehicleBudget.department)\
                                      .order_by(VehicleDepartment.name).all()
 
-    # ── Pending: bookings approved + expense_type in (central, department) ที่ยังไม่หักงบ
-    #    (ใช้ outerjoin VehicleMileage; pending = mileage IS NULL หรือ budget_deducted_at IS NULL)
-    pending_q = (VehicleBooking.query
-                 .outerjoin(VehicleMileage,
-                            VehicleMileage.booking_id == VehicleBooking.id)
-                 .filter(VehicleBooking.status == 'approved',
-                         VehicleBooking.expense_type.in_(['central', 'department']),
-                         or_(VehicleMileage.id.is_(None),
-                             VehicleMileage.budget_deducted_at.is_(None)))
-                 .order_by(VehicleBooking.start_datetime.desc()))
-    pending_bookings = pending_q.all()
+    pending_bookings = (VehicleBooking.query
+                        .outerjoin(VehicleMileage,
+                                   VehicleMileage.booking_id == VehicleBooking.id)
+                        .filter(VehicleBooking.status == 'approved',
+                                VehicleBooking.expense_type.in_(['central', 'department']),
+                                or_(VehicleMileage.id.is_(None),
+                                    VehicleMileage.budget_deducted_at.is_(None)))
+                        .order_by(VehicleBooking.start_datetime.desc())
+                        .all())
 
-    # นับต่อ (department_id, expense_type_id) → match กับ budget row
     pending_count_map = {}
     for pb in pending_bookings:
-        if pb.trip_department_id and pb.expense_type_id:
-            key = (pb.trip_department_id, pb.expense_type_id)
+        if pb.trip_department_id:
+            key = pb.trip_department_id
             pending_count_map[key] = pending_count_map.get(key, 0) + 1
 
-    budgets  = []   # active ในเดือนที่เลือก → section บน
-    archived = []   # ปิด/หมดช่วง/ไม่มีช่วง → section "คลังงบ" ด้านล่าง
+    budgets  = []
+    archived = []
     for b in raw_budgets:
-        pct = round(min(float(b.used_amount) / float(b.budget_amount) * 100, 100), 1) if b.budget_amount > 0 else 0
-        pkey = (b.department_id, b.budget_type_id)
+        pct        = round(min(float(b.used_amount) / float(b.budget_amount) * 100, 100), 1) if b.budget_amount > 0 else 0
+        pkey       = b.department_id
         has_period = bool(b.start_date and b.end_date)
         active_for_month = (b.is_active and has_period
                             and b.start_date <= month_end and b.end_date >= month_start)
-        # เหตุผลที่ไม่ active (badge ใน section คลังงบ)
         if active_for_month:
             status_reason = ''
         elif not b.is_active:
-            status_reason = 'closed'      # ถูกปิดใช้งาน
+            status_reason = 'closed'
         elif not has_period:
-            status_reason = 'no_period'   # ไม่ได้กำหนดช่วงเวลา
+            status_reason = 'no_period'
         elif b.end_date < month_start:
-            status_reason = 'expired'     # หมดช่วงก่อนเดือนที่เลือก
+            status_reason = 'expired'
         elif b.start_date > month_end:
-            status_reason = 'future'      # ช่วงเริ่มหลังเดือนที่เลือก
+            status_reason = 'future'
         else:
             status_reason = ''
         row = {
@@ -311,12 +270,28 @@ def budget_manage():
         }
         (budgets if active_for_month else archived).append(row)
 
-    central_budgets = [b for b in budgets if b['budget_type'] == 'central']
-    dept_budgets    = [b for b in budgets if b['budget_type'] == 'department']
-    # คลังงบ — เรียง end_date ล่าสุดก่อน (isoformat string เรียงได้ตรง)
+    central_budgets  = [b for b in budgets if b['budget_type'] == 'central']
+    dept_budgets     = [b for b in budgets if b['budget_type'] == 'department']
     archived_budgets = sorted(archived, key=lambda x: x['end_date'] or '', reverse=True)
 
-    # KPI summary stats — รวมเฉพาะ active เท่านั้น (inactive ยังแสดงในการ์ดแต่ไม่นับ KPI)
+    pending_list = []
+    for pb in pending_bookings:
+        m = VehicleMileage.query.filter_by(booking_id=pb.id).first()
+        pending_list.append({
+            'id':           pb.id,
+            'department':   pb.trip_department or '—',
+            'expense_type': pb.expense_type or '—',
+            'destination':  pb.destination or '—',
+            'start':        pb.start_datetime,
+            'user':         (pb.user.full_name or pb.user.username) if pb.user else '—',
+            'has_mileage':  bool(m),
+            'has_deduct':   bool(m and m.budget_deducted_at),
+        })
+
+    return central_budgets, dept_budgets, archived_budgets, pending_list
+
+
+def _calc_budget_kpi(central_budgets, dept_budgets, sel_year, sel_month):
     _active_central = [b for b in central_budgets if b['is_active']]
     _active_dept    = [b for b in dept_budgets    if b['is_active']]
     total_central_budget  = sum(float(b['budget_amount']) for b in _active_central)
@@ -326,14 +301,14 @@ def budget_manage():
     total_central_pending = sum(b['pending_count']        for b in _active_central)
     total_dept_pending    = sum(b['pending_count']        for b in _active_dept)
 
-    # งบส่วนตัวที่ได้รับจริง (personal_status=1 ในเดือนที่เลือก)
+    fuel_price = float(SystemConfig.get('fuel_price', '40'))
+
     personal_mileages = VehicleMileage.query.join(VehicleBooking).filter(
         VehicleBooking.expense_type == 'personal',
         VehicleMileage.personal_status == 1,
         extract('year',  VehicleMileage.personal_paid_at) == sel_year,
         extract('month', VehicleMileage.personal_paid_at) == sel_month,
     ).all()
-    fuel_price = float(SystemConfig.get('fuel_price', '40'))
     total_personal_received = 0.0
     for m in personal_mileages:
         if m.fuel_cost:
@@ -343,8 +318,6 @@ def budget_manage():
             rate = float(m.booking.assigned_vehicle.fuel_rate or 10)
             total_personal_received += round((dist / rate) * fuel_price, 2)
 
-    # ── ส่วนตัวค้างจ่าย: trip ปิดทริปแล้ว แต่ admin ยังไม่ได้กดรับเงิน
-    #    Scope: เดือนที่เลือก (จับคู่กับ KPI อื่น). Trigger จาก actual_end (ทริปปิด)
     personal_unpaid_mileages = VehicleMileage.query.join(VehicleBooking).filter(
         VehicleBooking.expense_type == 'personal',
         VehicleMileage.odometer_end.isnot(None),
@@ -361,38 +334,33 @@ def budget_manage():
             rate = float(m.booking.assigned_vehicle.fuel_rate or 10)
             total_personal_unpaid_amount += round((dist / rate) * fuel_price, 2)
 
-    # ── นับ budget rows ที่ใช้เกินเพดาน (used > cap, active เท่านั้น) สำหรับ critical signal
     over_budget_rows = [b for b in (_active_central + _active_dept)
                         if float(b['used_amount']) > float(b['budget_amount']) > 0]
 
-    kpi = {
-        'central_budget':       total_central_budget,
-        'dept_budget':          total_dept_budget,
-        'total_budget':         total_central_budget + total_dept_budget,
-        'central_used':         total_central_used,
-        'dept_used':            total_dept_used,
-        'total_used':           total_central_used + total_dept_used,
-        'central_remaining':    total_central_budget - total_central_used,
-        'dept_remaining':       total_dept_budget - total_dept_used,
-        'total_remaining':      (total_central_budget + total_dept_budget)
-                                - (total_central_used + total_dept_used),
-        'central_pending_count': total_central_pending,
-        'dept_pending_count':    total_dept_pending,
-        'total_pending_count':   total_central_pending + total_dept_pending,
-        'personal_received':     total_personal_received,
-        # Phase 2 redesign (2026-05-22): new signals สำหรับ summary card footer
+    total_cap = total_central_budget + total_dept_budget
+    return {
+        'central_budget':         total_central_budget,
+        'dept_budget':            total_dept_budget,
+        'total_budget':           total_cap,
+        'central_used':           total_central_used,
+        'dept_used':              total_dept_used,
+        'total_used':             total_central_used + total_dept_used,
+        'central_remaining':      total_central_budget - total_central_used,
+        'dept_remaining':         total_dept_budget - total_dept_used,
+        'total_remaining':        total_cap - (total_central_used + total_dept_used),
+        'central_pending_count':  total_central_pending,
+        'dept_pending_count':     total_dept_pending,
+        'total_pending_count':    total_central_pending + total_dept_pending,
+        'personal_received':      total_personal_received,
         'personal_unpaid_count':  len(personal_unpaid_mileages),
         'personal_unpaid_amount': total_personal_unpaid_amount,
         'over_budget_count':      len(over_budget_rows),
-        'pct_of_cap':             (((total_central_used + total_dept_used) /
-                                    (total_central_budget + total_dept_budget)) * 100)
-                                   if (total_central_budget + total_dept_budget) > 0 else 0,
+        'pct_of_cap':             ((total_central_used + total_dept_used) / total_cap * 100)
+                                   if total_cap > 0 else 0,
     }
 
-    # ── Phase 2E (2026-05-22): personal mileage rows สำหรับ section ส่วนตัว
-    #    Scope: เดือนที่เลือก (จับคู่ filter), รวมทั้ง paid + unpaid.
-    #    Trigger window: paid → personal_paid_at; unpaid → actual_end (วันปิดทริป)
-    personal_rows = []
+
+def _load_personal_rows(sel_year, sel_month, fuel_price):
     _personal_all = VehicleMileage.query.join(VehicleBooking).filter(
         VehicleBooking.expense_type == 'personal',
         VehicleMileage.odometer_end.isnot(None),
@@ -407,6 +375,7 @@ def budget_manage():
         ),
     ).order_by(VehicleMileage.actual_end.desc()).all()
 
+    rows = []
     for pm in _personal_all:
         if pm.fuel_cost:
             pcost = float(pm.fuel_cost)
@@ -416,9 +385,8 @@ def budget_manage():
             pcost = round((dist / rate) * fuel_price, 2)
         else:
             pcost = 0.0
-
         bk = pm.booking
-        personal_rows.append({
+        rows.append({
             'mileage_id':   pm.id,
             'booking_id':   bk.id if bk else None,
             'date':         pm.actual_end,
@@ -428,38 +396,57 @@ def budget_manage():
             'is_paid':      (pm.personal_status == 1),
             'paid_at':      pm.personal_paid_at,
         })
+    return rows
 
-    # pending_list สำหรับ refund modal — ตัด field ลงให้พอดี
-    pending_list = []
-    for pb in pending_bookings:
-        m = VehicleMileage.query.filter_by(booking_id=pb.id).first()
-        pending_list.append({
-            'id':           pb.id,
-            'department':   pb.trip_department or '—',
-            'expense_type': pb.expense_type or '—',
-            'destination':  pb.destination or '—',
-            'start':        pb.start_datetime,
-            'user':         (pb.user.full_name or pb.user.username) if pb.user else '—',
-            'has_mileage':  bool(m),
-            'has_deduct':   bool(m and m.budget_deducted_at),
-        })
 
-    # แยก datalist ตาม type
+@adminfleet_bp.route('/admin/budget', methods=['GET', 'POST'])
+@login_required
+def budget_manage():
+    if not is_vehicle_admin():
+        flash('คุณไม่มีสิทธิ์', 'danger')
+        return redirect(url_for('vehicle.index'))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        _POST_HANDLERS = {
+            'set_budget':     _handle_set_budget,
+            'top_up':         _handle_top_up,
+            'manual_adjust':  _handle_manual_adjust,
+            'toggle_active':  _handle_toggle_active,
+            'extend_period':  _handle_extend_period,
+            'cancel_booking': _handle_cancel_booking,
+        }
+        handler = _POST_HANDLERS.get(action)
+        if handler:
+            handler()
+        return redirect(url_for('adminfleet.budget_manage',
+                                year=request.form.get('year') or '',
+                                month=request.form.get('month') or ''))
+
+    now       = get_bkk_time()
+    sel_year  = int(request.args.get('year',  now.year))
+    sel_month = int(request.args.get('month', now.month))
+
+    central_budgets, dept_budgets, archived_budgets, pending_list = \
+        _load_budget_rows(sel_year, sel_month)
+
+    kpi = _calc_budget_kpi(central_budgets, dept_budgets, sel_year, sel_month)
+
+    fuel_price    = float(SystemConfig.get('fuel_price', '40'))
+    personal_rows = _load_personal_rows(sel_year, sel_month, fuel_price)
+
     central_dept_names = [cat['label'] for cat in EXPENSE_CATEGORIES['central']]
     dept_dept_names    = [d.name for d in VehicleDepartment.query
                           .filter(VehicleDepartment.is_disable == 0)
                           .join(VehicleDepartment.budget_type)
                           .filter(BudgetType.name == 'department')
                           .order_by(VehicleDepartment.name).all()]
-
     eligible_approvers = User.query.order_by(User.full_name).all()
 
-    TH_MONTHS = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
-
-    # ── Phase 7 (2026-05-22) — Pivot งบส่วนกลาง/แผนก × เดือน (ปีงบ Mar→Feb)
-    #    fiscal_year_start_ad = ปีที่ "เริ่มเดือน 3"; ถ้า sel_month >= 3 → start = sel_year, else start = sel_year - 1
     fiscal_year_start_ad = sel_year if sel_month >= 3 else sel_year - 1
     pivot = _build_budget_pivot(fiscal_year_start_ad)
+
+    _TH_MONTHS = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
     return render_template('vehicle/admin/vehicle_budget.html',
                            central_budgets=central_budgets,
@@ -472,8 +459,8 @@ def budget_manage():
                            pending_list=pending_list,
                            personal_rows=personal_rows,
                            sel_year=sel_year, sel_month=sel_month,
-                           month_label=f"{TH_MONTHS[sel_month]} {sel_year+543}",
-                           TH_MONTHS=TH_MONTHS,
+                           month_label=f"{_TH_MONTHS[sel_month]} {sel_year+543}",
+                           TH_MONTHS=_TH_MONTHS,
                            pivot=pivot,
                            fiscal_year_start_ad=fiscal_year_start_ad,
                            now=now)
@@ -551,7 +538,9 @@ def _build_budget_pivot(fiscal_year_start_ad):
                                  VehicleMileage.personal_paid_at <  fy_end)
                          .all())
     fuel_price = float(SystemConfig.get('fuel_price', '40'))
-    personal = {}
+    personal         = {}
+    personal_by_user = {}  # { user_id: { month_num: float } }
+    personal_user_labels = {}  # { user_id: str }
     for mi in personal_mileages:
         if not mi.personal_paid_at:
             continue
@@ -565,6 +554,12 @@ def _build_budget_pivot(fiscal_year_start_ad):
             cost = 0.0
         mkey = mi.personal_paid_at.month
         personal[mkey] = personal.get(mkey, 0.0) + cost
+        uid = mi.booking.user_id
+        if uid not in personal_by_user:
+            personal_by_user[uid]    = {}
+            u = mi.booking.user
+            personal_user_labels[uid] = (u.full_name or u.username) if u else str(uid)
+        personal_by_user[uid][mkey] = personal_by_user[uid].get(mkey, 0.0) + cost
 
     max_p = max((v for v in personal.values() if v > 0), default=0)
 
@@ -615,10 +610,12 @@ def _build_budget_pivot(fiscal_year_start_ad):
         'dept':           dept,
         'dept_labels':    labels_d,
         'dept_max':       max_d,
-        'personal':       personal,
-        'personal_max':   max_p,
-        'fiscal_months':  fiscal_months,
-        'summary':        summary,
+        'personal':             personal,
+        'personal_max':         max_p,
+        'personal_by_user':     personal_by_user,
+        'personal_user_labels': personal_user_labels,
+        'fiscal_months':        fiscal_months,
+        'summary':              summary,
     }
 
 
@@ -659,12 +656,7 @@ def budget_personal():
     for m in mileages:
         b = m.booking
         distance = (m.odometer_end - m.odometer_start) if (m.odometer_end and m.odometer_start) else 0
-        if m.fuel_cost and float(m.fuel_cost) > 0:
-            cost = float(m.fuel_cost)
-        elif distance and b.assigned_vehicle and b.assigned_vehicle.fuel_rate:
-            cost = round((distance / float(b.assigned_vehicle.fuel_rate)) * fuel_price, 2)
-        else:
-            cost = 0.0
+        cost = calc_fuel_cost(b.assigned_vehicle, distance, fuel_price, m.fuel_cost)
 
         if m.personal_status == 0:
             total_pending += cost
@@ -675,7 +667,7 @@ def budget_personal():
             'mileage_id':   m.id,
             'booking_id':   b.id,
             'user_name':    b.user.full_name or b.user.username,
-            'department':   b.snap_department_name or b.trip_department or '—',
+            'department':   b.trip_department or '—',
             'destination':  b.destination,
             'actual_end':   m.actual_end,
             'distance':     distance,

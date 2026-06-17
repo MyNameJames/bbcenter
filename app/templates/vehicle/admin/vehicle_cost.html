@@ -45,16 +45,17 @@
 
             {# ── Page header ────────────────────────────── #}
             <div class="cost-header">
-                <div>
-                    <h1 class="cost-title d-flex align-items-end justify-content-between flex-wrap gap-3 mb-2 pt-3">ค่าล่วงเวลา</h1>
-                    <p class="cost-subtitle">อนุมัติ · บันทึกการจ่าย · ออกใบเสร็จคนขับ
-                    </p>
+                <div class="d-flex align-items-end justify-content-between flex-wrap gap-3">
+                    <div>
+                        <h1 class="fw-bold text-accent pt-3">ค่าล่วงเวลา</h1>
+                        <h6 class="text-muted text-header">อนุมัติ · บันทึกการจ่าย · ออกใบเสร็จคนขับ</h6>
+                    </div>
                 </div>
                 <div class="cost-header-actions">
                     <button type="button" class="vc-btn vc-btn-secondary" id="printAllBtn" title="พิมพ์ใบเสร็จคนขับ (ตาม tab ที่เลือก)">
                         <i data-lucide="printer" class="vc-icon-sm"></i>พิมพ์
                     </button>
-                        <a id="exportLink" href="{{ url_for('admincost.cost_export', from_month=from_month, from_year=from_year, to_month=to_month, to_year=to_year, driver_id=sel_driver or '', status=sel_status) }}"
+                        <a id="exportLink" href="{{ url_for('admincost.cost_export', from_month=from_month, from_year=from_year, to_month=to_month, to_year=to_year, driver_id=sel_driver or '', status=sel_status, budget_type=sel_budget_type, budget_sub=sel_budget_sub) }}"
                             class="vc-btn vc-btn-secondary" title="ดาวน์โหลด Excel">
                             <i data-lucide="download" class="vc-icon-sm"></i>
                             Excel
@@ -71,7 +72,7 @@
             </div>
 
             {# ── Toolbar: status chips (scroll) + filter button (popover) — แถวเดียว ── #}
-            {% set filter_active = sel_driver or from_month != now.month or from_year != now.year or to_month != now.month or to_year != now.year %}
+            {# filter_active ส่งมาจาก view (รวม budget filter) #}
             <form method="get" action="{{ url_for('admincost.cost_summary') }}" class="cost-toolbar" id="filterForm">
                 <input type="hidden" name="status" id="statusInput" value="{{ sel_status }}">
 
@@ -115,6 +116,23 @@
                                     {% for d in drivers %}
                                     <option value="{{ d.id }}" {% if sel_driver == d.id %}selected{% endif %}>{{ d.name }}</option>
                                     {% endfor %}
+                                </select>
+                            </div>
+
+                            {# งบ — type → sub (cascade) อิง booking ที่ผูก OT #}
+                            <div class="cost-filter-field" id="filterBudgetTypeWrap">
+                                <span class="vc-filter-label">งบ</span>
+                                <select name="budget_type" id="filterBudgetType" class="vc-filter-select" data-dropdown>
+                                    <option value="">ทั้งหมด</option>
+                                    <option value="central"    {% if sel_budget_type=='central'    %}selected{% endif %}>ส่วนกลาง</option>
+                                    <option value="department" {% if sel_budget_type=='department' %}selected{% endif %}>ส่วนกอง</option>
+                                    <option value="personal"   {% if sel_budget_type=='personal'   %}selected{% endif %}>จ่ายเอง</option>
+                                </select>
+                            </div>
+                            <div class="cost-filter-field" id="filterBudgetSubWrap"{% if sel_budget_type not in ['central','department'] %} style="display:none"{% endif %}>
+                                <span class="vc-filter-label">หมวด/กอง</span>
+                                <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select" data-dropdown>
+                                    <option value="">ทั้งหมด</option>
                                 </select>
                             </div>
 
@@ -349,6 +367,69 @@
             </div>{# /otCard #}
 
             </div>{# /costResults — AJAX swap target #}
+
+            {# ── OT monthly pivot: driver × month ── #}
+            {% if ot_pivot %}
+            <div class="vc-card mt-4" id="otPivotCard" style="border: 1px solid var(--vc-border);">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding: var(--vc-space-3) var(--vc-space-4); border-bottom: 1px solid var(--vc-border);">
+                    <span style="font-weight:600; font-size:var(--vc-text-sm);">สรุปรายเดือน {{ from_year + 543 }}</span>
+                    <span class="vc-td-muted" style="font-size:var(--vc-text-xs);">เฉพาะ OT ที่ไม่ถูกลบ</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="vc-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="vc-pivot-td-sticky" style="min-width:130px; background:var(--vc-bg);">คนขับ</th>
+                                {% for m in range(1, 13) %}
+                                <th class="text-end" style="min-width:82px;">{{ TH_MONTHS[m-1] }}</th>
+                                {% endfor %}
+                                <th class="text-end" style="min-width:96px;">รวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for did, months in ot_pivot.items() %}
+                            <tr>
+                                <td class="vc-pivot-td-sticky" style="background:var(--vc-bg);">{{ ot_pivot_labels[did] }}</td>
+                                {% for m in range(1, 13) %}
+                                {% set cell = months.get(m) %}
+                                <td class="vc-td-num">
+                                    {% if cell %}
+                                    <div class="vc-td-strong vc-mono" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(cell.amount) }}</div>
+                                    <div class="vc-td-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(cell.hours) }}ชม.</div>
+                                    {% else %}
+                                    <span class="vc-td-muted" style="font-size:0.8125rem;">—</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="vc-td-num">
+                                    <div class="vc-td-strong vc-mono" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(ot_pivot_row_totals[did].amount) }}</div>
+                                    <div class="vc-td-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(ot_pivot_row_totals[did].hours) }}ชม.</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="vc-pivot-row-summary">
+                                <td class="vc-pivot-td-sticky" style="background:var(--vc-bg-subtle);">รวมทั้งหมด</td>
+                                {% for m in range(1, 13) %}
+                                {% set col = ot_pivot_col_totals[m] %}
+                                <td class="vc-td-num">
+                                    {% if col.amount > 0 %}
+                                    <div class="vc-td-strong vc-mono" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(col.amount) }}</div>
+                                    <div class="vc-td-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(col.hours) }}ชม.</div>
+                                    {% else %}
+                                    <span class="vc-td-muted" style="font-size:0.8125rem;">—</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="vc-td-num">
+                                    <div class="vc-td-strong vc-mono" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(ot_grand_amount) }}</div>
+                                    <div class="vc-td-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(ot_grand_hours) }}ชม.</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
 
         </div>
     </main>
@@ -708,6 +789,14 @@
 }
 </script>
 
+<script>
+    /* data injection (ไม่ใช่ logic) — options สำหรับ cascade filter งบ */
+    window.EXPENSE_CATS = {
+        central:    {{ budget_subs.central    | tojson }},
+        department: {{ budget_subs.department | tojson }}
+    };
+    window.COST_FILTER_SUB = {{ sel_budget_sub | tojson }};
+</script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_ot.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>

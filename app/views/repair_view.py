@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import db, RepairTicket, get_bkk_time
+from views.core.notification_service import notify_repair_created, notify_repair_accepted, notify_repair_closed
 from sqlalchemy import extract
 
 repair_bp = Blueprint('repair', __name__)
@@ -72,17 +73,24 @@ def index():
             image_file=filename
         )
         db.session.add(new_ticket)
+        db.session.flush()
+        notify_repair_created(new_ticket)
         db.session.commit()
 
         flash('แจ้งซ่อมสำเร็จ! ข้อมูลของคุณถูกส่งเข้าระบบเรียบร้อยแล้ว', 'success')
         return redirect(url_for('repair.index'))
 
+    # ทำซ้ำ: โหลด ticket ของ user มา prefill ฟอร์มสร้างใหม่ (?copy_from=<id>) / ?new=1 เปิดฟอร์มเปล่า
+    copy_from = request.args.get('copy_from', type=int)
+    copy_ticket = (RepairTicket.query.filter_by(id=copy_from, user_id=current_user.id).first()
+                   if copy_from else None)
     tickets = RepairTicket.query.order_by(RepairTicket.created_at.desc()).all()
     summary = get_repair_summary() if is_repair_admin() else None
-    return render_template('repair/repair.html', tickets=tickets, summary=summary)
+    return render_template('repair/repair.html', tickets=tickets, summary=summary,
+                           copy_ticket=copy_ticket, open_new=bool(request.args.get('new')))
 
 
-# 🟢 Route สำหรับแก้ไข (Update) — เฉพาะเจ้าของ 
+# 🟢 Route สำหรับแก้ไข (Update) — เฉพาะเจ้าของ
 @repair_bp.route('/repair/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit(id):
@@ -146,6 +154,7 @@ def update_status(id):
         new_urgency = request.form.get('urgency', '').strip()
         if new_urgency:
             ticket.urgency = new_urgency
+        notify_repair_accepted(ticket)
         flash(f'รับงาน #{ ticket.id } เรียบร้อยแล้ว กำลังดำเนินการซ่อม', 'success')
 
     elif action == 'close':
@@ -162,6 +171,7 @@ def update_status(id):
         ticket.status = 'done'
         ticket.resolved_note = resolved_note
         ticket.resolved_at = get_bkk_time()
+        notify_repair_closed(ticket)
         flash(f'ปิดงาน #{ ticket.id } เรียบร้อยแล้ว', 'success')
 
     else:

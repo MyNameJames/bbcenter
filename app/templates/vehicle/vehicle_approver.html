@@ -221,7 +221,7 @@
                      data-bs-target="#hist-{{ b.id }}"
                      aria-expanded="false">
                     <div class="ac-header-row">
-                        <span class="ac-ref">{{ b.trip_department or '—' }}{% if b.central_category %}-{{ b.central_category }}{% endif %}</span>
+                        <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
                         <div class="ac-header-right">
                             <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
                                 <i data-lucide="fuel" class="vc-icon-sm"></i>
@@ -231,16 +231,10 @@
                             <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-hist-{{ b.id }}"></i>
                         </div>
                     </div>
-                    <div class="ac-meta pt-1">
-                        <span class="ac-badge">
-                            <i data-lucide="user" class="vc-icon-sm"></i>
-                            {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
-                        </span>
-                        <span class="ac-badge">
-                            <i data-lucide="clock" class="vc-icon-sm"></i>
-                            {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
-                        </span>
-                        <span class="ac-badge">{{ b.user.full_name or b.user.username }}</span>
+                    <div class="ac-detail__trip">
+                        <span class="ac-detail__purpose"><i data-lucide="clock" class="vc-icon-sm mb-1 me-1"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}</span>
+                        <i data-lucide="dot" class="vc-icon-sm"></i>
+                        <span class="ac-detail__dest"><i data-lucide="map-pin" class="vc-icon-sm mb-1 me-1"></i>{{ b.destination }}</span>
                     </div>
                 </div>
                 <div class="collapse" id="hist-{{ b.id }}">
@@ -248,27 +242,21 @@
                         <div class="ac-detail-card">
                             <div class="ac-detail__head">
                                 <span class="ac-detail__requester">
-                                    <i data-lucide="user" class="vc-icon-sm"></i>{{ b.user.full_name or b.user.username }}
+                                    {{ b.user.full_name or b.user.username }}
                                 </span>
                                 <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
                                     <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
                                 </span>
                             </div>
-                            <div class="ac-detail__datetime">
-                                <span class="ac-detail__date">
-                                    <i data-lucide="calendar" class="vc-icon-sm"></i>{{ th_date(b.start_datetime) }}
-                                </span>
-                                <span class="ac-detail__time">
-                                    <i data-lucide="clock" class="vc-icon-sm"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
-                                </span>
-                            </div>
-                            <div class="ac-detail__trip">
+                            <div class="ac-detail__trip border-bottom pb-2 mb-2">
                                 <span class="ac-detail__purpose">{{ b.purpose }}</span>
                                 <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
                                 <span class="ac-detail__dest">{{ b.destination }}</span>
                             </div>
+                            <div class="ac-detail__pickup pt-2">
+                                คนขับรถ : {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
+                            </div>
                             <div class="ac-detail__pickup">
-                                <i data-lucide="map-pin" class="vc-icon-sm"></i>
                                 ขึ้นรถ: {{ b.pickup_location or '—' }}
                             </div>
                         </div>
@@ -300,7 +288,7 @@
                      data-bs-target="#rej-{{ b.id }}"
                      aria-expanded="false">
                     <div class="ac-header-row">
-                        <span class="ac-ref">{{ b.trip_department or '—' }}{% if b.central_category %}-{{ b.central_category }}{% endif %}</span>
+                        <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
                         <div class="ac-header-right">
                             <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
                                 <i data-lucide="fuel" class="vc-icon-sm"></i>
@@ -310,16 +298,10 @@
                             <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-rej-{{ b.id }}"></i>
                         </div>
                     </div>
-                    <div class="ac-meta pt-1">
-                        <span class="ac-badge">
-                            <i data-lucide="user" class="vc-icon-sm"></i>
-                            {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
-                        </span>
-                        <span class="ac-badge">
-                            <i data-lucide="clock" class="vc-icon-sm"></i>
-                            {{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
-                        </span>
-                        <span class="ac-badge">{{ b.user.full_name or b.user.username }}</span>
+                    <div class="ac-detail__trip">
+                        <span class="ac-detail__purpose"><i data-lucide="clock" class="vc-icon-sm mb-1 me-1"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}</span>
+                        <i data-lucide="dot" class="vc-icon-sm"></i>
+                        <span class="ac-detail__dest"><i data-lucide="map-pin" class="vc-icon-sm mb-1 me-1"></i>{{ b.destination }}</span>
                     </div>
                 </div>
                 <div class="collapse" id="rej-{{ b.id }}">
@@ -327,27 +309,21 @@
                         <div class="ac-detail-card">
                             <div class="ac-detail__head">
                                 <span class="ac-detail__requester">
-                                    <i data-lucide="user" class="vc-icon-sm"></i>{{ b.user.full_name or b.user.username }}
+                                    {{ b.user.full_name or b.user.username }}
                                 </span>
                                 <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
                                     <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
                                 </span>
                             </div>
-                            <div class="ac-detail__datetime">
-                                <span class="ac-detail__date">
-                                    <i data-lucide="calendar" class="vc-icon-sm"></i>{{ th_date(b.start_datetime) }}
-                                </span>
-                                <span class="ac-detail__time">
-                                    <i data-lucide="clock" class="vc-icon-sm"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}
-                                </span>
-                            </div>
-                            <div class="ac-detail__trip">
+                            <div class="ac-detail__trip border-bottom pb-2 mb-2">
                                 <span class="ac-detail__purpose">{{ b.purpose }}</span>
                                 <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
                                 <span class="ac-detail__dest">{{ b.destination }}</span>
                             </div>
+                            <div class="ac-detail__pickup pt-2">
+                                คนขับรถ : {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
+                            </div>
                             <div class="ac-detail__pickup">
-                                <i data-lucide="map-pin" class="vc-icon-sm"></i>
                                 ขึ้นรถ: {{ b.pickup_location or '—' }}
                             </div>
                         </div>

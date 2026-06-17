@@ -2,7 +2,7 @@
 
 > **Claude: อ่านไฟล์นี้ก่อนเสมอ** เมื่อต้องหา symbol/route/feature แทนการ glob/grep
 > ทุกคอลัมน์ `file:line` คลิกเปิดได้เลย
-> **อัปเดตล่าสุด:** 2026-06-11 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](CHANGELOG.md)
+> **อัปเดตล่าสุด:** 2026-06-16 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -31,7 +31,7 @@ app/
   logs/app.log              error log กลาง rotate 1MB×5 (gitignored — config ใน app.py, 2026-06-11)
   migrations/*.sql          manual migrations + migrations-index.md
   views/                    9 blueprints (auth/repair/maintenance/vehicle/room/fuel)
-    core/                   util ข้าม domain: telegram_service · notification_service · notification_cron
+    core/                   util ข้าม domain: telegram_service · line_service · broadcast · line_webhook(core_bp) · notification_service · notification_cron
     vehicle/                vehicle domain (ตัดจาก vehicle_view.py ขั้น 3, 2026-06-07):
                             vehicle_common (blueprints+helpers) · vehicle_booking · vehicle_notification
                             vehicle_admin · vehicle_mileage · vehicle_cost · vehicle_budget
@@ -65,6 +65,7 @@ docs/notes/
 | `driver_bp` | [views/vehicle/](../../app/views/vehicle/) | `/driver` | 3 |
 | `room_bp` | [app/views/room_view.py](../../app/views/room_view.py) | `/room`, `/api/room` | 5 |
 | `fuel_bp` | [app/views/fuel_view.py](../../app/views/fuel_view.py) | `/admin/fuel`, `/admin/fuel/export`, `/api/fuel` | 14 |
+| `core_bp` | [app/views/core/line_webhook.py](../../app/views/core/line_webhook.py) | `/line/webhook`, `/line/link` | 2 |
 
 > **vehicle controller mapping** (vehicle_view.py แตกขั้น 3, 2026-06-07):
 >
@@ -77,7 +78,8 @@ docs/notes/
 > | cost_summary/cost_export/override_fuel/ot_* | `vehicle_cost.py` |
 > | budget_manage/budget_personal* | `vehicle_budget.py` |
 > | driver_home/ad-hoc/mileage | `vehicle_driver.py` |
-> | helpers: is_vehicle_admin / _lookup_budget_for_booking / auto_generate_ot / EXPENSE_CATEGORIES | `vehicle_common.py` |
+> | helpers: is_vehicle_admin / require_vehicle_admin / _lookup_budget_for_booking / auto_generate_ot / EXPENSE_CATEGORIES | `vehicle_common.py` |
+| state machine: ALLOWED_TRANSITIONS / guard_budget / apply_transition | `vehicle_workflow.py` |
 
 ---
 

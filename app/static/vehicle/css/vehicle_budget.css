@@ -119,7 +119,7 @@
     margin: 2px 0 4px;
 }
 .budget-summary-used {
-    font-size: 2.25rem;
+    font-size: 2.75rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--vc-fg);
@@ -175,49 +175,11 @@
     font-weight: 500;
 }
 
-.budget-summary-signals {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--vc-space-2);
-    margin-top: var(--vc-space-2);
-    padding-top: var(--vc-space-3);
-    border-top: 1px solid var(--vc-border);
-}
-.budget-summary-signal {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 0.78125rem;
-    background: var(--vc-bg-subtle);
-    color: var(--vc-fg-muted);
-    border: 1px solid var(--vc-border);
-}
-.budget-summary-signal .vc-icon-sm {
-    width: 12px;
-    height: 12px;
-}
-.budget-summary-signal--warn {
-    background: var(--vc-bg-warn-subtle, #fffbeb);
-    color: var(--vc-amber, #b45309);
-    border-color: var(--vc-border-warn, #fde68a);
-}
-.budget-summary-signal--danger {
-    background: var(--vc-bg-danger-subtle, #fef2f2);
-    color: var(--vc-red, #b91c1c);
-    border-color: var(--vc-border-danger, #fecaca);
-}
-.budget-summary-signal-amount {
-    font-variant-numeric: tabular-nums;
-    font-weight: 500;
-    margin-left: 2px;
-    opacity: 0.85;
-}
+/* .budget-summary-signals* retired (2026-06-16) — signals footer ลบออกจาก markup
+   (tab redesign round 2). rules ลบครบ. */
 
 @media (max-width: 575.98px) {
-    .budget-summary { padding: var(--vc-space-4) var(--vc-space-5); }
-    .budget-summary-used { font-size: 1.75rem; }
+    .budget-summary-used { font-size: 2rem; }
     .budget-summary-cap  { font-size: 1.0625rem; }
 }
 
@@ -1164,8 +1126,8 @@ button.budget-row-approver--missing .vc-icon-sm { color: currentColor; }
     height: 100%;
     transition: width 480ms var(--bm-ease-out);
 }
-.budget-summary-seg--central { background: var(--vc-accent, #4F46E5); }
-.budget-summary-seg--dept    { background: #818cf8; }
+.budget-summary-seg--central { background: var(--vc-accent); }
+.budget-summary-seg--dept    { background: var(--vc-blue-mid); }
 .budget-summary-stack--danger .budget-summary-seg--central { background: var(--vc-red, #dc2626); }
 .budget-summary-stack--danger .budget-summary-seg--dept    { background: #f87171; }
 
@@ -1191,8 +1153,8 @@ button.budget-row-approver--missing .vc-icon-sm { color: currentColor; }
     border-radius: 999px;
     flex-shrink: 0;
 }
-.budget-summary-legend-dot--central  { background: var(--vc-accent, #4F46E5); }
-.budget-summary-legend-dot--dept     { background: #818cf8; }
+.budget-summary-legend-dot--central  { background: var(--vc-accent); }
+.budget-summary-legend-dot--dept     { background: var(--vc-blue-mid); }
 .budget-summary-legend-dot--free     { background: var(--vc-border-strong, #d4d4d4); }
 .budget-summary-legend-dot--personal { background: var(--vc-green, #16a34a); }
 .budget-summary-legend-val {
@@ -1360,6 +1322,133 @@ button.budget-row-sub--approver-missing .vc-icon-sm {
 
 
 /* ─────────────────────────────────────────────
+   20. TAB LAYOUT (2026-06-15 redesign)
+   ─────────────────────────────────────────────
+   summary card (2-col) อยู่บนสุดเสมอ → tab bar (เส้นยาวเต็ม container) →
+   toolbar (filter + add, ซ่อนตอน tab pivot) → panels (1 active)
+───────────────────────────────────────────── */
+
+/* 20A. SUMMARY CARD — 2-col (เลขใหญ่ซ้าย · breakdown ขวา) */
+.budget-summary-grid {
+    display: flex;
+    align-items: stretch;
+    gap: var(--vc-space-6);
+}
+
+.budget-summary-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--vc-fg-muted);
+    flex-shrink: 0;
+}
+.budget-summary-icon .vc-icon-sm { width: 16px; height: 16px; }
+.budget-summary-label {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    color: var(--vc-fg-muted);
+    line-height: 1.3;
+}
+.budget-summary-divider {
+    width: 3px;
+    background: var(--vc-border);
+    align-self: stretch;
+    flex-shrink: 0;
+}
+.budget-summary-breakdown {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--vc-space-2);
+}
+.budget-summary-bd-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: var(--vc-fg-muted);
+}
+.budget-summary-bd-label { color: var(--vc-fg-subtle); }
+
+@media (max-width: 767.98px) {
+    .budget-summary-grid { flex-direction: column; gap: var(--vc-space-4); }
+    .budget-summary-divider { width: auto; height: 3px; align-self: stretch; }
+}
+
+/* 20B. SEGMENT / LEGEND COLORS (2026-06-17 redesign) — bar 3 สี:
+   ส่วนกลาง = indigo accent · ส่วนกอง = amber · คงเหลือ = green */
+.budget-summary-seg--central       { background: var(--vc-accent, #4059e6); }
+.budget-summary-seg--dept          { background: var(--vc-amber,  #f5a623); }
+.budget-summary-seg--remain        { background: var(--vc-border,  #22c55e); }
+.budget-summary-legend-dot--central  { background: var(--vc-accent, #4059e6); }
+.budget-summary-legend-dot--dept     { background: var(--vc-amber,  #f5a623); }
+.budget-summary-legend-dot--remain   { background: var(--vc-green,  #22c55e); }
+
+/* 20C. TAB BAR — full-width underline */
+.budget-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    border-bottom: 0.3px solid var(--vc-border);
+    margin: var(--vc-space-5) 0 var(--vc-space-4);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.budget-tabs::-webkit-scrollbar { display: none; }
+.budget-tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 7px;
+    font-family: inherit;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.4;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color var(--vc-transition), border-color var(--vc-transition);
+}
+.budget-tab .vc-icon-sm { width: 14px; height: 14px; color: var(--vc-fg-subtle); }
+.budget-tab:hover { color: var(--vc-fg); }
+.budget-tab:hover .vc-icon-sm { color: var(--vc-fg-muted); }
+.budget-tab.is-active {
+    color: var(--vc-accent);
+    border-bottom: 4px solid var(--vc-accent);
+}
+.budget-tab.is-active .vc-icon-sm { color: var(--vc-accent); }
+
+/* 20D. TOOLBAR retired (2026-06-16) — budget-toolbar (filter + add) ลบออกจาก markup
+   ตามคำสั่งผู้ใช้. rules ลบครบ. */
+
+/* 20E. PANELS — 1 active */
+.budget-panel { display: none; }
+.budget-panel.is-active {
+    display: block;
+    animation: bm-fade-in var(--bm-dur-base) var(--bm-ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .budget-panel.is-active { animation: none; }
+}
+
+
+/* ─────────────────────────────────────────────
    16. PHASE 4e — REDUCED MOTION
    ─────────────────────────────────────────────
    Respect user preference — disable enter/stagger/fill animation
@@ -1427,3 +1516,278 @@ button.budget-row-sub--approver-missing .vc-icon-sm {
 /* alignment ของ popover ใน 2-col form row (กันล้นขอบ modal) */
 .va-cal--start { left: 0; right: auto; transform-origin: top left; }
 .va-cal--end   { right: 0; left: auto; transform-origin: top right; }
+
+
+/* ─────────────────────────────────────────────
+   21. TAB REDESIGN ROUND 2 (2026-06-15) — ตามภาพ ref
+   ─────────────────────────────────────────────
+   (1) summary = ไม่ใช่ card + grid ไม่เต็มจอ (desktop)
+   (2) tab underline เต็มจอ ถึง sidebar + หนา 4px
+   (3) table = image-style + sort ผ่านคลิก header
+   หมายเหตุ: section นี้ "ไม่สน design rule เดิม" ตามที่ผู้ใช้สั่ง (เงา + accent ได้)
+───────────────────────────────────────────── */
+
+/* 21A. SUMMARY — ไม่ใช่ card + grid ชิดซ้าย (ไม่เต็มจอ) */
+.budget-summary {
+    padding: var(--vc-space-2) 0 var(--vc-space-4);
+    background: transparent;
+    border: 0;
+}
+.budget-summary-grid {
+    align-items: center;
+
+}
+.budget-summary-breakdown {
+    flex: none;
+    width: 400px;
+    max-width: 100%;
+}
+@media (max-width: 767.98px) {
+    .budget-summary-breakdown { width: 100%; }
+}
+
+/* 21B retired (2026-06-16) — underline 4px/full-bleed กลับเป็นเดิม (§20C: 1px line + active 2px) ตามคำสั่งผู้ใช้ */
+
+/* 21C. TABLE — image-style + sortable header
+   "ไม่ต้องสนใจกฏ": ใช้เงา + accent ได้ */
+
+.budget-table thead th {
+    font-size: 0.7rem;
+    color: var(--vc-fg-muted);
+    letter-spacing: 0.06em;
+}
+.budget-table thead th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: color var(--vc-transition);
+}
+.budget-table thead th[data-sort]:hover { color: var(--vc-fg); }
+.budget-table thead th[data-sort]::after {
+    content: '⇅';
+    margin-left: 6px;
+    font-size: 0.9em;
+    opacity: 0.35;
+}
+.budget-table thead th.sort-asc::after {
+    content: '↑';
+    opacity: 1;
+    color: var(--vc-accent);
+}
+.budget-table thead th.sort-desc::after {
+    content: '↓';
+    opacity: 1;
+    color: var(--vc-accent);
+}
+.budget-table tbody tr { transition: background var(--vc-transition); }
+.budget-table tbody tr:hover td { background: var(--vc-bg-subtle); }
+
+
+/* ─────────────────────────────────────────────
+   22. DNA REDESIGN (2026-06-17) — card layout + tabbar one-row
+   ─────────────────────────────────────────────
+   accent #4059e6 · border #f0f0f0 · radius 6px · no shadow · icon monochrome
+   central/dept budgets = card grid; tab + toolbar บรรทัดเดียว
+───────────────────────────────────────────── */
+
+/* 22A. TABBAR — tab (overflow-x) ซ้าย + toolbar ขวา "บรรทัดเดียวเสมอ", underline เต็มแถว
+   display:flex ตรงๆ (ไม่พึ่ง utility) + nowrap → กัน toolbar ตกบรรทัด
+   sticky: ตรึงใต้ header (.vrc-topbar sticky top:0 สูง 56px, z-index 5) ตอนเลื่อนหน้า
+           — แกน Y ไม่ขยับ. bg ทึบ + z-index 4 (< header) คลุม card ที่ scroll ลอด */
+.budget-tabbar {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    gap: var(--vc-space-3);
+    border-bottom: 3px solid var(--vc-border);
+    margin: var(--vc-space-5) 0 var(--vc-space-4);
+    position: sticky;
+    top: 56px;
+    z-index: 4;
+    background: var(--vc-bg);
+}
+.budget-tabbar .budget-tabs {
+    border-bottom: 0;
+    margin: 0;
+    min-width: 0;          /* ยอม shrink → tab เลื่อน scroll แทนดันปุ่มตก */
+    flex: 1 1 auto;
+    overflow-y: hidden;    /* กัน jitter แนวตั้งตอน scroll tab แนวนอน */
+}
+.budget-toolbar {
+    flex: 0 0 auto;        /* ปุ่มไม่ย่อ/ไม่ตกบรรทัด pin ขวา */
+    margin-bottom: 7px;
+}
+
+/* month dropdown — scroll ถ้าเดือนเยอะ */
+.budget-month-menu {
+    max-height: 320px;
+    overflow-y: auto;
+}
+.budget-month-menu .vc-dropdown-item.is-active {
+    color: var(--vc-accent);
+    font-weight: 600;
+}
+
+/* 22B. KPI SUMMARY ICON — monochrome (#9999b0 บน #f0f0f0) */
+.budget-summary-icon {
+    background: var(--vc-icon-bg);
+    border-color: var(--vc-border);
+    color: var(--vc-icon);
+}
+
+/* 22C. SECTION HEAD — dot + label + เส้นยาว (ใช้งานอยู่ / ไม่ได้ใช้งาน) */
+.bcard-section-head {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    margin: var(--vc-space-2) 0 var(--vc-space-4);
+}
+.bcard-section-head--off { margin-top: var(--vc-space-6); }
+.bcard-section-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.bcard-section-dot--on  { background: var(--vc-green, #22c55e); }
+.bcard-section-dot--off { background: var(--vc-bg); border: 1.5px solid var(--vc-fg-subtle); }
+.bcard-section-label {
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    letter-spacing: var(--vc-tracking-wide);
+    text-transform: uppercase;
+    color: var(--vc-fg-muted);
+}
+.bcard-section-head--off .bcard-section-label { color: var(--vc-fg-subtle); }
+.bcard-section-count {
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    color: var(--vc-fg-subtle);
+    font-variant-numeric: tabular-nums;
+}
+.bcard-section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--vc-border);
+}
+
+/* 22D. BUDGET CARD GRID */
+.bcard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--vc-space-3);
+    margin-bottom: var(--vc-space-2);
+}
+
+.bcard {
+    position: relative;
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    padding: var(--vc-space-4);
+    background: var(--vc-bg);
+    transition: border-color var(--vc-transition);
+    animation: bm-fade-up var(--bm-dur-base) var(--bm-ease-out) both;
+}
+.bcard:hover { border-color: var(--vc-border-hover); }
+/* dropdown เปิด → ยก card ขึ้นเหนือ sibling (กัน menu โดน card ข้างๆ ทับ) */
+.bcard:has(.vc-dropdown.is-open) { z-index: 70; }
+
+.bcard-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-icon-bg);
+    color: var(--vc-icon);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.bcard-icon .vc-icon-sm { width: 20px; height: 20px; }
+
+.bcard-id { min-width: 0; }
+.bcard-name {
+    font-size: var(--vc-text-sm);
+    font-weight: 600;
+    color: var(--vc-fg);
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bcard-amount {
+    font-size: var(--vc-text-lg);
+    font-weight: 700;
+    color: var(--vc-fg);
+    margin-top: 3px;
+    line-height: 1.2;
+}
+.bcard-amount-cap {
+    color: var(--vc-fg-subtle);
+    font-weight: 500;
+}
+.bcard-pct {
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    margin-left: 2px;
+}
+.bcard-pct.is-ok     { color: var(--vc-green, #22c55e); }
+.bcard-pct.is-warn   { color: var(--vc-amber, #b45309); }
+.bcard-pct.is-danger { color: var(--vc-red,   #dc2626); }
+
+.bcard-menu { flex-shrink: 0; margin: -4px -6px 0 0; }
+
+.bcard-divider {
+    height: 1px;
+    background: var(--vc-border);
+    margin: var(--vc-space-3) 0;
+}
+.bcard-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.bcard-meta-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-muted);
+    line-height: 1.4;
+}
+.bcard-meta-row .vc-icon-sm { width: 13px; height: 13px; color: var(--vc-icon); flex-shrink: 0; }
+.bcard-meta-faint { color: var(--vc-fg-subtle); }
+
+/* approver ยังไม่กำหนด — ปุ่มเตือน */
+button.bcard-meta-missing {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--vc-red, #b91c1c);
+    transition: color var(--vc-transition);
+}
+button.bcard-meta-missing:hover { text-decoration: underline; }
+button.bcard-meta-missing .vc-icon-sm { color: currentColor; }
+
+/* 22E. INACTIVE (ไม่ได้ใช้งาน) CARD — disable tone + ปุ่มเปิดใช้งาน */
+.bcard--off {
+    background: var(--vc-sidebar-bg, #fafbfc);
+    border-style: dashed;
+}
+.bcard--off .bcard-name { color: var(--vc-fg-subtle); }
+.bcard--off .bcard-icon { color: var(--vc-fg-disabled); }
+.bcard--off .bcard-amount,
+.bcard--off .bcard-amount-cap,
+.bcard--off .bcard-pct,
+.bcard--off .bcard-meta-row { color: var(--vc-fg-disabled); }
+.bcard--off .bcard-meta-row .vc-icon-sm { color: var(--vc-fg-disabled); }
+.bcard-activate { flex-shrink: 0; white-space: nowrap; }
+
+@media (max-width: 575.98px) {
+    /* คง row เดียว — tab เลื่อน scroll, ปุ่มอยู่ขวา (ไม่ stack เป็น 2 แถว) */
+    .bcard-grid { grid-template-columns: 1fr; }
+}

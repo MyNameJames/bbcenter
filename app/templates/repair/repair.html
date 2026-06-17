@@ -18,7 +18,9 @@
     <link href="{{ url_for('static', filename='vendor/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='vendor/datatables/css/responsive.bootstrap5.min.css') }}" rel="stylesheet">
 </head>
-<body data-edit-ticket="{{ edit_ticket.id if edit_ticket else '' }}">
+<body data-edit-ticket="{{ edit_ticket.id if edit_ticket else '' }}"
+      data-copy-ticket="{{ copy_ticket.id if copy_ticket is defined and copy_ticket else '' }}"
+      data-open-new="{{ '1' if open_new is defined and open_new else '' }}">
 {% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
 {% from '_components/empty_state.html' import empty_state %}
 
@@ -45,11 +47,11 @@
                 {% endif %}
             {% endwith %}
 
-            {# ── Page Header ────────────────────────────── #}
-            <div class="repair-header">
+            {# ── Page Header (vehicle_budget.html style, 2026-06-16) ── #}
+            <div class="repair-header d-flex align-items-end justify-content-between flex-wrap gap-3">
                 <div>
-                    <h1 class="repair-title">ระบบแจ้งซ่อมไอที</h1>
-                    <p class="repair-subtitle">แจ้งปัญหาคอมพิวเตอร์ อุปกรณ์ IT และเครือข่าย</p>
+                    <h1 class="fw-bold text-accent pt-3">ระบบแจ้งซ่อมไอที</h1>
+                    <h6 class="text-muted text-header">แจ้งปัญหาคอมพิวเตอร์ อุปกรณ์ IT และเครือข่าย</h6>
                 </div>
                 <div class="repair-header-actions">
                     <button type="button" class="vc-btn vc-btn-primary" data-bs-toggle="modal" data-bs-target="#repairFormModal" title="แจ้งซ่อมไอทีใหม่">
@@ -267,7 +269,9 @@
     </main>
 </div>
 
-{# ── Modal: ฟอร์มแจ้งซ่อม (Create / Edit) ──────────── #}
+{# ── Modal: ฟอร์มแจ้งซ่อม (Create / Edit / ทำซ้ำ) ──────────────
+   src = แหล่ง prefill (edit หรือ copy) · edit_ticket = โหมดแก้ไขจริง (action=edit) #}
+{% set src = edit_ticket or (copy_ticket if copy_ticket is defined else None) %}
 <div class="modal fade" id="repairFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content vc-modal">
@@ -307,24 +311,24 @@
                         <label class="repair-form-section-label">รายละเอียดอุปกรณ์และสถานที่</label>
                         <div class="vc-form-group mb-3">
                             <select class="vc-filter-select w-100 repair-select" name="category" required>
-                                <option value="" {% if not edit_ticket %}selected{% endif %} disabled>-- เลือกประเภทปัญหา --</option>
-                                <option value="PC/Laptop" {% if edit_ticket and edit_ticket.category == 'PC/Laptop' %}selected{% endif %}>คอมพิวเตอร์ / โน้ตบุ๊ก</option>
-                                <option value="Printer" {% if edit_ticket and edit_ticket.category == 'Printer' %}selected{% endif %}>เครื่องปริ้นเตอร์</option>
-                                <option value="Network" {% if edit_ticket and edit_ticket.category == 'Network' %}selected{% endif %}>ระบบเครือข่าย (Network)</option>
-                                <option value="Software" {% if edit_ticket and edit_ticket.category == 'Software' %}selected{% endif %}>โปรแกรม / ซอฟต์แวร์</option>
-                                <option value="Other" {% if edit_ticket and edit_ticket.category == 'Other' %}selected{% endif %}>อื่นๆ</option>
+                                <option value="" {% if not src %}selected{% endif %} disabled>-- เลือกประเภทปัญหา --</option>
+                                <option value="PC/Laptop" {% if src and src.category == 'PC/Laptop' %}selected{% endif %}>คอมพิวเตอร์ / โน้ตบุ๊ก</option>
+                                <option value="Printer" {% if src and src.category == 'Printer' %}selected{% endif %}>เครื่องปริ้นเตอร์</option>
+                                <option value="Network" {% if src and src.category == 'Network' %}selected{% endif %}>ระบบเครือข่าย (Network)</option>
+                                <option value="Software" {% if src and src.category == 'Software' %}selected{% endif %}>โปรแกรม / ซอฟต์แวร์</option>
+                                <option value="Other" {% if src and src.category == 'Other' %}selected{% endif %}>อื่นๆ</option>
                             </select>
                         </div>
                         <div class="row g-2">
                             <div class="col-6">
                                 <input type="text" class="vc-form-input vc-mono" name="asset_tag"
                                        placeholder="รหัสทรัพย์สิน (ถ้ามี)"
-                                       value="{{ edit_ticket.asset_tag if edit_ticket and edit_ticket.asset_tag else '' }}">
+                                       value="{{ src.asset_tag if src and src.asset_tag else '' }}">
                             </div>
                             <div class="col-6">
                                 <input type="text" class="vc-form-input" name="location"
                                        placeholder="สถานที่ / ห้อง"
-                                       value="{{ edit_ticket.location if edit_ticket else '' }}" required>
+                                       value="{{ src.location if src else '' }}" required>
                             </div>
                         </div>
                     </div>
@@ -333,15 +337,15 @@
                         <label class="repair-form-section-label">ความเร่งด่วน</label>
                         <div class="vc-segmented-group">
                             <input type="radio" name="urgency" value="ปกติ" id="urgNormal"
-                                   {% if not edit_ticket or edit_ticket.urgency == 'ปกติ' %}checked{% endif %}>
+                                   {% if not src or src.urgency == 'ปกติ' %}checked{% endif %}>
                             <label for="urgNormal">ปกติ</label>
 
                             <input type="radio" name="urgency" value="ด่วน" id="urgUrgent"
-                                   {% if edit_ticket and edit_ticket.urgency == 'ด่วน' %}checked{% endif %}>
+                                   {% if src and src.urgency == 'ด่วน' %}checked{% endif %}>
                             <label for="urgUrgent">ด่วน</label>
 
                             <input type="radio" name="urgency" value="ด่วนมาก" id="urgCritical"
-                                   {% if edit_ticket and edit_ticket.urgency == 'ด่วนมาก' %}checked{% endif %}>
+                                   {% if src and src.urgency == 'ด่วนมาก' %}checked{% endif %}>
                             <label for="urgCritical">ด่วนมาก</label>
                         </div>
                     </div>
@@ -350,7 +354,7 @@
                         <label class="repair-form-section-label">หัวข้อปัญหา / อาการที่พบ</label>
                         <input type="text" class="vc-form-input repair-input-lg" name="subject"
                                placeholder="เช่น เครื่องพิมพ์กระดาษติด, เปิดคอมไม่ติด..."
-                               value="{{ edit_ticket.subject if edit_ticket else '' }}" required>
+                               value="{{ src.subject if src else '' }}" required>
                     </div>
 
                     {% if not edit_ticket %}

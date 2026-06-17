@@ -33,6 +33,7 @@ class Notification(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     booking_id = db.Column(db.Integer, db.ForeignKey('vehicle_booking.id'), nullable=True)
+    title      = db.Column(db.String(120), nullable=True)    # บรรทัดแรกของ notif card (freeze ตอนสร้าง; null = serializer fallback _notif_title)
     message    = db.Column(db.String(255), nullable=False)
     ntype      = db.Column(db.String(20), default='info')   # success | warning | danger | info
     is_read    = db.Column(db.Boolean, default=False)
@@ -44,6 +45,10 @@ class Notification(db.Model):
     is_sticky  = db.Column(db.Boolean, default=False)         # ปักบนสุด (payment unpaid)
     expired_at = db.Column(db.DateTime, nullable=True)        # ไม่แสดง badge count ถ้าเกิน (null = ไม่หมดอายุ — ใช้กับ payment)
     icon       = db.Column(db.String(40), nullable=True)      # FA icon class (เช่น 'fa-solid fa-circle-check')
+
+    # ── Supersede (2026-06-15) ──
+    event_key     = db.Column(db.String(40), nullable=True)   # ชนิด event แบบ stable ('booked'/'assigned'/'forwarded'/'approved'/'rejected'/'merged'/'mileage_start'/'mileage_end'/'budget') — ใช้ระบุตัวตน event เพราะ icon string ชนกัน (เช่น approved/payment_done ใช้ icon เดียวกัน)
+    superseded_at = db.Column(db.DateTime, nullable=True)     # เวลาที่ถูกแทนด้วย event ชนิดเดียวกันที่ใหม่กว่า (null = ยัง active/แสดงผล)
 
     user    = db.relationship('User',           foreign_keys=[user_id])
     booking = db.relationship('VehicleBooking', foreign_keys=[booking_id])

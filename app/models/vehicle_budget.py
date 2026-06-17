@@ -13,17 +13,6 @@ class BudgetType(db.Model):
 
 
 # ==========================================
-# 0.1 ตาราง ExpenseType (ประเภทค่าใช้จ่าย)
-# ==========================================
-class ExpenseType(db.Model):
-    __tablename__ = 'expense_type'
-
-    id   = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
-    # seed: (1, 'central'), (2, 'department'), (3, 'personal')
-
-
-# ==========================================
 # 0.2 ตาราง VehicleDepartment (ต้องอยู่ก่อน User)
 # ==========================================
 class VehicleDepartment(db.Model):

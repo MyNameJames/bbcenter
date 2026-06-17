@@ -1,0 +1,151 @@
+/* ============================================================
+   vehicle_zendenta.css — vehicle page theme (2026-06-14, prod)
+   ─────────────────────────────────────────────────────────────
+   scope `body.zd` — เฉพาะหน้า vehicle.html (vehicle theme hook).
+   token สีน้ำเงิน #014198 ยกขึ้น global (core/css/tokens.css) แล้ว.
+   ไฟล์นี้เหลือ vehicle-specific เท่านั้น:
+     1) icon ใหญ่ขึ้น (sidebar + header) — เฉพาะหน้านี้
+     2) calendar restyle ตามภาพ 2 (layout/ขนาดเดิม)
+   ============================================================ */
+
+/* ─────────────────── 1. ICON SIZE (sidebar + header) ──────────
+   ★★ จุดแก้ขนาด icon อยู่ที่นี่ทั้งหมด ★★
+   - sidebar  → block แรก (width/height/stroke-width)
+   - header   → block สอง
+   ถ้ายก global: sidebar → components/sidebar.css `.sb-icon svg.lucide`
+                 header  → core/css/vercel.css `.vrc-topbar ... svg` */
+body.zd .sb-icon [data-lucide],
+body.zd .sb-icon svg.lucide {
+    width: 21px; height: 21px; stroke-width: 2;     /* ★ sidebar icon */
+}
+body.zd .vrc-topbar [data-lucide],
+body.zd .vrc-topbar svg.lucide,
+body.zd .vrc-topbar .ds-btn-icon svg {
+    width: 22px; height: 22px; stroke-width: 2.2;     /* ★ header icon */
+}
+/* ส่วนประกอบ sidebar เล็ก (chevron + brand mark) ขยายตาม */
+body.zd .sb-chevron [data-lucide],
+body.zd .sb-chevron svg.lucide { width: 16px; height: 16px; stroke-width: 2.4; }
+body.zd .sb-logo-icon [data-lucide],
+body.zd .sb-logo-icon svg.lucide { width: 18px; height: 18px; stroke-width: 2.2; }
+
+/* ─────────────────── 3. CALENDAR — image 2 design ─────────────
+   layout/ขนาด = เดิม (bordered grid, min-height 112). เปลี่ยนแค่ design:
+   เลขมุมขวาบน + today วงกลมน้ำเงินทึบ + other-month ลายเฉียง + event pill */
+
+/* calendar toolbar — เดือนอยู่กลางเสมอ (grid 1fr auto 1fr) */
+body.zd .cal-toolbar {
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+body.zd .cal-toolbar-left   { justify-self: start;  display: flex; gap: 8px; }
+body.zd .cal-month-label {
+    min-width: 150px;
+    text-align: center;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* weekday header (base ถูก comment ทิ้ง → ใส่กลับ) — พื้นขาวตามภาพ */
+body.zd .calendar-grid-head { background: transparent; }
+body.zd .calendar-header-cell {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 500;
+    background: var(--vc-bg-subtle);
+    /* color: var(--vc-fg-muted); */
+    padding: 12px 8px;
+}
+
+/* hover → ฟ้าอ่อน (cell ไม่มี border) */
+body.zd .calendar-cell:hover { background: var(--vc-accent-light); }
+body.zd .calendar-cell.selected { background: var(--vc-bg); }
+
+
+/* date number → มุมขวาบน + ใหญ่ขึ้น (ภาพ 2) */
+body.zd .date-number {
+    align-self: flex-end;
+    width: 26px; height: 26px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vc-fg);
+}
+body.zd .calendar-cell.other-month .date-number { color: var(--vc-fg-subtle); }
+
+/* today → เลขปกติ (ลบวงกลม base border ออก) — ให้เหลือวงกลมเดียวที่ selected */
+body.zd .today .date-number {
+    background: transparent;
+    border: 0;
+    color: var(--vc-fg);
+    font-weight: 500;
+}
+
+/* selected → เลขวันเป็นวงกลมน้ำเงินทึบ (วงกลมเดียวในปฏิทิน) */
+body.zd .calendar-cell.selected .date-number {
+    background: var(--vc-accent);
+    color: #fff;
+    border: 0;
+    border-radius: 50%;
+    font-weight: 600;
+}
+
+/* other-month → ลายเฉียงจาง (ภาพ 2) */
+body.zd .calendar-cell.other-month,
+body.zd .calendar-cell.other-month:hover {
+    background-color: var(--vc-bg-subtle);
+    opacity: 0.5;
+}
+
+/* event → soft pill (คงสีสถานะเดิมจาก JS EVENT_CARD_STYLE) */
+body.zd .event-card {
+    border-radius: 6px;
+    padding: 3px 7px;
+    font-size: .72rem;
+}
+
+/* "+N รายการ" trigger */
+body.zd .event-more.vc-cal-more { font-weight: 500; }
+
+/* ─────────────────── 4. MOBILE (≤767px) ──────────────────────
+   (1) header โปร่ง · (2) indicator = สีน้ำเงิน · (3) เลขกลางช่อง
+   ไม่ยกขึ้นเมื่อมี indicator (ดันเป็น absolute) */
+@media (max-width: 767px) {
+    /* (1) calendar-grid-head + cell โปร่ง */
+    body.zd .calendar-grid-head,
+    body.zd .calendar-header-cell { background: transparent; }
+
+    /* today/selected ให้เหมือน desktop: today = เลขปกติ (ไม่ fill ทั้งช่อง),
+       selected = เลขวงกลมน้ำเงินทึบ (วงกลมเดียว) */
+    body.zd .calendar-cell.today,
+    body.zd .calendar-cell.today:hover,
+    body.zd .calendar-cell.selected,
+    body.zd .calendar-cell.selected.today {
+        background: transparent;
+        box-shadow: none;
+    }
+    body.zd .calendar-cell.today .date-number {
+        background: transparent;
+        color: var(--vc-fg);
+    }
+    body.zd .calendar-cell.selected .date-number {
+        background: var(--vc-accent);
+        color: #fff;
+        border-radius: 50%;
+    }
+
+    /* (3) เลขอยู่กลางช่อง (override align-self:flex-end ของ desktop) */
+    body.zd .calendar-cell .date-number { align-self: center; }
+
+    /* (2)+(3) indicator = น้ำเงิน + absolute ก้นช่อง → ไม่ดันเลขขึ้น */
+    body.zd .mobile-indicator,
+    body.zd .calendar-cell.today .mobile-indicator {
+        position: absolute;
+        bottom: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--vc-accent);
+        opacity: 1;
+    }
+}

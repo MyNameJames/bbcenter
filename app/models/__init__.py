@@ -22,7 +22,6 @@ from .vehicle import (
 )
 from .vehicle_budget import (
     BudgetType,
-    ExpenseType,
     VehicleDepartment,
     VehicleBudget,
     DeptApprover,
@@ -46,7 +45,7 @@ __all__ = [
     'RoomBooking',
     'Vehicle', 'Driver', 'VehicleBooking', 'VehicleMileage',
     'TripPassenger', 'VehicleServiceLog', 'TripExpenseItem',
-    'BudgetType', 'ExpenseType', 'VehicleDepartment', 'VehicleBudget',
+    'BudgetType', 'VehicleDepartment', 'VehicleBudget',
     'DeptApprover', 'VehicleBudgetLog',
     'OTRateConfig', 'DriverOT', 'DriverOTSlot',
     'FuelBill', 'FuelReimbursement', 'FuelPrice',

@@ -72,6 +72,20 @@ document.getElementById('todayBtn')?.addEventListener('click', () => {
     renderCalendar();
 });
 
+document.getElementById('prevMonthBtnMobile')?.addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar();
+});
+document.getElementById('nextMonthBtnMobile')?.addEventListener('click', () => {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+});
+document.getElementById('todayBtnMobile')?.addEventListener('click', () => {
+    currentDate = new Date(); currentDate.setDate(1);
+    selectedDate = new Date();
+    renderCalendar();
+});
+
 const calBody = document.getElementById('calendarBody');
 function hideOtherMonthEvents() {
     document.querySelectorAll('.calendar-cell.other-month .events-container')
@@ -209,6 +223,8 @@ function initFlatpickrInEditModal() {
 function renderCalendar() {
     const year = currentDate.getFullYear(), month = currentDate.getMonth();
     document.getElementById('currentMonthLabel').textContent = `${TH_MONTHS[month]} ${year + 543}`;
+    const _mobLabel = document.getElementById('currentMonthLabelMobile');
+    if (_mobLabel) _mobLabel.textContent = `${TH_MONTHS[month]} ${year + 543}`;
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrev = new Date(year, month, 0).getDate();
@@ -338,6 +354,8 @@ function updateMobileList(dateObj) {
     }
 
     const dayEvents = sortByTime(mockEvents.filter(e => e.date === ds));
+    const countEl = document.getElementById('mobileDaybarCount');
+    if (countEl) countEl.textContent = dayEvents.length ? `${dayEvents.length} รายการ` : '';
     const content = document.getElementById('mobileListContent');
 
     if (!dayEvents.length) {
@@ -482,6 +500,37 @@ function openBookingModal(dateStr = null) {
     bookingModal.show();
 }
 
+/* ── ทำซ้ำ: เปิด modal จองใหม่ prefill ห้อง+หัวข้อเดิม (เว้นวัน/เวลา) ── */
+function openDuplicateModal(eventId) {
+    const e = mockEvents.find(b => b.id === eventId);
+    if (!e) return;
+    openBookingModal();   // modal เปล่า: set เวลา default
+    const bkDate = document.getElementById('bk_date');
+    if (bkDate) bkDate.value = '';   // เว้นวันให้เลือกใหม่
+    const title = document.getElementById('bk_title');
+    if (title) title.value = e.title || '';
+    // ห้องเดิม — เลือกถ้ายังมีในตัวเลือก (กันห้องถูกปิด)
+    const roomSel = document.getElementById('bk_room_name');
+    if (roomSel) {
+        const exists = Array.from(roomSel.options).some(o => o.value === e.room);
+        roomSel.value = exists ? (e.room || '') : '';
+        roomSel.classList.toggle('is-invalid', !exists);
+    }
+}
+
 /* ── Expose for inline onclick handlers ── */
-Object.assign(window, { openEventDetail, openEditBookingModal, openBookingModal });
+Object.assign(window, { openEventDetail, openEditBookingModal, openBookingModal, openDuplicateModal });
 Object.defineProperty(window, 'eventDetailModal', { get: () => eventDetailModal, configurable: true });
+
+/* ── ?new=1 (จองใหม่) / ?copy_from=<id> (ทำซ้ำ) deep-link จากหน้า home ── */
+(function handleNewOrCopyDeeplink() {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('copy_from') && !params.has('new')) return;
+    const copyId = parseInt(params.get('copy_from'), 10);
+    if (copyId) openDuplicateModal(copyId);
+    else if (params.get('new')) openBookingModal();
+    const url = new URL(window.location.href);
+    url.searchParams.delete('copy_from');
+    url.searchParams.delete('new');
+    history.replaceState(null, '', url.toString());
+})();

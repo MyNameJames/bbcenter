@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from sqlalchemy import extract, func
 from models import db, MaintenanceTicket, get_bkk_time
+from views.core.notification_service import notify_maintenance_created, notify_maintenance_accepted, notify_maintenance_closed
 
 maintenance_bp = Blueprint('maintenance', __name__)
 
@@ -72,11 +73,17 @@ def index():
             image_file=filename
         )
         db.session.add(new_ticket)
+        db.session.flush()
+        notify_maintenance_created(new_ticket)
         db.session.commit()
 
         flash('แจ้งซ่อมสำเร็จ! ส่งเรื่องให้ช่างอาคารสถานที่เรียบร้อยแล้ว', 'success')
         return redirect(url_for('maintenance.index'))
 
+    # ทำซ้ำ: โหลด ticket ของ user มา prefill ฟอร์มสร้างใหม่ (?copy_from=<id>) / ?new=1 เปิดฟอร์มเปล่า
+    copy_from = request.args.get('copy_from', type=int)
+    copy_ticket = (MaintenanceTicket.query.filter_by(id=copy_from, user_id=current_user.id).first()
+                   if copy_from else None)
     tickets = MaintenanceTicket.query.order_by(MaintenanceTicket.created_at.desc()).all()
     summary, available_months = get_summary_context()
 
@@ -84,7 +91,9 @@ def index():
         'maintenance/maintenance.html',
         tickets=tickets,
         summary=summary,
-        available_months=available_months
+        available_months=available_months,
+        copy_ticket=copy_ticket,
+        open_new=bool(request.args.get('new'))
     )
 
 
@@ -147,6 +156,7 @@ def update_status(id):
             return redirect(url_for('maintenance.index'))
 
         ticket.status = 'in_progress'
+        notify_maintenance_accepted(ticket)
 
         # กำหนดวันนัดซ่อม (optional)
         scheduled_date_str = request.form.get('scheduled_date', '').strip()
@@ -176,6 +186,7 @@ def update_status(id):
         ticket.resolved_note   = resolved_note
         ticket.resolved_at     = get_bkk_time()
         ticket.technician_type = request.form.get('technician_type')
+        notify_maintenance_closed(ticket)
 
         # ค่าใช้จ่าย
         cost_str = request.form.get('repair_cost', '').strip()

@@ -33,6 +33,11 @@ def app():
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         TESTING=True,
         SECRET_KEY='test-only',
+        # StaticPool: cron functions open their own app_context — must share same in-memory DB
+        SQLALCHEMY_ENGINE_OPTIONS={
+            'connect_args': {'check_same_thread': False},
+            'poolclass': StaticPool,
+        },
     )
     db.init_app(app)
     lm = LoginManager()

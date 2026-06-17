@@ -501,6 +501,33 @@ document.addEventListener('click', e => {
     });
 })();
 
+/* Budget filter cascade: budget_type → budget_sub (sheet อยู่นอก #costResults → bind ครั้งเดียว) */
+(function bindBudgetFilter() {
+    const typeSel = document.getElementById('filterBudgetType');
+    const subSel  = document.getElementById('filterBudgetSub');
+    const subWrap = document.getElementById('filterBudgetSubWrap');
+    if (!typeSel || !subSel || !subWrap) return;
+
+    const cats       = window.EXPENSE_CATS || { central: [], department: [] };
+    const initialSub = window.COST_FILTER_SUB || '';
+
+    function updateBudgetSubDropdown() {
+        const t = typeSel.value;
+        if (t !== 'central' && t !== 'department') {
+            subWrap.style.display = 'none';
+            subSel.innerHTML = '<option value="">ทั้งหมด</option>';
+            return;
+        }
+        subWrap.style.display = '';
+        const list    = cats[t] || [];
+        const prevKey = subSel.value || initialSub;
+        subSel.innerHTML = '<option value="">ทั้งหมด</option>' +
+            list.map(x => `<option value="${x.key}" ${x.key === prevKey ? 'selected' : ''}>${x.label}</option>`).join('');
+    }
+    typeSel.addEventListener('change', updateBudgetSubDropdown);
+    updateBudgetSubDropdown();
+})();
+
 /* ── Slot add/remove/recompute — ใช้ร่วม edit + add modal ── */
 [
     { btn: 'addSlotBtn',   container: 'editSlotsContainer' },

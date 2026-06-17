@@ -1,0 +1,75 @@
+{# LINE Account Linking — แสดงโค้ด 6 หลักให้ user ผูกบัญชี LINE
+   Vercel-style shell · vc-* tokens · no inline style/script #}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>ผูกบัญชี LINE - BBCenter</title>
+    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
+    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
+</head>
+<body>
+<div class="container-fluid container-p-y">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    {% set active_menu = 'dashboard' %}
+    {% include '_shared/sidebar.html' %}
+
+    <main class="main-content vc-scope">
+        {% set page_section = 'บัญชี' %}
+        {% set page_title = 'ผูกบัญชี LINE' %}
+        {% include '_shared/header.html' %}
+
+        <div class="container-xxl px-3 pt-2" style="max-width:640px">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }} py-2">{{ message }}</div>
+              {% endfor %}
+            {% endwith %}
+
+            {% if is_linked %}
+            <div class="card vc-card border-0">
+              <div class="card-body text-center py-5">
+                <i class="fa-solid fa-circle-check text-success" style="font-size:2.5rem"></i>
+                <h5 class="mt-3 mb-1">ผูกบัญชี LINE เรียบร้อยแล้ว</h5>
+                <p class="text-muted mb-0">คุณจะได้รับการแจ้งเตือนผ่าน LINE อัตโนมัติ</p>
+              </div>
+            </div>
+            {% else %}
+            <div class="card vc-card border-0">
+              <div class="card-body py-4">
+                <h5 class="mb-3"><i class="fa-brands fa-line text-success me-2"></i>ผูกบัญชี LINE</h5>
+                <p class="text-muted">รับแจ้งเตือนผ่าน LINE — ทำตาม 3 ขั้นตอน:</p>
+                <ol class="ps-3 mb-4" style="line-height:2">
+                  <li>แอด <b>Official Account</b> ของระบบเป็นเพื่อน</li>
+                  <li>พิมพ์ <b>โค้ด 6 หลัก</b> ด้านล่างส่งในแชต</li>
+                  <li>รอข้อความยืนยัน “ผูกบัญชีสำเร็จ”</li>
+                </ol>
+
+                <div class="text-center p-4 mb-3"
+                     style="border:1px dashed var(--vc-border); border-radius:6px; background:var(--vc-subtle, #FAFAFA)">
+                  <div class="text-muted mb-1" style="font-size:.85rem">โค้ดของคุณ</div>
+                  <div style="font-size:2.4rem; font-weight:700; letter-spacing:.4rem; font-family:monospace">
+                    {{ link_code }}
+                  </div>
+                </div>
+
+                <p class="text-muted mb-0" style="font-size:.85rem">
+                  <i class="fa-solid fa-circle-info me-1"></i>
+                  โค้ดจะถูกสร้างใหม่ทุกครั้งที่เปิดหน้านี้ — ใช้ได้เฉพาะกับบัญชีของคุณเท่านั้น
+                </p>
+              </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </main>
+</div>
+</body>
+</html>

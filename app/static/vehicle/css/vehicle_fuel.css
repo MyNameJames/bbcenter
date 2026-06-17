@@ -34,18 +34,13 @@
     gap: var(--vc-space-4);
     flex-wrap: wrap;
     padding-bottom: var(--vc-space-5);
-    margin-bottom: var(--vc-space-6);
-    /* border-bottom: 1px solid var(--vc-border); */
 }
 
-.fuel-title {
-    font-size: var(--vc-text-xl);            /* 24px */
-    font-weight: 600;
-    letter-spacing: var(--vc-tracking-tight);
+/* .fuel-title { 
+    font-weight: 800;
     color: var(--vc-fg);
-    line-height: 1.2;
     margin: 0;
-}
+} */
 
 .fuel-subtitle {
     font-size: var(--vc-text-sm);
@@ -66,21 +61,179 @@
 ───────────────────────────────────────────── */
 .vc-card {
     background: var(--vc-bg);
-    border: 1px solid var(--vc-border);
-    border-radius: var(--vc-radius-md);
+    /* border: 1px solid var(--vc-border); */
+    border-radius: var(--vc-radius-sm);     /* DNA 2026-06-17: 6px ทุกที่ */
     overflow: hidden;
     transition: border-color var(--vc-transition);
 }
 
 .vc-card:hover {
-    border-color: #D4D4D4;
+    border-color: var(--vc-border-hover);
 }
 
 .vc-card-pad   { padding: var(--vc-space-5); }
 .vc-card-pad-lg{ padding: var(--vc-space-6); }
 
 
-/* KPI strip moved to components/kpi.css (Phase 2). */
+/* generic KPI strip moved to components/kpi.css (Phase 2). */
+
+/* ─────────────────────────────────────────────
+   4. FUEL KPI STRIP (DNA 2026-06-17 — icon tile + ใช้/ทั้งหมด แบบ Zendenta)
+   layout = bootstrap .row.row-cols-1.row-cols-md-3.g-0 ใน markup
+───────────────────────────────────────────── */
+.fuel-kpi {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-5) var(--vc-space-6);
+    border-right: 1px solid var(--vc-border);
+    position: relative;
+    min-width: 0;
+}
+.fuel-kpi:last-child { border-right: none; }
+
+.fuel-kpi-icon {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-icon-bg);
+    color: var(--vc-icon);
+}
+.fuel-kpi-icon [data-lucide] { width: 18px; height: 18px; }
+
+.fuel-kpi-body { min-width: 0; flex: 1 1 auto; }
+
+.fuel-kpi-label {
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+    line-height: 1;
+    margin: 0 0 var(--vc-space-2);
+}
+
+.fuel-kpi-value {
+    font-size: var(--vc-text-2xl);
+    font-weight: 700;
+    color: var(--vc-fg);
+    line-height: 1.1;
+    margin: 0;
+    word-break: break-word;
+}
+.fuel-kpi-cap {
+    font-size: var(--vc-text-md);
+    font-weight: 500;
+    color: var(--vc-fg-subtle);
+    margin-left: 4px;
+}
+.fuel-kpi-unit {
+    font-size: var(--vc-text-sm);
+    font-weight: 400;
+    color: var(--vc-fg-muted);
+    margin-left: 4px;
+}
+
+.fuel-kpi-sub {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    line-height: 1.4;
+    margin: var(--vc-space-2) 0 0;
+}
+.fuel-kpi-sub .is-danger  { color: var(--vc-red); }
+.fuel-kpi-sub .is-success { color: var(--vc-green); }
+
+.fuel-kpi-action {
+    position: absolute;
+    top: var(--vc-space-3);
+    right: var(--vc-space-3);
+}
+
+@media (max-width: 767.98px) {
+    .fuel-kpi {
+        border-right: none;
+        border-bottom: 1px solid var(--vc-border);
+    }
+    .fuel-kpi:last-child { border-bottom: none; }
+}
+
+/* KPI strip wrapper — borderless (ข้อ1: ไม่มี border รอบ มีแต่เส้นกั้น cell + เส้นใต้) */
+.fuel-kpi-strip {
+    border-bottom: 1px solid var(--vc-border);
+}
+
+
+/* ─────────────────────────────────────────────
+   4b. FILTER POPOVER (DNA 2026-06-17 — ปุ่มตัวกรองใน card-head-actions)
+   panel = position:fixed (กัน clip จาก actions overflow-x:auto)
+───────────────────────────────────────────── */
+.fuel-filter { position: relative; flex-shrink: 0; }
+
+.fuel-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    margin-left: 2px;
+    background: var(--vc-blue);
+    color: var(--vc-on-primary);
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.fuel-filter-panel {
+    position: fixed;
+    z-index: 50;
+    display: none;
+    min-width: 260px;
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    padding: var(--vc-space-4);
+}
+.fuel-filter-panel.is-open {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vc-space-3);
+}
+
+.fuel-filter-panel .vc-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.fuel-filter-panel .vc-filter-label {
+    font-size: var(--vc-text-xs);
+    font-weight: 500;
+    color: var(--vc-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--vc-tracking-wide);
+}
+.fuel-filter-panel .vc-filter-select {
+    width: 100%;
+    height: var(--vc-h-input);
+    padding: 0 var(--vc-space-3);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-bg);
+    color: var(--vc-fg);
+    font-size: var(--vc-text-sm);
+    cursor: pointer;
+}
+.fuel-filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--vc-space-2);
+    border-top: 1px solid var(--vc-border);
+}
 
 /* ─────────────────────────────────────────────
    5. BUTTONS (Vercel pill)
@@ -115,13 +268,13 @@
 }
 
 .vc-btn-primary {
-    background: var(--vc-primary);
+    background: var(--vc-blue);
     color: var(--vc-on-primary);
-    border-color: var(--vc-primary);
+    border-color: var(--vc-blue);
 }
 .vc-btn-primary:hover {
-    background: var(--vc-primary-hover);
-    border-color: var(--vc-primary-hover);
+    background: var(--vc-blue-hover);
+    border-color: var(--vc-blue-hover);
     color: var(--vc-on-primary);
 }
 
@@ -219,7 +372,7 @@
     gap: var(--vc-space-3);
     padding: var(--vc-space-3) var(--vc-space-5);
     border-bottom: 1px solid var(--vc-border);
-    flex-wrap: wrap;
+    flex-wrap: nowrap;          /* DNA 2026-06-17: บรรทัดเดียวเสมอ */
 }
 
 .vc-card-head-title {
@@ -231,6 +384,7 @@
     align-items: center;
     gap: var(--vc-space-2);
     line-height: 1;
+    flex-shrink: 0;             /* title ไม่ย่อ */
 }
 
 .vc-card-head-title .vc-icon { color: var(--vc-fg-subtle); }
@@ -242,12 +396,23 @@
     margin-left: 4px;
 }
 
+/* actions: scroll แนวนอนเมื่อปุ่มเยอะ/จอแคบ (DNA 2026-06-17 toolbar) */
 .vc-card-head-actions {
     display: flex;
     gap: var(--vc-space-2);
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    min-width: 0;
 }
+.vc-card-head-actions::-webkit-scrollbar { height: 4px; }
+.vc-card-head-actions::-webkit-scrollbar-thumb {
+    background: var(--vc-border-hover);
+    border-radius: 9999px;
+}
+.vc-card-head-actions > * { flex-shrink: 0; }
 
 
 /* ─────────────────────────────────────────────

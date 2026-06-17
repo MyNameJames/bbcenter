@@ -23,6 +23,10 @@ class User(UserMixin, db.Model):
     role_room = db.Column(db.String(20), default='user')
     is_superadmin = db.Column(db.Boolean, default=False)
 
+    # LINE Messaging API (2026-06-12)
+    line_user_id = db.Column(db.String(64), unique=True, nullable=True)   # LINE userId (จาก webhook ตอนผูกบัญชี) → push แจ้งเตือนรายคน
+    line_link_code = db.Column(db.String(6), nullable=True)               # โค้ด 6 หลักชั่วคราวสำหรับ flow ผูกบัญชี LINE ผ่าน chat
+
     # 🛑 ย้าย Relationship มาไว้ฝั่ง User ให้มันรู้ตัวว่ามีตาราง RepairTicket เชื่อมอยู่
     repair_tickets = db.relationship('RepairTicket', backref='user', lazy=True)
     maintenance_tickets = db.relationship('MaintenanceTicket', backref='user', lazy=True)

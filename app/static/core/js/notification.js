@@ -1,9 +1,9 @@
-/* pages/notification.js — Notification System (ES module)
+/* notification.js — Notification System
    - Polling /api/notifications ทุก 30 วิ
-   - Dropdown panel (group by booking, tabs, sticky payment)
-   - Toast popup (desktop only, สำหรับ event สำคัญ)
+   - Hybrid feed: booking notifications grouped (collapsed); non-booking solo flat
+   - Dropdown panel (tabs, sticky payment)
+   - Toast popup (desktop only)
    - Icons: Lucide only (FA mapped via faToLucide())
-   - Tab switch = client-side filter (no refetch)
    โหลดจาก _shared/header.html → ทุกหน้าที่มี header
 */
 
@@ -13,14 +13,14 @@ const IMPORTANT_CATEGORIES = new Set(['payment', 'payment_admin']);
 const IMPORTANT_NTYPES_FOR_TOAST = new Set(['success', 'danger', 'warning']);
 
 // ── Elements ─────────────────────────────
-const bellBtn   = document.getElementById('notifBellBtn');
-const badge     = document.getElementById('notifBadge');
-const panel     = document.getElementById('notifPanel');
-const tabsEl    = document.getElementById('notifTabs');
-const bodyEl    = document.getElementById('notifBody');
-const stickyEl  = document.getElementById('notifStickySection');
-const listEl    = document.getElementById('notifList');
-const markAllBtn = document.getElementById('notifMarkAll');
+const bellBtn        = document.getElementById('notifBellBtn');
+const badge          = document.getElementById('notifBadge');
+const panel          = document.getElementById('notifPanel');
+const tabsEl         = document.getElementById('notifTabs');
+const bodyEl         = document.getElementById('notifBody');
+const stickyEl       = document.getElementById('notifStickySection');
+const listEl         = document.getElementById('notifList');
+const markAllBtn     = document.getElementById('notifMarkAll');
 const toastContainer = document.getElementById('notifToastContainer');
 
 if (bellBtn && panel && bodyEl) {
@@ -30,15 +30,14 @@ if (bellBtn && panel && bodyEl) {
 function bootNotifications() {
     // ── State ────────────────────────────────
     const state = {
-        panelOpen: false,
-        currentTab: 'all',       // 'all' | 'unread' | 'payment'
-        lastData: null,
-        lastError: false,
-        expanded: new Set(),     // booking_ids ที่ expand อยู่
-        seenToastIds: new Set(), // กัน toast ซ้ำ
-        lastBadge: 0,
-        // booking_ids (number) + 'loose:<id>' (string) ที่อ่านแล้วในรอบ panel นี้
-        // → คงไว้ใน unread tab จนกว่าจะปิด panel (รอผู้ใช้อ่านจบก่อน)
+        panelOpen:    false,
+        currentTab:   'all',      // 'all' | 'unread' | 'payment'
+        lastData:     null,
+        lastError:    false,
+        expanded:     new Set(),  // booking_ids (number) ที่ expand อยู่
+        seenToastIds: new Set(),
+        lastBadge:    0,
+        // 'g:<bid>' = group อ่านแล้วในรอบนี้; 'n:<id>' = solo item อ่านแล้ว
         justRead: new Set(),
     };
 
@@ -50,16 +49,14 @@ function bootNotifications() {
         }[ch]));
     }
 
-    // Server returns FA classes ("fa-solid fa-credit-card") — map → Lucide name.
     function faToLucide(fa) {
         const s = String(fa || '');
-        // Specific matches first (most specific wins)
         if (s.includes('fa-gauge') || s.includes('fa-tachometer')) return 'gauge';
         if (s.includes('fa-wallet'))            return 'wallet';
         if (s.includes('fa-credit-card'))       return 'credit-card';
         if (s.includes('fa-money'))             return 'banknote';
         if (s.includes('fa-coins'))             return 'coins';
-        if (s.includes('fa-fuel') || s.includes('fa-gas'))      return 'fuel';
+        if (s.includes('fa-fuel') || s.includes('fa-gas'))     return 'fuel';
         if (s.includes('fa-car'))               return 'car';
         if (s.includes('fa-truck'))             return 'truck';
         if (s.includes('fa-wrench') || s.includes('fa-tools')) return 'wrench';
@@ -71,7 +68,7 @@ function bootNotifications() {
         if (s.includes('fa-circle-check') || s.includes('fa-check-circle')) return 'check-circle-2';
         if (s.includes('fa-check'))             return 'check';
         if (s.includes('fa-circle-xmark') || s.includes('fa-times-circle') || s.includes('fa-circle-x')) return 'x-circle';
-        if (s.includes('fa-xmark') || s.includes('fa-times'))   return 'x';
+        if (s.includes('fa-xmark') || s.includes('fa-times'))  return 'x';
         if (s.includes('fa-triangle-exclamation') || s.includes('fa-exclamation-triangle')) return 'alert-triangle';
         if (s.includes('fa-circle-exclamation') || s.includes('fa-exclamation-circle')) return 'alert-circle';
         if (s.includes('fa-octagon-exclamation')) return 'alert-octagon';
@@ -89,30 +86,9 @@ function bootNotifications() {
         if (s.includes('fa-pen') || s.includes('fa-edit') || s.includes('fa-pencil')) return 'pencil';
         if (s.includes('fa-plus'))              return 'plus';
         if (s.includes('fa-minus'))             return 'minus';
-        // Fallback by ntype-style classes
         return 'bell';
     }
 
-    // Role → icon + label (สำหรับ cat-icon ใน group head)
-    function roleIcon(role) {
-        if (role === 'user')     return 'bell';
-        if (role === 'approver') return 'user';
-        if (role === 'admin')    return 'circle-alert';
-        return null;
-    }
-    function roleLabel(role) {
-        if (role === 'user')     return 'Booking ของฉัน';
-        if (role === 'approver') return 'Booking ที่ฉันอนุมัติ';
-        if (role === 'admin')    return 'Booking ที่ฉันดูแล (Admin)';
-        return '';
-    }
-    function roleChipText(role) {
-        if (role === 'approver') return 'อนุมัติ';
-        if (role === 'admin')    return 'Admin';
-        return '';
-    }
-
-    // Icon name for a notification group/item — prefers server, falls back per category/ntype.
     function pickIcon(n) {
         if (n && n.icon) return faToLucide(n.icon);
         const cat = n && n.category;
@@ -127,7 +103,7 @@ function bootNotifications() {
     }
 
     function lucideIcon(name, extraClass) {
-        const cls = extraClass ? ` class="${extraClass}"` : '';
+        const cls = extraClass ? ` class="${escapeHtml(extraClass)}"` : '';
         return `<i data-lucide="${escapeHtml(name)}"${cls}></i>`;
     }
 
@@ -149,6 +125,12 @@ function bootNotifications() {
         if (days >= 14) return 'overdue-14';
         if (days >= 7)  return 'overdue-7';
         return '';
+    }
+
+    function _categoryChip(cat) {
+        const map = { mileage: 'ไมล์', budget: 'งบ', payment_admin: 'ชำระ' };
+        if (!map[cat]) return '';
+        return `<span class="notif-cat-chip">${map[cat]}</span>`;
     }
 
     // ── Rendering ─────────────────────────────
@@ -177,9 +159,9 @@ function bootNotifications() {
 
     function renderEmpty(tab) {
         const msg = {
-            all:     { icon:'bell-off',         title:'ยังไม่มีการแจ้งเตือน', sub:'การแจ้งเตือนใหม่จะปรากฏที่นี่' },
-            unread:  { icon:'check-circle-2',   title:'อ่านครบแล้ว',           sub:'ไม่มีการแจ้งเตือนที่ยังไม่ได้อ่าน' },
-            payment: { icon:'check-circle-2',   title:'ไม่มีรายการค้างชำระ',   sub:'ชำระครบแล้วทุกรายการ' },
+            all:     { icon:'bell-off',       title:'ยังไม่มีการแจ้งเตือน', sub:'การแจ้งเตือนใหม่จะปรากฏที่นี่' },
+            unread:  { icon:'check-circle-2', title:'อ่านครบแล้ว',           sub:'ไม่มีการแจ้งเตือนที่ยังไม่ได้อ่าน' },
+            payment: { icon:'check-circle-2', title:'ไม่มีรายการค้างชำระ',   sub:'ชำระครบแล้วทุกรายการ' },
         }[tab] || { icon:'bell-off', title:'ยังไม่มีการแจ้งเตือน', sub:'' };
         return `<div class="notif-empty">
             ${lucideIcon(msg.icon)}
@@ -195,7 +177,7 @@ function bootNotifications() {
         return `<div class="notif-payment-card ${od}" data-id="${n.id}">
             <div class="notif-payment-head">
                 ${lucideIcon(titleIcon, 'title-icon')}
-                <div class="notif-payment-title">${escapeHtml(n.booking_title || ('คำขอ #' + n.booking_id))}</div>
+                <div class="notif-payment-title">${escapeHtml(n.title || n.booking_title || ('คำขอ #' + n.booking_id))}</div>
                 ${lucideIcon('bell-ring', 'notif-payment-bell')}
             </div>
             <div class="notif-payment-message">${escapeHtml(n.message)}</div>
@@ -205,81 +187,98 @@ function bootNotifications() {
                          ดูรายการทั้งหมด ${lucideIcon('arrow-right')}
                        </a>`
                     : `<button class="notif-btn-primary" data-act="report-paid" data-booking="${n.booking_id}">
-                          ฉันจ่ายแล้ว
+                         ฉันจ่ายแล้ว
                        </button>`
                 }
             </div>
         </div>`;
     }
 
-    // Stage timeline (booking ของ user เอง) — replace message timeline
-    function renderStageTimeline(stages) {
-        return stages.map((st, i) => {
-            const isLast = i === stages.length - 1;
-            const desc = st.desc_main
-                ? `<div class="notif-stage-desc">${escapeHtml(st.desc_main)}</div>
-                   ${st.desc_sub ? `<div class="notif-stage-sub">${escapeHtml(st.desc_sub)}</div>` : ''}`
-                : `<div class="notif-stage-desc">${escapeHtml(st.desc || '')}</div>`;
-            return `<div class="notif-stage ${isLast ? 'notif-stage--last' : ''}">
-                <div class="notif-stage-icon">${lucideIcon(st.icon || 'circle')}</div>
-                <div class="notif-stage-body">
-                    <div class="notif-stage-title">${escapeHtml(st.title)}</div>
-                    ${desc}
-                </div>
-                <div class="notif-stage-time">${escapeHtml(st.ts || '')}</div>
-            </div>`;
-        }).join('');
-    }
-
+    // Booking group card (collapsed; click header to expand)
     function renderGroup(g) {
-        const latest = g.latest || {};
-        const unread = g.unread_count > 0;
         const isExp = state.expanded.has(g.booking_id);
-        const groupIcon = pickIcon(latest);                       // preview icon (latest event)
-        const headerIcon = roleIcon(g.role) || groupIcon;         // cat-icon (role context)
-        const rLabel = roleLabel(g.role);
-        const rChip = roleChipText(g.role);
-        // Backend (vehicle_view.py:_build_*_stages) garantee stages.length > 0 สำหรับ group ที่ valid
-        // → ไม่มี fallback ไป notif-timeline-item อีกแล้ว
-        const stages = Array.isArray(g.stages) ? g.stages : [];
-        const displayCount = stages.length;
-
-        return `<div class="notif-group ${unread ? 'unread' : ''} ${isExp ? 'expanded' : ''}" data-booking="${g.booking_id}">
+        const unread = g.unread_count > 0;
+        const colorClass = `notif-icon-${g.latest_ntype || 'info'}`;
+        return `<div class="notif-group ${unread ? 'unread' : ''} ${isExp ? 'expanded' : ''}"
+                     data-booking="${g.booking_id}">
             <div class="notif-group-head" data-act="toggle" role="button" tabindex="0"
                  aria-expanded="${isExp ? 'true' : 'false'}">
                 <span class="notif-dot-unread"></span>
-                <div class="notif-cat-icon" title="${escapeHtml(rLabel)}">${lucideIcon(headerIcon)}</div>
+                <div class="notif-cat-icon ${colorClass}">${lucideIcon(faToLucide(g.latest_icon))}</div>
                 <div class="notif-group-main">
                     <div class="notif-group-title-row">
                         <span class="notif-group-title">${escapeHtml(g.booking_title)}</span>
                         <span class="notif-group-id">#${g.booking_id}</span>
-                        <span class="notif-group-count">${displayCount}</span>
-                        ${rChip ? `<span class="notif-role-chip">${escapeHtml(rChip)}</span>` : ''}
+                        <span class="notif-group-count">${g.notifications.length}</span>
                     </div>
-                    <div class="notif-group-preview">
-                        ${escapeHtml(latest.message || '')}
-                    </div>
-                    <div class="notif-group-meta">${escapeHtml(latest.created_rel || '')}</div>
+                    <div class="notif-group-preview">${escapeHtml(g.latest_message)}</div>
+                    <div class="notif-group-meta">${escapeHtml(g.latest_rel)}</div>
                 </div>
                 ${lucideIcon('chevron-right', 'notif-chevron')}
             </div>
-            <div class="notif-timeline notif-timeline--stages">
-                ${renderStageTimeline(stages)}
+            <div class="notif-timeline notif-timeline--notifs">
+                ${g.notifications.map(renderInnerNotif).join('')}
             </div>
         </div>`;
     }
 
-    function renderLooseItem(n) {
-        return `<div class="notif-group ${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-act="open-single">
+    // subtitle = message ตัด prefix "คำขอ/ทริป #N" ออก (group header แสดง #N + ปลายทางแล้ว → กระชับ)
+    function innerSubtitle(n) {
+        return String(n.message || '').replace(/^(คำขอ|ทริป)\s*#\d+\s*/, '');
+    }
+
+    // Compact notification row inside an expanded group — title + subtitle (2 บรรทัด) + time ขวา
+    function renderInnerNotif(n) {
+        const colorClass = `notif-icon-${n.ntype || 'info'}`;
+        const title = n.title || ntypeLabel(n.ntype);
+        return `<div class="notif-inner ${n.is_read ? '' : 'unread'}"
+                     data-id="${n.id}" data-act="open-inner">
+            <div class="notif-cat-icon ${colorClass}">${lucideIcon(pickIcon(n))}</div>
+            <div class="notif-inner-body">
+                <div class="notif-inner-title">${escapeHtml(title)}</div>
+                <div class="notif-inner-msg">${escapeHtml(innerSubtitle(n))}</div>
+            </div>
+            <div class="notif-inner-time">${escapeHtml(n.created_rel)}</div>
+        </div>`;
+    }
+
+    // Solo flat item (non-booking notification)
+    function renderItem(n) {
+        const colorClass = `notif-icon-${n.ntype || 'info'}`;
+        const chip = _categoryChip(n.category);
+        return `<div class="notif-group ${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-act="open-item">
             <div class="notif-group-head" role="button" tabindex="0">
                 <span class="notif-dot-unread"></span>
-                <div class="notif-cat-icon">${lucideIcon(pickIcon(n))}</div>
+                <div class="notif-cat-icon ${colorClass}">${lucideIcon(pickIcon(n))}</div>
                 <div class="notif-group-main">
+                    ${chip ? `<div style="margin-bottom:3px">${chip}</div>` : ''}
                     <div class="notif-group-preview">${escapeHtml(n.message)}</div>
                     <div class="notif-group-meta">${escapeHtml(n.created_rel)}</div>
                 </div>
             </div>
         </div>`;
+    }
+
+    // Merge-sort groups + solo items by ts_ms desc (both arrays pre-sorted by backend)
+    function buildFeed(data, tab) {
+        let groups = data.groups || [];
+        let items  = data.items  || [];
+        if (tab === 'unread') {
+            groups = groups.filter(g => g.unread_count > 0 || state.justRead.has('g:' + g.booking_id));
+            items  = items.filter(n => !n.is_read || state.justRead.has('n:' + n.id));
+        }
+        const gList = groups.map(g => ({...g, _type:'group'}));
+        const nList = items.map(n  => ({...n, _type:'item'}));
+        const out = [];
+        let gi = 0, ni = 0;
+        while (gi < gList.length || ni < nList.length) {
+            const g = gList[gi], n = nList[ni];
+            if (!g)                      { out.push(n); ni++; }
+            else if (!n)                 { out.push(g); gi++; }
+            else if (g.ts_ms >= n.ts_ms) { out.push(g); gi++; }
+            else                         { out.push(n); ni++; }
+        }
+        return out;
     }
 
     function renderList(data) {
@@ -290,24 +289,12 @@ function bootNotifications() {
         const tab = state.currentTab;
         listEl.setAttribute('aria-labelledby', `notifTab-${tab}`);
 
-        // Sticky section (แสดงเฉพาะ tab all / payment)
         const stickyHtml = (tab === 'unread') ? ''
             : (data.sticky || []).map(renderPaymentCard).join('');
         stickyEl.innerHTML = stickyHtml;
         stickyEl.classList.toggle('notif-sticky-section-empty', !stickyHtml);
 
-        // Main list
-        let groups = data.groups || [];
-        let loose  = data.loose || [];
-
-        if (tab === 'unread') {
-            // keep items ที่เพิ่งอ่านในรอบ panel นี้ไว้ด้วย (state.justRead)
-            // → user จะได้อ่านจบก่อนค่อยปิด panel แล้ว item ถึงหายไป
-            groups = groups.filter(g => g.unread_count > 0 || state.justRead.has(g.booking_id));
-            loose  = loose.filter(n => !n.is_read || state.justRead.has('loose:' + n.id));
-        } else if (tab === 'payment') {
-            groups = [];
-            loose  = [];
+        if (tab === 'payment') {
             if (!stickyHtml) {
                 listEl.innerHTML = renderEmpty('payment');
                 refreshLucide();
@@ -318,23 +305,23 @@ function bootNotifications() {
             return;
         }
 
-        if (groups.length === 0 && loose.length === 0 && !stickyHtml) {
+        const feed = buildFeed(data, tab);
+        if (feed.length === 0 && !stickyHtml) {
             listEl.innerHTML = renderEmpty(tab);
             refreshLucide();
             return;
         }
 
-        listEl.innerHTML =
-            groups.map(renderGroup).join('') +
-            loose.map(renderLooseItem).join('');
+        listEl.innerHTML = feed.map(e =>
+            e._type === 'group' ? renderGroup(e) : renderItem(e)
+        ).join('');
         refreshLucide();
     }
 
     function renderTabs(data) {
         if (!data) return;
-        // นับ stages length (= displayCount ใน renderGroup) + loose items
-        const tAll = (data.groups || []).reduce((s, g) => s + (g.stages || []).length, 0)
-                   + (data.loose || []).length;
+        const tAll = (data.groups || []).reduce((s, g) => s + g.notifications.length, 0)
+                   + (data.items  || []).length;
         const tUnread  = data.unread || 0;
         const tPayment = data.unread_payment || 0;
 
@@ -355,8 +342,8 @@ function bootNotifications() {
         };
 
         tabsEl.innerHTML =
-            tab('all',     'ทั้งหมด',     tAll) +
-            tab('unread',  'ยังไม่อ่าน',  tUnread) +
+            tab('all',     'ทั้งหมด',      tAll) +
+            tab('unread',  'ยังไม่อ่าน',   tUnread) +
             tab('payment', 'ต้องจ่ายเงิน', tPayment, { icon: 'wallet', dot: true });
 
         refreshLucide();
@@ -391,7 +378,9 @@ function bootNotifications() {
         el.innerHTML = `
             <div class="notif-toast-icon">${lucideIcon(pickIcon(n))}</div>
             <div class="notif-toast-body">
-                <div class="notif-toast-title">${escapeHtml(n.booking_title ? ('คำขอ #' + n.booking_id + ' · ' + n.booking_title) : ntypeLabel(n.ntype))}</div>
+                <div class="notif-toast-title">${escapeHtml(n.title || (n.booking_title
+                    ? ('คำขอ #' + n.booking_id + ' · ' + n.booking_title)
+                    : ntypeLabel(n.ntype)))}</div>
                 <div class="notif-toast-msg">${escapeHtml(n.message)}</div>
             </div>
             <button class="notif-toast-close" aria-label="ปิด">${lucideIcon('x')}</button>
@@ -416,9 +405,13 @@ function bootNotifications() {
     }
 
     function maybeShowToasts(data) {
-        if (!data || !data.notifications) return;
+        if (!data) return;
         const now = Date.now();
-        data.notifications.forEach(n => {
+        const all = [
+            ...(data.items || []),
+            ...(data.groups || []).flatMap(g => g.notifications),
+        ];
+        all.forEach(n => {
             if (n.is_read) return;
             if (state.seenToastIds.has(n.id)) return;
             const isImportant =
@@ -428,10 +421,7 @@ function bootNotifications() {
             const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})$/.exec(n.created_at || '');
             if (!m) return;
             const t = new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5]).getTime();
-            if (now - t > 45000) {
-                state.seenToastIds.add(n.id);
-                return;
-            }
+            if (now - t > 45000) { state.seenToastIds.add(n.id); return; }
             showToast(n);
         });
     }
@@ -481,11 +471,34 @@ function bootNotifications() {
         panel.classList.remove('open');
         bellBtn.setAttribute('aria-expanded', 'false');
         document.body.style.overflow = '';
-        // reset justRead → รอบหน้าเปิด panel item ที่อ่านไปแล้วจะหายจาก unread tab ทันที
         state.justRead.clear();
     }
     function togglePanel() {
         if (state.panelOpen) closePanel(); else openPanel();
+    }
+
+    // ── Toggle group expand/collapse ──────
+    function toggleGroup(groupEl) {
+        const bid = parseInt(groupEl.dataset.booking, 10);
+        const isNowExp = !state.expanded.has(bid);
+        if (isNowExp) state.expanded.add(bid); else state.expanded.delete(bid);
+        groupEl.classList.toggle('expanded', isNowExp);
+        groupEl.querySelector('[data-act="toggle"]')
+               ?.setAttribute('aria-expanded', String(isNowExp));
+        if (isNowExp) {
+            // mark all unread notifications in group as read after 1.5s (if still expanded)
+            setTimeout(async () => {
+                if (!state.expanded.has(bid)) return;
+                const g = (state.lastData?.groups || []).find(g => g.booking_id === bid);
+                for (const n of (g?.notifications || [])) {
+                    if (!n.is_read) {
+                        fetch(`/api/notifications/${n.id}/read`, {method:'POST'}).catch(()=>{});
+                    }
+                }
+                state.justRead.add('g:' + bid);
+                setTimeout(refresh, 400);
+            }, 1500);
+        }
     }
 
     // ── Event wiring ─────────────────────
@@ -494,8 +507,7 @@ function bootNotifications() {
         togglePanel();
     });
 
-    // กัน click ภายใน panel bubble ไป document (กรณี innerHTML replace ทำให้
-    // e.target หลุดจาก DOM → panel.contains() คืน false → ปิด panel โดยไม่ตั้งใจ)
+    // กัน click ภายใน panel bubble ไป document
     panel.addEventListener('click', (e) => { e.stopPropagation(); });
 
     document.addEventListener('click', (e) => {
@@ -508,7 +520,6 @@ function bootNotifications() {
         if (e.key === 'Escape' && state.panelOpen) closePanel();
     });
 
-    // Tabs — click + keyboard (instant client-side filter, no refetch)
     function setTab(name) {
         if (!name || state.currentTab === name) return;
         state.currentTab = name;
@@ -540,7 +551,6 @@ function bootNotifications() {
         }
     });
 
-    // Mark all
     if (markAllBtn) {
         markAllBtn.addEventListener('click', async () => {
             await fetch('/api/notifications/read-all', { method:'POST' });
@@ -548,33 +558,7 @@ function bootNotifications() {
         });
     }
 
-    // List interactions (delegation) — toggle group, open loose item, keyboard activate
-    function toggleGroup(group) {
-        const bid = parseInt(group.dataset.booking, 10);
-        if (state.expanded.has(bid)) state.expanded.delete(bid);
-        else state.expanded.add(bid);
-        group.classList.toggle('expanded');
-        const head = group.querySelector('.notif-group-head');
-        if (head) head.setAttribute('aria-expanded', group.classList.contains('expanded') ? 'true' : 'false');
-
-        if (group.classList.contains('expanded')) {
-            setTimeout(async () => {
-                if (!state.expanded.has(bid)) return;
-                const ids = state.lastData?.groups
-                    ?.find(g => g.booking_id === bid)?.items
-                    ?.filter(it => !it.is_read && !it.is_sticky)
-                    ?.map(it => it.id) || [];
-                for (const id of ids) {
-                    fetch(`/api/notifications/${id}/read`, { method:'POST' }).catch(()=>{});
-                }
-                if (ids.length) {
-                    state.justRead.add(bid);  // ค้างใน unread tab จนปิด panel
-                    setTimeout(refresh, 400);
-                }
-            }, 1500);
-        }
-    }
-
+    // List interactions: toggle group | open inner notif | open solo item
     listEl.addEventListener('click', async (e) => {
         const head = e.target.closest('[data-act="toggle"]');
         if (head) {
@@ -582,35 +566,44 @@ function bootNotifications() {
             return;
         }
 
-        const singleCard = e.target.closest('[data-act="open-single"]');
-        if (singleCard) {
-            const id = parseInt(singleCard.dataset.id, 10);
-            const item = (state.lastData?.loose || []).find(n => n.id === id);
-            await fetch(`/api/notifications/${id}/read`, { method:'POST' }).catch(()=>{});
-            state.justRead.add('loose:' + id);  // ค้างใน unread tab จนปิด panel
-            if (item && item.action_url && item.action_url !== '#') {
-                window.location.href = item.action_url;
+        const inner = e.target.closest('[data-act="open-inner"]');
+        if (inner) {
+            const id  = parseInt(inner.dataset.id, 10);
+            const bid = parseInt(inner.closest('.notif-group').dataset.booking, 10);
+            const g   = (state.lastData?.groups || []).find(g => g.booking_id === bid);
+            const n   = (g?.notifications || []).find(n => n.id === id);
+            await fetch(`/api/notifications/${id}/read`, {method:'POST'}).catch(()=>{});
+            if (n?.action_url && n.action_url !== '#') {
+                window.location.href = n.action_url;
             } else {
                 refresh();
             }
-        }
-    });
-    listEl.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        const head = e.target.closest('[data-act="toggle"]');
-        if (head) {
-            e.preventDefault();
-            toggleGroup(head.closest('.notif-group'));
             return;
         }
-        const single = e.target.closest('[data-act="open-single"]');
-        if (single) {
-            e.preventDefault();
-            single.click();
+
+        const itemCard = e.target.closest('[data-act="open-item"]');
+        if (!itemCard) return;
+        const id   = parseInt(itemCard.dataset.id, 10);
+        const item = (state.lastData?.items || []).find(n => n.id === id);
+        await fetch(`/api/notifications/${id}/read`, {method:'POST'}).catch(()=>{});
+        state.justRead.add('n:' + id);
+        if (item?.action_url && item.action_url !== '#') {
+            window.location.href = item.action_url;
+        } else {
+            refresh();
         }
     });
 
-    // Sticky section — "ฉันจ่ายแล้ว"
+    listEl.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const head = e.target.closest('[data-act="toggle"]');
+        if (head) { e.preventDefault(); toggleGroup(head.closest('.notif-group')); return; }
+        const inner = e.target.closest('[data-act="open-inner"]');
+        if (inner) { e.preventDefault(); inner.click(); return; }
+        const item = e.target.closest('[data-act="open-item"]');
+        if (item) { e.preventDefault(); item.click(); }
+    });
+
     stickyEl.addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-act="report-paid"]');
         if (!btn) return;
@@ -642,7 +635,6 @@ function bootNotifications() {
         }
     });
 
-    // Mobile back button
     const mobileBack = document.getElementById('notifMobileBack');
     if (mobileBack) mobileBack.addEventListener('click', closePanel);
 

@@ -12,13 +12,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='room/css/room.css') }}">
 </head>
 <body>
 
-<div class="container-fluid container-p-y">
+<div class="container-fluid">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     {% set active_menu = 'room' %}
@@ -41,37 +41,52 @@
                 {% endif %}
             {% endwith %}
 
-            <div class="va-page-header">
+            {# Desktop page head — fuel-header pattern #}
+            <div class="d-none d-md-flex align-items-end justify-content-between flex-wrap gap-3">
                 <div>
-                    <h1 class="va-page-title">ปฏิทินการจองห้องประชุม</h1>
-                    <p class="va-page-subtitle">ห้องประชุมมีทั้งหมด 2 ห้อง · อยู่ที่อาคารเรียน 1 ชั้น 2</p>
+                    <h1 class="fw-bold text-accent pt-3">ปฏิทินจองห้องประชุม</h1>
+                    <h6 class="text-muted">ห้องประชุมมีทั้งหมด 2 ห้อง · อยู่ที่อาคารเรียน 1 ชั้น 2</h6>
                 </div>
-                <div class="va-page-header-actions"></div>
+                {# Room legend (desktop) #}
+                <div class="d-flex align-items-center gap-2 pb-2 room-legend">
+                    {% for room in room_choices %}
+                    <span class="vc-badge room-badge room-badge--{{ 'small' if 'เล็ก' in room else 'large' }}">
+                        <span class="room-dot"></span>{{ room }}
+                    </span>
+                    {% endfor %}
+                </div>
             </div>
 
-            {# Toolbar #}
-            <div class="flex-grow-1 pt-2 pb-3">
-                <div class="toolbar">
-                    <div class="row w-100 gx-0 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center gap-2 col-auto">
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" id="prevMonthBtn" title="เดือนก่อนหน้า">
-                                <i data-lucide="chevron-left" class="vc-icon-sm"></i>
-                            </button>
-                            <h5 class="d-flex align-items-center mx-2 mb-0 fw-bold" id="currentMonthLabel" style="text-align:center;min-width:120px;"></h5>
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" id="nextMonthBtn" title="เดือนถัดไป">
-                                <i data-lucide="chevron-right" class="vc-icon-sm"></i>
-                            </button>
-                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="todayBtn" title="กระโดดไปวันนี้">วันนี้</button>
-                        </div>
+            {# Calendar toolbar (desktop) #}
+            <div class="cal-toolbar d-none d-md-grid">
+                <div class="cal-toolbar-left">
+                    <button type="button" class="vc-btn vc-btn-secondary" id="todayBtn">วันนี้</button>
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon" id="prevMonthBtn" title="เดือนก่อนหน้า">
+                        <i data-lucide="chevron-left"></i>
+                    </button>
+                    <h6 class="cal-month-label pt-2 text-header fw-bold" id="currentMonthLabel"></h6>
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon" id="nextMonthBtn" title="เดือนถัดไป">
+                        <i data-lucide="chevron-right"></i>
+                    </button>
+                </div>
+            </div>
 
-                        {# Room legend #}
-                        <div class="d-none d-md-flex align-items-center gap-2 col-auto room-legend">
-                            {% for room in room_choices %}
-                            <span class="vc-badge room-badge room-badge--{{ 'small' if 'เล็ก' in room else 'large' }}">
-                                <span class="room-dot"></span>{{ room }}
-                            </span>
-                            {% endfor %}
-                        </div>
+            {# Mobile hero — title + month picker #}
+            <div class="vrc-m-hero d-md-none mb-3">
+                <h2 class="text-header fw-bold text-accent pt-3">ปฏิทินการจองห้องประชุม</h2>
+                <h6 class="text-header p-0 m-0 pb-2">ห้องประชุม 2 ห้อง · <span class="text-danger">อาคารเรียน 1 ชั้น 2</span></h6>
+                <div class="vrc-m-month d-flex align-items-center justify-content-between">
+                    <div class="vrc-m-month-label text-header fw-normal fs-6 pt-1" id="currentMonthLabelMobile"></div>
+                    <div class="vrc-m-month-controls">
+                        <button type="button" class="vrc-btn-icon" id="prevMonthBtnMobile" aria-label="เดือนก่อนหน้า">
+                            <i data-lucide="chevron-left"></i>
+                        </button>
+                        <button type="button" class="vrc-m-today-btn py-2 px-2 rounded-3" id="todayBtnMobile" aria-label="กระโดดไปวันนี้">
+                            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> วันนี้
+                        </button>
+                        <button type="button" class="vrc-btn-icon" id="nextMonthBtnMobile" aria-label="เดือนถัดไป">
+                            <i data-lucide="chevron-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -79,21 +94,17 @@
             <div class="flex-grow-1">
                 <div class="row mb-3">
                     <div class="col-12">
-                        <div class="vc-card p-3" role="grid" aria-label="ปฏิทินจองห้องประชุม">
-                            <div class="card-header bg-white">
-                                <div class="calendar-grid" role="row">
-                                    <div class="calendar-header-cell text-danger" role="columnheader" aria-label="อาทิตย์">อา</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="จันทร์">จ</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="อังคาร">อ</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="พุธ">พ</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="พฤหัสบดี">พฤ</div>
-                                    <div class="calendar-header-cell" role="columnheader" aria-label="ศุกร์">ศ</div>
-                                    <div class="calendar-header-cell text-primary" role="columnheader" aria-label="เสาร์">ส</div>
-                                </div>
+                        <div class="vc-card overflow-hidden" role="grid" aria-label="ปฏิทินจองห้องประชุม">
+                            <div class="calendar-grid calendar-grid-head text-header border-bottom" role="row">
+                                <div class="calendar-header-cell text-danger" role="columnheader" aria-label="อาทิตย์"><span class="d-none d-md-inline">อาทิตย์</span><span class="d-md-none">อา</span></div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="จันทร์"><span class="d-none d-md-inline">จันทร์</span><span class="d-md-none">จ</span></div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="อังคาร"><span class="d-none d-md-inline">อังคาร</span><span class="d-md-none">อ</span></div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="พุธ"><span class="d-none d-md-inline">พุธ</span><span class="d-md-none">พ</span></div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="พฤหัสบดี"><span class="d-none d-md-inline">พฤหัสบดี</span><span class="d-md-none">พฤ</span></div>
+                                <div class="calendar-header-cell" role="columnheader" aria-label="ศุกร์"><span class="d-none d-md-inline">ศุกร์</span><span class="d-md-none">ศ</span></div>
+                                <div class="calendar-header-cell text-primary" role="columnheader" aria-label="เสาร์"><span class="d-none d-md-inline">เสาร์</span><span class="d-md-none">ส</span></div>
                             </div>
-                            <div class="card-body pt-2">
-                                <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
-                            </div>
+                            <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
                         </div>
                     </div>
                 </div>
@@ -101,10 +112,13 @@
                 {# Mobile list #}
                 <div class="row d-md-none mb-3">
                     <div class="col-12">
-                        <div class="mobile-list-header mb-2">
-                            <span id="mobileListDateLabel" class="pt-2 px-0">รายการจอง</span>
-                            <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="mobileDateCountBtn"
-                                data-bs-toggle="modal" data-bs-target="#bookingModal" title="จองห้องประชุม">
+                        <div class="vrc-m-daybar">
+                            <div class="vrc-m-daybar-text">
+                                <span class="vrc-m-daybar-label" id="mobileListDateLabel">รายการจอง</span>
+                                <span class="vrc-m-daybar-count" id="mobileDaybarCount"></span>
+                            </div>
+                            <button type="button" class="vc-btn vc-btn-primary py-3" id="mobileDateCountBtn"
+                                onclick="openBookingModal()" title="จองห้องประชุม">
                                 <i data-lucide="plus" class="vc-icon-sm"></i>
                                 จองห้อง
                             </button>

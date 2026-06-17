@@ -324,7 +324,7 @@
 .notif-group:not(.unread) .notif-dot-unread { visibility: hidden; }
 
 .notif-cat-icon {
-    width: 28px; height: 28px;
+    width: 30px; height: 30px;
     border-radius: var(--vc-radius-sm);
     background: var(--vc-bg-subtle);
     border: 1px solid var(--vc-border);
@@ -332,7 +332,14 @@
     display: inline-flex; align-items: center; justify-content: center;
     flex-shrink: 0;
 }
-.notif-cat-icon [data-lucide] { width: 14px; height: 14px; stroke-width: 2; }
+.notif-cat-icon [data-lucide] { width: 14px; height: 14px; stroke-width: 1.75; }
+
+/* สี icon ตามสถานะ ntype — โครงสร้าง/text ใช้ --vc-fg เป็นหลัก, icon เป็นตัวสื่อสถานะด้วยสี
+   tint อ่อน (bg + border) กลมกลืน Vercel light ไม่ฉูดฉาด */
+.notif-cat-icon.notif-icon-success { color: var(--vc-green);   background: var(--vc-green-bg); border-color: var(--vc-green-border); }
+.notif-cat-icon.notif-icon-info    { color: var(--vc-primary); background: var(--vc-blue-bg);  border-color: var(--vc-blue-border); }
+.notif-cat-icon.notif-icon-warning { color: var(--vc-amber);   background: var(--vc-amber-bg); border-color: var(--vc-amber-border); }
+.notif-cat-icon.notif-icon-danger  { color: var(--vc-red);     background: var(--vc-red-bg);   border-color: var(--vc-red-border); }
 
 .notif-group-main { flex: 1; min-width: 0; }
 
@@ -468,6 +475,68 @@
 }
 .notif-group.expanded .notif-timeline--stages {
     padding: 12px 14px 14px 30px;
+}
+
+/* Inner notification rows (hybrid grouped feed) */
+.notif-timeline--notifs { background: var(--vc-bg-subtle); }
+.notif-group.expanded .notif-timeline--notifs {
+    max-height: 800px;
+    padding: 0 14px 8px 30px;   /* left 30 = inner icon-node align ใต้ parent icon (head: 14 pad + 6 dot + 10 gap) */
+}
+.notif-inner {
+    position: relative;
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 0;
+    cursor: pointer;
+    transition: opacity .12s;
+}
+/* Timeline connector: เส้นแนวตั้งกลาง icon-node (28px → กลาง = 14px) — เฉพาะช่องว่าง ไม่ชน icon
+   icon-node = padding 9 + 28 = 37px จากบนแถว → top:41 (ใต้ icon +4) / bottom:-5 (เหนือ icon แถวถัดไป ~4px)
+   สี --vc-fg ให้เห็นชัด */
+.notif-inner:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 14px;
+    top: 41px;
+    bottom: -5px;
+    width: 2px;
+    background: var(--vc-border);
+    border-radius: 1px;
+}
+/* icon-node ต้องทับเส้น connector */
+.notif-inner .notif-cat-icon { position: relative; z-index: 1; }
+.notif-inner:hover { opacity: .75; }
+.notif-inner-body { flex: 1; min-width: 0; }
+/* title บรรทัด 1 (เด่น) + subtitle บรรทัด 2 (clamp 1 บรรทัด) ตาม reference */
+.notif-inner-title {
+    font-size: .8rem; font-weight: 600; color: var(--vc-fg);
+    line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.notif-inner-msg {
+    font-size: .73rem; color: var(--vc-fg-muted); line-height: 1.4;
+    margin-top: 1px;
+    overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+}
+/* time ชิดขวา (คอลัมน์แยก) */
+.notif-inner-time {
+    font-size: .68rem; color: var(--vc-fg-subtle);
+    white-space: nowrap; flex-shrink: 0;
+    padding-top: 1px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Category chip — solo non-booking items (แจ้งซ่อม, ค่าน้ำมัน ฯลฯ) */
+.notif-cat-chip {
+    display: inline-flex; align-items: center;
+    height: 16px; padding: 0 7px;
+    border-radius: 9999px;
+    font-size: .62rem; font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--vc-bg-subtle);
+    color: var(--vc-fg-muted);
+    border: 1px solid var(--vc-border);
 }
 
 .notif-stage {

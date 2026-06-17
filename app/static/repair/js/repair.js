@@ -17,7 +17,48 @@ if ($table.length) {
         pageLength: 10,
         columnDefs: [{ targets: -1, orderable: false }],
     });
-    table.on('draw', initIcons);
+    table.on('draw', () => {
+        initIcons();
+        renderGotoPage(table);
+    });
+    renderGotoPage(table);
+}
+
+// ── Go-to-page control (appended into the pagination pill) ──
+// DataTables wipes .dataTables_paginate innerHTML on every draw, so we
+// re-attach + refresh option list each time renderGotoPage runs.
+let gotoBox = null;
+function renderGotoPage(table) {
+    const wrapper = table.table().container();
+    const paginate = wrapper.querySelector('.dataTables_paginate');
+    if (!paginate) return;
+
+    if (!gotoBox) {
+        gotoBox = document.createElement('div');
+        gotoBox.className = 'repair-goto';
+        gotoBox.innerHTML =
+            '<span class="repair-goto-label">ไปที่หน้า</span>' +
+            '<select class="repair-goto-select" aria-label="เลือกหน้าที่ต้องการ"></select>' +
+            '<button type="button" class="repair-goto-btn" title="ไปที่หน้าที่เลือก">ไป</button>';
+        const select = gotoBox.querySelector('.repair-goto-select');
+        gotoBox.querySelector('.repair-goto-btn')
+            .addEventListener('click', () => table.page(parseInt(select.value, 10)).draw('page'));
+    }
+    if (gotoBox.parentElement !== paginate) paginate.appendChild(gotoBox);
+
+    const info   = table.page.info();
+    const pages  = Math.max(info.pages, 1);
+    const select = gotoBox.querySelector('.repair-goto-select');
+    if (select.options.length !== pages) {
+        select.innerHTML = '';
+        for (let i = 0; i < pages; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = i + 1;
+            select.appendChild(opt);
+        }
+    }
+    select.value = info.page;
 }
 
 // ── Modal: รับงาน ───────────────────────────────────
@@ -48,9 +89,9 @@ if (closeModal) {
     });
 }
 
-// ── Auto-open edit modal ─────────────────────────────
-const editTicketId = document.body.dataset.editTicket;
-if (editTicketId) {
+// ── Auto-open form modal (แก้ไข / ทำซ้ำ / จองใหม่) ─────
+const ds = document.body.dataset;
+if (ds.editTicket || ds.copyTicket || ds.openNew) {
     const modalEl = document.getElementById('repairFormModal');
     if (modalEl) new bootstrap.Modal(modalEl).show();
 }

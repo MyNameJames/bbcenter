@@ -1,6 +1,6 @@
 # Database Schema
 
-> **Snapshot ของ models ณ 2026-05-18** — 27 tables (table list ครบ)
+> **Snapshot ของ models ณ 2026-06-15** — 26 tables (table list ครบ)
 > 🗂️ **2026-06-07: `models.py` แตกเป็น package [`models/`](../../../app/models/) ตาม domain** (base/user/common/repair/maintenance/room/vehicle/vehicle_budget/vehicle_ot/vehicle_fuel). path `models.py` ในหัวข้อ ### ทั้งหมดด้านล่าง **ตายแล้ว** — class ย้ายไปไฟล์ domain (ดู mapping ที่ [INDEX.md §Database Models](../INDEX.md#-database-models)). โครง schema/column **ไม่เปลี่ยน** (refactor ย้าย class ล้วน ไม่แตะ DB)
 > ⚠️ **DRIFT (ตรวจ 2026-06-02):** line-ref `models.py:NNN` ในหัวข้อ ### **ผิด 17/27 tables** ตั้งแต่ก่อน refactor + ตอนนี้ path เปลี่ยนเป็น package ด้วย → **ต้อง full re-sync (db-helper) ก่อนเชื่อ line ในไฟล์นี้** — table names + column + ภาพรวมยังถูก
 > ส่วนบน = ตารางปัจจุบัน · ส่วนล่าง = ประวัติ + เหตุผลทุก version
@@ -10,19 +10,13 @@
 
 # Part 1 — Current Tables
 
-## Lookup Tables (4)
+## Lookup Tables (3)
 
 ### `budget_type` — [models.py:14](../../../app/models.py#L14)
 | Field | Type | Note |
 |-------|------|------|
 | `id` | Integer PK | |
 | `name` | String(50) unique | seed: `central`, `department` |
-
-### `expense_type` — [models.py:25](../../../app/models.py#L25)
-| Field | Type | Note |
-|-------|------|------|
-| `id` | Integer PK | |
-| `name` | String(50) unique | seed: `central`, `department`, `personal` |
 
 ### `vehicle_department` — [models.py:36](../../../app/models.py#L36)
 | Field | Type | Note |
@@ -58,6 +52,8 @@
 | `role_vehicle` | String(20) | `user` / `admin` / `approver` |
 | `role_room` | String(20) | `user` / `admin` |
 | `is_superadmin` | Boolean | override ทุก role |
+| `line_user_id` | String(64) unique nullable | LINE userId (จาก webhook ตอนผูกบัญชี) → push แจ้งเตือน LINE รายคน (v2.17) |
+| `line_link_code` | String(6) nullable | โค้ด 6 หลักชั่วคราวสำหรับ flow ผูกบัญชี LINE ผ่าน chat — set line_user_id แล้วล้างค่านี้ (v2.17) |
 
 ---
 
@@ -158,17 +154,14 @@
 | `trip_group` | Integer | รวมทริป (1, 2, 3...) |
 | `assigned_vehicle_id` | FK → vehicle | |
 | `telegram_message_id` | Integer | |
-| `expense_type` | String(20) | legacy string |
-| `expense_type_id` | FK → expense_type | **canonical** |
+| `expense_type` | String(20) | legacy string — display/backward compat only |
 | `central_category` | String(50) | ถ้า expense_type=central |
 | `trip_department` | String(100) | legacy string |
 | `trip_department_id` | FK → vehicle_department | **canonical** |
 | `pickup_location` | String(200) | |
 | `snap_vehicle_plate` | String(20) | **snapshot** เมื่อ assign |
 | `snap_driver_name` | String(100) | **snapshot** |
-| `snap_department_name` | String(100) | **snapshot** |
 | `is_ad_hoc` | Boolean NOT NULL default False | True = driver สร้างเองจาก /driver (งานนอกระบบ) — filter ออกจาก /vehicle calendar; ยังแสดงในหน้า admin (v2.11) |
-| `contact_name` | String(100) nullable | free-text ผู้ติดต่อ/ผู้จองสำหรับ external visitors นอก LDAP; display layer prefer ค่านี้แทน `user.full_name` เมื่อ not null (v2.11) |
 
 **Relationships:** `passengers` (→ TripPassenger CASCADE), `extra_expenses` (→ TripExpenseItem CASCADE), `mileage` (→ VehicleMileage)
 
@@ -442,6 +435,7 @@
 | `id` | Integer PK | |
 | `user_id` | FK → user | |
 | `booking_id` | FK → vehicle_booking | nullable |
+| `title` | String(120) nullable | บรรทัดแรกของ notif card — freeze ตอนสร้าง (null = serializer fallback `_notif_title()`) (v2.20) |
 | `message` | String(255) | |
 | `ntype` | String(20) | `success`/`warning`/`danger`/`info` |
 | `is_read` | Boolean | |
@@ -451,6 +445,8 @@
 | `is_sticky` | Boolean | ปักบนสุด (v2.2) |
 | `expired_at` | DateTime | ไม่นับ badge ถ้าเกิน (v2.2) |
 | `icon` | String(40) | FA class (v2.2) |
+| `event_key` | String(40) nullable | ชนิด event แบบ stable (`booked`/`assigned`/`forwarded`/`approved`/`rejected`/`merged`/`mileage_start`/`mileage_end`/`budget`) — ใช้ระบุตัวตน event เพราะ icon string ชนกัน (v2.19) |
+| `superseded_at` | DateTime nullable | เวลาที่ถูกแทนด้วย event ชนิดเดียวกันที่ใหม่กว่า (null = active/แสดงผล) (v2.19) |
 
 **Indexes (manual SQL):**
 - `idx_notif_user_unread(user_id, is_read)`
@@ -465,7 +461,6 @@
 ```
 budget_type      ──< vehicle_department
 budget_type      ──< vehicle_budget
-expense_type     ──< vehicle_booking
 
 vehicle_department ──< user
 vehicle_department ──< vehicle_booking (trip_department)
@@ -515,7 +510,6 @@ user ──< notification
 
 ```sql
 INSERT INTO budget_type (id, name) VALUES (1, 'central'), (2, 'department');
-INSERT INTO expense_type (id, name) VALUES (1, 'central'), (2, 'department'), (3, 'personal');
 ```
 
 ---
@@ -540,6 +534,13 @@ INSERT INTO expense_type (id, name) VALUES (1, 'central'), (2, 'department'), (3
 | v2.11 | 2026-05-18 | 27 | `vehicle_booking` + `is_ad_hoc` + `contact_name` — ad-hoc trip (งานนอกระบบ) driver-created off-the-books |
 | v2.12 | 2026-05-22 | 27 | `vehicle_booking.status` — doc-only: เพิ่ม `cancelled` ใน enum comment (Phase 9 `cancel_booking()`). ไม่มี schema change — value ถูกใช้ที่ vehicle_view.py:2858 ตั้งแต่ 2026-05-18 แล้ว |
 | v2.13 | 2026-06-06 | 27 | `vehicle_budget` — **งบช่วงเวลา**: backfill `start_date`/`end_date` จาก year/month + index `ix_vb_active_period`. ไม่มี schema change (column มีอยู่แล้ว) แต่เปลี่ยน semantic — ดู [v2.13 detail](#v213--vehiclebudget-active-period-2026-06-06) |
+| v2.14 | 2026-06-08 | 27 | `driver` + 8 profile fields (national_id, ที่อยู่ 5 ส่วน, id_card_image, avatar_image) |
+| v2.15 | 2026-06-08 | 27 | `driver_ot` + `no_receipt`/`is_deleted`/`deleted_at` — paid-only flow + soft delete |
+| v2.16 | 2026-06-09 | 27 | `driver_ot.booking_id` NOT NULL → nullable (table rebuild) — manual standalone OT |
+| v2.17 | 2026-06-12 | 27 | `user` + `line_user_id`/`line_link_code` — LINE Messaging API (ช่องทางแจ้งเตือนที่ 3) |
+| v2.18 | 2026-06-14 | 26 | `vehicle_booking` -3 dead columns (`expense_type_id`, `snap_department_name`, `contact_name`); `expense_type` table dropped |
+| v2.19 | 2026-06-15 | 26 | `notification` + `event_key`/`superseded_at` — supersede กัน notif ชนิดเดียวกันต่อ booking สะสมซ้ำ |
+| v2.20 | 2026-06-16 | 26 | `notification` + `title` — freeze title ตอนสร้าง notif (เดิม compute จาก event_key → แยก case ไม่ได้) |
 
 ---
 
@@ -964,6 +965,77 @@ App: `vehicle_cost.py` — `cost_summary` filter ตาม tab, KPI = ยอด�
 | `booking_id` (NOT NULL → nullable) | manual OT ไม่มี booking ต้นทาง → `booking_id=None`. SQLite ไม่รองรับ drop-NOT-NULL ผ่าน ALTER → migration ใช้ table rebuild (create new + copy + drop + rename). ข้อมูลเดิมมี booking_id ครบ — copy ตรง ไม่มี data loss |
 
 App: `vehicle_cost.py` — route `ot_create` (POST `/admin/ot/create`, standalone, AJAX/JSON); helper `_parse_ot_slots(form)` (แชร์กับ `ot_edit`); `next_ot_number(yr)` (vehicle_common.py — factor ออกจาก `auto_generate_ot`). `_ot_budget_label(None)` คืน `('—','')` อยู่แล้ว → template null-safe. UI: ปุ่ม `#addOtBtn` + modal `#addOtModal` (layout เหมือน edit), date เป็น va-cal datepicker, slot rows แบบ header (`cost-slot-head`)
+
+---
+
+## v2.17 — User LINE Messaging API (2026-06-12)
+
+*Migration: [2026-06-12_user-line-id.sql](../../../app/migrations/2026-06-12_user-line-id.sql)*
+
+**บริบทธุรกิจ:** เพิ่มช่องทางแจ้งเตือน LINE Messaging API เป็นช่องทางที่ 3 ต่อจาก Telegram + in-app notification. flow ผูกบัญชี = user พิมพ์โค้ด 6 หลัก (`line_link_code`) ใน chat ของ Official Account → webhook จับคู่ผู้ใช้ → set `line_user_id` แล้วล้างโค้ดทิ้ง → จากนั้น push แจ้งเตือนรายคนผ่าน `line_user_id` ได้
+
+| Field | เหตุผล |
+|-------|--------|
+| `line_user_id` (String(64) unique nullable) | LINE userId ของผู้ใช้ ได้จาก webhook ตอนผูกบัญชี — ใช้เป็นปลายทาง push แจ้งเตือนรายคน. UNIQUE กัน 1 LINE account ผูกหลาย user. SQLite เพิ่ม UNIQUE column ผ่าน ALTER ไม่ได้ → migration สร้าง `CREATE UNIQUE INDEX ix_user_line_user_id` แยกแทน inline constraint |
+| `line_link_code` (String(6) nullable) | โค้ด 6 หลักชั่วคราวสำหรับ flow ผูกบัญชี — generate ตอน user ขอผูก, ล้างเป็น NULL หลัง webhook จับคู่สำเร็จ |
+
+---
+
+## v2.18 — Drop dead columns (2026-06-14)
+
+*Migration: [2026-06-14_drop-dead-columns.sql](../../../app/migrations/2026-06-14_drop-dead-columns.sql)*
+
+**บริบทธุรกิจ:** ตรวจพบ 3 column ใน `vehicle_booking` ที่ไม่เคยถูกเขียน (NULL ทุกแถว) + 1 table (`expense_type`) ที่ไม่เคยถูก query เลยตลอดอายุระบบ. ลบทิ้งเพื่อลด schema noise + กัน developer เข้าใจผิดว่า field เหล่านี้ยังมีความหมาย
+
+### `vehicle_booking` — ลบ 3 column
+
+| Column | เหตุผลที่ลบ |
+|--------|-------------|
+| `expense_type_id` | FK ไปยัง `expense_type` table. เพิ่มใน v2.0 เพื่อเป็น canonical FK แทน string แต่ write path ไม่เคย implement — controller ทุกตัวใช้ `expense_type` (string) แทน budget code มี comment "Bug fix: expense_type_id เป็น NULL" และ workaround โดยไม่ set field นี้เลย ทำให้ NULL 100% ในทุกแถว |
+| `snap_department_name` | snapshot field เพิ่มใน v2.0 พร้อม `snap_vehicle_plate`/`snap_driver_name` แต่ write path (ตอน admin assign) ไม่เคยเขียน `snap_department_name` → NULL ทุกแถวมาโดยตลอด |
+| `contact_name` | เพิ่มใน v2.11 สำหรับ ad-hoc trips (external visitor ที่ไม่อยู่ใน LDAP) แต่ write path หายไประหว่าง refactor `vehicle_view.py` → package (2026-06-07) — controller ใหม่ไม่เคย set field นี้ → NULL ทุกแถว; display layer fallback logic ก็ถูก clean up พร้อมกัน |
+
+### `expense_type` table — dropped
+
+| เหตุผล | |
+|--------|-|
+| `ExpenseType` model defined ใน `vehicle_budget.py:18-23` แต่ grep พบ zero `.query` calls ตลอด codebase | ไม่มี controller อ่านหรือเขียนตาราง นอกจาก FK จาก `vehicle_booking.expense_type_id` ซึ่ง drop ไปแล้วด้านบน |
+| Seed data (`central`/`department`/`personal`) ไม่ถูกใช้แม้แต่ใน lookup | ค่า expense_type ที่ใช้จริงเป็น string `'central'`/`'department'`/`'personal'` ใน `VehicleBooking.expense_type` (String column) โดยตรง |
+
+**หมายเหตุ Model:** `ExpenseType` class และ relationship `expense_type_ref` ใน `VehicleBooking` ยังคงอยู่ใน `app/models/vehicle_budget.py` และ `app/models/vehicle.py` ตามลำดับ — ต้องลบทั้งสองในรอบ cleanup code (ไม่มีผลต่อ DB หลัง migration รัน; SQLAlchemy จะพยายาม reflect ตาราง `expense_type` ที่ไม่มีแล้วเมื่อ `db.create_all()` ซึ่ง safe เพราะ `create_all` ไม่ drop; แต่ควร clean up เร็ว ๆ นี้)
+
+---
+
+## v2.19 — Notification Supersede (2026-06-15)
+
+*Migration: [2026-06-15_notification-supersede.sql](../../../app/migrations/2026-06-15_notification-supersede.sql)*
+
+### `notification` + 2 fields
+
+**เหตุผลหลัก:** ฟีเจอร์ "supersede" — กัน notification ชนิดเดียวกันของ booking เดิมสะสมซ้ำใน feed (เช่น booking ถูก assign/forward/approve หลายรอบ → เดิมได้ notif ใหม่ทุกครั้งทับกอง) เมื่อมี event ชนิดเดียวกันที่ใหม่กว่าเข้ามา ตัวเก่าถูก mark `superseded_at` แทนที่จะค้างใน feed
+
+| Field | เหตุผล |
+|-------|--------|
+| `event_key` | ระบุชนิด event แบบ stable (`booked`/`assigned`/`forwarded`/`approved`/`rejected`/`merged`/`mileage_start`/`mileage_end`/`budget`) ใช้เป็น key จับคู่ supersede ต่อ booking — **ต้องแยกจาก `icon`** เพราะ icon string ชนกัน (เช่น `approved` กับ `payment_done` ใช้ icon `fa-solid fa-circle-check` เดียวกัน → icon ระบุตัวตน event ไม่ได้) |
+| `superseded_at` | เวลาที่ถูกแทนด้วย event ชนิดเดียวกันที่ใหม่กว่า (null = ยัง active/แสดงผล) — กรอง `superseded_at IS NULL` ตอน render feed + นับ badge |
+
+**Note:** ทั้งสอง column nullable → backfill ไม่จำเป็น (notif เก่าทั้งหมด `event_key=NULL`, `superseded_at=NULL` = active ตามเดิม). `db.create_all()` ไม่ ALTER ตารางเดิม → ต้องรัน `.sql` manual
+
+---
+
+## v2.20 — Notification Title (2026-06-16)
+
+*Migration: [2026-06-16_notification-add-title.sql](../../../app/migrations/2026-06-16_notification-add-title.sql)*
+
+### `notification` + 1 field
+
+**เหตุผลหลัก:** freeze "title" (บรรทัดแรกของ notification card บน UI) ตอนสร้าง notification — เดิม title ถูก compute ตอน serialize จาก `event_key` (`_notif_title()` ใน `vehicle_notification.py`) ทำให้ title เป็น generic ต่อ event_key เดียวกัน และแยก case ไม่ได้ (เช่น admin-approve vs approver-approve ใช้ `event_key='approved'` เหมือนกัน). การ freeze title ตอนสร้างทำให้แต่ละ notification เก็บ title เฉพาะของมันเอง + รองรับ dynamic title (เช่น "อนุมัติงาน {purpose}")
+
+| Field | เหตุผล |
+|-------|--------|
+| `title` | บรรทัดแรกของ notif card — freeze ตอนสร้างเพื่อให้ title เฉพาะต่อ notification (ไม่ใช่ generic ต่อ event_key) + รองรับ dynamic title. **nullable** เพราะ notification เก่าไม่มีค่า → serializer fallback ไปใช้ `_notif_title()` เดิมจาก event_key |
+
+**Note:** column nullable → backfill ไม่จำเป็น (notif เก่าทั้งหมด `title=NULL` → serializer ใช้ `_notif_title()` fallback). `db.create_all()` ไม่ ALTER ตารางเดิม → ต้องรัน `.sql` manual
 
 ---
 

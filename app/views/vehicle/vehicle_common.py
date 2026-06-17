@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from models import db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage, SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment, BudgetType, Notification, DeptApprover, OTRateConfig, DriverOT, DriverOTSlot, FuelPrice, FuelBill, RepairTicket, MaintenanceTicket, RoomBooking
 from sqlalchemy import and_, extract, or_, func
 from datetime import datetime, date, timedelta
-from views.core.telegram_service import (notify_approved, notify_forwarded_to_approver, notify_approver_approved, notify_rejected,
+from views.core.broadcast import (notify_approved, notify_forwarded_to_approver, notify_approver_approved, notify_rejected,
                                     notify_cancelled            as tg_notify_cancelled)
 from views.core.notification_service import (
     notify_booking_created      as _n_booking_created,
@@ -20,9 +20,11 @@ from views.core.notification_service import (
     notify_admin_deleted        as _n_admin_deleted,
     notify_payment_confirmed    as _n_payment_confirmed,
     notify_user_cancelled       as _n_user_cancelled,
+    notify_admin_personal_trip  as _n_admin_personal,
 )
 import views.vehicle.vehicle_budget_service as budget_svc
 import os, time
+from functools import wraps
 from werkzeug.utils import secure_filename
 
 vehicle_bp    = Blueprint('vehicle', __name__)
@@ -57,9 +59,42 @@ EXPENSE_CATEGORIES = {
 }
 
 
+def _build_budget_subs():
+    """Distinct หมวด/กอง ที่ถูกใช้จริงใน approved booking → options สำหรับ filter งบ
+    (cascade budget_type → sub). ใช้ร่วม mileage_log + cost_summary."""
+    _central_labels = {c['key']: c['label'] for c in EXPENSE_CATEGORIES['central']}
+    _dept_labels    = {c['key']: c['label'] for c in EXPENSE_CATEGORIES['department']}
+    central_keys = [k for (k,) in db.session.query(VehicleBooking.central_category)
+                    .filter(VehicleBooking.status == 'approved',
+                            VehicleBooking.expense_type == 'central',
+                            VehicleBooking.central_category.isnot(None),
+                            VehicleBooking.central_category != '')
+                    .distinct().order_by(VehicleBooking.central_category).all()]
+    dept_keys = [k for (k,) in db.session.query(VehicleBooking.trip_department)
+                 .filter(VehicleBooking.status == 'approved',
+                         VehicleBooking.expense_type == 'department',
+                         VehicleBooking.trip_department.isnot(None),
+                         VehicleBooking.trip_department != '')
+                 .distinct().order_by(VehicleBooking.trip_department).all()]
+    return {
+        'central':    [{'key': k, 'label': _central_labels.get(k, k)} for k in central_keys],
+        'department': [{'key': k, 'label': _dept_labels.get(k, k)} for k in dept_keys],
+    }
+
 
 def is_vehicle_admin():
     return current_user.role_vehicle == 'admin' or current_user.is_superadmin
+
+
+def require_vehicle_admin(f):
+    """Decorator: block route ถ้าไม่ใช่ vehicle admin (flash + redirect to vehicle.index)"""
+    @wraps(f)
+    def _decorated(*args, **kwargs):
+        if not is_vehicle_admin():
+            flash('คุณไม่มีสิทธิ์', 'danger')
+            return redirect(url_for('vehicle.index'))
+        return f(*args, **kwargs)
+    return _decorated
 
 
 # ─────────────────────────────────────────────
@@ -104,6 +139,61 @@ def _lookup_budget_for_booking(booking, on_date=None):
         VehicleBudget.end_date >= d,
     ).order_by(VehicleBudget.start_date.desc(), VehicleBudget.id.desc()).first())
     return budget, key_label
+
+
+def deduct_budget_for_trip(booking, m2, source):
+    """หักงบ / แจ้งจ่ายส่วนตัวเมื่อปิดทริป. source = ชื่อ route caller (ใส่ใน note/log)."""
+    if not m2:
+        return
+    distance    = (m2.odometer_end - m2.odometer_start) if (m2.odometer_end and m2.odometer_start) else None
+    target_date = m2.actual_end.date() if m2.actual_end else get_bkk_time().date()
+    fuel_price  = get_fuel_price(target_date)
+    trip_cost   = calc_fuel_cost(booking.assigned_vehicle, distance, fuel_price, m2.fuel_cost)
+
+    if booking.trip_department and booking.expense_type in ('central', 'department') and trip_cost > 0:
+        budget, _key_label = _lookup_budget_for_booking(booking, on_date=target_date)
+        if budget:
+            budget_svc.deduct_for_mileage(
+                m2, budget, trip_cost,
+                snap={'distance': distance,
+                      'fuel_rate': float(booking.assigned_vehicle.fuel_rate) if booking.assigned_vehicle else None,
+                      'fuel_price': fuel_price},
+                note=f'{source} booking #{booking.id}',
+            )
+        else:
+            current_app.logger.warning(
+                '[budget-deduct skip] booking #%s (%s): ไม่พบงบ active ครอบวันปิดทริป '
+                '(expense_type=%s, key_label=%s, on_date=%s, trip_cost=%s)',
+                booking.id, source, booking.expense_type, _key_label, target_date, trip_cost,
+            )
+            flash(
+                f'⚠️ ปิดทริป #{booking.id} แล้ว แต่ไม่ได้หักงบ '
+                f'(ไม่พบงบ {booking.expense_type} ของ "{_key_label or "—"}" '
+                f'ที่เปิดใช้ครอบวันที่ {target_date.strftime("%d/%m/%Y")})',
+                'warning',
+            )
+        _n_budget(booking, trip_cost, booking.expense_type)
+        db.session.commit()
+    elif booking.expense_type in ('central', 'department'):
+        current_app.logger.warning(
+            '[budget-deduct skip] booking #%s (%s): ข้ามการหักงบ '
+            '(trip_department=%s, expense_type=%s, trip_cost=%s)',
+            booking.id, source, booking.trip_department, booking.expense_type, trip_cost,
+        )
+        if trip_cost == 0:
+            flash(
+                f'⚠️ ปิดทริป #{booking.id} แล้ว แต่ไม่ได้หักงบ '
+                f'(trip_cost = 0 — ตรวจ fuel_cost หรือ vehicle.fuel_rate)',
+                'warning',
+            )
+    elif booking.expense_type == 'personal' and trip_cost > 0:
+        _n_payment_required(booking, m2, trip_cost)
+        db.session.commit()
+
+    # แจ้ง admin สำหรับทริปส่วนตัว + ad-hoc (admin ต้องเห็นเพื่อยืนยันการชำระ/ตรวจสอบ)
+    if trip_cost > 0 and (booking.expense_type == 'personal' or booking.is_ad_hoc):
+        _n_admin_personal(booking, trip_cost)
+        db.session.commit()
 
 
 # ─────────────────────────────────────────────
@@ -189,10 +279,27 @@ def auto_generate_ot(booking, mileage):
     ot.slots = new_slots
     db.session.add(ot)
     db.session.flush()  # ไม่ commit เอง — ให้ caller ที่เรียก commit() ครอบ transaction ไว้
+    return ot
 
 
 
 TH_MONTHS = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+
+
+def get_fuel_price(on_date) -> float:
+    """ราคาน้ำมัน/ลิตร ณ วันที่ on_date — fallback จาก SystemConfig['fuel_price']"""
+    return FuelPrice.get_for_date(on_date) or float(SystemConfig.get('fuel_price', '40') or 40)
+
+
+def calc_fuel_cost(vehicle, distance, fuel_price, override=None) -> float:
+    """คำนวณค่าน้ำมัน — ใช้ override (mileage.fuel_cost) ถ้ามี ไม่งั้นคำนวณจาก formula
+    คืน 0.0 ถ้าข้อมูลไม่ครบ
+    """
+    if override and float(override) > 0:
+        return float(override)
+    if not distance or not vehicle or not vehicle.fuel_rate or float(vehicle.fuel_rate) <= 0:
+        return 0.0
+    return round((distance / float(vehicle.fuel_rate)) * fuel_price, 2)
 
 
 def _fmt_date_th(d):

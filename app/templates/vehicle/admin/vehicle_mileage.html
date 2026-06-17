@@ -42,21 +42,6 @@
             {% endif %}
             {% endwith %}
 
-            {# ── Page Header ────────────────────────────── #}
-            <div class="fuel-header d-flex align-items-end justify-content-between flex-wrap gap-3 mb-4 pt-3">
-                <div>
-                    <h1 class="fuel-title">บันทึกเลขไมล์</h1>
-                    <p class="fuel-subtitle">ติดตามไมล์ออก-กลับ · คำนวณค่าน้ำมัน · กรอง+export</p>
-                </div>
-                <div class="fuel-header-actions">
-                    {% if missing_count > 0 %}
-                    <span class="vc-badge vc-badge-warning vc-badge-dot" title="รายการที่ยังบันทึกไม่ครบ">
-                        รอกรอก {{ missing_count }} รายการ
-                    </span>
-                    {% endif %}
-                </div>
-            </div>
-
             {# ── Filter Toolbar (Arto+ inspired) ─────────── #}
             {% set has_adv_filter = f.vehicle_id or f.driver_id or f.booker_q or f.budget_type or f.budget_sub or f.cost_min or f.cost_max %}
             <form method="get" action="{{ url_for('vehicle.mileage_log') }}" class="mlg-toolbar" id="filterForm">

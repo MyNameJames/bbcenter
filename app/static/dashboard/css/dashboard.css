@@ -317,6 +317,64 @@
     font-size: var(--vc-text-xs);
 }
 
+/* ── คำขอของฉัน — title cell (icon + text) ───────────────── */
+.dash-req-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--vc-fg);
+}
+.dash-req-title i { color: var(--vc-fg-muted); flex-shrink: 0; }
+
+/* ── วันนี้ของฉัน — timeline list ─────────────────────────── */
+.dash-today {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.dash-today-row {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-3);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    border-bottom: 1px solid var(--vc-border);
+}
+.dash-today-row:last-child { border-bottom: 0; }
+.dash-today-time {
+    font-size: var(--vc-text-xs);
+    font-weight: 600;
+    color: var(--vc-fg);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 92px;
+}
+.dash-today-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--vc-radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    color: var(--vc-fg);
+    flex-shrink: 0;
+}
+.dash-today-body { flex: 1; min-width: 0; }
+.dash-today-title {
+    font-size: var(--vc-text-sm);
+    font-weight: 600;
+    color: var(--vc-fg);
+    display: block;
+}
+.dash-today-body .dash-recent-sub {
+    font-size: var(--vc-text-xs);
+    color: var(--vc-fg-subtle);
+    display: block;
+    margin-top: 2px;
+}
+
 /* ── Mobile compaction ───────────────────────────────────── */
 @media (max-width: 575px) {
     .dash-superadmin { flex-direction: column; align-items: stretch; }

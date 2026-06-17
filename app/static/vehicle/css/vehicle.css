@@ -104,20 +104,12 @@ body {
 .calendar-grid-head {
     background: var(--vc-bg-subtle);
 }
-.calendar-header-cell {
-    text-align: center;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--vc-fg-subtle);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    padding: 10px 12px;
-}
+
 
 .calendar-cell {
-    background: var(--vc-bg);
+    /* background: var(--vc-bg); */
     padding: 8px;
-    min-height: 112px;
+    min-height: 125px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -129,8 +121,8 @@ body {
 .calendar-cell:nth-child(7n) { border-right: 0; }
 .calendar-cell:hover  { background: var(--vc-bg-subtle); }
 .calendar-cell.selected {
-    background: var(--vc-bg);
-    outline: 1.5px solid var(--vc-fg);
+    /* background: var(--vc-bg); */ 
+    /* outline: 1.5px solid var(--vc-fg); */
     outline-offset: -1.5px;
     position: relative;
     z-index: 1;
@@ -195,17 +187,18 @@ body {
     font-size: .72rem;
     font-weight: 500;
     color: var(--text-main);
-    padding: 1px 0;
-    background: transparent;
-    border: none;
-    border-radius: 0;
+    padding: 2px 6px;
+    background: var(--vc-bg-subtle);
+    border: 1px solid transparent;
+    border-radius: var(--vc-radius-xs);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: pointer;
     width: 100%;
+    transition: filter 80ms ease;
 }
-.event-card:hover { color: var(--primary); }
+.event-card:hover { filter: brightness(.96); }
 
 
 /* Calendar overflow trigger "+N รายการ"
@@ -312,7 +305,7 @@ body {
 .bk-datepick-btn:hover { border-color: var(--vc-border-strong); }
 .bk-datepick-btn[aria-expanded="true"] {
     border-color: var(--vc-primary);
-    box-shadow: 0 0 0 3px var(--vc-primary-ring, rgba(79,70,229,.15));
+    box-shadow: var(--vc-accent-ring);
 }
 .bk-datepick-lead { color: var(--vc-fg-subtle); flex-shrink: 0; }
 .bk-datepick-val { flex: 1; text-align: left; }
@@ -352,7 +345,7 @@ body {
 .bk-timepick-btn:hover { border-color: var(--vc-border-strong); }
 .bk-timepick-btn[aria-expanded="true"] {
     border-color: var(--vc-primary);
-    box-shadow: 0 0 0 3px var(--vc-primary-ring, rgba(79,70,229,.15));
+    box-shadow: var(--vc-accent-ring);
 }
 .bk-timepick-btn.bk-ot-active {
     border-color: var(--vc-amber-border);
@@ -475,7 +468,7 @@ body {
     margin-top: 14px;
 }
 .vrc-m-month-label {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--vc-fg);
     letter-spacing: -0.005em;
@@ -494,9 +487,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    /* height: 30px; */
-    /* padding: 0 8px; */
-    border-radius: var(--vc-radius-xs);
+    border-radius: 6px;
     border: 1px solid var(--vc-border);
     background: var(--vc-bg);
     color: var(--vc-fg);
@@ -855,10 +846,11 @@ body {
         padding: 0 4px;
     }
     .calendar-header-cell {
+        text-align: center;
         padding: 6px 0;
-        font-size: 10px;
-        font-weight: 500;
-        letter-spacing: .04em;
+        font-size: 20px;
+        font-weight: 400;
+        /* letter-spacing: .04em; */
         color: var(--vc-fg-subtle);
         text-transform: uppercase;
         border: 0;
@@ -1033,7 +1025,7 @@ body {
    2026-05-20: ทิ้ง 44px header circle → status pill; solid full-bleed divider.
    2026-05-23 premium: ทุก override อยู่ใน .bk-detail-content scope ด้านล่าง (ไม่ leak ไป room). */
 .bk-detail-title        { font-size: 1rem; font-weight: 600; color: var(--vc-fg); }
-.bk-detail-date         { font-size: .8rem; color: var(--vc-fg-subtle); margin-top: 2px; }
+/* .bk-detail-date         { font-size: .8rem; color: var(--vc-fg); margin-top: 2px; } */
 
 /* Inline status pill (base — ใช้ใน room ด้วย) */
 .bk-detail-status {
@@ -1110,14 +1102,7 @@ body {
     letter-spacing: 0;
     margin-bottom: 6px;
 }
-.bk-detail-content .bk-detail-date {
-    font-size: 1.0625rem;
-    font-weight: 600;
-    color: var(--vc-fg);
-    line-height: 1.3;
-    letter-spacing: -0.01em;
-    margin-top: 0;
-}
+
 .bk-detail-content .bk-close {
     position: absolute;
     top: 14px; right: 14px;
@@ -1189,6 +1174,7 @@ body {
     justify-content: space-between;
     padding: 18px 24px 10px;
     gap: 8px;
+    background: var(--vc-bg-subtle);
 }
 .bk-detail-content .bk-detail-section-label {
     font-size: .78rem;
@@ -1209,6 +1195,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    background: var(--vc-bg-subtle);
 }
 .bk-detail-content .bk-detail-member {
     display: flex;
@@ -1216,7 +1203,7 @@ body {
     padding: 12px;
     border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-sm);
-    background: #fff;
+    background: var(--vc-bg-subtle);
     transition: border-color .15s, background .15s;
     animation: bk-member-in .3s cubic-bezier(.16,1,.3,1) both;
     animation-delay: calc(.25s + var(--bk-i, 0) * .05s);
@@ -1246,13 +1233,13 @@ body {
     gap: 8px;
 }
 .bk-detail-content .bk-detail-member-name {
-    font-size: .875rem;
+    font-size: .975rem;
     font-weight: 500;
     color: var(--vc-fg);
     min-width: 0;
 }
 .bk-detail-content .bk-detail-member-trip {
-    font-size: .8rem;
+    font-size: .9rem;
     color: var(--vc-fg-muted);
     display: flex;
     align-items: center;
@@ -1261,14 +1248,14 @@ body {
 }
 .bk-detail-content .bk-detail-member-pickup {
     font-size: .75rem;
-    color: var(--vc-fg-subtle);
+    color: var(--vc-fg-muted);
     margin-top: 2px;
 }
 
 /* Footer — separator + bg-subtle action bar, :has() empty collapse */
 .bk-detail-content .bk-detail-footer {
     padding: 14px 20px;
-    border-top: 1px solid var(--vc-border);
+    /* border-top: 1px solid var(--vc-border); */
     background: var(--vc-bg-subtle);
     display: flex;
     justify-content: flex-end;

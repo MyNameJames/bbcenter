@@ -50,9 +50,9 @@ body {
 }
 
 /* Reserve scrollbar gutter to prevent layout shift when content height changes */
-html {
+/* html {
     scrollbar-gutter: stable;
-}
+} */
 
 /* Modal × scrollbar-gutter:stable fix —
    html จอง gutter (~15px) ไว้ตลอด → เปิด modal แล้ว layout ไม่ขยับ
@@ -81,25 +81,39 @@ body.modal-open {
 /* ─────────────────────────────────────────────
    2. TYPOGRAPHY SCALE
 ───────────────────────────────────────────── */
+/* Heading h1-h3 ทุกตัว → Sukhumvit Set + --vc-blue (2026-06-13)
+   !important: title class รายหน้า (vrc-*-title, fuel-title, dash-title ฯลฯ)
+   set color เอง specificity (0,1,0) ชนะ element (0,0,1) → ต้องบังคับ */
+h1, h2, h3 {
+    font-family: var(--vc-font-heading) !important;
+    /* color: var(--vc-blue) !important; */
+}
+
+.text-header {
+    font-family: var(--vc-font-heading) !important;
+}
+
 .ds-h1 {
-    font-family: inherit;
+    font-family: var(--vc-font-heading);
     font-size: var(--vc-text-2xl);
     font-weight: 700;
-    color: var(--vc-fg);
+    color: var(--vc-blue);
     line-height: 1.25;
     letter-spacing: -.02em;
 }
 .ds-h2 {
+    font-family: var(--vc-font-heading);
     font-size: var(--vc-text-xl);
     font-weight: 600;
-    color: var(--vc-fg);
+    color: var(--vc-blue);
     line-height: 1.3;
     letter-spacing: -.01em;
 }
 .ds-h3 {
+    font-family: var(--vc-font-heading);
     font-size: var(--vc-text-lg);
     font-weight: 600;
-    color: var(--vc-fg);
+    color: var(--vc-blue);
 }
 .ds-body {
     font-size: var(--vc-text-base);
@@ -133,6 +147,10 @@ body.modal-open {
     line-height: 1;
 }
 
+.text-accent {
+    color: #014198;
+}
+
 
 /* ─────────────────────────────────────────────
    3. PAGE LAYOUT
@@ -143,7 +161,7 @@ body.modal-open {
     font-family: inherit;
     color: var(--vc-fg-muted);
     font-size: var(--vc-text-base);
-    -webkit-font-smoothing: antialiased;
+    /* -webkit-font-smoothing: antialiased; */
 }
 
 .ds-app-shell {
@@ -475,13 +493,13 @@ body.modal-open {
     box-shadow: var(--vc-accent-ring);
 }
 
-/* Primary — Dark fill (Vercel-style CTA) */
+/* Primary — Blue fill (2026-06-13: --vc-fg navy → --vc-blue) */
 .ds-btn-primary {
-    background: var(--vc-fg);
+    background: var(--vc-blue);
     color: #fff;
-    border-color: var(--vc-fg);
+    border-color: var(--vc-blue);
 }
-.ds-btn-primary:hover { background: var(--vc-primary-hover); border-color: var(--vc-primary-hover); }
+.ds-btn-primary:hover { background: var(--vc-blue-hover); border-color: var(--vc-blue-hover); }
 
 /* Accent — Indigo fill */
 .ds-btn-accent {
@@ -759,9 +777,8 @@ body.modal-open {
    without leaking to other pages (e.g. <main class="vc-scope">) */
 .vc-scope {
     color: var(--vc-fg);
-    background: var(--vc-bg-subtle);
+    background: var(--vc-bg);
     font-size: var(--vc-text-base);
     padding-bottom: 1.5rem;   /* extra breathing room for mobile */
-    line-height: 1.5;
 }
 

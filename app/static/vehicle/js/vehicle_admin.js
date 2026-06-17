@@ -1030,12 +1030,9 @@ function updateExpSubDropdown(b) {
     const selKey = sub.value;
     if (modalExpType === 'department' && selKey) {
         const entry = list.find(x => x.key === selKey);
-        if (entry?.approver) {
-            approverName.textContent  = ` ${entry.approver}`;
-            approverEl.style.display  = 'block';
-        } else {
-            approverEl.style.display  = 'none';
-        }
+        approverName.textContent  = entry?.approver ? ` ${entry.approver}` : ' ยังไม่ได้ตั้งผู้อนุมัติ';
+        approverName.style.color  = entry?.approver ? '' : 'var(--vc-warning)';
+        approverEl.style.display  = 'flex';
     } else {
         approverEl.style.display = 'none';
     }

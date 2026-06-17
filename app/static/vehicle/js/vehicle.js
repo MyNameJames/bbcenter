@@ -475,10 +475,10 @@ function bkUpdateWarning() {
         const r = ot.rate != null
             ? `วันละ <strong>${ot.rate.toLocaleString()} บาท</strong>`
             : 'ตามอัตราที่กำหนด';
-        txt.innerHTML = `<strong>วันอาทิตย์เป็นวันหยุดของพนักงานขับรถ</strong> — หากใช้รถส่วนกลางพร้อมคนขับในวันนี้ จะมีค่าล่วงเวลาสารถี ${r}`;
+        txt.innerHTML = `<strong>วันอาทิตย์เป็นวันหยุดของสารถี</strong> </br>: หากไม่ใช่งานส่วนกลาง จะมีค่าล่วงเวลาสารถี ${r}`;
     } else {
         const rTxt = `ชั่วโมงละ <strong>${ot.rates.map(r => r.toLocaleString()).join('/')} บาท</strong>`;
-        txt.innerHTML = `เวลาที่เลือกอยู่<strong>นอกเวลาทำงานของพนักงานขับรถ (08:00–17:00)</strong> — หากใช้รถส่วนกลางพร้อมคนขับ จะมีค่าล่วงเวลาสารถีประมาณ <strong>${Math.round(ot.amount).toLocaleString()} บาท</strong> (นอกเวลา ${_fmtDur(ot.minutes)} · ${rTxt})`;
+        txt.innerHTML = `เวลาที่เลือกอยู่ <strong>นอกเวลาทำงานของสารถี (08:00–17:00)</strong></br>: หากไม่ใช่งานส่วนกลาง จะมีค่าล่วงเวลาสารถี <strong>${Math.round(ot.amount).toLocaleString()} บาท</strong></br>: (นอกเวลา ${_fmtDur(ot.minutes)} · ${rTxt})`;
         [sBtn, eBtn].forEach(b => b && b.classList.add('bk-ot-active'));
     }
     box.hidden = false;
@@ -723,9 +723,9 @@ function buildDesktopEventCards(dayEvents, ds) {
                 const f=item.members[0];
                 return `<div class="vc-cal-pop-row" data-id="${f.id}"
                     onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${f.id}),200)">
-                    <span class="vc-cal-pop-dot vc-cal-pop-dot--group" title="ทริปร่วม"></span>
+                    <span class="vc-cal-pop-dot vc-cal-pop-dot--group" title="ใช้รถร่วมกัน"></span>
                     <span class="vc-cal-pop-time">${f.time}</span>
-                    <span class="vc-cal-pop-dest"><i data-lucide="users" class="vc-cal-pop-dest-icon"></i>ทริปร่วม (${item.members.length})</span>
+                    <span class="vc-cal-pop-dest"><i data-lucide="users" class="vc-cal-pop-dest-icon"></i>ใช้รถร่วมกัน (${item.members.length})</span>
                 </div>`;
             }
             const e=item.e;
@@ -935,7 +935,7 @@ function openEventDetail(eventId) {
 
     // Status pill (แทน header circle dot เดิม)
     const statusKey      = isGroup ? 'group' : (STATUS_DOT[e.status]   || 'approved');
-    const statusLabel    = isGroup ? 'ทริปร่วม' : (STATUS_LABEL[e.status] || 'อนุมัติแล้ว');
+    const statusLabel    = isGroup ? 'ใช้รถร่วมกัน' : (STATUS_LABEL[e.status] || 'อนุมัติแล้ว');
     const statusIconName = isGroup ? 'users'   : (STATUS_ICON[e.status]  || 'circle-check');
     const statusPill = document.getElementById('detailStatusPill');
     statusPill.className = `bk-detail-status bk-detail-status--${statusKey}`;
@@ -961,17 +961,14 @@ function openEventDetail(eventId) {
     // Premium member tiles — bordered cards with avatar ring + stagger (--bk-i)
     document.getElementById('detailMembersList').innerHTML = members.map((m, idx) => `
         <div class="bk-detail-member" style="--bk-i:${idx}">
-            <div class="bk-detail-member-avatar">
-                <i data-lucide="user"></i>
-            </div>
             <div class="bk-detail-member-body">
-                <div class="bk-detail-member-head">
+                <div class="bk-detail-member-head ">
                     <span class="bk-detail-member-name text-truncate">${m.booker || '–'}</span>
                     <span class="vc-badge vc-badge-neutral flex-shrink-0 d-inline-flex align-items-center gap-1">
                         <i data-lucide="users" class="vc-icon-sm"></i>${m.pax || '–'}
                     </span>
                 </div>
-                <div class="bk-detail-member-trip">
+                <div class="bk-detail-member-trip p-0 m-0">
                     <span class="text-truncate">${m.purpose || '–'}</span>
                     <i data-lucide="arrow-right" class="vc-icon-sm flex-shrink-0"></i>
                     <span class="text-truncate">${m.dest || '–'}</span>
@@ -1058,9 +1055,23 @@ function openBookingModal(dateStr=null) {
     bookingModal.show();
 }
 
+/* ── ทำซ้ำ: เปิด modal จองใหม่ prefill ข้อมูลเดิม (เว้นวัน/เวลา) ── */
+function openDuplicateModal(eventId) {
+    const e = mockEvents.find(b => b.id === eventId);
+    if (!e) return;
+    openBookingModal();   // modal เปล่า: clear date + default time 08:00–17:00
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    setVal('bk_purpose',         e.purpose || '');
+    setVal('bk_destination',     e.dest    || '');
+    setVal('bk_passenger_count', e.pax     || 1);
+    setVal('bk_pickup_location', e.pickup  || '');
+    const nd = document.getElementById('needDriver');
+    if (nd) nd.checked = !!e.needDriver;
+}
+
 /* ── Expose for HTML-string onclick handlers ── */
 Object.assign(window, {
-    openEventDetail, openEditBookingModal, openMoreEvents, openBookingModal,
+    openEventDetail, openEditBookingModal, openMoreEvents, openBookingModal, openDuplicateModal,
 });
 Object.defineProperty(window, 'eventDetailModal', { get: () => eventDetailModal, configurable: true });
 Object.defineProperty(window, 'moreEventsModal',  { get: () => moreEventsModal,  configurable: true });
@@ -1076,5 +1087,18 @@ Object.defineProperty(window, 'moreEventsModal',  { get: () => moreEventsModal, 
     const url = new URL(window.location.href);
     url.searchParams.delete('pay');
     url.searchParams.delete('detail');
+    history.replaceState(null, '', url.toString());
+})();
+
+/* ── ?new=1 (จองใหม่) / ?copy_from=<id> (ทำซ้ำ) deep-link จากหน้า home ── */
+(function handleNewOrCopyDeeplink() {
+    const params = new URLSearchParams(window.location.search);
+    const copyId = parseInt(params.get('copy_from'), 10);
+    if (copyId) openDuplicateModal(copyId);
+    else if (params.get('new')) openBookingModal();
+    if (!params.has('copy_from') && !params.has('new')) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('copy_from');
+    url.searchParams.delete('new');
     history.replaceState(null, '', url.toString());
 })();

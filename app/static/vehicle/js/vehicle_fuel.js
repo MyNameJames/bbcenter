@@ -350,7 +350,7 @@ function wireBudgetModal() {
 }
 
 /* ─────────────────────────────────────────────
-   7. FILTER BAR — auto-submit on select change
+   7. FILTER — auto-submit on change + popover toggle
 ───────────────────────────────────────────── */
 function wireFilterBar() {
     const form = $('#filterForm');
@@ -358,6 +358,37 @@ function wireFilterBar() {
     $$('.vc-filter-select', form).forEach(sel => {
         sel.addEventListener('change', () => form.submit());
     });
+}
+
+/* ปุ่ม "ตัวกรอง" ใน card-head-actions → popover (position:fixed กัน overflow clip) */
+function wireFilterPopover() {
+    const toggle = $('#filterToggle');
+    const panel  = $('#filterForm');
+    if (!toggle || !panel) return;
+
+    const place = () => {
+        const r = toggle.getBoundingClientRect();
+        const w = panel.offsetWidth || 260;
+        panel.style.top  = (r.bottom + 6) + 'px';
+        panel.style.left = Math.max(8, r.right - w) + 'px';
+    };
+    const close = () => panel.classList.remove('is-open');
+    const open  = () => { panel.classList.add('is-open'); place(); };
+
+    toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        panel.classList.contains('is-open') ? close() : open();
+    });
+    document.addEventListener('click', (e) => {
+        if (panel.classList.contains('is-open') &&
+            !panel.contains(e.target) && !toggle.contains(e.target)) close();
+    });
+    window.addEventListener('resize', () => {
+        if (panel.classList.contains('is-open')) place();
+    });
+    window.addEventListener('scroll', () => {
+        if (panel.classList.contains('is-open')) place();
+    }, true);
 }
 
 /* ─────────────────────────────────────────────
@@ -374,5 +405,6 @@ if (typeof bootstrap === 'undefined') {
     wirePriceModal();
     wireBudgetModal();
     wireFilterBar();
+    wireFilterPopover();
     bindModalReinit();
 }

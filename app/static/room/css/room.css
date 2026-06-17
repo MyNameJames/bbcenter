@@ -101,3 +101,29 @@
     display: block;
     margin: 0 auto var(--vc-space-2);
 }
+
+/* Calendar toolbar — ตรงกับ vehicle.html (เดิม style อยู่ใน vehicle_zendenta.css ที่ room ไม่โหลด) */
+.cal-toolbar {
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.cal-toolbar-left { justify-self: start; display: flex; gap: 8px; }
+.cal-month-label {
+    min-width: 150px;
+    text-align: center;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+}
+
+/* Weekday header — พื้นเทาอ่อนตาม vehicle */
+.calendar-grid-head { background: transparent; }
+.calendar-header-cell {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 500;
+    background: var(--vc-bg-subtle);
+    padding: 12px 8px;
+}

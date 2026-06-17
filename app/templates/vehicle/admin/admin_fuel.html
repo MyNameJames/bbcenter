@@ -14,7 +14,7 @@
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
@@ -46,202 +46,76 @@
                 {% endif %}
             {% endwith %}
 
-            {# ── Page Header ────────────────────────────── #}
-            <div class=" fuel-header d-flex align-items-end justify-content-between flex-wrap gap-3 mb-2 pt-3">
-                <div>
-                    <h1 class="fuel-title">ค่าน้ำมัน</h1>
-                    <p class="fuel-subtitle">บันทึกบิล · จัดการเงินสำรอง · ติดตามใบเบิก</p>
-                </div>
-                <div class="fuel-header-actions">
-                    <button type="button" class="vc-btn vc-btn-secondary" data-fuel-action="price-open" title="ตั้งค่าราคาน้ำมัน/ลิตร">
-                        <i data-lucide="banknote" class="vc-icon"></i>
-                        ตั้งค่าราคา
-                    </button>
-                    <button type="button" class="vc-btn vc-btn-primary" data-fuel-action="bill-create" title="กรอกบิลใหม่">
-                        <i data-lucide="plus" class="vc-icon-sm"></i>
-                        บิลใหม่
-                    </button>
-                </div>
-            </div>
+            {# ── Page actions ย้ายเข้า bills card-head-actions แล้ว (DNA 2026-06-17) ── #}
 
             {# ────────────────────────────────────────────────
-               KPI GROUP A — Cash Reserve
-               เงินสำรอง · คงเหลือ · ใช้ไป
-               (raw HTML — canonical reference for /bbcenter-design)
+               KPI STRIP (DNA 2026-06-17) — งบทั้งปี / เงินสำรอง / รอเบิก
+               รูปแบบ icon tile + ใช้/ทั้งหมด (Manrope) แบบ Zendenta
+               layout = bootstrap .row.row-cols-md-3.g-0
             ──────────────────────────────────────────────── #}
-            <div class="vc-card" style="margin-bottom: var(--vc-space-4);">
-                <div class="vc-kpi-group vc-kpi-group--4">
+            <div class="fuel-kpi-strip" style="margin-bottom: var(--vc-space-6);">
+                <div class="row row-cols-1 row-cols-md-3 g-0">
 
-                    <div class="vc-kpi-cell" data-fuel-kpi="reserve-amount" data-value="{{ reserve_amount }}">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="wallet" class="vc-icon-sm"></i>
-                            เงินสำรอง
-                        </p>
-                        <p class="vc-kpi-value">
-                            {{ '{:,.0f}'.format(reserve_amount) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">วงเงินที่ admin ถือไว้สำรองจ่ายคนขับ</p>
-                        <div class="vc-kpi-action">
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" data-fuel-action="reserve-open" title="ปรับเงินสำรอง">
+                    {# 1. งบทั้งปี — ใช้ไป / เพดาน #}
+                    <div class="col fuel-kpi">
+                        <span class="fuel-kpi-icon"><i data-lucide="folder-open"></i></span>
+                        <div class="fuel-kpi-body">
+                            <p class="fuel-kpi-label">งบทั้งปี {{ f_year + 543 }}</p>
+                            <p class="fuel-kpi-value vc-mono">
+                                {{ '{:,.0f}'.format(year_used) }}<span class="fuel-kpi-cap">/ {{ '{:,.0f}'.format(annual_budget) }}</span><span class="fuel-kpi-unit">บาท</span>
+                            </p>
+                            <p class="fuel-kpi-sub">
+                                {% if annual_budget > 0 %}
+                                    {{ '{:.0f}'.format(year_used / annual_budget * 100) }}% ของงบ ·
+                                    คงเหลือ <span class="vc-mono {% if year_remaining < 0 %}is-danger{% elif year_remaining > 0 %}is-success{% endif %}">{{ '{:,.0f}'.format(year_remaining) }}</span> บาท
+                                {% else %}ยังไม่ได้ตั้งงบรายปี{% endif %}
+                            </p>
+                        </div>
+                        <div class="fuel-kpi-action">
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" data-fuel-action="budget-open" title="ตั้งงบรายปี">
                                 <i data-lucide="settings-2" class="vc-icon-sm"></i>
-                                ตั้งค่า
                             </button>
                         </div>
                     </div>
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="circle-dollar-sign" class="vc-icon-sm"></i>
-                            คงเหลือ
-                        </p>
-                        <p class="vc-kpi-value {% if reserve_balance < 0 %}vc-kpi-value--danger{% elif reserve_balance == 0 %}vc-kpi-value--muted{% endif %}">
-                            {{ '{:,.0f}'.format(reserve_balance) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">หลังหักบิลค้างเบิก (เฉพาะเงินสด)</p>
-                    </div>
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="receipt" class="vc-icon-sm"></i>
-                            ใช้ไปแล้ว
-                        </p>
-                        <p class="vc-kpi-value vc-kpi-value--muted">
-                            {{ '{:,.0f}'.format(reserve_used) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">
-                            รอเบิก {{ '{:,.0f}'.format(pending_by_status.get('รอเบิก', 0)) }}
-                            · อนุมัติ {{ '{:,.0f}'.format(pending_by_status.get('อนุมัติ', 0)) }}
-                        </p>
-                    </div>
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="hand-coins" class="vc-icon-sm"></i>
-                            จ่ายเอง
-                        </p>
-                        <p class="vc-kpi-value {% if self_paid_total == 0 %}vc-kpi-value--muted{% endif %}">
-                            {{ '{:,.0f}'.format(self_paid_total) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">
-                            ผู้โดยสารจ่ายเอง · {{ self_paid_count }} บิลค้างประวัติ
-                        </p>
-                    </div>
-
-                </div>
-            </div>
-
-            {# ────────────────────────────────────────────────
-               KPI GROUP B — Annual Budget
-               งบทั้งปี · ใช้แล้ว · คงเหลือ
-            ──────────────────────────────────────────────── #}
-            <div class="vc-card" style="margin-bottom: var(--vc-space-6);">
-                <div class="vc-kpi-group">
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="target" class="vc-icon-sm"></i>
-                            งบทั้งปี
-                        </p>
-                        <p class="vc-kpi-value">
-                            {{ '{:,.0f}'.format(annual_budget) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">เพดานงบค่าน้ำมัน ปี {{ f_year }}</p>
-                        <div class="vc-kpi-action">
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" data-fuel-action="budget-open" title="ตั้งงบรายปี">
+                    {# 2. เงินสำรอง — ใช้ไป / วงเงิน (คง data-fuel-kpi ให้ vehicle_fuel.js) #}
+                    <div class="col fuel-kpi" data-fuel-kpi="reserve-amount" data-value="{{ reserve_amount }}">
+                        <span class="fuel-kpi-icon"><i data-lucide="wallet"></i></span>
+                        <div class="fuel-kpi-body">
+                            <p class="fuel-kpi-label">เงินสำรอง</p>
+                            <p class="fuel-kpi-value vc-mono">
+                                {{ '{:,.0f}'.format(reserve_used) }}<span class="fuel-kpi-cap">/ {{ '{:,.0f}'.format(reserve_amount) }}</span><span class="fuel-kpi-unit">บาท</span>
+                            </p>
+                            <p class="fuel-kpi-sub">
+                                {% if reserve_amount > 0 %}
+                                    {{ '{:.0f}'.format(reserve_used / reserve_amount * 100) }}% ของวงเงิน ·
+                                    คงเหลือ <span class="vc-mono {% if reserve_balance < 0 %}is-danger{% endif %}">{{ '{:,.0f}'.format(reserve_balance) }}</span> บาท
+                                {% else %}ยังไม่ได้ตั้งเงินสำรอง{% endif %}
+                            </p>
+                        </div>
+                        <div class="fuel-kpi-action">
+                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" data-fuel-action="reserve-open" title="ปรับเงินสำรอง">
                                 <i data-lucide="settings-2" class="vc-icon-sm"></i>
-                                ตั้งค่า
                             </button>
                         </div>
                     </div>
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="trending-up" class="vc-icon-sm"></i>
-                            ใช้แล้ว
-                        </p>
-                        <p class="vc-kpi-value vc-kpi-value--muted">
-                            {{ '{:,.0f}'.format(year_used) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">
-                            {% if annual_budget > 0 %}
-                                {{ '{:.1f}'.format(year_used / annual_budget * 100) }}% ของงบ · {{ year_bills_count if year_bills_count is defined else bills|length }} บิลในปีนี้
-                            {% else %}
-                                ยังไม่ได้ตั้งงบรายปี
-                            {% endif %}
-                        </p>
-                    </div>
-
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="piggy-bank" class="vc-icon-sm"></i>
-                            คงเหลืองบ
-                        </p>
-                        <p class="vc-kpi-value {% if year_remaining < 0 %}vc-kpi-value--danger{% elif year_remaining > 0 %}vc-kpi-value--success{% else %}vc-kpi-value--muted{% endif %}">
-                            {{ '{:,.0f}'.format(year_remaining) }}<span class="vc-kpi-unit">บาท</span>
-                        </p>
-                        <p class="vc-kpi-meta">
-                            {% if year_remaining > 0 %}เบิกเพิ่มได้
-                            {% elif year_remaining < 0 %}เกินงบที่ตั้งไว้
-                            {% else %}ใช้เต็มงบ{% endif %}
-                        </p>
+                    {# 3. รอเบิก — ยอดบิลเงินสดที่รอทำใบเบิกคืน #}
+                    <div class="col fuel-kpi">
+                        <span class="fuel-kpi-icon"><i data-lucide="coins"></i></span>
+                        <div class="fuel-kpi-body">
+                            <p class="fuel-kpi-label">รอเบิกคืน</p>
+                            <p class="fuel-kpi-value vc-mono">
+                                {{ '{:,.0f}'.format(pending_by_status.get('รอเบิก', 0)) }}<span class="fuel-kpi-unit">บาท</span>
+                            </p>
+                            <p class="fuel-kpi-sub">ยอดบิลเงินสดที่รอทำใบเบิกคืน</p>
+                        </div>
                     </div>
 
                 </div>
             </div>
 
-            {# ── Filter Bar ──────────────────────────────────────── #}
-            <form method="get" action="{{ url_for('fuel.admin_fuel') }}" class="vc-filter-bar" id="filterForm">
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">ปี</span>
-                    <select name="year" class="vc-filter-select" data-dropdown>
-                        {% for y in available_years %}
-                        <option value="{{ y }}" {% if y == f_year %}selected{% endif %}>{{ y + 543 }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">เดือน</span>
-                    <select name="month" class="vc-filter-select" data-dropdown>
-                        <option value="0" {% if f_month == 0 %}selected{% endif %}>ทั้งปี</option>
-                        {% for m in range(1, 13) %}
-                        <option value="{{ m }}" {% if m == f_month %}selected{% endif %}>{{ TH_MONTHS[m-1] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">รถ</span>
-                    <select name="vehicle_id" class="vc-filter-select" data-dropdown>
-                        <option value="">ทั้งหมด</option>
-                        {% for v in vehicles %}
-                        <option value="{{ v.id }}" {% if f_veh == v.id %}selected{% endif %}>{{ v.license_plate }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="vc-filter-group">
-                    <span class="vc-filter-label">คนขับ</span>
-                    <select name="driver_id" class="vc-filter-select" data-dropdown>
-                        <option value="">ทั้งหมด</option>
-                        {% for d in drivers %}
-                        <option value="{{ d.id }}" {% if f_drv == d.id %}selected{% endif %}>{{ d.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="vc-filter-actions">
-                    {% if f_month or f_veh or f_drv %}
-                    <a href="{{ url_for('fuel.admin_fuel', year=f_year) }}"
-                       class="vc-btn vc-btn-ghost vc-btn-sm" title="ล้าง filter ทั้งหมด">
-                        <i data-lucide="x" class="vc-icon-sm"></i>
-                        ล้าง
-                    </a>
-                    {% endif %}
-                    <noscript>
-                        <button type="submit" class="vc-btn vc-btn-secondary vc-btn-sm">
-                            <i data-lucide="filter" class="vc-icon-sm"></i>
-                            กรอง
-                        </button>
-                    </noscript>
-                </div>
-            </form>
+            {# ── Filter ย้ายเข้าปุ่ม "ตัวกรอง" ใน bills card-head-actions (DNA 2026-06-17) ── #}
 
             {# ── Pivot รถ × เดือน ─────────────────────────────────── #}
             <details class="vc-card vc-pivot-wrap" id="pivotDetails">
@@ -336,6 +210,60 @@
                             <span class="vc-card-head-meta">{{ bills|length }} รายการ</span>
                         </h3>
                         <div class="vc-card-head-actions">
+                            {# ตัวกรอง → popover (filter form ย้ายมาจาก filter bar เดิม) #}
+                            <div class="fuel-filter">
+                                {% set active_filters = (1 if f_month else 0) + (1 if f_veh else 0) + (1 if f_drv else 0) %}
+                                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="filterToggle"
+                                        title="ตัวกรอง: ปี / เดือน / รถ / คนขับ">
+                                    <i data-lucide="filter" class="vc-icon-sm"></i>
+                                    ตัวกรอง{% if active_filters %}<span class="fuel-filter-badge">{{ active_filters }}</span>{% endif %}
+                                </button>
+                                <form method="get" action="{{ url_for('fuel.admin_fuel') }}" class="fuel-filter-panel" id="filterForm">
+                                    <div class="vc-filter-group">
+                                        <span class="vc-filter-label">ปี</span>
+                                        <select name="year" class="vc-filter-select">
+                                            {% for y in available_years %}
+                                            <option value="{{ y }}" {% if y == f_year %}selected{% endif %}>{{ y + 543 }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="vc-filter-group">
+                                        <span class="vc-filter-label">เดือน</span>
+                                        <select name="month" class="vc-filter-select">
+                                            <option value="0" {% if f_month == 0 %}selected{% endif %}>ทั้งปี</option>
+                                            {% for m in range(1, 13) %}
+                                            <option value="{{ m }}" {% if m == f_month %}selected{% endif %}>{{ TH_MONTHS[m-1] }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="vc-filter-group">
+                                        <span class="vc-filter-label">รถ</span>
+                                        <select name="vehicle_id" class="vc-filter-select">
+                                            <option value="">ทั้งหมด</option>
+                                            {% for v in vehicles %}
+                                            <option value="{{ v.id }}" {% if f_veh == v.id %}selected{% endif %}>{{ v.license_plate }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="vc-filter-group">
+                                        <span class="vc-filter-label">คนขับ</span>
+                                        <select name="driver_id" class="vc-filter-select">
+                                            <option value="">ทั้งหมด</option>
+                                            {% for d in drivers %}
+                                            <option value="{{ d.id }}" {% if f_drv == d.id %}selected{% endif %}>{{ d.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    {% if active_filters %}
+                                    <div class="fuel-filter-actions">
+                                        <a href="{{ url_for('fuel.admin_fuel', year=f_year) }}" class="vc-btn vc-btn-ghost vc-btn-sm" title="ล้างตัวกรองทั้งหมด">
+                                            <i data-lucide="x" class="vc-icon-sm"></i>
+                                            ล้างตัวกรอง
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </form>
+                            </div>
                             <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="mergeBillsBtn" disabled title="เลือกบิล 'รอเบิก' อย่างน้อย 1 ใบก่อน">
                                 <i data-lucide="list-filter" class="vc-icon-sm"></i>
                                 รวมบิลที่เลือก<span id="selectedCount" class="vc-card-head-meta"></span>
@@ -346,6 +274,10 @@
                                 <i data-lucide="download" class="vc-icon-sm"></i>
                                 Excel
                             </a>
+                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-fuel-action="price-open" title="ตั้งค่าราคาน้ำมัน/ลิตร">
+                                <i data-lucide="banknote" class="vc-icon-sm"></i>
+                                ตั้งค่าราคา
+                            </button>
                             <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
                                     data-fuel-action="bill-create" title="กรอกบิลใหม่">
                                 <i data-lucide="plus" class="vc-icon-sm"></i>

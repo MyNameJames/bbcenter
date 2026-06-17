@@ -1,34 +1,29 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app
+from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage, SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment, BudgetType, Notification, DeptApprover, OTRateConfig, DriverOT, DriverOTSlot, FuelPrice, FuelBill, RepairTicket, MaintenanceTicket, RoomBooking
-from sqlalchemy import and_, extract, or_, func
-from datetime import datetime, date, timedelta
-from views.core.telegram_service import (notify_approved, notify_forwarded_to_approver, notify_approver_approved, notify_rejected,
-                                    notify_cancelled            as tg_notify_cancelled)
-from views.core.notification_service import (
-    notify_booking_created      as _n_booking_created,
-    notify_admin_assigned       as _n_admin_assigned,
-    notify_admin_approved       as _n_admin_approved,
-    notify_forwarded_to_approver as _n_forwarded,
-    notify_approver_approved    as _n_approver_approved,
-    notify_rejected             as _n_rejected,
-    notify_merged_into_group    as _n_merged,
-    notify_mileage_started      as _n_mileage_start,
-    notify_mileage_ended        as _n_mileage_end,
-    notify_budget_deducted      as _n_budget,
-    notify_payment_required     as _n_payment_required,
-    notify_admin_deleted        as _n_admin_deleted,
-    notify_payment_confirmed    as _n_payment_confirmed,
-    notify_user_cancelled       as _n_user_cancelled,
-)
+from models import (db, get_bkk_time, Vehicle, Driver, VehicleMileage, VehicleBooking,
+                    VehicleBudgetLog, OTRateConfig, DriverOT, DriverOTSlot)
+from sqlalchemy import extract, func
+from datetime import datetime, date
 import views.vehicle.vehicle_budget_service as budget_svc
-import os, time
-from werkzeug.utils import secure_filename
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
     is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot, next_ot_number,
-    EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
+    EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th, _build_budget_subs,
 )
+
+
+def _apply_budget_filter(q, f_budget_type, f_budget_sub):
+    """กรอง DriverOT ตามงบ (derive จาก booking ที่ผูก) — join VehicleBooking.
+    standalone OT (booking_id=None) จะหลุดเมื่อ filter งบ active เพราะไม่มีงบ"""
+    if f_budget_type not in ('central', 'department', 'personal'):
+        return q
+    q = q.join(VehicleBooking, DriverOT.booking_id == VehicleBooking.id) \
+         .filter(VehicleBooking.expense_type == f_budget_type)
+    if f_budget_sub and f_budget_type == 'central':
+        q = q.filter(VehicleBooking.central_category == f_budget_sub)
+    elif f_budget_sub and f_budget_type == 'department':
+        q = q.filter(VehicleBooking.trip_department == f_budget_sub)
+    return q
 
 
 def _parse_ot_slots(form):
@@ -50,10 +45,12 @@ def _parse_ot_slots(form):
             eh, em = map(int, end.split(':'))
             mins   = max(0, (eh * 60 + em) - (sh * 60 + sm))
             hrs    = round(mins / 60, 2)
+            # day_of_week config = flat daily rate (ไม่คูณชั่วโมง)
+            amount = rate if cfg.day_of_week is not None else round(hrs * rate, 2)
             slots.append(DriverOTSlot(
                 rate_config_id=cfg_id, slot_label=cfg.label,
                 start_time=start, end_time=end,
-                hours=hrs, rate=rate, amount=round(hrs * rate, 2),
+                hours=hrs, rate=rate, amount=amount,
             ))
         except (ValueError, IndexError):
             continue
@@ -119,6 +116,70 @@ def _ot_budget_label(booking):
     return ('—', '')
 
 
+def _calc_ot_kpi(all_ots):
+    live      = [o for o in all_ots if not o.is_deleted]
+    receipted = [o for o in live if not o.no_receipt]
+    unpaid    = [o for o in receipted if o.status == 'unpaid']
+    paid      = [o for o in receipted if o.status == 'paid']
+    self_paid = [o for o in live if o.no_receipt]
+    deleted   = [o for o in all_ots if o.is_deleted]
+    return {
+        'live':      live,
+        'unpaid':    unpaid,
+        'paid':      paid,
+        'self_paid': self_paid,
+        'deleted':   deleted,
+        'kpi_total':  round(sum(float(o.total_amount) for o in live),   2),
+        'kpi_unpaid': round(sum(float(o.total_amount) for o in unpaid), 2),
+        'kpi_paid':   round(sum(float(o.total_amount) for o in paid),   2),
+        'counts': {
+            'all':       len(live),
+            'unpaid':    len(unpaid),
+            'paid':      len(paid),
+            'self_paid': len(self_paid),
+            'deleted':   len(deleted),
+        },
+    }
+
+
+def _build_ot_pivot(from_year):
+    pivot_rows = (db.session.query(
+        DriverOT.driver_id,
+        extract('month', DriverOT.date).label('month'),
+        func.sum(DriverOT.total_hours).label('hours'),
+        func.sum(DriverOT.total_amount).label('amount'),
+    ).filter(
+        DriverOT.is_deleted == False,
+        extract('year', DriverOT.date) == from_year,
+    ).group_by(DriverOT.driver_id, extract('month', DriverOT.date))
+    .all())
+
+    ot_pivot        = {}
+    ot_pivot_labels = {}
+    for row in pivot_rows:
+        did = row.driver_id
+        m   = int(row.month)
+        if did not in ot_pivot:
+            ot_pivot[did] = {}
+            drv = Driver.query.get(did)
+            ot_pivot_labels[did] = drv.name if drv else str(did)
+        ot_pivot[did][m] = {'hours': float(row.hours or 0), 'amount': float(row.amount or 0)}
+
+    row_totals = {
+        did: {'hours': sum(v['hours'] for v in months.values()),
+              'amount': sum(v['amount'] for v in months.values())}
+        for did, months in ot_pivot.items()
+    }
+    col_totals = {
+        m: {'hours':  sum(ot_pivot[did].get(m, {}).get('hours',  0) for did in ot_pivot),
+            'amount': sum(ot_pivot[did].get(m, {}).get('amount', 0) for did in ot_pivot)}
+        for m in range(1, 13)
+    }
+    grand_hours  = sum(t['hours']  for t in row_totals.values())
+    grand_amount = sum(t['amount'] for t in row_totals.values())
+    return ot_pivot, ot_pivot_labels, row_totals, col_totals, grand_hours, grand_amount
+
+
 @admincost_bp.route('/admin/cost', methods=['GET'])
 @login_required
 def cost_summary():
@@ -132,48 +193,24 @@ def cost_summary():
     to_month   = int(request.args.get('to_month',   now.month))
     to_year    = int(request.args.get('to_year',    now.year))
     sel_driver = request.args.get('driver_id', type=int)
-    sel_status = request.args.get('status', '')   # '' | unpaid | paid | self_paid | deleted
+    sel_status = request.args.get('status', '')
+    f_budget_type = request.args.get('budget_type', '').strip()
+    f_budget_sub  = request.args.get('budget_sub', '').strip()
 
     from_date = date(from_year, from_month, 1)
     to_date   = date(to_year + 1, 1, 1) if to_month == 12 else date(to_year, to_month + 1, 1)
 
-    # ดึงทุก record ในช่วง (รวม deleted) แล้วแยกนับฝั่ง Python — counts ใช้ตั้ง tab
     base_q = DriverOT.query.filter(DriverOT.date >= from_date, DriverOT.date < to_date)
     if sel_driver:
         base_q = base_q.filter(DriverOT.driver_id == sel_driver)
-    all_ots = base_q.all()
+    base_q = _apply_budget_filter(base_q, f_budget_type, f_budget_sub)
+    kpi = _calc_ot_kpi(base_q.all())
 
-    live      = [o for o in all_ots if not o.is_deleted]              # ไม่ลบ
-    receipted = [o for o in live if not o.no_receipt]                 # เข้า workflow ออกใบ
-    unpaid    = [o for o in receipted if o.status == 'unpaid']
-    paid      = [o for o in receipted if o.status == 'paid']
-    self_paid = [o for o in live if o.no_receipt]
-    deleted   = [o for o in all_ots if o.is_deleted]
-
-    # KPI cards — ยอดรวม / ยังไม่จ่าย / จ่ายแล้ว (ไม่นับ deleted)
-    kpi_total  = round(sum(float(o.total_amount) for o in live),   2)
-    kpi_unpaid = round(sum(float(o.total_amount) for o in unpaid), 2)
-    kpi_paid   = round(sum(float(o.total_amount) for o in paid),   2)
-
-    counts = {
-        'all':       len(live),
-        'unpaid':    len(unpaid),
-        'paid':      len(paid),
-        'self_paid': len(self_paid),
-        'deleted':   len(deleted),
-    }
-
-    # Filtered list ตาม tab
     bucket = {
-        '':          live,
-        'unpaid':    unpaid,
-        'paid':      paid,
-        'self_paid': self_paid,
-        'deleted':   deleted,
-    }.get(sel_status, live)
+        '': kpi['live'], 'unpaid': kpi['unpaid'], 'paid': kpi['paid'],
+        'self_paid': kpi['self_paid'], 'deleted': kpi['deleted'],
+    }.get(sel_status, kpi['live'])
     ots = sorted(bucket, key=lambda o: o.date, reverse=True)
-
-    # งบ label ต่อ row (attach attribute ให้ template/JSON ใช้)
     for o in ots:
         o.budget_label, o.budget_sub = _ot_budget_label(o.booking)
 
@@ -184,14 +221,26 @@ def cost_summary():
     if from_month != to_month or from_year != to_year:
         range_label += f" – {TH_MONTHS[to_month]} {to_year + 543}"
 
+    ot_pivot, ot_pivot_labels, row_totals, col_totals, grand_hours, grand_amount = \
+        _build_ot_pivot(from_year)
+
+    filter_active = bool(sel_driver or f_budget_type
+                         or from_month != now.month or from_year != now.year
+                         or to_month != now.month or to_year != now.year)
+
     return render_template('vehicle/admin/vehicle_cost.html',
         ots=ots, drivers=drivers, rate_configs=rate_configs,
         from_month=from_month, from_year=from_year,
         to_month=to_month, to_year=to_year,
         sel_driver=sel_driver, sel_status=sel_status,
-        kpi_total=kpi_total, kpi_unpaid=kpi_unpaid, kpi_paid=kpi_paid,
-        counts=counts,
+        sel_budget_type=f_budget_type, sel_budget_sub=f_budget_sub,
+        budget_subs=_build_budget_subs(), filter_active=filter_active,
+        kpi_total=kpi['kpi_total'], kpi_unpaid=kpi['kpi_unpaid'], kpi_paid=kpi['kpi_paid'],
+        counts=kpi['counts'],
         range_label=range_label, now=now,
+        ot_pivot=ot_pivot, ot_pivot_labels=ot_pivot_labels,
+        ot_pivot_row_totals=row_totals, ot_pivot_col_totals=col_totals,
+        ot_grand_hours=grand_hours, ot_grand_amount=grand_amount,
     )
 
 
@@ -414,6 +463,8 @@ def cost_export():
     to_year    = int(request.args.get('to_year',    now.year))
     sel_driver = request.args.get('driver_id', type=int)
     sel_status = request.args.get('status', '')
+    f_budget_type = request.args.get('budget_type', '').strip()
+    f_budget_sub  = request.args.get('budget_sub', '').strip()
 
     from_date = date(from_year, from_month, 1)
     to_date   = date(to_year + 1, 1, 1) if to_month == 12 else date(to_year, to_month + 1, 1)
@@ -421,6 +472,7 @@ def cost_export():
     q = DriverOT.query.filter(DriverOT.date >= from_date, DriverOT.date < to_date)
     if sel_driver:
         q = q.filter(DriverOT.driver_id == sel_driver)
+    q = _apply_budget_filter(q, f_budget_type, f_budget_sub)
     if sel_status == 'deleted':
         q = q.filter(DriverOT.is_deleted.is_(True))
     else:

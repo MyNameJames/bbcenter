@@ -13,16 +13,16 @@
 /* ─────────────────── BOOTSTRAP OVERRIDE ───────────────────
    Bootstrap `.container-fluid` default มี `padding-x: 1.5rem` (gutter).
    Vercel layout จัด spacing เองที่ระดับ page → ลบ padding ทิ้งทั้งหมด */
-.container-fluid {
+/* .container-fluid {
     padding-left: 0;
     padding-right: 0;
-}
+} */
 
 /* ─────────────────── PAGE BG ───────────────────
    body bg = subtle gray → กลมกลืนกับ topbar + sidebar ที่ใช้ bg-subtle.
    .vc-card / .card ภายในยังคงเป็นพื้นขาว → เด่นออกมาด้วย border */
 body {
-    background: var(--vc-bg-subtle);
+    background: var(--vc-bg);
 }
 
 /* ─────────────────── PAGE HEAD ───────────────────
@@ -42,6 +42,53 @@ body {
     line-height: 1.4;
 }
 
+/* ─────────────── HERO BANNER (2026-06-13) ───────────────
+   title + illustration บนพื้น indigo-soft — ลดความเป็นทางการ
+   ใช้กับ vehicle/vehicle.html (.vrc-hero d-none d-md-flex) */
+.vrc-hero {
+    position: relative;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vc-space-4);
+    background: var(--vc-accent-light);
+    border: 1px solid var(--vc-accent-border);
+    border-radius: var(--vc-radius-lg);
+    padding: var(--vc-space-6) var(--vc-space-8);
+    overflow: hidden;
+    min-height: 136px;
+}
+.vrc-hero-text {
+    position: relative;
+    z-index: 2;
+    max-width: 60%;
+}
+.vrc-hero-title {
+    font-size: var(--vc-text-xl);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--vc-accent-dark);
+    line-height: 1.2;
+}
+.vrc-hero-sub {
+    font-size: var(--vc-text-base);
+    color: var(--vc-accent);
+    line-height: 1.5;
+}
+.vrc-hero-img {
+    position: absolute;
+    right: -6px;
+    bottom: -8px;
+    height: 156px;
+    width: auto;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 1;
+}
+@media (max-width: 1100px) {
+    .vrc-hero-img { height: 122px; opacity: .9; }
+    .vrc-hero-text { max-width: 70%; }
+}
+
 /* ─────────────────── TOPBAR ───────────────────
    Layout (d-flex / align-items-center / gap-2 / sticky-top / border-bottom)
    ใช้ Bootstrap utility ใน markup. CSS เหลือเฉพาะ:
@@ -52,7 +99,7 @@ body {
    ★ ใส่ position:sticky + top:0 ซ้ำใน CSS เพื่อ override z-index ของ sticky-top */
 .vrc-topbar {
   height: 56px;
-  background: var(--vc-bg-subtle);
+  background: var(--vc-bg);
   border-color: var(--vc-border) !important;
   padding: 0 14px;
   position: sticky;
@@ -60,19 +107,18 @@ body {
   z-index: 5;
 }
 
-/* Breadcrumb — layout/gap/fw-medium ใช้ BS class ใน markup */
-.vrc-topbar-crumb {
-  font-size: 14px;
+/* Page title (DNA 2026-06-17: หัวเรื่องใหญ่ใน topbar แบบ Zendenta — แทน breadcrumb เดิม) */
+.vrc-topbar-title {
+  font-size: 19px;
+  font-weight: 700;
   color: var(--vc-fg);
+  line-height: 1;
+  margin: 0;
   min-width: 0;
+  /* overflow: hidden; */
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.vrc-topbar-crumb .sep {
-  color: var(--vc-fg-subtle);
-  font-weight: 400;
-  font-size: 18px;
-}
-.vrc-topbar-crumb-section { color: var(--vc-fg-muted); font-weight: 400; }
-.vrc-topbar-crumb-title   { color: var(--vc-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ─────────────────── ICON BUTTON 32×32 ───────────────────
    re-skin `.ds-btn-icon` ที่อยู่ใน .vrc-topbar ให้กลมกลืน — ไม่ต้องแก้
@@ -140,7 +186,7 @@ body {
     background: var(--vc-bg);
     color: var(--vc-fg-muted);
     border: 1px solid var(--vc-border);
-    border-radius: 8px;
+    border-radius: 6px;
     display: inline-flex; align-items: center; justify-content: center;
     cursor: pointer;
     transition: background 100ms ease, color 100ms ease;

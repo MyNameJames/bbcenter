@@ -16,17 +16,9 @@
         <i data-lucide="menu"></i>
     </button>
 
-    {# ── Breadcrumb ── #}
+    {# ── Page title (DNA 2026-06-17: หัวเรื่องใหญ่ใน topbar แทน breadcrumb แบบ Zendenta) ── #}
     {% if page_title or page_section %}
-    <nav class="vrc-topbar-crumb d-flex align-items-center gap-2 fw-medium" aria-label="breadcrumb">
-        {% if page_section %}
-        <span class="vrc-topbar-crumb-section">{{ page_section }}</span>
-        <span class="sep">/</span>
-        {% endif %}
-        {% if page_title %}
-        <span class="vrc-topbar-crumb-title">{{ page_title }}</span>
-        {% endif %}
-    </nav>
+    <h1 class="vrc-topbar-title">{{ page_title or page_section }}</h1>
     {% endif %}
 
     {# ── Right-side actions ── #}
@@ -218,12 +210,13 @@ window.bbToggleUserMenu = function() {
 {% include '_shared/notification_toast.html' %}
 <script type="module" src="{{ url_for('static', filename='core/js/notification.js') }}"></script>
 
-{# ── Sarabun (font เดียวของระบบ — --vc-font-sans / --vc-font-mono) ──
-   โหลด global ที่นี่ทุกหน้าจึงได้ Sarabun เสมอ. ห้ามโหลด font อื่น. #}
+{# ── Fonts (global ทุกหน้า) ──
+   Sarabun = --vc-font-sans (ข้อความไทย) · Manrope = --vc-font-mono (ตัวเลข .vc-mono)
+   DNA redesign 2026-06-17: โหลด Manrope global จึง .vc-mono ได้ Manrope จริงทุกหน้า. #}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap">
+      href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Manrope:wght@500;600;700;800&display=swap">
 
 {# ── Lucide Icons (line, stroke 1.5px) ──
    Usage: <i data-lucide="fuel"></i>

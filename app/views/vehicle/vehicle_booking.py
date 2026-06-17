@@ -1,33 +1,26 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app
+from flask import render_template, request, redirect, url_for, flash, jsonify, session, current_app
 from flask_login import login_required, current_user
-from models import db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage, SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment, BudgetType, Notification, DeptApprover, OTRateConfig, DriverOT, DriverOTSlot, FuelPrice, FuelBill, RepairTicket, MaintenanceTicket, RoomBooking
-from sqlalchemy import and_, extract, or_, func
-from datetime import datetime, date, timedelta
-from views.core.telegram_service import (notify_approved, notify_forwarded_to_approver, notify_approver_approved, notify_rejected,
-                                    notify_cancelled            as tg_notify_cancelled)
+from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, Driver,
+                    VehicleBudget, VehicleDepartment, DeptApprover, OTRateConfig)
+from sqlalchemy import or_
+from datetime import datetime, date
+from views.core.broadcast import (notify_approved, notify_forwarded_to_approver,
+                                   notify_approver_approved, notify_rejected,
+                                   notify_cancelled as tg_notify_cancelled)
 from views.core.notification_service import (
     notify_booking_created      as _n_booking_created,
-    notify_admin_assigned       as _n_admin_assigned,
     notify_admin_approved       as _n_admin_approved,
     notify_forwarded_to_approver as _n_forwarded,
     notify_approver_approved    as _n_approver_approved,
     notify_rejected             as _n_rejected,
-    notify_merged_into_group    as _n_merged,
-    notify_mileage_started      as _n_mileage_start,
-    notify_mileage_ended        as _n_mileage_end,
-    notify_budget_deducted      as _n_budget,
-    notify_payment_required     as _n_payment_required,
     notify_admin_deleted        as _n_admin_deleted,
-    notify_payment_confirmed    as _n_payment_confirmed,
     notify_user_cancelled       as _n_user_cancelled,
 )
-import views.vehicle.vehicle_budget_service as budget_svc
-import os, time
-from werkzeug.utils import secure_filename
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
     is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
     EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
+    get_fuel_price, calc_fuel_cost,
 )
 
 
@@ -213,113 +206,91 @@ def delete_booking(booking_id):
 # Time guard: must be BEFORE booking.start_datetime
 # ─────────────────────────────────────────────
 
+def _build_cancel_recipients(booking, is_admin, is_owner, prev_status):
+    already_notified = {current_user.id}
+
+    owner_notify_id = booking.user_id if (is_admin and not is_owner) else None
+    if owner_notify_id and owner_notify_id not in already_notified:
+        already_notified.add(owner_notify_id)
+    else:
+        owner_notify_id = None
+
+    admin_user_ids = {u.id for u in User.query.filter(
+        or_(User.role_vehicle == 'admin', User.is_superadmin.is_(True))
+    ).all()} - already_notified
+    already_notified |= admin_user_ids
+
+    approver_user_ids = set()
+    if booking.trip_department_id and prev_status in ('waiting_approver', 'approved'):
+        apv_rows = DeptApprover.query.filter_by(dept_id=booking.trip_department_id).all()
+        approver_user_ids = {r.user_id for r in apv_rows} - already_notified
+        already_notified |= approver_user_ids
+
+    driver_user_id = None
+    if booking.driver_id and booking.driver and booking.driver.user_id:
+        cand = booking.driver.user_id
+        if cand not in already_notified:
+            driver_user_id = cand
+            already_notified.add(cand)
+
+    trip_mate_user_ids = set()
+    if booking.trip_group:
+        mate_rows = VehicleBooking.query.filter(
+            VehicleBooking.trip_group == booking.trip_group,
+            VehicleBooking.id != booking.id,
+        ).all()
+        trip_mate_user_ids = {m.user_id for m in mate_rows if m.user_id} - already_notified
+
+    return owner_notify_id, admin_user_ids, approver_user_ids, driver_user_id, trip_mate_user_ids
+
+
+def _send_cancel_notifications(booking, owner_notify_id, admin_user_ids,
+                                approver_user_ids, driver_user_id, trip_mate_user_ids):
+    if owner_notify_id:
+        _n_user_cancelled(user_id=owner_notify_id, booking=booking,
+                          cancelled_by=current_user, role_label='owner')
+    for uid in admin_user_ids:
+        _n_user_cancelled(user_id=uid, booking=booking,
+                          cancelled_by=current_user, role_label='admin')
+    for uid in approver_user_ids:
+        _n_user_cancelled(user_id=uid, booking=booking,
+                          cancelled_by=current_user, role_label='approver')
+    if driver_user_id:
+        _n_user_cancelled(user_id=driver_user_id, booking=booking,
+                          cancelled_by=current_user, role_label='driver')
+    for uid in trip_mate_user_ids:
+        _n_user_cancelled(user_id=uid, booking=booking,
+                          cancelled_by=current_user, role_label='mate')
+
+
 @vehicle_bp.route('/vehicle/cancel/<int:booking_id>', methods=['POST'])
 @login_required
 def cancel_booking(booking_id):
-    """C1 — Soft cancel approved/pending/waiting_approver booking. Row kept for audit."""
-    booking = VehicleBooking.query.get_or_404(booking_id)
-
-    # Permission: owner OR admin
+    booking  = VehicleBooking.query.get_or_404(booking_id)
     is_owner = (current_user.id == booking.user_id)
     is_admin = is_vehicle_admin()
+
     if not (is_owner or is_admin):
         flash('คุณไม่มีสิทธิ์ยกเลิกการจองนี้', 'danger')
         return redirect(url_for('vehicle.index'))
-
-    # Status guard — owner: pending/waiting_approver เท่านั้น; admin: +approved
     if not is_admin and booking.status not in ('pending', 'waiting_approver'):
         flash(f'ยกเลิกไม่ได้ — สถานะปัจจุบันคือ {booking.status}', 'warning')
         return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
     if booking.status not in ('pending', 'waiting_approver', 'approved'):
         flash(f'ยกเลิกไม่ได้ — สถานะปัจจุบันคือ {booking.status}', 'warning')
         return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
-
-    # Time guard — block หลัง trip start
     if get_bkk_time() >= booking.start_datetime:
         flash('ทริปเริ่มแล้ว ไม่สามารถยกเลิกได้ — ติดต่อ Admin หากจำเป็น', 'warning')
         return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
 
     try:
         prev_status = booking.status
-
-        # ── Build recipient sets BEFORE status flip
-        # Priority cascade (highest → lowest): owner > admin > approver > driver > mate
-        # ทุก lower-priority set จะ discard user_id ที่อยู่ใน higher-priority set แล้ว
-        # → ทุก user_id ได้รับ notification เพียง 1 ใบเท่านั้น (role_label = highest priority)
-        already_notified = set()
-        already_notified.add(current_user.id)  # canceler never notifies themselves
-
-        # 1) Owner (priority #1) — only if admin cancels someone else's booking
-        owner_notify_id = booking.user_id if (is_admin and not is_owner) else None
-        if owner_notify_id and owner_notify_id not in already_notified:
-            already_notified.add(owner_notify_id)
-        else:
-            owner_notify_id = None  # ป้องกัน double-notify ถ้า owner = canceler
-
-        # 2) Admin user_ids (priority #2)
-        admin_user_ids = {u.id for u in User.query.filter(
-            or_(User.role_vehicle == 'admin', User.is_superadmin.is_(True))
-        ).all()}
-        admin_user_ids -= already_notified
-        already_notified |= admin_user_ids
-
-        # 3) Approver user_ids (priority #3) — only if booking went through approver flow
-        approver_user_ids = set()
-        if booking.trip_department_id and prev_status in ('waiting_approver', 'approved'):
-            apv_rows = DeptApprover.query.filter_by(
-                dept_id=booking.trip_department_id).all()
-            approver_user_ids = {r.user_id for r in apv_rows} - already_notified
-            already_notified |= approver_user_ids
-
-        # 4) Driver-as-user (priority #4) — if driver.user_id linked
-        driver_user_id = None
-        if booking.driver_id and booking.driver and booking.driver.user_id:
-            cand = booking.driver.user_id
-            if cand not in already_notified:
-                driver_user_id = cand
-                already_notified.add(cand)
-
-        # 5) Trip mates (priority #5) — other user_ids in same trip_group
-        trip_mate_user_ids = set()
-        if booking.trip_group:
-            mate_rows = VehicleBooking.query.filter(
-                VehicleBooking.trip_group == booking.trip_group,
-                VehicleBooking.id != booking.id,
-            ).all()
-            trip_mate_user_ids = {m.user_id for m in mate_rows if m.user_id} - already_notified
-            already_notified |= trip_mate_user_ids
-
-        # ── Notify (in-app) — ลำดับตาม priority
-        if owner_notify_id:
-            _n_user_cancelled(user_id=owner_notify_id, booking=booking,
-                              cancelled_by=current_user, role_label='owner')
-
-        for uid in admin_user_ids:
-            _n_user_cancelled(user_id=uid, booking=booking,
-                              cancelled_by=current_user, role_label='admin')
-
-        for uid in approver_user_ids:
-            _n_user_cancelled(user_id=uid, booking=booking,
-                              cancelled_by=current_user, role_label='approver')
-
-        if driver_user_id:
-            _n_user_cancelled(user_id=driver_user_id, booking=booking,
-                              cancelled_by=current_user, role_label='driver')
-
-        for uid in trip_mate_user_ids:
-            _n_user_cancelled(user_id=uid, booking=booking,
-                              cancelled_by=current_user, role_label='mate')
-
-        # ── Soft cancel — flip status, row kept
-        booking.status = 'cancelled'
+        recipients  = _build_cancel_recipients(booking, is_admin, is_owner, prev_status)
+        _send_cancel_notifications(booking, *recipients)
+        booking.status     = 'cancelled'
         booking.updated_by = current_user.id
-
-        # ── Telegram — delete old (approved/assigned msg) + send cancel
-        # Pattern matches approve_booking — let exception abort txn (consistent w/ project convention)
         tg_notify_cancelled(booking, current_user)
-
         db.session.commit()
-
         flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย', 'success')
     except Exception:
         db.session.rollback()
@@ -399,24 +370,15 @@ def approver_inbox():
                )
                .all())
 
-    # ── ค่าน้ำมันต่อ booking (override ถ้า fuel_cost มีค่า, ไม่งั้นคำนวณ
-    #    (distance / fuel_rate) * fuel_price — mirror mileage/driver views) ──
     fuel_costs = {}
     for bk in (pending + history):
         m = bk.mileage[0] if bk.mileage else None
-        cost = 0
         if m and m.odometer_start is not None and m.odometer_end is not None:
-            override = float(m.fuel_cost or 0)
-            if override > 0:
-                cost = override
-            else:
-                veh  = bk.assigned_vehicle
-                rate = float(veh.fuel_rate) if veh and veh.fuel_rate else 0
-                if rate > 0:
-                    fp = (FuelPrice.get_for_date(bk.start_datetime.date())
-                          or float(SystemConfig.get('fuel_price', '40') or 40))
-                    cost = round(((m.odometer_end - m.odometer_start) / rate) * fp, 2)
-        fuel_costs[bk.id] = cost
+            distance = m.odometer_end - m.odometer_start
+            fp = get_fuel_price(bk.start_datetime.date())
+            fuel_costs[bk.id] = calc_fuel_cost(bk.assigned_vehicle, distance, fp, m.fuel_cost)
+        else:
+            fuel_costs[bk.id] = 0
 
     return render_template('vehicle/vehicle_approver.html',
                            pending=pending, history=history,

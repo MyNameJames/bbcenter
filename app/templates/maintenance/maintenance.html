@@ -44,13 +44,11 @@
             {% endif %}
             {% endwith %}
 
-            {# Page header #}
-            <div class="maintenance-header">
+            {# Page header (vehicle_budget.html style, 2026-06-16) #}
+            <div class="maintenance-header d-flex align-items-end justify-content-between flex-wrap gap-3">
                 <div>
-                    <h1 class="maintenance-title">
-                        แจ้งซ่อมอาคารสถานที่
-                    </h1>
-                    <p class="maintenance-subtitle">แจ้งปัญหาอาคาร สิ่งอำนวยความสะดวก และระบบสาธารณูปโภค</p>
+                    <h1 class="fw-bold text-accent pt-3">แจ้งซ่อมอาคารสถานที่</h1>
+                    <h6 class="text-muted text-header">แจ้งปัญหาอาคาร สิ่งอำนวยความสะดวก และระบบสาธารณูปโภค</h6>
                 </div>
                 <div class="maintenance-header-actions">
                     {% if current_user.role_maintenance == 'admin' or current_user.is_superadmin %}
@@ -348,6 +346,8 @@
 {# ===== MODALS ===== #}
 
 {# Modal: แจ้งซ่อม / แก้ไข #}
+{# src = แหล่ง prefill (edit หรือ copy) · edit_ticket = โหมดแก้ไขจริง (action=edit) #}
+{% set src = edit_ticket or (copy_ticket if copy_ticket is defined else None) %}
 <div class="modal fade" id="maintenanceFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content" style="border-radius: var(--vc-radius-md); border: 1px solid var(--vc-border);">
@@ -377,20 +377,20 @@
                         <div class="col-md-6">
                             <label class="form-label text-muted small fw-bold">ประเภทงานซ่อม <span class="text-danger">*</span></label>
                             <select class="form-select" name="category" required>
-                                <option value="" {% if not edit_ticket %}selected{% endif %} disabled>-- เลือกประเภท --</option>
-                                <option value="ไฟฟ้า/แสงสว่าง" {% if edit_ticket and edit_ticket.category=='ไฟฟ้า/แสงสว่าง' %}selected{% endif %}>⚡ ระบบไฟฟ้า / แสงสว่าง</option>
-                                <option value="ประปา/ห้องน้ำ" {% if edit_ticket and edit_ticket.category=='ประปา/ห้องน้ำ' %}selected{% endif %}>💧 ระบบประปา / ท่อน้ำ</option>
-                                <option value="แอร์/ปรับอากาศ" {% if edit_ticket and edit_ticket.category=='แอร์/ปรับอากาศ' %}selected{% endif %}>❄️ เครื่องปรับอากาศ (แอร์)</option>
-                                <option value="อาคาร/เฟอร์นิเจอร์" {% if edit_ticket and edit_ticket.category=='อาคาร/เฟอร์นิเจอร์' %}selected{% endif %}>🚪 อาคารสถานที่ / เฟอร์นิเจอร์</option>
-                                <option value="อื่นๆ" {% if edit_ticket and edit_ticket.category=='อื่นๆ' %}selected{% endif %}>🔧 อื่นๆ</option>
+                                <option value="" {% if not src %}selected{% endif %} disabled>-- เลือกประเภท --</option>
+                                <option value="ไฟฟ้า/แสงสว่าง" {% if src and src.category=='ไฟฟ้า/แสงสว่าง' %}selected{% endif %}>⚡ ระบบไฟฟ้า / แสงสว่าง</option>
+                                <option value="ประปา/ห้องน้ำ" {% if src and src.category=='ประปา/ห้องน้ำ' %}selected{% endif %}>💧 ระบบประปา / ท่อน้ำ</option>
+                                <option value="แอร์/ปรับอากาศ" {% if src and src.category=='แอร์/ปรับอากาศ' %}selected{% endif %}>❄️ เครื่องปรับอากาศ (แอร์)</option>
+                                <option value="อาคาร/เฟอร์นิเจอร์" {% if src and src.category=='อาคาร/เฟอร์นิเจอร์' %}selected{% endif %}>🚪 อาคารสถานที่ / เฟอร์นิเจอร์</option>
+                                <option value="อื่นๆ" {% if src and src.category=='อื่นๆ' %}selected{% endif %}>🔧 อื่นๆ</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label text-muted small fw-bold">ความเร่งด่วน <span class="text-danger">*</span></label>
                             <select class="form-select" name="urgency" required>
-                                <option value="ปกติ" {% if not edit_ticket or edit_ticket.urgency=='ปกติ' %}selected{% endif %}>🟢 ปกติ (ซ่อมตามคิว)</option>
-                                <option value="ด่วน" {% if edit_ticket and edit_ticket.urgency=='ด่วน' %}selected{% endif %}>🟡 ด่วน (รบกวนการทำงาน)</option>
-                                <option value="ด่วนมาก" {% if edit_ticket and edit_ticket.urgency=='ด่วนมาก' %}selected{% endif %}>🔴 ด่วนมาก (อันตราย / น้ำรั่วหนัก)</option>
+                                <option value="ปกติ" {% if not src or src.urgency=='ปกติ' %}selected{% endif %}>🟢 ปกติ (ซ่อมตามคิว)</option>
+                                <option value="ด่วน" {% if src and src.urgency=='ด่วน' %}selected{% endif %}>🟡 ด่วน (รบกวนการทำงาน)</option>
+                                <option value="ด่วนมาก" {% if src and src.urgency=='ด่วนมาก' %}selected{% endif %}>🔴 ด่วนมาก (อันตราย / น้ำรั่วหนัก)</option>
                             </select>
                         </div>
                     </div>
@@ -400,13 +400,13 @@
                             <label class="form-label text-muted small fw-bold">บริเวณ/สถานที่ <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="location"
                                    placeholder="เช่น อาคาร A ชั้น 2"
-                                   value="{{ edit_ticket.location if edit_ticket else '' }}" required>
+                                   value="{{ src.location if src else '' }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label text-muted small fw-bold">เบอร์ติดต่อกลับ <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="contact_number"
                                    placeholder="08X-XXX-XXXX"
-                                   value="{{ edit_ticket.contact_number if edit_ticket else '' }}" required>
+                                   value="{{ src.contact_number if src else '' }}" required>
                         </div>
                     </div>
 
@@ -414,7 +414,7 @@
                         <label class="form-label text-muted small fw-bold">ปัญหาที่พบ <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="subject"
                                placeholder="เช่น แอร์น้ำหยด, หลอดไฟขาด"
-                               value="{{ edit_ticket.subject if edit_ticket else '' }}" required>
+                               value="{{ src.subject if src else '' }}" required>
                     </div>
 
                     {% if not edit_ticket %}
@@ -611,6 +611,7 @@
 {# Jinja data bridge for JS (no inline script) #}
 <div id="pageData"
      data-edit-mode="{{ 'true' if edit_ticket else 'false' }}"
+     data-open-form="{{ 'true' if edit_ticket or (copy_ticket is defined and copy_ticket) or (open_new is defined and open_new) else 'false' }}"
      data-dt-lang="{{ url_for('static', filename='vendor/datatables/json/th.json') }}"
      class="d-none"></div>
 

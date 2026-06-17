@@ -8,7 +8,7 @@
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
@@ -41,131 +41,125 @@
                 {% endif %}
             {% endwith %}
 
-            {# ── Page Header ─────────────────────────────── #}
-             <div class=" fuel-header d-flex align-items-end justify-content-between flex-wrap gap-3 mb-2 pt-3">
-                <div>
-                    <h1 class="fuel-title">งบประมาณ</h1>
-                    <p class="fuel-subtitle">ภาพรวมงบประมาณกองกลางและงานกอง</p>
-                </div>
-                <div class="fuel-header-actions">
-                    <button type="button" class="vc-btn vc-btn-secondary"
-                            data-bs-toggle="modal" data-bs-target="#budgetRefundModal"
-                            title="ยกเลิกการจองที่อนุมัติแล้วแต่ยังไม่ปิดทริป">
-                        <i data-lucide="x-circle" class="vc-icon-sm"></i>
-                        ยกเลิกการจองที่ยังไม่ปิดทริป
-                    </button>
-                </div>
-            </div>
-
-            {# ── Phase 2 redesign (2026-05-22) — Summary card + inline filter ── #}
+            {# ── Summary card redesign (2026-06-15) — 2-col: เลขใหญ่ซ้าย · breakdown ขวา ──
+               filter ย้ายออกไป toolbar ใต้ tab. bar 3 สี (เขียว/เหลือง/แดง) ตามภาพ ref —
+               composition ค่าใช้จ่ายแยกหมวด: ส่วนกลาง / ส่วนกอง / ส่วนตัว
+            #}
             {% set pct = kpi.pct_of_cap %}
             {% set tone = 'danger' if pct >= 90 or kpi.total_remaining < 0
                          else 'warn' if pct >= 70
                          else 'ok' %}
-            <section class="vc-card budget-summary" aria-labelledby="budgetSummaryHeading">
-                <header class="budget-summary-head">
-                    <h2 id="budgetSummaryHeading" class="budget-summary-title">
-                        <i data-lucide="wallet" class="vc-icon-sm"></i>
-                        งบใช้ไป · {{ month_label }}
-                    </h2>
-                    {# Phase 3A (2026-05-22): filter inline ใน summary head #}
-                    <form method="GET" class="budget-summary-filter" id="filterForm">
-                        <select name="month" class="vc-filter-select budget-summary-filter-select" onchange="this.form.submit()" title="เลือกเดือน" data-dropdown>
-                            {% for m in range(1, 13) %}
-                            <option value="{{ m }}" {% if m == sel_month %}selected{% endif %}>{{ TH_MONTHS_FULL[m] }}</option>
-                            {% endfor %}
-                        </select>
-                        <select name="year" class="vc-filter-select budget-summary-filter-select" onchange="this.form.submit()" title="เลือกปี (พ.ศ.)" data-dropdown>
-                            {% for y in range(now.year - 1, now.year + 2) %}
-                            <option value="{{ y }}" {% if y == sel_year %}selected{% endif %}>{{ y + 543 }}</option>
-                            {% endfor %}
-                        </select>
-                        <noscript>
-                            <button type="submit" class="vc-btn vc-btn-secondary vc-btn">
-                                <i data-lucide="filter" class="vc-icon-sm"></i>
-                            </button>
-                        </noscript>
-                    </form>
-                </header>
+            {% set _cap = kpi.total_budget %}
+            {% set _rem = kpi.total_remaining if kpi.total_remaining > 0 else 0 %}
+            {% set c_w = (kpi.central_used / _cap * 100) if _cap > 0 else 0 %}
+            {% set d_w = (kpi.dept_used    / _cap * 100) if _cap > 0 else 0 %}
+            {% set p_w = (_rem             / _cap * 100) if _cap > 0 else 0 %}
+            <section class="budget-summary pt-5 " aria-labelledby="budgetSummaryHeading">
+                <div class="budget-summary-grid d-flex align-items-start justify-content-start gap-6">
+                    {# ── ซ้าย: เลขรวมใหญ่ ── #}
+                    <div class="budget-summary-main d-flex align-items-start justify-content-start gap-3">
+                        <span class="budget-summary-icon" aria-hidden="true">
+                            <i data-lucide="wallet" class="vc-icon-sm"></i>
+                        </span>
+                        <div class="budget-summary-main-text">
+                            <h2 id="budgetSummaryHeading" class="budget-summary-label">งบใช้ไป · {{ month_label }}</h2>
+                            <div class="budget-summary-amount">
+                                <h1 class="budget-summary-used vc-mono fw-bold">฿{{ '{:,.0f}'.format(kpi.total_used) }}</h1>
+                                <span class="budget-summary-sep">/</span>
+                                <span class="budget-summary-cap vc-mono">฿{{ '{:,.0f}'.format(kpi.total_budget) }}</span>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="budget-summary-amount">
-                    <span class="budget-summary-used vc-mono">฿{{ '{:,.0f}'.format(kpi.total_used) }}</span>
-                    <span class="budget-summary-sep">/</span>
-                    <span class="budget-summary-cap vc-mono">฿{{ '{:,.0f}'.format(kpi.total_budget) }}</span>
+                    <div class="budget-summary-divider" aria-hidden="true"></div>
+
+                    {# ── ขวา: composition bar + legend ── #}
+                    <div class="budget-summary-breakdown">
+                        <div class="budget-summary-bd-head">
+                            <span class="budget-summary-pct budget-summary-pct--{{ tone }}">{{ '{:.1f}'.format(pct) }}%</span>
+                            <span class="budget-summary-bd-label">ของเพดาน</span>
+                            <span class="budget-summary-meta-dot">·</span>
+                            {% if kpi.total_remaining < 0 %}
+                            <span class="budget-summary-remain budget-summary-remain--danger">เกินงบ ฿{{ '{:,.0f}'.format(-kpi.total_remaining) }}</span>
+                            {% else %}
+                            <span class="budget-summary-remain">เหลือ ฿{{ '{:,.0f}'.format(kpi.total_remaining) }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="budget-summary-stack" role="img"
+                             aria-label="สัดส่วนงบ: ส่วนกลาง {{ '{:.0f}'.format(c_w) }}% · ส่วนกอง {{ '{:.0f}'.format(d_w) }}% · คงเหลือ {{ '{:.0f}'.format(p_w) }}%">
+                            {% if c_w > 0 %}<span class="budget-summary-seg budget-summary-seg--central" style="width: {{ '{:.2f}'.format(c_w) }}%;" title="ส่วนกลาง ฿{{ '{:,.0f}'.format(kpi.central_used) }}"></span>{% endif %}
+                            {% if d_w > 0 %}<span class="budget-summary-seg budget-summary-seg--dept" style="width: {{ '{:.2f}'.format(d_w) }}%;" title="ส่วนกอง ฿{{ '{:,.0f}'.format(kpi.dept_used) }}"></span>{% endif %}
+                            {% if p_w > 0 %}<span class="budget-summary-seg budget-summary-seg--remain" style="width: {{ '{:.2f}'.format(p_w) }}%;" title="คงเหลือ ฿{{ '{:,.0f}'.format(_rem) }}"></span>{% endif %}
+                        </div>
+
+                        <ul class="budget-summary-legend">
+                            <li class="budget-summary-legend-item">
+                                <span class="budget-summary-legend-dot budget-summary-legend-dot--central"></span>
+                                ส่วนกลาง <span class="budget-summary-legend-val vc-mono">฿{{ '{:,.0f}'.format(kpi.central_used) }}</span>
+                            </li>
+                            <li class="budget-summary-legend-item">
+                                <span class="budget-summary-legend-dot budget-summary-legend-dot--dept"></span>
+                                ส่วนกอง <span class="budget-summary-legend-val vc-mono">฿{{ '{:,.0f}'.format(kpi.dept_used) }}</span>
+                            </li>
+                            <li class="budget-summary-legend-item">
+                                <span class="budget-summary-legend-dot budget-summary-legend-dot--remain"></span>
+                                คงเหลือ <span class="budget-summary-legend-val vc-mono">฿{{ '{:,.0f}'.format(_rem) }}</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-
-                {# 2026-06-08 redesign: stacked segment bar (storage-bar style) —
-                   track สีเทา = งบเหลือ, segment indigo = ส่วนกลาง/งานกอง ใช้ไป
-                   personal = แสดงใน legend แยก (เก็บจากผู้จอง ไม่ใช่เพดานงบ) #}
-                {% set _tb = kpi.total_budget %}
-                {% set c_w = (kpi.central_used / _tb * 100) if _tb > 0 else 0 %}
-                {% set d_w = (kpi.dept_used    / _tb * 100) if _tb > 0 else 0 %}
-                <div class="budget-summary-stack budget-summary-stack--{{ tone }}" role="img"
-                     aria-label="สัดส่วนงบใช้ไป: ส่วนกลาง {{ '{:.0f}'.format(c_w) }}% · งานกอง {{ '{:.0f}'.format(d_w) }}%">
-                    {% if c_w > 0 %}<span class="budget-summary-seg budget-summary-seg--central" style="width: {{ '{:.2f}'.format(c_w) }}%;" title="ส่วนกลางใช้ ฿{{ '{:,.0f}'.format(kpi.central_used) }}"></span>{% endif %}
-                    {% if d_w > 0 %}<span class="budget-summary-seg budget-summary-seg--dept" style="width: {{ '{:.2f}'.format(d_w) }}%;" title="งานกองใช้ ฿{{ '{:,.0f}'.format(kpi.dept_used) }}"></span>{% endif %}
-                </div>
-
-                <ul class="budget-summary-legend">
-                    <li class="budget-summary-legend-item">
-                        <span class="budget-summary-legend-dot budget-summary-legend-dot--central"></span>
-                        ส่วนกลาง <span class="budget-summary-legend-val vc-mono">฿{{ '{:,.0f}'.format(kpi.central_used) }}</span>
-                    </li>
-                    <li class="budget-summary-legend-item">
-                        <span class="budget-summary-legend-dot budget-summary-legend-dot--dept"></span>
-                        งานกอง <span class="budget-summary-legend-val vc-mono">฿{{ '{:,.0f}'.format(kpi.dept_used) }}</span>
-                    </li>
-                    <li class="budget-summary-legend-item">
-                        <span class="budget-summary-legend-dot budget-summary-legend-dot--free"></span>
-                        เหลือ <span class="budget-summary-legend-val vc-mono">฿{{ '{:,.0f}'.format(kpi.total_remaining if kpi.total_remaining > 0 else 0) }}</span>
-                    </li>
-                    {% if kpi.personal_received %}
-                    <li class="budget-summary-legend-item budget-summary-legend-item--aside"
-                        title="เก็บจากผู้จอง — แยกจากเพดานงบกลาง/กอง">
-                        <span class="budget-summary-legend-dot budget-summary-legend-dot--personal"></span>
-                        ส่วนตัว <span class="budget-summary-legend-val vc-mono">฿{{ '{:,.0f}'.format(kpi.personal_received) }}</span>
-                    </li>
-                    {% endif %}
-                </ul>
-
-                <p class="budget-summary-meta">
-                    <span class="budget-summary-pct budget-summary-pct--{{ tone }}">{{ '{:.1f}'.format(pct) }}%</span>
-                    <span class="budget-summary-meta-sep">ของเพดาน</span>
-                    <span class="budget-summary-meta-dot">·</span>
-                    {% if kpi.total_remaining < 0 %}
-                    <span class="budget-summary-remain budget-summary-remain--danger">
-                        เกินงบ ฿{{ '{:,.0f}'.format(-kpi.total_remaining) }}
-                    </span>
-                    {% else %}
-                    <span class="budget-summary-remain">เหลือ ฿{{ '{:,.0f}'.format(kpi.total_remaining) }}</span>
-                    {% endif %}
-                </p>
-
-                {# Critical signals footer — แสดงเฉพาะเมื่อมีอะไรต้องสนใจ #}
-                {% if kpi.total_pending_count or kpi.over_budget_count or kpi.personal_unpaid_count %}
-                <footer class="budget-summary-signals">
-                    {% if kpi.total_pending_count %}
-                    <span class="budget-summary-signal budget-summary-signal--warn" title="ทริปอนุมัติแล้วยังไม่ปิด — งบยังไม่ถูกหัก">
-                        <i data-lucide="clock" class="vc-icon-sm"></i>
-                        {{ kpi.total_pending_count }} ทริปรอปิด
-                    </span>
-                    {% endif %}
-                    {% if kpi.over_budget_count %}
-                    <span class="budget-summary-signal budget-summary-signal--danger" title="งบที่ใช้เกินเพดาน">
-                        <i data-lucide="alert-triangle" class="vc-icon-sm"></i>
-                        {{ kpi.over_budget_count }} งบเกินเพดาน
-                    </span>
-                    {% endif %}
-                    {% if kpi.personal_unpaid_count %}
-                    <span class="budget-summary-signal budget-summary-signal--warn" title="ผู้จองใช้รถส่วนตัวเสร็จแล้ว แต่ admin ยังไม่ได้กดรับเงิน">
-                        <i data-lucide="wallet" class="vc-icon-sm"></i>
-                        {{ kpi.personal_unpaid_count }} ส่วนตัวค้างรับเงิน
-                        <span class="budget-summary-signal-amount">฿{{ '{:,.0f}'.format(kpi.personal_unpaid_amount) }}</span>
-                    </span>
-                    {% endif %}
-                </footer>
-                {% endif %}
             </section>
+
+            {# ── Tab bar + toolbar บรรทัดเดียว (2026-06-17 redesign) ──
+               ซ้าย = tab underline (overflow-x auto) · ขวา = เลือกเดือน + ตั้งงบใหม่ (ไม่ย่อ)
+               tab "คลังงบ" ถูกตัด — งบไม่ active ย้ายไป section "ไม่ได้ใช้งาน" ใน central/dept
+            #}
+            <div class="budget-tabbar d-flex align-items-end justify-content-between gap-3">
+                <nav class="budget-tabs" role="tablist" aria-label="หมวดงบประมาณ">
+                    <button type="button" class="budget-tab is-active" data-budget-tab="pivot" role="tab" aria-selected="true">
+                        <i data-lucide="grid-3x3" class="vc-icon-sm"></i> ตารางรวม
+                    </button>
+                    <button type="button" class="budget-tab" data-budget-tab="central" role="tab" aria-selected="false">
+                        <i data-lucide="landmark" class="vc-icon-sm"></i> ส่วนกลาง
+                    </button>
+                    <button type="button" class="budget-tab" data-budget-tab="dept" role="tab" aria-selected="false">
+                        <i data-lucide="users" class="vc-icon-sm"></i> ส่วนกอง
+                    </button>
+                    <button type="button" class="budget-tab" data-budget-tab="personal" role="tab" aria-selected="false">
+                        <i data-lucide="hand-coins" class="vc-icon-sm"></i> ส่วนตัว
+                    </button>
+                </nav>
+
+                <div class="budget-toolbar d-flex align-items-center gap-2 flex-shrink-0">
+                    <div class="vc-dropdown">
+                        <button type="button" class="vc-btn vc-btn-secondary vc-btn" data-dropdown-trigger
+                                aria-label="เลือกเดือน" title="เลือกเดือนที่ต้องการดู">
+                            <i data-lucide="calendar" class="vc-icon-sm"></i>
+                            <span>{{ month_label }}</span>
+                        </button>
+                        <div class="vc-dropdown-menu budget-month-menu">
+                            {% for (m, y) in pivot.fiscal_months %}
+                            <a class="vc-dropdown-item{% if m == sel_month and y == sel_year %} is-active{% endif %}"
+                               href="{{ url_for('adminfleet.budget_manage', year=y, month=m) }}">
+                                {{ TH_MONTHS[m] }} {{ y + 543 }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button type="button" class="vc-btn vc-btn-primary vc-btn"
+                            data-bs-toggle="modal" data-bs-target="#setBudgetModal"
+                            data-budget-type="department" data-dept="" data-amount=""
+                            data-approver="" data-start="" data-end=""
+                            title="ตั้งงบประมาณใหม่">
+                        <i data-lucide="plus" class="vc-icon-sm"></i> ตั้งงบ
+                    </button>
+                </div>
+            </div>
+
+            {# ── Tab panels ── #}
+            <div class="budget-panels">
+            <section class="budget-panel is-active" id="tabPanelPivot" data-budget-panel="pivot" role="tabpanel">
 
             {# ── Phase 2 redesign (2026-05-22) — Pivot รวม 3 section ใน details เดียว ────
                (Phase 7 เดิม: 2 details แยก central / dept) → 1 details, 3 tbody section
@@ -218,14 +212,6 @@
 
             {% set s = pivot.summary %}
             <section class="vc-card budget-pivot-card" id="pivotAllDetails" aria-labelledby="pivotHeading">
-                <header class="budget-pivot-head py-3 px-2 ps-4">
-                    <h2 id="pivotHeading" class="budget-pivot-title">
-                        <i data-lucide="grid-3x3" class="vc-icon-sm"></i>
-                        งบใช้ไป × เดือน · ปีงบ {{ fy_label_th }}
-                    </h2>
-                    <span class="budget-pivot-hint">กดแต่ละหมวดเพื่อดูรายเดือน</span>
-                </header>
-
                 {% if pivot.central or pivot.dept or pivot.personal %}
                 <div class="budget-pivot-rows">
                     {# ── ส่วนกลาง ── #}
@@ -300,8 +286,8 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td class="vc-pivot-td-sticky">ค่าน้ำมัน</td>
+                                    <tr class="vc-pivot-row-summary">
+                                        <td class="vc-pivot-td-sticky">รวมทั้งหมด</td>
                                         {% for (m, y) in pivot.fiscal_months %}
                                         {% set cv = pivot.personal.get(m, 0) %}
                                         {% if cv > 0 %}
@@ -317,6 +303,24 @@
                                         {% endfor %}
                                         <td class="text-end vc-pivot-total-col vc-mono">{{ '{:,.0f}'.format(s.personal.used) }}</td>
                                     </tr>
+                                    {% for uid, urow in pivot.personal_by_user.items() %}
+                                    {% set utotal = urow.values()|sum %}
+                                    <tr>
+                                        <td class="vc-pivot-td-sticky vc-pivot-td-sub">{{ pivot.personal_user_labels.get(uid, uid) }}</td>
+                                        {% for (m, y) in pivot.fiscal_months %}
+                                        {% set cv = urow.get(m, 0) %}
+                                        {% if cv > 0 %}
+                                        {% set heat = (cv / pivot.personal_max * 100)|int if pivot.personal_max else 0 %}
+                                        <td class="text-end vc-pivot-cell" style="--cell-heat:{{ heat }};">
+                                            <span class="vc-mono">{{ '{:,.0f}'.format(cv) }}</span>
+                                        </td>
+                                        {% else %}
+                                        <td class="text-end vc-pivot-cell-empty">—</td>
+                                        {% endif %}
+                                        {% endfor %}
+                                        <td class="text-end vc-pivot-total-col vc-mono">{{ '{:,.0f}'.format(utotal) }}</td>
+                                    </tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>
@@ -329,364 +333,207 @@
                 </div>
                 {% endif %}
             </section>
+            </section>{# /tabPanelPivot #}
 
             {# ════════════════════════════════════════════ #}
-            {# Phase 3 redesign (2026-05-22) — 3 sections plain (ไม่ collapsible)
-               แต่ละ section = header bar (label + stats + actions) + table โดยตรง.
-               ไม่มี <details>/chevron — table แสดงเสมอ (flat layout).
+            {# Card layout redesign (2026-06-17) — central/dept = card grid แบ่ง 2 section
+               (ใช้งานอยู่ = central_budgets · ไม่ได้ใช้งาน = archived_budgets filter budget_type).
+               2 macro reuse: budget_card (active, full dropdown) + budget_card_off (inactive, ปุ่มเปิดใช้งาน)
             #}
-            {# ── Section 1: งบประมาณส่วนกลาง ── #}
-            <section class="budget-section" id="sectionCentral">
-                <header class="budget-section-head">
-                    <span class="budget-section-label">
-                        <span class="budget-section-title">งานส่วนกลาง</span>
-                        <span class="budget-section-count">{{ central_budgets|length }} แผนก</span>
-                        {% if kpi.central_pending_count %}
-                        <span class="vc-badge vc-badge-warning vc-badge-dot">
-                            {{ kpi.central_pending_count }} รอปิด
-                        </span>
-                        {% endif %}
-                    </span>
-                    <div class="budget-section-actions">
-                        <button type="button" class="vc-btn vc-btn-primary vc-btn"
-                                data-bs-toggle="modal" data-bs-target="#setBudgetModal"
-                                data-budget-type="central"
-                                title="ตั้งงบส่วนกลางใหม่">
-                            <i data-lucide="plus" class="vc-icon-sm"></i>
-                            ตั้งงบส่วนกลาง
+            {% macro budget_card(b, btype, icon) %}
+            {% set pct_cls = 'is-danger' if b.pct >= 90 else ('is-warn' if b.pct >= 70 else 'is-ok') %}
+            <div class="bcard{% if not b.is_active %} bcard--off{% endif %}">
+                <div class="bcard-head d-flex align-items-start gap-3">
+                    <span class="bcard-icon"><i data-lucide="{{ icon }}" class="vc-icon-sm"></i></span>
+                    <div class="bcard-id flex-grow-1">
+                        <div class="bcard-name">{{ b.department }}</div>
+                        <div class="bcard-amount vc-mono">
+                            ฿{{ '{:,.0f}'.format(b.used_amount) }}<span class="bcard-amount-cap">/{{ '{:,.0f}'.format(b.budget_amount) }}</span>
+                            <span class="bcard-pct {{ pct_cls }}">({{ '{:.0f}'.format(b.pct) }}%)</span>
+                        </div>
+                    </div>
+                    <div class="vc-dropdown bcard-menu">
+                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn"
+                                data-dropdown-trigger aria-label="เมนูจัดการ" title="เมนูจัดการ">
+                            <i data-lucide="more-horizontal" class="vc-icon-sm"></i>
                         </button>
+                        <div class="vc-dropdown-menu">
+                            <button type="button" class="vc-dropdown-item" data-dropdown-close
+                                    data-bs-toggle="modal" data-bs-target="#setBudgetModal"
+                                    data-budget-type="{{ 'central' if btype == 'central' else 'department' }}"
+                                    data-dept="{{ b.department }}" data-amount="{{ b.budget_amount }}"
+                                    data-approver="{{ '' if btype == 'central' else (b.approver_id or '') }}"
+                                    data-start="{{ b.start_date }}" data-end="{{ b.end_date }}"
+                                    title="แก้เพดานงบ">
+                                <i data-lucide="pencil" class="vc-icon-sm"></i> แก้เพดานงบ
+                            </button>
+                            <button type="button" class="vc-dropdown-item" data-dropdown-close
+                                    data-bs-toggle="modal" data-bs-target="#budgetTopUpModal"
+                                    data-bid="{{ b.id }}" data-dept="{{ b.department }}" data-amount="{{ b.budget_amount }}"
+                                    title="เพิ่มงบ (top-up)">
+                                <i data-lucide="plus-circle" class="vc-icon-sm"></i> เพิ่มงบ (top-up)
+                            </button>
+                            <button type="button" class="vc-dropdown-item" data-dropdown-close
+                                    data-bs-toggle="modal" data-bs-target="#budgetAdjustModal"
+                                    data-bid="{{ b.id }}" data-dept="{{ b.department }}" data-used="{{ b.used_amount }}"
+                                    title="ปรับยอดใช้ไป">
+                                <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i> ปรับยอดใช้ไป
+                            </button>
+                            <div class="vc-dropdown-divider"></div>
+                            <form method="POST" class="vc-dropdown-form" data-confirm-toggle
+                                  data-dept-name="{{ b.department }}" data-to-active="0">
+                                <input type="hidden" name="action"    value="toggle_active">
+                                <input type="hidden" name="year"      value="{{ sel_year }}">
+                                <input type="hidden" name="month"     value="{{ sel_month }}">
+                                <input type="hidden" name="budget_id" value="{{ b.id }}">
+                                <input type="hidden" name="to_active" value="0">
+                                <button type="submit" class="vc-dropdown-item is-danger" data-dropdown-close
+                                        title="ปิดใช้งานงบนี้ — booking ใหม่จะถูกบล็อก">
+                                    <i data-lucide="power-off" class="vc-icon-sm"></i> ปิดใช้งานงบนี้
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </header>
-
-            {% if central_budgets %}
-            <div class="budget-table-wrap">
-                <table class="vc-table budget-table">
-                    <thead>
-                        <tr>
-                            <th>หมวด</th>
-                            <th class="text-end">เพดาน</th>
-                            <th class="text-end">ใช้ไป</th>
-                            <th class="text-end">คงเหลือ</th>
-                            <th></th>
-                            <th style="width: 44px;"></th>
-                            <th style="width: 44px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for b in central_budgets %}
-                        {% set pct_cls = 'is-danger' if b.pct >= 90 else ('is-warn' if b.pct >= 70 else '') %}
-                        {% set rem_cls = 'is-danger' if b.remaining < 0 else ('is-warn' if b.pct >= 70 else 'is-success') %}
-                        <tr class="budget-row{% if not b.is_active %} budget-row--inactive{% endif %}" style="--bm-delay: {{ loop.index0 * 30 }}ms">
-                            <td>
-                                <span class="budget-row-name">{{ b.department }}</span>
-                                {% if b.start_date or b.end_date %}
-                                <span class="budget-row-sub">
-                                    {{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}
-                                </span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end vc-mono">฿{{ '{:,.0f}'.format(b.budget_amount) }}</td>
-                            <td class="text-end vc-mono">
-                                <span class="budget-row-used {{ pct_cls }}">฿{{ '{:,.0f}'.format(b.used_amount) }}</span>
-                                <span class="budget-row-pct-inline {{ pct_cls }}">({{ '{:.1f}'.format(b.pct) }}%)</span>
-                            </td>
-                            <td class="text-end vc-mono {{ rem_cls }}">
-                                {% if b.remaining < 0 %}
-                                <span class="budget-row-rem-over">
-                                    <i data-lucide="alert-triangle" class="vc-icon-sm"></i>
-                                    -฿{{ '{:,.0f}'.format(-b.remaining) }}
-                                </span>
-                                {% else %}
-                                ฿{{ '{:,.0f}'.format(b.remaining) }}
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="budget-row-tags">
-                                    {% if not b.is_active %}
-                                    <span class="vc-badge vc-badge-neutral vc-badge-dot" title="งบนี้ถูกปิดใช้งาน — booking ใหม่จะถูกบล็อก">
-                                        <i data-lucide="power-off" class="vc-icon-sm"></i>
-                                        ปิดใช้งาน
-                                    </span>
-                                    {% endif %}
-                                    {% if b.pending_count %}
-                                    <span class="vc-badge vc-badge-warning" title="ทริปอนุมัติแล้วยังไม่ปิด">
-                                        <i data-lucide="clock" class="vc-icon-sm"></i>
-                                        {{ b.pending_count }} รอปิด
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="text-end">
-                                <form method="POST" class="vc-dropdown-form budget-bin-form" data-confirm-toggle
-                                      data-dept-name="{{ b.department }}" data-to-active="0">
-                                    <input type="hidden" name="action"    value="toggle_active">
-                                    <input type="hidden" name="year"      value="{{ sel_year }}">
-                                    <input type="hidden" name="month"     value="{{ sel_month }}">
-                                    <input type="hidden" name="budget_id" value="{{ b.id }}">
-                                    <input type="hidden" name="to_active" value="0">
-                                    <button type="submit" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn budget-bin-btn"
-                                            title="ปิดใช้งานงบนี้ — ย้ายไปคลังงบ (booking ใหม่ถูกบล็อก)"
-                                            aria-label="ปิดใช้งานงบนี้">
-                                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
-                                    </button>
-                                </form>
-                            </td>
-                            <td class="text-end">
-                                <div class="vc-dropdown">
-                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn"
-                                            data-dropdown-trigger aria-label="เมนูจัดการ" title="เมนูจัดการ">
-                                        <i data-lucide="more-horizontal" class="vc-icon-sm"></i>
-                                    </button>
-                                    <div class="vc-dropdown-menu">
-                                        <button type="button" class="vc-dropdown-item" data-dropdown-close
-                                                data-bs-toggle="modal" data-bs-target="#setBudgetModal"
-                                                data-budget-type="central"
-                                                data-dept="{{ b.department }}"
-                                                data-amount="{{ b.budget_amount }}"
-                                                data-approver=""
-                                                data-start="{{ b.start_date }}"
-                                                data-end="{{ b.end_date }}"
-                                                title="แก้เพดานงบ">
-                                            <i data-lucide="pencil" class="vc-icon-sm"></i> แก้เพดานงบ
-                                        </button>
-                                        <button type="button" class="vc-dropdown-item" data-dropdown-close
-                                                data-bs-toggle="modal" data-bs-target="#budgetTopUpModal"
-                                                data-bid="{{ b.id }}"
-                                                data-dept="{{ b.department }}"
-                                                data-amount="{{ b.budget_amount }}"
-                                                title="เพิ่มงบ (top-up)">
-                                            <i data-lucide="plus-circle" class="vc-icon-sm"></i> เพิ่มงบ (top-up)
-                                        </button>
-                                        <button type="button" class="vc-dropdown-item" data-dropdown-close
-                                                data-bs-toggle="modal" data-bs-target="#budgetAdjustModal"
-                                                data-bid="{{ b.id }}"
-                                                data-dept="{{ b.department }}"
-                                                data-used="{{ b.used_amount }}"
-                                                title="ปรับยอดใช้ไป">
-                                            <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i> ปรับยอดใช้ไป
-                                        </button>
-                                        <div class="vc-dropdown-divider"></div>
-                                        <form method="POST" class="vc-dropdown-form"
-                                              data-confirm-toggle
-                                              data-dept-name="{{ b.department }}"
-                                              data-to-active="{{ '0' if b.is_active else '1' }}">
-                                            <input type="hidden" name="action"    value="toggle_active">
-                                            <input type="hidden" name="year"      value="{{ sel_year }}">
-                                            <input type="hidden" name="month"     value="{{ sel_month }}">
-                                            <input type="hidden" name="budget_id" value="{{ b.id }}">
-                                            <input type="hidden" name="to_active" value="{{ '0' if b.is_active else '1' }}">
-                                            <button type="submit" class="vc-dropdown-item {% if b.is_active %}is-danger{% endif %}"
-                                                    data-dropdown-close
-                                                    title="{{ 'ปิดใช้งานงบนี้ — booking ใหม่จะถูกบล็อก' if b.is_active else 'เปิดใช้งานงบนี้กลับมา' }}">
-                                                {% if b.is_active %}
-                                                <i data-lucide="power-off" class="vc-icon-sm"></i> ปิดใช้งานงบนี้
-                                                {% else %}
-                                                <i data-lucide="power" class="vc-icon-sm"></i> เปิดใช้งานงบนี้
-                                                {% endif %}
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="vc-card budget-empty-block">
-                <div class="vc-empty">
-                    <div class="vc-empty-icon">
-                        <i data-lucide="landmark" class="budget-empty-icon"></i>
-                    </div>
-                    <p class="vc-empty-title">ยังไม่มีงบส่วนกลาง</p>
-                    <p class="vc-empty-desc">กดปุ่ม "ตั้งงบส่วนกลาง" ด้านบนเพื่อเริ่มต้น</p>
+                </div>
+                <div class="bcard-divider"></div>
+                <div class="bcard-meta">
+                    <span class="bcard-meta-row">
+                        : ตั้งแต่วันที่ {{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}
+                    </span>
+                    {% if btype == 'dept' %}
+                    {% if b.approver_name %}
+                    <span class="bcard-meta-row">
+                        : {{ b.approver_name }} <span class="bcard-meta-faint">(ผู้อนุมัติงบ)</span>
+                    </span>
+                    {% else %}
+                    <button type="button" class="bcard-meta-row bcard-meta-missing"
+                            data-bs-toggle="modal" data-bs-target="#setBudgetModal"
+                            data-budget-type="department" data-dept="{{ b.department }}"
+                            data-amount="{{ b.budget_amount }}" data-approver=""
+                            data-start="{{ b.start_date }}" data-end="{{ b.end_date }}"
+                            title="กดเพื่อกำหนดผู้อนุมัติ">
+                        <i data-lucide="alert-circle" class="vc-icon-sm"></i> ยังไม่มีผู้อนุมัติ
+                    </button>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
+            {% endmacro %}
+
+            {% macro budget_card_off(b, icon) %}
+            {% set _pct = (b.used_amount / b.budget_amount * 100) if b.budget_amount else 0 %}
+            <div class="bcard bcard--off">
+                <div class="bcard-head d-flex align-items-start gap-3">
+                    <span class="bcard-icon"><i data-lucide="{{ icon }}" class="vc-icon-sm"></i></span>
+                    <div class="bcard-id flex-grow-1">
+                        <div class="bcard-name">{{ b.department }}</div>
+                        <div class="bcard-amount vc-mono">
+                            ฿{{ '{:,.0f}'.format(b.used_amount) }}<span class="bcard-amount-cap">/{{ '{:,.0f}'.format(b.budget_amount) }}</span>
+                            <span class="bcard-pct">({{ '{:.0f}'.format(_pct) }}%)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="vc-btn vc-btn-secondary vc-btn bcard-activate"
+                            data-bs-toggle="modal" data-bs-target="#extendBudgetModal"
+                            data-bid="{{ b.id }}" data-dept="{{ b.department }}"
+                            data-start="{{ b.start_date }}" data-end="{{ b.end_date }}"
+                            title="ตั้งช่วงเวลาใหม่ + เปิดใช้งานงบ">
+                        เปิดการใช้งาน
+                    </button>
+                </div>
+                <div class="bcard-divider"></div>
+                <div class="bcard-meta">
+                    <span class="bcard-meta-row">
+                        : ตั้งแต่วันที่ {{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}
+                    </span>
+                </div>
+            </div>
+            {% endmacro %}
+
+            {% set central_off = archived_budgets|selectattr('budget_type', 'equalto', 'central')|list %}
+            {% set dept_off    = archived_budgets|rejectattr('budget_type', 'equalto', 'central')|list %}
+
+            {# ── Section 1: งบประมาณส่วนกลาง ── #}
+            <section class="budget-panel" id="tabPanelCentral" data-budget-panel="central" role="tabpanel" hidden>
+            <section class="budget-section" id="sectionCentral">
+
+                {% if central_budgets %}
+                <div class="bcard-section-head">
+                    <span class="bcard-section-dot bcard-section-dot--on"></span>
+                    <span class="bcard-section-label">ใช้งานอยู่</span>
+                    <span class="bcard-section-count">{{ central_budgets|length }}</span>
+                    {% if kpi.central_pending_count %}
+                    <span class="vc-badge vc-badge-warning vc-badge-dot ms-1">{{ kpi.central_pending_count }} รอปิด</span>
+                    {% endif %}
+                    <span class="bcard-section-line"></span>
+                </div>
+                <div class="bcard-grid">
+                    {% for b in central_budgets %}{{ budget_card(b, 'central', 'landmark') }}{% endfor %}
+                </div>
+                {% else %}
+                <div class="vc-card budget-empty-block">
+                    <div class="vc-empty">
+                        <div class="vc-empty-icon"><i data-lucide="landmark" class="budget-empty-icon"></i></div>
+                        <p class="vc-empty-title">ยังไม่มีงบส่วนกลาง</p>
+                        <p class="vc-empty-desc">กดปุ่ม "ตั้งงบใหม่" ด้านบนเพื่อเริ่มต้น</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if central_off %}
+                <div class="bcard-section-head bcard-section-head--off">
+                    <span class="bcard-section-dot bcard-section-dot--off"></span>
+                    <span class="bcard-section-label">ไม่ได้ใช้งาน</span>
+                    <span class="bcard-section-count">{{ central_off|length }}</span>
+                    <span class="bcard-section-line"></span>
+                </div>
+                <div class="bcard-grid">
+                    {% for b in central_off %}{{ budget_card_off(b, 'landmark') }}{% endfor %}
+                </div>
+                {% endif %}
+
             </section>
+            </section>{# /tabPanelCentral #}
 
             {# ── Section 2: งบประมาณงานกอง ── #}
+            <section class="budget-panel" id="tabPanelDept" data-budget-panel="dept" role="tabpanel" hidden>
             <section class="budget-section" id="sectionDept">
-                <header class="budget-section-head">
-                    <span class="budget-section-label">
-                        <span class="budget-section-title">งานส่วนกอง</span>
-                        <span class="budget-section-count">{{ dept_budgets|length }} กอง</span>
-                    </span>
-                    <div class="budget-section-actions">
-                        <button type="button" class="vc-btn vc-btn-primary vc-btn"
-                                data-bs-toggle="modal" data-bs-target="#setBudgetModal"
-                                data-budget-type="department"
-                                title="ตั้งงบกองใหม่">
-                            <i data-lucide="plus" class="vc-icon-sm"></i>
-                            ตั้งงบกอง
-                        </button>
-                    </div>
-                </header>
 
-            {% if dept_budgets %}
-            <div class="budget-table-wrap">
-                <table class="vc-table budget-table">
-                    <thead>
-                        <tr>
-                            <th>กอง</th>
-                            <th class="text-end">เพดาน</th>
-                            <th class="text-end">ใช้ไป</th>
-                            <th class="text-end">คงเหลือ</th>
-                            <th></th>
-                            <th style="width: 44px;"></th>
-                            <th style="width: 44px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for b in dept_budgets %}
-                        {% set pct_cls = 'is-danger' if b.pct >= 90 else ('is-warn' if b.pct >= 70 else '') %}
-                        {% set rem_cls = 'is-danger' if b.remaining < 0 else ('is-warn' if b.pct >= 70 else 'is-success') %}
-                        <tr class="budget-row{% if not b.is_active %} budget-row--inactive{% endif %}" style="--bm-delay: {{ loop.index0 * 30 }}ms">
-                            <td>
-                                <span class="budget-row-name">
-                                    {{ b.department }}
-                                </span>
-                                {% if b.start_date or b.end_date %}
-                                <span class="budget-row-sub">
-                                    {{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}
-                                </span>
-                                {% endif %}
-                                {% if b.approver_name %}
-                                <span class="budget-row-sub budget-row-sub--approver">
-                                    <i data-lucide="user" class="vc-icon-sm"></i>
-                                    {{ b.approver_name }}
-                                </span>
-                                {% else %}
-                                <button type="button" class="budget-row-sub budget-row-sub--approver-missing"
-                                        data-bs-toggle="modal" data-bs-target="#setBudgetModal"
-                                        data-budget-type="department"
-                                        data-dept="{{ b.department }}"
-                                        data-amount="{{ b.budget_amount }}"
-                                        data-approver=""
-                                        data-start="{{ b.start_date }}"
-                                        data-end="{{ b.end_date }}"
-                                        title="กดเพื่อกำหนดผู้อนุมัติ">
-                                    <i data-lucide="alert-circle" class="vc-icon-sm"></i>
-                                    ยังไม่มีผู้อนุมัติ
-                                </button>
-                                {% endif %}
-                            </td>
-                            <td class="text-end vc-mono">฿{{ '{:,.0f}'.format(b.budget_amount) }}</td>
-                            <td class="text-end vc-mono">
-                                <span class="budget-row-used {{ pct_cls }}">฿{{ '{:,.0f}'.format(b.used_amount) }}</span>
-                                <span class="budget-row-pct-inline {{ pct_cls }}">({{ '{:.1f}'.format(b.pct) }}%)</span>
-                            </td>
-                            <td class="text-end vc-mono {{ rem_cls }}">
-                                {% if b.remaining < 0 %}
-                                <span class="budget-row-rem-over">
-                                    <i data-lucide="alert-triangle" class="vc-icon-sm"></i>
-                                    -฿{{ '{:,.0f}'.format(-b.remaining) }}
-                                </span>
-                                {% else %}
-                                ฿{{ '{:,.0f}'.format(b.remaining) }}
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="budget-row-tags">
-                                    {% if not b.is_active %}
-                                    <span class="vc-badge vc-badge-neutral vc-badge-dot" title="งบนี้ถูกปิดใช้งาน — booking ใหม่จะถูกบล็อก">
-                                        <i data-lucide="power-off" class="vc-icon-sm"></i>
-                                        ปิดใช้งาน
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="text-end">
-                                <form method="POST" class="vc-dropdown-form budget-bin-form" data-confirm-toggle
-                                      data-dept-name="{{ b.department }}" data-to-active="0">
-                                    <input type="hidden" name="action"    value="toggle_active">
-                                    <input type="hidden" name="year"      value="{{ sel_year }}">
-                                    <input type="hidden" name="month"     value="{{ sel_month }}">
-                                    <input type="hidden" name="budget_id" value="{{ b.id }}">
-                                    <input type="hidden" name="to_active" value="0">
-                                    <button type="submit" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn budget-bin-btn"
-                                            title="ปิดใช้งานงบนี้ — ย้ายไปคลังงบ (booking ใหม่ถูกบล็อก)"
-                                            aria-label="ปิดใช้งานงบนี้">
-                                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
-                                    </button>
-                                </form>
-                            </td>
-                            <td class="text-end">
-                                <div class="vc-dropdown">
-                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn"
-                                            data-dropdown-trigger aria-label="เมนูจัดการ" title="เมนูจัดการ">
-                                        <i data-lucide="more-horizontal" class="vc-icon-sm"></i>
-                                    </button>
-                                    <div class="vc-dropdown-menu">
-                                        <button type="button" class="vc-dropdown-item" data-dropdown-close
-                                                data-bs-toggle="modal" data-bs-target="#setBudgetModal"
-                                                data-budget-type="department"
-                                                data-dept="{{ b.department }}"
-                                                data-amount="{{ b.budget_amount }}"
-                                                data-approver="{{ b.approver_id or '' }}"
-                                                data-start="{{ b.start_date }}"
-                                                data-end="{{ b.end_date }}"
-                                                title="แก้เพดานงบ">
-                                            <i data-lucide="pencil" class="vc-icon-sm"></i> แก้เพดานงบ
-                                        </button>
-                                        <button type="button" class="vc-dropdown-item" data-dropdown-close
-                                                data-bs-toggle="modal" data-bs-target="#budgetTopUpModal"
-                                                data-bid="{{ b.id }}"
-                                                data-dept="{{ b.department }}"
-                                                data-amount="{{ b.budget_amount }}"
-                                                title="เพิ่มงบ (top-up)">
-                                            <i data-lucide="plus-circle" class="vc-icon-sm"></i> เพิ่มงบ (top-up)
-                                        </button>
-                                        <button type="button" class="vc-dropdown-item" data-dropdown-close
-                                                data-bs-toggle="modal" data-bs-target="#budgetAdjustModal"
-                                                data-bid="{{ b.id }}"
-                                                data-dept="{{ b.department }}"
-                                                data-used="{{ b.used_amount }}"
-                                                title="ปรับยอดใช้ไป">
-                                            <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i> ปรับยอดใช้ไป
-                                        </button>
-                                        <div class="vc-dropdown-divider"></div>
-                                        <form method="POST" class="vc-dropdown-form"
-                                              data-confirm-toggle
-                                              data-dept-name="{{ b.department }}"
-                                              data-to-active="{{ '0' if b.is_active else '1' }}">
-                                            <input type="hidden" name="action"    value="toggle_active">
-                                            <input type="hidden" name="year"      value="{{ sel_year }}">
-                                            <input type="hidden" name="month"     value="{{ sel_month }}">
-                                            <input type="hidden" name="budget_id" value="{{ b.id }}">
-                                            <input type="hidden" name="to_active" value="{{ '0' if b.is_active else '1' }}">
-                                            <button type="submit" class="vc-dropdown-item {% if b.is_active %}is-danger{% endif %}"
-                                                    data-dropdown-close
-                                                    title="{{ 'ปิดใช้งานงบนี้ — booking ใหม่จะถูกบล็อก' if b.is_active else 'เปิดใช้งานงบนี้กลับมา' }}">
-                                                {% if b.is_active %}
-                                                <i data-lucide="power-off" class="vc-icon-sm"></i> ปิดใช้งานงบนี้
-                                                {% else %}
-                                                <i data-lucide="power" class="vc-icon-sm"></i> เปิดใช้งานงบนี้
-                                                {% endif %}
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="vc-card budget-empty-block">
-                <div class="vc-empty">
-                    <div class="vc-empty-icon">
-                        <i data-lucide="users" class="budget-empty-icon"></i>
-                    </div>
-                    <p class="vc-empty-title">ยังไม่มีงบงานกอง</p>
-                    <p class="vc-empty-desc">กดปุ่ม "ตั้งงบกอง" ด้านบนเพื่อเริ่มต้น</p>
+                {% if dept_budgets %}
+                <div class="bcard-section-head">
+                    <span class="bcard-section-dot bcard-section-dot--on"></span>
+                    <span class="bcard-section-label">ใช้งานอยู่</span>
+                    <span class="bcard-section-count">{{ dept_budgets|length }}</span>
+                    <span class="bcard-section-line"></span>
                 </div>
-            </div>
-            {% endif %}
-            </section>
+                <div class="bcard-grid">
+                    {% for b in dept_budgets %}{{ budget_card(b, 'dept', 'users') }}{% endfor %}
+                </div>
+                {% else %}
+                <div class="vc-card budget-empty-block">
+                    <div class="vc-empty">
+                        <div class="vc-empty-icon"><i data-lucide="users" class="budget-empty-icon"></i></div>
+                        <p class="vc-empty-title">ยังไม่มีงบงานกอง</p>
+                        <p class="vc-empty-desc">กดปุ่ม "ตั้งงบใหม่" ด้านบนเพื่อเริ่มต้น</p>
+                    </div>
+                </div>
+                {% endif %}
 
+                {% if dept_off %}
+                <div class="bcard-section-head bcard-section-head--off">
+                    <span class="bcard-section-dot bcard-section-dot--off"></span>
+                    <span class="bcard-section-label">ไม่ได้ใช้งาน</span>
+                    <span class="bcard-section-count">{{ dept_off|length }}</span>
+                    <span class="bcard-section-line"></span>
+                </div>
+                <div class="bcard-grid">
+                    {% for b in dept_off %}{{ budget_card_off(b, 'users') }}{% endfor %}
+                </div>
+                {% endif %}
+
+            </section>
+            </section>{# /tabPanelDept #}
+
+            <section class="budget-panel" id="tabPanelPersonal" data-budget-panel="personal" role="tabpanel" hidden>
             {# ── Section 3: งบส่วนตัว (เก็บจากผู้จอง) ──
                รอบ 1: link ไปหน้า /admin/budget/personal เพื่อจัดการ.
                รอบ 2 (Phase 2E): embed table mileage + ปุ่ม "รับเงินแล้ว" inline.
@@ -724,15 +571,15 @@
                 </div>
 
                 <div class="budget-table-wrap">
-                    <table class="vc-table budget-table budget-table--personal">
+                    <table class="vc-table budget-table budget-table--personal" data-sortable-table>
                         <thead>
                             <tr>
-                                <th>วันที่ปิดทริป</th>
-                                <th>BK</th>
-                                <th>ผู้จอง</th>
-                                <th>ปลายทาง</th>
-                                <th class="text-end">ค่าน้ำมัน</th>
-                                <th class="text-end" style="width: 160px;">สถานะ</th>
+                                <th data-sort="text">วันที่ปิดทริป</th>
+                                <th data-sort="text">BK</th>
+                                <th data-sort="text">ผู้จอง</th>
+                                <th data-sort="text">ปลายทาง</th>
+                                <th class="text-end" data-sort="num">ค่าน้ำมัน</th>
+                                <th class="text-end" style="width: 160px;" data-sort="text">สถานะ</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -792,100 +639,11 @@
                 </div>
                 {% endif %}
             </section>
+            </section>{# /tabPanelPersonal #}
 
-            {# ── Section 4: คลังงบ (หมดช่วง / ปิดใช้งาน) ──
-               งบช่วงเวลา (2026-06-06): งบที่ไม่ active ในเดือนที่เลือก (ปิด/หมดช่วง/ยังไม่เริ่ม/ไม่มีช่วง)
-               กด "เพิ่มเวลา" → ตั้งช่วง start–end ใหม่ + เปิด is_active → กลับขึ้น section บน
-            #}
-            <section class="budget-section" id="sectionArchived">
-                <header class="budget-section-head">
-                    <span class="budget-section-label">
-                        <span class="budget-section-title">คลังงบ</span>
-                        <span class="budget-section-count">{{ archived_budgets|length }} งบ</span>
-                    </span>
-                    <span class="budget-section-stats">
-                        <span class="budget-section-amount" style="color:var(--vc-fg-subtle); font-weight:400;">
-                            งบที่ไม่ได้เปิดใช้งาน — กด "เพิ่มเวลา" เพื่อนำกลับมาใช้
-                        </span>
-                    </span>
-                </header>
-
-            {% if archived_budgets %}
-            <div class="budget-table-wrap">
-                <table class="vc-table budget-table">
-                    <thead>
-                        <tr>
-                            <th>งบ</th>
-                            <th>ประเภท</th>
-                            <th class="text-end">เพดาน</th>
-                            <th class="text-end">ใช้ไป</th>
-                            <th>ช่วงเวลาเดิม</th>
-                            <th>สถานะ</th>
-                            <th style="width: 44px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for b in archived_budgets %}
-                        <tr class="budget-row budget-row--inactive" style="--bm-delay: {{ loop.index0 * 24 }}ms">
-                            <td><span class="budget-row-name">{{ b.department }}</span></td>
-                            <td>
-                                {% if b.budget_type == 'central' %}
-                                <span class="vc-badge vc-badge-neutral">ส่วนกลาง</span>
-                                {% else %}
-                                <span class="vc-badge vc-badge-neutral">กอง</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end vc-mono">฿{{ '{:,.0f}'.format(b.budget_amount) }}</td>
-                            <td class="text-end vc-mono">฿{{ '{:,.0f}'.format(b.used_amount) }}</td>
-                            <td class="vc-td-muted">{{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}</td>
-                            <td>
-                                {% if b.status_reason == 'closed' %}
-                                <span class="vc-badge vc-badge-neutral" title="ถูกปิดใช้งาน">
-                                    <i data-lucide="power-off" class="vc-icon-sm"></i> ปิดใช้งาน
-                                </span>
-                                {% elif b.status_reason == 'expired' %}
-                                <span class="vc-badge vc-badge-neutral" title="ช่วงงบจบก่อนเดือนที่เลือก">
-                                    <i data-lucide="calendar-x" class="vc-icon-sm"></i> หมดช่วง
-                                </span>
-                                {% elif b.status_reason == 'future' %}
-                                <span class="vc-badge vc-badge-neutral " title="ช่วงงบเริ่มหลังเดือนที่เลือก">
-                                    <i data-lucide="calendar-clock" class="vc-icon-sm"></i> ยังไม่เริ่ม
-                                </span>
-                                {% elif b.status_reason == 'no_period' %}
-                                <span class="vc-badge vc-badge-warning" title="ยังไม่กำหนดช่วงเวลา">
-                                    <i data-lucide="alert-circle" class="vc-icon-sm"></i> ไม่มีช่วงเวลา
-                                </span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <button type="button" class="vc-btn vc-btn-secondary vc-btn"
-                                        data-bs-toggle="modal" data-bs-target="#extendBudgetModal"
-                                        data-bid="{{ b.id }}"
-                                        data-dept="{{ b.department }}"
-                                        data-start="{{ b.start_date }}"
-                                        data-end="{{ b.end_date }}"
-                                        title="ตั้งช่วงเวลาใหม่ + เปิดใช้งาน เพื่อนำงบกลับมาใช้">
-                                    <i data-lucide="calendar-plus" class="vc-icon-sm"></i>
-                                    เพิ่มเวลา
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="vc-card budget-empty-block">
-                <div class="vc-empty">
-                    <div class="vc-empty-icon">
-                        <i data-lucide="archive" class="budget-empty-icon"></i>
-                    </div>
-                    <p class="vc-empty-title">ไม่มีงบในคลัง</p>
-                    <p class="vc-empty-desc">งบที่หมดช่วงเวลา หรือถูกปิดใช้งาน จะมาอยู่ที่นี่</p>
-                </div>
-            </div>
-            {% endif %}
-            </section>
+            {# Section "คลังงบ" (tab archived) ถูกตัด 2026-06-17 — งบไม่ active แสดงเป็น
+               section "ไม่ได้ใช้งาน" ใน tab central/dept แล้ว (budget_card_off + extendBudgetModal) #}
+            </div>{# /budget-panels #}
 
         </div>{# /container-xxl #}
     </main>

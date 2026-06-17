@@ -11,7 +11,8 @@
    No component classes here — components live in design-system.css
    and component-specific CSS files.
 
-   Updated: 2026-05-16 (Phase 5.1: ลบ --ds-* Part A ทั้งหมด → migrate ครบแล้ว)
+   Updated: 2026-06-17 (DNA redesign: accent #4059e6, fg #162334, border #f0f0f0,
+            +icon/sidebar tokens, font-mono → Manrope; เดิม 2026-05-16 Phase 5.1)
    ============================================================ */
 
 
@@ -19,43 +20,57 @@
 
     /* ── Surface (Vercel "accents") ──────────── */
     --vc-bg:             #FFFFFF;
-    --vc-bg-subtle:      #FAFAFA;
+    --vc-bg-subtle:      #f5f8fb;
     --vc-bg-hover:       #F5F5F5;
     --vc-bg-inverted:    #000000;
 
     /* ── Border ──────────────────────────────── */
-    --vc-border:         #E5E7EB;
+    /* 2026-06-17 redesign: #E5E7EB → #f0f0f0 (เบาลง ตาม ref) */
+    --vc-border:         #f0f0f0;
     --vc-border-hover:   #999999;
     --vc-border-strong:  #666666;
 
     /* ── Foreground / Text ───────────────────── */
-    /* font หลัก = กรมท่า/navy (2026-06-10, เดิม #111827 เกือบดำ) */
-    --vc-fg:             #1C2E4A;
+    /* font หลัก = navy (2026-06-17 redesign #1C2E4A → #162334; เดิม #111827) */
+    --vc-fg:             #162334;
     --vc-fg-muted:       #6B7280;
     --vc-fg-subtle:      #9CA3AF;
     --vc-fg-disabled:    #BBBBBB;
     --vc-fg-inverted:    #FFFFFF;
 
-    /* ── Primary action (กรมท่า/navy — ปุ่มดำเดิม, 2026-06-10) ─ */
-    --vc-primary:        #1C2E4A;
-    --vc-primary-hover:  #26405F;
+    /* ── Icon (2026-06-17 redesign) — monochrome เทา-ม่วง บนวงกลม/tile เทาอ่อน ── */
+    --vc-icon:           #9999b0;
+    --vc-icon-bg:        #f0f0f0;
+
+    /* ── Sidebar surface (2026-06-17 redesign) ── */
+    --vc-sidebar-bg:     #fafbfc;
+    --vc-sidebar-active: #e6ecfa;
+
+    /* ── Primary action (indigo #4059e6 — 2026-06-17 redesign; เดิม #014198 sila5 น้ำเงิน)
+       navy ย้ายไปเป็นสี text (--vc-fg) อย่างเดียว */
+    --vc-primary:        #4059e6;
+    --vc-primary-hover:  #2f46c4;
     --vc-on-primary:     #FFFFFF;
 
-    /* ── Accent (Indigo — focus ring, sidebar active, secondary CTA)
-       Added Phase 1 2026-05-14 — promoted from --ds-accent so the
-       Vercel namespace has a single source for "selected/active" hue. */
-    --vc-accent:         #4F46E5;
-    --vc-accent-hover:   #4338CA;
-    --vc-accent-dark:    #3730A3;
-    --vc-accent-light:   #EEF2FF;
-    --vc-accent-border:  #C7D2FE;
-    --vc-accent-ring:    0 0 0 3px rgba(79,70,229,.18);
+    /* ── Accent (indigo #4059e6 — focus ring, sidebar active, secondary CTA)
+       2026-06-17: redesign #014198 → #4059e6 (unify ทุก blue token เฉดเดียว).
+       2026-06-14: Indigo #4F46E5 → น้ำเงิน. Added Phase 1 2026-05-14 — single "selected/active" hue. */
+    --vc-accent:         #4059e6;
+    --vc-accent-hover:   #2f46c4;
+    --vc-accent-dark:    #25379e;
+    --vc-accent-light:   #e6ecfa;
+    --vc-accent-border:  #c3cdf7;
+    --vc-accent-ring:    0 0 0 3px rgba(64,89,230,.18);
+    /* channel triplet สำหรับ rgba() ที่ต้องคุม opacity (heat-tint ฯลฯ) — ค่าเท่า --vc-accent #4059e6 */
+    --vc-accent-rgb:     64, 89, 230;
 
-    /* ── Semantic — Blue (info) ──────────────── */
-    --vc-blue:           #2563EB;
-    --vc-blue-hover:     #1D4ED8;
-    --vc-blue-bg:        rgba(37,99,235,.10);
-    --vc-blue-border:    rgba(37,99,235,.25);
+    /* ── Semantic — Blue (info) — 2026-06-17 unify เข้า brand #4059e6 ── */
+    --vc-blue:           #4059e6;
+    --vc-blue-hover:     #2f46c4;
+    --vc-blue-bg:        rgba(64,89,230,.10);
+    --vc-blue-border:    rgba(64,89,230,.25);
+    /* midpoint --vc-blue ↔ --vc-accent-light (dept 2-tone / sidebar active bg) */
+    --vc-blue-mid:       #8b9bf0;
 
     /* ── Semantic — Amber (warning / pending) ─ */
     --vc-amber:          #D97706;
@@ -111,9 +126,13 @@
     --vc-tracking-tighter:  -.04em;
     --vc-tracking-wide:     .02em;
 
-    /* ── Font stacks (Sarabun เท่านั้น — ห้ามใส่ font อื่น) ── */
+    /* ── Font stacks ── */
+    /* sans = Sarabun (ไทย). mono = Manrope (ตัวเลข, 2026-06-17 redesign) →
+       fallback Sarabun บนหน้าที่ไม่ได้โหลด Manrope. ใช้ผ่าน .vc-mono ทุกที่ที่เป็นตัวเลข */
     --vc-font-sans:      'Sarabun', sans-serif;
-    --vc-font-mono:      'Sarabun', sans-serif;
+    --vc-font-mono:      'Manrope', 'Sarabun', sans-serif;
+    /* heading h1-h3 → Sukhumvit Set (Apple system font; fallback Sarabun บน Win/Android) 2026-06-13 */
+    --vc-font-heading:   'Sukhumvit Set', 'Sarabun', sans-serif;
 
     /* ── Component heights ───────────────────── */
     --vc-h-input-sm:     28px;

@@ -1,117 +1,95 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
-	<title>ศูนย์บริการออนไลน์ | DCI</title>
+	<title>เข้าสู่ระบบ | BBCenter</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
-<!--===============================================================================================-->	
-	<link rel="icon" type="image/png" href="{{ url_for('static', filename='images/icons/favicon.ico') }}">
-<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}">
-<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='fonts/font-awesome-4.7.0/css/font-awesome.min.css') }}">
-<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='vendor/animate/animate.css') }} ">
-<!--===============================================================================================-->	
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='vendor/css-hamburgers/hamburgers.min.css') }}   ">
-<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='vendor/select2/select2.min.css') }} ">
-<!--===============================================================================================-->
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap">
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='core/css/util.css') }}">
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='core/css/main.css') }} ">
-<!--===============================================================================================-->
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='core/css/tokens.css') }}">
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='auth/css/login.css') }}">
 </head>
-<body>
-	
-	<div class="limiter">
-		<div class="container-login100">
-			<div class="wrap-login100">
-				<div class="login100-pic js-tilt" data-tilt>
-					<img src="{{ url_for('static', filename='images/img-01.png') }}" alt="IMG">
-				</div>
+<body class="login-page">
 
-				<form class="login100-form validate-form" action="/login" method="POST">
-					<span class="login100-form-title">
-						BB-center V2
-					</span>
-					<!-- py flash -->
-					 {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} fade show w-100" style="position: relative; border-radius: 25px; font-size: 14px; margin-bottom: 20px; text-align: center; padding: 12px 40px;" role="alert">
-									{{ message }}
-									<button type="button" class="close" data-dismiss="alert" aria-label="Close" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); outline: none; margin: 0; padding: 0;">
-										<span aria-hidden="true">&times;</span>
-									</button>
-								</div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-					<div class="wrap-input100 validate-input" data-validate = "Username is required">
-						<input class="input100" type="text" id="username" name="username" placeholder="Username">
-						<span class="focus-input100"></span>
-						<span class="symbol-input100">
-							<i class="fa fa-envelope" aria-hidden="true"></i>
-						</span>
-					</div>
+	<span class="login-dots dots-tr"></span>
+	<span class="login-dots dots-bl"></span>
 
-					<div class="wrap-input100 validate-input" data-validate = "Password is required">
-						<input class="input100" type="password" id="password" name="password" placeholder="Password">
-						<span class="focus-input100"></span>
-						<span class="symbol-input100">
-							<i class="fa fa-lock" aria-hidden="true"></i>
-						</span>
-					</div>
-					
-					<div class="container-login100-form-btn">
-						<button type="submit" class="login100-form-btn">
-							Login
-						</button>
-					</div>
+	<div class="login-card">
 
-					<div class="text-center p-t-12">
-						<span class="txt1">
-							Forgot
-						</span>
-						<a class="txt2" href="https://register.bb-center.org/forgot-password" target="_blank">
-							Username / Password?
-						</a>
-					</div>
-
-					<div class="text-center p-t-136">
-						<a class="txt2" href="https://register.bb-center.org" target="_blank">
-							Create your Account
-							<i class="fa fa-long-arrow-right m-l-5" aria-hidden="true"></i>
-						</a>
-					</div>
-				</form>
-			</div>
+		<!-- Brand -->
+		<div class="login-brand">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+				<path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+				<path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+				<path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+			</svg>
+			<span class="brand-name text-header">BB CENTER</span>
 		</div>
+
+		<!-- Heading -->
+		<h1 class="login-title">ยินดีต้อนรับ 👋</h1>
+		<p class="login-subtitle">เข้าสู่ระบบด้วยรหัสหน้าแดงที่ได้สมัครไว้แล้ว</p>
+
+		<!-- Flash -->
+		{% with messages = get_flashed_messages(with_categories=true) %}
+			{% if messages %}
+				{% for category, message in messages %}
+					<div class="login-flash alert-{{ category }}" role="alert">
+						{{ message }}
+						<button type="button" class="flash-close" aria-label="ปิด"
+								onclick="this.parentElement.remove()">&times;</button>
+					</div>
+				{% endfor %}
+			{% endif %}
+		{% endwith %}
+
+		<!-- Form -->
+		<form action="/login" method="POST" autocomplete="off">
+
+			<div class="login-field">
+				<label for="username">รหัสหน้าแดง</label>
+				<div class="login-input-wrap">
+					<input class="login-input" type="text" id="username" name="username"
+						   placeholder="กรอกรหัสหน้าแดง" required autofocus>
+				</div>
+			</div>
+
+			<div class="login-field">
+				<label for="password">รหัสผ่าน</label>
+				<div class="login-input-wrap">
+					<input class="login-input has-toggle" type="password" id="password" name="password"
+						   placeholder="••••••••" required>
+					<button type="button" class="login-toggle" aria-label="แสดง/ซ่อนรหัสผ่าน">
+						<svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+						</svg>
+						<svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none">
+							<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+							<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+							<path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+							<line x1="2" x2="22" y1="2" y2="22"/>
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			<div class="login-row">
+				<label class="login-remember">
+					<input type="checkbox" name="remember"> จดจำฉันไว้
+				</label>
+				<a class="login-forgot" href="https://register.bb-center.org/forgot-password" target="_blank" rel="noopener">
+					ลืมรหัสผ่าน?
+				</a>
+			</div>
+
+			<button type="submit" class="login-btn">เข้าสู่ระบบ</button>
+
+		</form>
 	</div>
-	
-	
 
-	
-<!--===============================================================================================-->	
-	<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.2.1.min.js') }}"></script>
-<!--===============================================================================================-->
-	<script src="{{ url_for('static', filename='vendor/bootstrap/js/popper.js') }}"></script>
-	<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.min.js') }}"></script>
-<!--===============================================================================================-->
-	<script src="{{ url_for('static', filename='vendor/select2/select2.min.js') }}"></script>
-<!--===============================================================================================-->
-	<script src="{{ url_for('static', filename='vendor/tilt/tilt.jquery.min.js') }}"></script>
-	<script >
-		$('.js-tilt').tilt({
-			scale: 1.1
-		})
-	</script>
-<!--===============================================================================================-->
-	<script src="{{ url_for('static', filename='core/js/main.js') }}"></script>
-
+	<script src="{{ url_for('static', filename='auth/js/login.js') }}"></script>
 </body>
 </html>

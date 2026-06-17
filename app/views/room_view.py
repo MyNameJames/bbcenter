@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from datetime import datetime, date
 from models import db, RoomBooking
+from views.core.notification_service import notify_room_booked
 
 room_bp = Blueprint('room', __name__)
 
@@ -49,6 +50,8 @@ def book_room():
             end_time   = end_time
         )
         db.session.add(new_booking)
+        db.session.flush()
+        notify_room_booked(new_booking)
         db.session.commit()
         flash('จองห้องประชุมสำเร็จ!', 'success')
 

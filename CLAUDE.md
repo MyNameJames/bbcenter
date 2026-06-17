@@ -1,6 +1,6 @@
 # BBCenter V2 — Project Rules
 
-> **อัปเดตล่าสุด:** 2026-06-02 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](docs/notes/CHANGELOG.md)
+> **อัปเดตล่าสุด:** 2026-06-17 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](docs/notes/CHANGELOG.md)
 
 ## 📖 Reading Strategy
 
@@ -20,6 +20,7 @@
 - System flows → [architecture.md](docs/notes/architecture.md)
 - Task lifecycle (template, สรุปงาน, จบงาน) → [task-lifecycle.md](docs/notes/task-lifecycle.md)
 - Design detail → [design_system.md](docs/notes/design_system.md)
+- DNA redesign 2026-06-17 (migration spec + component cookbook) → [design_dna_redesign.md](docs/notes/design_dna_redesign.md)
 - Pending features → [future_features.md](docs/notes/future_features.md)
 - Token budget check → `bash tools/doc-stats.sh`
 
@@ -66,6 +67,55 @@
 
 ---
 
+## 🧹 Clean Code Rules — บังคับทุก function ใหม่
+
+กฎเหล่านี้ **บังคับใช้ทันที** เมื่อเขียน/แก้ code — ไม่ต้องรอให้ผู้ใช้สั่ง
+
+### ❌ ห้ามเด็ดขาด
+
+| ห้าม | ทำแทนด้วย |
+|------|----------|
+| `print(...)` ทุกกรณี | `current_app.logger.exception/warning/info()` (ใน Flask context) · `logging.getLogger(__name__)` (service module) |
+| `import X` กลางฟังก์ชัน | ย้ายขึ้น top-of-file เสมอ |
+| Copy import block จากไฟล์อื่น | import เฉพาะที่ไฟล์นี้ใช้จริง |
+| `flash(str(e), 'danger')` | `logger.exception(...)` + `flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')` |
+| Formula/pattern เดิม copy ครั้งที่ 3 | extract helper ใน `vehicle_common.py` ก่อนเขียนซ้ำ |
+| [DEBUG ...] หรือ debug comment ค้างใน code | ลบก่อน mark เสร็จ |
+
+### ✅ Function ใหม่ทุกตัว — checklist ก่อน submit
+
+```
+[ ] ≤ 60 บรรทัด (นับเฉพาะ logic, ไม่นับ docstring)
+    — ถ้าเกิน: แตก helper หรืออธิบายว่าทำไมจำเป็น
+[ ] ทำงานอย่างเดียว (Single Responsibility)
+    — ถ้ามี POST action หลาย branch → แตกฟังก์ชันต่อ action
+[ ] ชื่อสื่อ verb+noun: `_calc_fuel_cost()`, `_lookup_budget()`, ไม่ใช่ `process()` / `handle()`
+[ ] import เฉพาะที่ใช้ — ห้าม copy import block ยาว
+[ ] error: `logger.exception()` → flash generic → return/redirect
+[ ] ไม่มี magic number → ใช้ constant หรือ config
+```
+
+### กฎ DRY — ตรวจก่อนเขียน
+
+1. ก่อนเขียน formula ค่าใช้จ่าย/คำนวณ → เช็ก `vehicle_common.py` ว่ามี helper แล้วหรือยัง
+2. Fuel cost formula — **ห้าม inline** ใช้ `calc_fuel_cost(vehicle, distance, fuel_price, override=None)` จาก `vehicle_common.py` (extracted 2026-06-12)
+3. FuelPrice fallback — **ห้าม inline** ใช้ `get_fuel_price(on_date)` จาก `vehicle_common.py` (extracted 2026-06-12)
+
+### Logger pattern ตาม context
+
+```python
+# ใน Flask route / service ที่เรียกจาก route (current_app ใช้ได้)
+current_app.logger.exception('route_name failed')   # error + traceback
+current_app.logger.warning('ข้อความ %s', var)        # warning ไม่มี traceback
+
+# ใน module-level service (telegram_service, line_service, broadcast)
+_log = logging.getLogger(__name__)   # บรรทัดแรกของไฟล์ หลัง import
+_log.exception('send error')
+_log.warning('config missing: %s', key)
+```
+
+---
+
 ## Stack (Quick Ref)
 
 Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + in-app + APScheduler notify · `--vc-*` design tokens (canonical) — `--ds-*` **retired** (Phase 5.1, 2026-05-16): ลบครบแล้ว ห้ามเพิ่มใหม่เด็ดขาด
@@ -79,7 +129,7 @@ Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + 
 **Business logic**
 - Budget mutation: ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` / `is_active` ตรงๆ — ทุก mutation ต้องผ่าน `app/views/vehicle/vehicle_budget_service.py` (vehicle domain service — ย้ายจาก `services/` 2026-06-07; core = util ข้าม domain เท่านั้น เพื่อ ledger + idempotency)
   - **Deduct/override** 4 call sites: `mileage_log()`, `driver_mileage()`, `override_fuel()`, `budget_manage()` POST
-  - **Refund** (`refund_for_booking()`) 5 call sites: `delete_booking()` (ก่อน cascade), `cancel_booking()` (Phase 9, 2026-05-22 — soft cancel), `approve_booking()` admin reject + approver reject, `admin_assign()` reject
+  - **Refund** — `refund_for_booking()` ถูกลบออกแล้ว (Phase 1, 2026-06-12) เพราะงบหักที่ mileage ไม่ใช่ approve; admin ยกเลิก approved booking ผ่าน `budget_manage` action `cancel_booking` เท่านั้น
   - **`set_active(budget, active)`** (2026-05-18) — toggle ปิด/เปิดใช้งาน → log `set_active`/`set_inactive`; `is_active=False` block `approve_booking` (admin + approver paths ผ่าน `_lookup_budget_for_booking()`) + `top_up` + `manual_adjust`; ไม่ block mileage deduct/refund (booking เก่าปิดทริปได้); KPI sum filter `is_active=True`
 - **งบช่วงเวลา (active period, 2026-06-06):** การหางบ "เลิกใช้ year/month" — `_lookup_budget_for_booking(booking, on_date=None)` หางบ `is_active=True AND start_date <= on_date <= end_date` (default on_date = วันเริ่ม booking; ตอนหักงบส่งวันปิดทริป). overlap → start_date ล่าสุด. ใช้ร่วม approve + 3 จุดหักงบ (mileage_log/driver_mileage/override_fuel). `approve_booking` block ถ้าคืน `None`. `budget_manage` แยกงบ active-for-month vs `archived_budgets` (section "คลังงบ") + action `extend_period` (ตั้ง start–end ใหม่ + เปิด is_active). `year`/`month` = anchor (UniqueConstraint + set_budget); pivot×เดือน ดึงจาก `vehicle_budget_log.created_at`
 - Mileage formula: `fuel_cost = (distance / vehicle.fuel_rate) * fuel_price` (override ถ้า `mileage.fuel_cost` มีค่า)
@@ -108,11 +158,51 @@ booking.telegram_message_id = msg_id; db.session.commit()
 
 ---
 
+## Flask Response Pattern
+
+**Regular form POST** → `flash(msg, category)` + `redirect(url_for(...))`
+
+**AJAX/fetch request** → `jsonify({'ok': True, 'msg': '...'})` (200) หรือ `jsonify({'ok': False, 'msg': '...'})` (400/403/404)
+
+**Error handling ใน route:**
+```python
+except Exception:
+    current_app.logger.exception('<route_name> failed')
+    flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(url_for(...))
+```
+
+**JS ฝั่ง client:**
+```javascript
+const res  = await fetch(url, { method: 'POST', body: fd });
+const data = await res.json();
+if (!res.ok || !data.ok) { showToast(data.msg, 'danger'); return; }
+// patch UI
+```
+ห้าม patch UI ก่อนเช็ก `res.ok` + `data.ok` — เดิมเคย patch ทันทีแล้ว UI โชว์สถานะปลอมเมื่อ server ตอบ 400
+
+---
+
+## Naming Conventions
+
+**Blueprint:** `<domain>_bp` → ลงทะเบียนใน `app.py` ด้วย prefix `/vehicle`, `/room`, ฯลฯ
+
+**View function:** `<action>_<noun>` (เช่น `book_vehicle_simple`, `cancel_booking`) หรือ `admin_<noun>` สำหรับ admin-only route
+
+**Template:** `templates/<domain>/` + `templates/<domain>/admin/` + `templates/<domain>/modals/` — ชื่อไฟล์ใช้ `vehicle_<name>.html` ไม่ใช่ `<name>_vehicle.html`
+
+**Static:** `static/<domain>/css/<domain>_<page>.css`, `static/<domain>/js/<domain>_<page>.js`
+
+**Model:** PascalCase ตาม domain (เช่น `VehicleBooking`, `VehicleBudget`) — ไฟล์อยู่ใน `models/<domain>.py`
+
+---
+
 ## Design Quick Rules
 
-- Vercel-inspired light, accent `#4F46E5`
-- **No shadow** → ใช้ border (`var(--vc-border)` = `#EAEAEA`)
-- Radius 4–6px
+- Light, primary + accent `#4059e6` (indigo, 2026-06-17 redesign; เดิม `#014198`/`#0046FF`/navy) · text = navy `#162334` (`--vc-fg`)
+- **No shadow** (ยกเว้น modal) → ใช้ border (`var(--vc-border)` = `#f0f0f0`)
+- Radius 6px (`--vc-radius-sm`, = bootstrap `rounded-2`)
+- **ตัวเลข = Manrope** (ผ่าน `.vc-mono` / `--vc-font-mono`) · ข้อความไทย = Sarabun · icon monochrome `#9999b0` (`--vc-icon`) บนวงกลม/tile `#f0f0f0` (`--vc-icon-bg`)
 - Icons: Font Awesome (`fa-solid` นำหน้าทุก field เทคนิค)
 - **No `border-left/top` สีพิเศษ** บน card/KPI (ดู AI-generated)
 - Vehicle modal: ไฟล์แยกใน `vehicle/modals/vehicle_*.html` (ขั้น 4, 2026-06-07; เดิม `vehicle-modal-*.html`), **ห้ามมี inline `<script>`** — JS อยู่ใน vehicle.js · partials กลางอยู่ `templates/_shared/` · macro อยู่ `templates/_components/`

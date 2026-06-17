@@ -3,24 +3,9 @@
    Scope: vc-scope on <main>. Uses --vc-* tokens only.
    ============================================================ */
 
-/* ── Page Header ─────────────────────────────────────── */
+/* ── Page Header (budget-aligned: utility-class h1/h6, 2026-06-16) ── */
 .repair-header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--vc-space-4);
     margin-bottom: var(--vc-space-5);
-}
-.repair-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--vc-fg);
-    margin: 0;
-}
-.repair-subtitle {
-    font-size: var(--vc-text-sm);
-    color: var(--vc-fg-subtle);
-    margin: 4px 0 0;
 }
 .repair-header-actions {
     display: flex;
@@ -156,3 +141,132 @@
 .repair-textarea      { font-size: .9rem; line-height: 1.5; }
 .repair-required      { color: var(--vc-danger); }
 .repair-note-hint     { font-size: .75rem; }
+
+/* ============================================================
+   DataTables footer — custom pagination (ref image, accent)
+   Scoped to #repairTable_wrapper so it never bleeds to other tables
+   ============================================================ */
+#repairTable_wrapper .row:last-child {
+    align-items: center;
+    margin-top: var(--vc-space-4);
+    row-gap: var(--vc-space-3);
+}
+#repairTable_wrapper .dataTables_info {
+    color: var(--vc-fg-subtle);
+    font-size: var(--vc-text-sm);
+    padding-top: 0;
+}
+
+/* ── Pill container holding pagination + go-to-page ── */
+#repairTable_wrapper .dataTables_paginate {
+    float: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    padding: 6px 10px;
+    background: var(--vc-bg-subtle);
+    border: 1px solid var(--vc-border);
+    border-radius: 999px;
+}
+#repairTable_wrapper .dataTables_paginate .pagination {
+    margin: 0;
+    gap: 4px;
+    align-items: center;
+}
+
+/* ── Page number buttons → circular ── */
+#repairTable_wrapper .pagination .page-item .page-link {
+    min-width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--vc-fg-muted);
+    font-size: var(--vc-text-sm);
+    font-weight: 600;
+    transition: background .15s, color .15s, border-color .15s;
+}
+#repairTable_wrapper .pagination .page-item .page-link:hover {
+    background: var(--vc-accent-light);
+    color: var(--vc-accent-dark);
+}
+#repairTable_wrapper .pagination .page-item.active .page-link {
+    background: var(--vc-accent);
+    color: var(--vc-bg);
+}
+#repairTable_wrapper .pagination .page-item.active .page-link:hover {
+    background: var(--vc-accent-hover);
+    color: var(--vc-bg);
+}
+#repairTable_wrapper .pagination .page-item.disabled .page-link {
+    opacity: .4;
+    background: transparent;
+    color: var(--vc-fg-subtle);
+}
+#repairTable_wrapper .pagination .page-link:focus {
+    outline: none;
+    box-shadow: var(--vc-accent-ring);
+}
+
+/* ── Prev / Next → chevron in white circle (text hidden) ── */
+#repairTable_wrapper .pagination .page-item.previous .page-link,
+#repairTable_wrapper .pagination .page-item.next .page-link {
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    font-size: 0;
+}
+#repairTable_wrapper .pagination .page-item.previous .page-link::before { content: '\2039'; font-size: 1.15rem; line-height: 1; }
+#repairTable_wrapper .pagination .page-item.next     .page-link::before { content: '\203A'; font-size: 1.15rem; line-height: 1; }
+#repairTable_wrapper .pagination .page-item.previous:not(.disabled) .page-link:hover,
+#repairTable_wrapper .pagination .page-item.next:not(.disabled) .page-link:hover {
+    border-color: var(--vc-accent);
+    color: var(--vc-accent);
+    background: var(--vc-bg);
+}
+
+/* ── Go-to-page (built in repair.js, appended into the pill) ── */
+.repair-goto {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    margin-left: 4px;
+    padding-left: 10px;
+    border-left: 1px solid var(--vc-border);
+}
+.repair-goto-label {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    white-space: nowrap;
+}
+.repair-goto-select {
+    height: 32px;
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-xs);
+    background: var(--vc-bg);
+    padding: 0 8px;
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg);
+    cursor: pointer;
+}
+.repair-goto-select:focus {
+    outline: none;
+    border-color: var(--vc-accent);
+    box-shadow: var(--vc-accent-ring);
+}
+.repair-goto-btn {
+    height: 32px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 999px;
+    background: var(--vc-accent);
+    color: var(--vc-bg);
+    font-size: var(--vc-text-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+.repair-goto-btn:hover { background: var(--vc-accent-hover); }

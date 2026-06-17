@@ -1,0 +1,213 @@
+/* ============================================================
+   BBCenter V2 — Login page (Sneat-inspired)
+   standalone page · ใช้ --vc-* tokens เท่านั้น · no shadow
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+body.login-page {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--vc-space-6);
+    font-family: var(--vc-font-sans);
+    color: var(--vc-fg);
+    background: var(--vc-bg-subtle);
+}
+
+/* ── Dot decoration ───────────────────────────── */
+.login-dots {
+    position: fixed;
+    width: 230px;
+    height: 230px;
+    background-image: radial-gradient(var(--vc-accent-border) 2px, transparent 2px);
+    background-size: 22px 22px;
+    opacity: .7;
+    z-index: 0;
+    pointer-events: none;
+}
+.login-dots.dots-tr { top: 150px;  right: 400px; }
+.login-dots.dots-bl { bottom: 150px; left: 420px; }
+
+/* ── Card ─────────────────────────────────────── */
+.login-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-lg);
+    padding: var(--vc-space-10) var(--vc-space-8);
+}
+
+/* ── Brand ────────────────────────────────────── */
+.login-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--vc-space-2);
+    margin-bottom: var(--vc-space-8);
+}
+.login-brand svg {
+    width: 28px;
+    height: 28px;
+    stroke: var(--vc-accent);
+}
+.login-brand .brand-name {
+    font-family: var(--vc-font-heading);
+    font-size: var(--vc-text-xl);
+    font-weight: 400;
+    letter-spacing: var(--vc-tracking-tight);
+    color: var(--vc-accent);
+}
+
+/* ── Heading ──────────────────────────────────── */
+.login-title {
+    font-family: var(--vc-font-heading);
+    font-size: var(--vc-text-lg);
+    font-weight: 700;
+    margin: 0 0 var(--vc-space-2);
+}
+.login-subtitle {
+    font-size: var(--vc-text-base);
+    color: var(--vc-fg-muted);
+    margin: 0 0 var(--vc-space-6);
+    line-height: 1.5;
+}
+
+/* ── Flash ────────────────────────────────────── */
+.login-flash {
+    position: relative;
+    border-radius: var(--vc-radius-sm);
+    font-size: var(--vc-text-sm);
+    padding: var(--vc-space-3) var(--vc-space-4);
+    margin-bottom: var(--vc-space-4);
+    border: 1px solid;
+}
+.login-flash.alert-danger,
+.login-flash.alert-error {
+    background: var(--vc-red-bg);
+    border-color: var(--vc-red-border);
+    color: var(--vc-red);
+}
+.login-flash.alert-success {
+    background: var(--vc-green-bg);
+    border-color: var(--vc-green-border);
+    color: var(--vc-green);
+}
+.login-flash.alert-warning {
+    background: var(--vc-amber-bg);
+    border-color: var(--vc-amber-border);
+    color: var(--vc-amber);
+}
+.login-flash .flash-close {
+    position: absolute;
+    right: var(--vc-space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    color: inherit;
+    opacity: .6;
+    cursor: pointer;
+}
+.login-flash .flash-close:hover { opacity: 1; }
+
+/* ── Form ─────────────────────────────────────── */
+.login-field { margin-bottom: var(--vc-space-5); }
+.login-field label {
+    display: block;
+    font-size: var(--vc-text-sm);
+    font-weight: 500;
+    margin-bottom: var(--vc-space-2);
+}
+.login-input-wrap { position: relative; }
+.login-input {
+    width: 100%;
+    height: var(--vc-h-input-md);
+    padding: 0 var(--vc-space-4);
+    font-family: var(--vc-font-sans);
+    font-size: var(--vc-text-base);
+    color: var(--vc-fg);
+    background: var(--vc-bg);
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-sm);
+    transition: border-color var(--vc-dur-fast) var(--vc-ease-snap),
+                box-shadow var(--vc-dur-fast) var(--vc-ease-snap);
+}
+.login-input::placeholder { color: var(--vc-fg-subtle); }
+.login-input:focus {
+    outline: none;
+    border-color: var(--vc-accent);
+    box-shadow: var(--vc-accent-ring);
+}
+.login-input.has-toggle { padding-right: 44px; }
+
+.login-toggle {
+    position: absolute;
+    right: var(--vc-space-2);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--vc-fg-subtle);
+    cursor: pointer;
+}
+.login-toggle:hover { color: var(--vc-fg-muted); }
+.login-toggle svg { width: 18px; height: 18px; stroke: currentColor; }
+
+/* ── Row: remember + forgot ───────────────────── */
+.login-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--vc-space-6);
+}
+.login-remember {
+    display: flex;
+    align-items: center;
+    gap: var(--vc-space-2);
+    font-size: var(--vc-text-sm);
+    color: var(--vc-fg-muted);
+    cursor: pointer;
+    user-select: none;
+}
+.login-remember input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--vc-accent);
+    cursor: pointer;
+}
+.login-forgot {
+    font-size: var(--vc-text-sm);
+    color: var(--vc-accent);
+    text-decoration: none;
+}
+.login-forgot:hover { color: var(--vc-accent-hover); text-decoration: underline; }
+
+/* ── Submit ───────────────────────────────────── */
+.login-btn {
+    width: 100%;
+    height: var(--vc-h-input-md);
+    font-family: var(--vc-font-sans);
+    font-size: var(--vc-text-base);
+    font-weight: 600;
+    color: var(--vc-on-primary);
+    background: var(--vc-primary);
+    border: none;
+    border-radius: var(--vc-radius-sm);
+    cursor: pointer;
+    transition: background var(--vc-dur-fast) var(--vc-ease-snap);
+}
+.login-btn:hover { background: var(--vc-primary-hover); }
+.login-btn:active { transform: translateY(1px); }

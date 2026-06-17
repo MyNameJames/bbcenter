@@ -8,8 +8,6 @@ Notification Cron Jobs (APScheduler)
     Day 14+ → แจ้ง admin ซ้ำทุก 7 วัน
 """
 from datetime import timedelta
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 
 def _calc_fuel_cost(mileage, booking, fuel_price):
@@ -88,14 +86,47 @@ def check_payment_escalation(app):
         db.session.commit()
 
 
+def auto_reject_overdue_bookings(app):
+    """ยกเลิก pending/waiting_approver ที่ start_datetime < now อัตโนมัติ (08:10 BKK)"""
+    from models import db, VehicleBooking, get_bkk_time
+    from views.core.notification_service import notify_auto_rejected
+
+    REASON = 'เลยกำหนดเดินทาง — ระบบยกเลิกอัตโนมัติ'
+
+    with app.app_context():
+        now = get_bkk_time()
+        overdue = VehicleBooking.query.filter(
+            VehicleBooking.status.in_(['pending', 'waiting_approver']),
+            VehicleBooking.start_datetime < now,
+        ).all()
+
+        for bk in overdue:
+            bk.status = 'rejected'
+            bk.reject_reason = REASON
+            bk.updated_by = None  # ระบบ
+            db.session.flush()
+            notify_auto_rejected(bk)
+
+        db.session.commit()
+
+
 def init_scheduler(app):
     """เรียกจาก app.py หลัง register blueprints"""
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.cron import CronTrigger
     scheduler = BackgroundScheduler(timezone='Asia/Bangkok')
     scheduler.add_job(
         func    = lambda: check_payment_escalation(app),
         trigger = CronTrigger(hour=8, minute=0),
         id      = 'payment_escalation',
         name    = 'Check overdue personal payments',
+        replace_existing = True,
+    )
+    scheduler.add_job(
+        func    = lambda: auto_reject_overdue_bookings(app),
+        trigger = CronTrigger(hour=8, minute=10),
+        id      = 'auto_reject_overdue',
+        name    = 'Auto-reject overdue pending bookings',
         replace_existing = True,
     )
     scheduler.start()

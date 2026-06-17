@@ -151,7 +151,7 @@
                     {% else %}
                         {% set trip_status = 'waiting' %}
                     {% endif %}
-                    {% set requester_label = b.contact_name or (b.user.full_name if b.user else '-') %}
+                    {% set requester_label = b.user.full_name if b.user else '-' %}
                     {% set last_odo = latest_odo.get(b.assigned_vehicle_id) %}
 
                     <div class="driver-card" data-card>
@@ -325,7 +325,7 @@
         <div class="driver-panel" data-panel="tomorrow">
             {% if tomorrow_trips %}
                 {% for b in tomorrow_trips %}
-                    {% set requester_label = b.contact_name or (b.user.full_name if b.user else '-') %}
+                    {% set requester_label = b.user.full_name if b.user else '-' %}
                     <div class="driver-card driver-card--readonly" data-card>
                         <button type="button" class="driver-card__head" data-card-toggle title="ขยาย/ย่อ">
                             <span class="driver-card__plate">

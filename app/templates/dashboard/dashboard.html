@@ -1,6 +1,6 @@
-{# Dashboard — landing page after login
+{# Dashboard — Action Hub (หน้าแรกของ user)
    Vercel-style shell · vc-* tokens · no inline style/script
-   Vehicle section = อนุมัติแล้ว · start วันพรุ่งนี้ (recent_vehicle จาก view)
+   เน้น time-to-action: Quick Actions (สร้างใหม่) + คำขอของฉัน (+ ทำซ้ำ) + วันนี้ของฉัน
 #}
 {% from '_components/empty_state.html' import empty_state %}
 <!DOCTYPE html>
@@ -15,14 +15,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard/css/dashboard.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
 </head>
 <body>
-{% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
-{% set is_admin = current_user.role_repair == 'admin' or current_user.role_maintenance == 'admin' or current_user.is_superadmin %}
+{% set is_superadmin = current_user.is_superadmin %}
 
 <div class="container-fluid container-p-y">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -47,7 +44,7 @@
                 {% endif %}
             {% endwith %}
 
-            {# ── Page header ─────────────────────────────── #}
+            {# ── Greeting ────────────────────────────────── #}
             <div class="dash-header dash-fade d-1">
                 <div>
                     <h1 class="dash-title">สวัสดี, {{ current_user.full_name or current_user.username }}</h1>
@@ -59,421 +56,125 @@
                 </div>
             </div>
 
-            {# ── Alert: งานรอดำเนินการ ──────────────────── #}
-            {% if is_admin and stats.total_pending > 0 %}
-            <div class="dash-alert dash-fade d-1">
-                <i data-lucide="bell" class="vc-icon-sm"></i>
-                <div>
-                    มีงานรอดำเนินการทั้งหมด
-                    <strong>{{ stats.total_pending }}</strong> รายการ
-                    <span class="vc-dot-sep">·</span>
-                    IT {{ stats.repair_pending }}
-                    <span class="vc-dot-sep">·</span>
-                    อาคาร {{ stats.maint_pending }}
-                    <span class="vc-dot-sep">·</span>
-                    จองรถ {{ stats.vehicle_pending }}
-                </div>
-            </div>
-            {% endif %}
-
-            {# ── Admin KPI strip ─────────────────────────── #}
-            {% if is_admin %}
+            {# ── Quick Actions — เริ่มงานใหม่ ───────────────── #}
             <section class="dash-section dash-fade d-2">
-                <p class="dash-section-label">สรุปวันนี้</p>
+                <p class="dash-section-label">เริ่มงานใหม่</p>
                 <div class="dash-grid-4">
-                    <div class="dash-kpi">
-                        <p class="dash-kpi-label">
-                            <i data-lucide="desktop" class="vc-icon-sm"></i>
-                            แจ้งซ่อม IT รอดำเนินการ
-                        </p>
-                        <p class="dash-kpi-value {% if stats.repair_pending == 0 %}dash-kpi-value--muted{% endif %}">
-                            {{ stats.repair_pending }}
-                        </p>
-                        <p class="dash-kpi-meta">กำลังซ่อม {{ stats.repair_in_progress }}</p>
-                    </div>
-                    <div class="dash-kpi">
-                        <p class="dash-kpi-label">
-                            <i data-lucide="wrench" class="vc-icon-sm"></i>
-                            แจ้งซ่อมอาคาร รอดำเนินการ
-                        </p>
-                        <p class="dash-kpi-value {% if stats.maint_pending == 0 %}dash-kpi-value--muted{% endif %}">
-                            {{ stats.maint_pending }}
-                        </p>
-                        <p class="dash-kpi-meta">กำลังดำเนินการ {{ stats.maint_in_progress }}</p>
-                    </div>
-                    <div class="dash-kpi">
-                        <p class="dash-kpi-label">
-                            <i data-lucide="car" class="vc-icon-sm"></i>
-                            จองรถ รออนุมัติ
-                        </p>
-                        <p class="dash-kpi-value {% if stats.vehicle_pending == 0 %}dash-kpi-value--muted{% endif %}">
-                            {{ stats.vehicle_pending }}
-                        </p>
-                        <p class="dash-kpi-meta">รอตัวแทนกอง {{ stats.vehicle_waiting_approver }}</p>
-                    </div>
-                    <div class="dash-kpi">
-                        <p class="dash-kpi-label">
-                            <i data-lucide="users" class="vc-icon-sm"></i>
-                            ห้องประชุมวันนี้
-                        </p>
-                        <p class="dash-kpi-value {% if stats.room_today == 0 %}dash-kpi-value--muted{% endif %}">
-                            {{ stats.room_today }}
-                        </p>
-                        <p class="dash-kpi-meta">ผู้ใช้งานในระบบ {{ stats.user_count }}</p>
-                    </div>
-                </div>
-            </section>
-            {% endif %}
-
-            {# ── รายการของฉัน ────────────────────────────── #}
-            {% if stats.my_repair_open > 0 or stats.my_maint_open > 0 or stats.my_vehicle_pending > 0 or stats.my_room_today %}
-            <section class="dash-section dash-fade d-3">
-                <p class="dash-section-label">รายการของฉัน</p>
-                <div class="dash-grid-4">
-                    {% if stats.my_repair_open > 0 %}
-                    <a href="/repair" class="dash-mine" title="ดูรายการแจ้งซ่อมไอทีของฉัน">
-                        <span class="dash-mine-icon"><i data-lucide="desktop" class="vc-icon-sm"></i></span>
-                        <div class="dash-mine-body">
-                            <p class="dash-mine-title">แจ้งซ่อมไอที</p>
-                            <p class="dash-mine-desc">ยังค้างอยู่ <strong>{{ stats.my_repair_open }}</strong> รายการ</p>
-                        </div>
-                        <i data-lucide="chevron-right" class="vc-icon-sm dash-mine-chev"></i>
-                    </a>
-                    {% endif %}
-                    {% if stats.my_maint_open > 0 %}
-                    <a href="/maintenance" class="dash-mine" title="ดูรายการแจ้งซ่อมอาคารของฉัน">
-                        <span class="dash-mine-icon"><i data-lucide="wrench" class="vc-icon-sm"></i></span>
-                        <div class="dash-mine-body">
-                            <p class="dash-mine-title">แจ้งซ่อมอาคาร</p>
-                            <p class="dash-mine-desc">ยังค้างอยู่ <strong>{{ stats.my_maint_open }}</strong> รายการ</p>
-                        </div>
-                        <i data-lucide="chevron-right" class="vc-icon-sm dash-mine-chev"></i>
-                    </a>
-                    {% endif %}
-                    {% if stats.my_vehicle_pending > 0 %}
-                    <a href="/vehicle" class="dash-mine" title="ดูคำขอจองรถของฉัน">
-                        <span class="dash-mine-icon"><i data-lucide="car" class="vc-icon-sm"></i></span>
-                        <div class="dash-mine-body">
-                            <p class="dash-mine-title">จองรถ</p>
-                            <p class="dash-mine-desc">รออนุมัติ <strong>{{ stats.my_vehicle_pending }}</strong> รายการ</p>
-                        </div>
-                        <i data-lucide="chevron-right" class="vc-icon-sm dash-mine-chev"></i>
-                    </a>
-                    {% endif %}
-                    {% if stats.my_room_today %}
-                    <a href="/room" class="dash-mine" title="ดูห้องประชุมวันนี้">
-                        <span class="dash-mine-icon"><i data-lucide="users" class="vc-icon-sm"></i></span>
-                        <div class="dash-mine-body">
-                            <p class="dash-mine-title">ห้องประชุมวันนี้</p>
-                            <p class="dash-mine-desc">
-                                {% for b in stats.my_room_today -%}
-                                {{ b.room_name }} {{ b.start_time.strftime('%H:%M') }}–{{ b.end_time.strftime('%H:%M') }}{% if not loop.last %}, {% endif %}
-                                {%- endfor %}
-                            </p>
-                        </div>
-                        <i data-lucide="chevron-right" class="vc-icon-sm dash-mine-chev"></i>
-                    </a>
-                    {% endif %}
-                </div>
-            </section>
-            {% endif %}
-
-            {# ── บริการทั้งหมด ────────────────────────────── #}
-            <section class="dash-section dash-fade d-3">
-                <p class="dash-section-label">บริการทั้งหมด</p>
-                <div class="dash-grid-4">
-                    <a href="/repair" class="dash-svc" title="เข้าสู่ระบบแจ้งซ่อมไอที">
-                        <div class="dash-svc-head">
-                            <span class="dash-svc-icon"><i data-lucide="wrench" class="vc-icon-sm"></i></span>
-                            {% if stats.repair_pending > 0 %}
-                            <span class="vc-badge vc-badge-warning vc-badge-dot">รอ {{ stats.repair_pending }}</span>
-                            {% endif %}
-                        </div>
-                        <h3 class="dash-svc-title">แจ้งซ่อมไอที</h3>
-                        <p class="dash-svc-desc">คอมพิวเตอร์ เครือข่าย ปริ้นเตอร์ และซอฟต์แวร์</p>
-                        <div class="dash-svc-foot">
-                            <span class="dash-svc-cta">เข้าสู่ระบบ <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
-                        </div>
-                    </a>
-
-                    <a href="/maintenance" class="dash-svc" title="เข้าสู่ระบบแจ้งซ่อมอาคาร">
-                        <div class="dash-svc-head">
-                            <span class="dash-svc-icon"><i data-lucide="building-2" class="vc-icon-sm"></i></span>
-                            {% if stats.maint_pending > 0 %}
-                            <span class="vc-badge vc-badge-warning vc-badge-dot">รอ {{ stats.maint_pending }}</span>
-                            {% endif %}
-                        </div>
-                        <h3 class="dash-svc-title">แจ้งซ่อมอาคาร</h3>
-                        <p class="dash-svc-desc">ไฟฟ้า ประปา แอร์ และสิ่งอำนวยความสะดวก</p>
-                        <div class="dash-svc-foot">
-                            <span class="dash-svc-cta">เข้าสู่ระบบ <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
-                        </div>
-                    </a>
-
-                    <a href="/vehicle" class="dash-svc" title="เข้าสู่ระบบจองรถ">
+                    <a href="{{ url_for('vehicle.index', new=1) }}" class="dash-svc" title="จองรถ">
                         <div class="dash-svc-head">
                             <span class="dash-svc-icon"><i data-lucide="car" class="vc-icon-sm"></i></span>
-                            {% if stats.my_vehicle_pending > 0 %}
-                            <span class="vc-badge vc-badge-warning vc-badge-dot">ของฉัน {{ stats.my_vehicle_pending }}</span>
-                            {% elif is_admin and stats.vehicle_pending > 0 %}
-                            <span class="vc-badge vc-badge-warning vc-badge-dot">รอ {{ stats.vehicle_pending }}</span>
-                            {% endif %}
                         </div>
                         <h3 class="dash-svc-title">จองรถ</h3>
-                        <p class="dash-svc-desc">รถตู้ รถกระบะ ตรวจสอบตาราง อนุมัติคำขอ</p>
+                        <p class="dash-svc-desc">รถตู้ รถกระบะ ขอใช้รถส่วนกลาง</p>
                         <div class="dash-svc-foot">
-                            <span class="dash-svc-cta">เข้าสู่ระบบ <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                            <span class="dash-svc-cta">เริ่มจอง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
                         </div>
                     </a>
 
-                    <a href="/room" class="dash-svc" title="เข้าสู่ระบบจองห้องประชุม">
+                    <a href="{{ url_for('room.index', new=1) }}" class="dash-svc" title="จองห้องประชุม">
                         <div class="dash-svc-head">
                             <span class="dash-svc-icon"><i data-lucide="users" class="vc-icon-sm"></i></span>
-                            {% if stats.room_today > 0 %}
-                            <span class="vc-badge vc-badge-blue vc-badge-dot">วันนี้ {{ stats.room_today }}</span>
-                            {% endif %}
                         </div>
                         <h3 class="dash-svc-title">จองห้องประชุม</h3>
-                        <p class="dash-svc-desc">ดูตารางว่าง จองล่วงหน้า และจัดการอุปกรณ์</p>
+                        <p class="dash-svc-desc">ดูตารางว่าง จองห้องล่วงหน้า</p>
                         <div class="dash-svc-foot">
-                            <span class="dash-svc-cta">เข้าสู่ระบบ <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                            <span class="dash-svc-cta">เริ่มจอง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                        </div>
+                    </a>
+
+                    <a href="{{ url_for('repair.index', new=1) }}" class="dash-svc" title="แจ้งซ่อมไอที">
+                        <div class="dash-svc-head">
+                            <span class="dash-svc-icon"><i data-lucide="desktop" class="vc-icon-sm"></i></span>
+                        </div>
+                        <h3 class="dash-svc-title">แจ้งซ่อมไอที</h3>
+                        <p class="dash-svc-desc">คอมพิวเตอร์ เครือข่าย ปริ้นเตอร์</p>
+                        <div class="dash-svc-foot">
+                            <span class="dash-svc-cta">แจ้งเรื่อง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                        </div>
+                    </a>
+
+                    <a href="{{ url_for('maintenance.index', new=1) }}" class="dash-svc" title="แจ้งซ่อมอาคาร">
+                        <div class="dash-svc-head">
+                            <span class="dash-svc-icon"><i data-lucide="building-2" class="vc-icon-sm"></i></span>
+                        </div>
+                        <h3 class="dash-svc-title">แจ้งซ่อมอาคาร</h3>
+                        <p class="dash-svc-desc">ไฟฟ้า ประปา แอร์ สิ่งอำนวยความสะดวก</p>
+                        <div class="dash-svc-foot">
+                            <span class="dash-svc-cta">แจ้งเรื่อง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
                         </div>
                     </a>
                 </div>
             </section>
 
-            {# ── Recent activity ────────────────────────── #}
-            <section class="dash-section dash-fade d-4">
-                <p class="dash-section-label">รายการล่าสุด</p>
-
-                {# IT Recent #}
-                <div class="vc-card dash-recent-card" style="margin-bottom: var(--vc-space-4);">
-                    <div class="vc-card-head">
-                        <h3 class="vc-card-head-title">
-                            <i data-lucide="wrench" class="vc-icon-sm"></i>
-                            แจ้งซ่อมไอที
-                            <span class="vc-card-head-meta">{{ recent_repair|length }} รายการ</span>
-                        </h3>
-                        <div class="vc-card-head-actions">
-                            <a href="/repair" class="vc-btn vc-btn-ghost vc-btn-sm" title="ดูทั้งหมด">
-                                ดูทั้งหมด
-                                <i data-lucide="arrow-right" class="vc-icon-sm"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% if recent_repair %}
-                    <div class="table-responsive">
-                        <table class="vc-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>ผู้แจ้ง</th>
-                                    <th>หัวข้อ</th>
-                                    <th>ความเร่งด่วน</th>
-                                    <th>สถานะ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for t in recent_repair %}
-                                <tr>
-                                    <td class="vc-td-muted vc-mono">#{{ t.id }}</td>
-                                    <td class="vc-td-strong">{{ t.user.full_name or t.user.username }}</td>
-                                    <td>
-                                        {{ t.subject }}
-                                        <span class="dash-recent-sub">{{ t.category }}</span>
-                                    </td>
-                                    <td>
-                                        {% if t.urgency == 'ด่วนมาก' %}
-                                            <span class="vc-badge vc-badge-danger vc-badge-dot">ด่วนมาก</span>
-                                        {% elif t.urgency == 'ด่วน' %}
-                                            <span class="vc-badge vc-badge-warning vc-badge-dot">ด่วน</span>
-                                        {% else %}
-                                            <span class="vc-badge vc-badge-neutral vc-badge-dot">ปกติ</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if t.status == 'pending' %}
-                                            <span class="vc-badge vc-badge-warning vc-badge-dot">รอดำเนินการ</span>
-                                        {% elif t.status == 'in_progress' %}
-                                            <span class="vc-badge vc-badge-blue vc-badge-dot">กำลังซ่อม</span>
-                                        {% else %}
-                                            <span class="vc-badge vc-badge-success vc-badge-dot">เสร็จสิ้น</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    {{ empty_state(title='ยังไม่มีรายการแจ้งซ่อมไอที', desc='เมื่อมีคำขอเข้ามา จะแสดงที่นี่', icon='desktop', compact=True) }}
-                    {% endif %}
-                </div>
-
-                {# Maintenance Recent #}
-                <div class="vc-card dash-recent-card" style="margin-bottom: var(--vc-space-4);">
-                    <div class="vc-card-head">
-                        <h3 class="vc-card-head-title">
-                            <i data-lucide="building-2" class="vc-icon-sm"></i>
-                            แจ้งซ่อมอาคาร
-                            <span class="vc-card-head-meta">{{ recent_maint|length }} รายการ</span>
-                        </h3>
-                        <div class="vc-card-head-actions">
-                            <a href="/maintenance" class="vc-btn vc-btn-ghost vc-btn-sm" title="ดูทั้งหมด">
-                                ดูทั้งหมด
-                                <i data-lucide="arrow-right" class="vc-icon-sm"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% if recent_maint %}
-                    <div class="table-responsive">
-                        <table class="vc-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>ผู้แจ้ง</th>
-                                    <th>หัวข้อ</th>
-                                    <th>ความเร่งด่วน</th>
-                                    <th>สถานะ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for t in recent_maint %}
-                                <tr>
-                                    <td class="vc-td-muted vc-mono">#{{ t.id }}</td>
-                                    <td class="vc-td-strong">{{ t.user.full_name or t.user.username }}</td>
-                                    <td>
-                                        {{ t.subject }}
-                                        <span class="dash-recent-sub">{{ t.category }}</span>
-                                    </td>
-                                    <td>
-                                        {% if t.urgency == 'ด่วนมาก' %}
-                                            <span class="vc-badge vc-badge-danger vc-badge-dot">ด่วนมาก</span>
-                                        {% elif t.urgency == 'ด่วน' %}
-                                            <span class="vc-badge vc-badge-warning vc-badge-dot">ด่วน</span>
-                                        {% else %}
-                                            <span class="vc-badge vc-badge-neutral vc-badge-dot">ปกติ</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if t.status == 'pending' %}
-                                            <span class="vc-badge vc-badge-warning vc-badge-dot">รอช่างรับงาน</span>
-                                        {% elif t.status == 'in_progress' %}
-                                            <span class="vc-badge vc-badge-blue vc-badge-dot">กำลังดำเนินการ</span>
-                                        {% else %}
-                                            <span class="vc-badge vc-badge-success vc-badge-dot">เรียบร้อย</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    {{ empty_state(title='ยังไม่มีรายการแจ้งซ่อมอาคาร', desc='เมื่อมีคำขอเข้ามา จะแสดงที่นี่', icon='wrench', compact=True) }}
-                    {% endif %}
-                </div>
-
-                {# Vehicle — อนุมัติแล้ว · พรุ่งนี้ #}
-                <div class="vc-card dash-recent-card" style="margin-bottom: var(--vc-space-4);">
-                    <div class="vc-card-head">
-                        <h3 class="vc-card-head-title">
-                            <i data-lucide="car" class="vc-icon-sm"></i>
-                            จองรถ — อนุมัติแล้ว
-                            <span class="vc-card-head-meta">{{ recent_vehicle|length }} รายการ</span>
-                        </h3>
-                        <div class="vc-card-head-actions">
-                            <a href="/vehicle" class="vc-btn vc-btn-ghost vc-btn-sm" title="ดูทั้งหมด">
-                                ดูทั้งหมด
-                                <i data-lucide="arrow-right" class="vc-icon-sm"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% if recent_vehicle %}
-                    <div class="table-responsive">
-                        <table class="vc-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>ผู้จอง</th>
-                                    <th>ปลายทาง</th>
-                                    <th>เวลา</th>
-                                    <th>สถานะ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for v in recent_vehicle %}
-                                <tr>
-                                    <td class="vc-td-muted vc-mono">#{{ v.id }}</td>
-                                    <td class="vc-td-strong">{{ v.user.full_name or v.user.username }}</td>
-                                    <td>
-                                        {{ v.destination }}
-                                        <span class="dash-recent-sub">{{ v.purpose }}</span>
-                                    </td>
-                                    <td class="dash-recent-time">
-                                        {{ v.start_datetime.strftime('%H:%M') }}–{{ v.end_datetime.strftime('%H:%M') }}
-                                    </td>
-                                    <td>
-                                        <span class="vc-badge vc-badge-success vc-badge-dot">อนุมัติแล้ว</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    {{ empty_state(title='ยังไม่มีจองรถวันพรุ่งนี้', desc='เมื่อมีรายการอนุมัติแล้วสำหรับพรุ่งนี้ จะแสดงที่นี่', icon='car', compact=True) }}
-                    {% endif %}
-                </div>
-
-                {# Room Today #}
+            {# ── วันนี้ของฉัน ─────────────────────────────── #}
+            {% if today_items %}
+            <section class="dash-section dash-fade d-3">
+                <p class="dash-section-label">วันนี้ของฉัน</p>
                 <div class="vc-card dash-recent-card">
-                    <div class="vc-card-head">
-                        <h3 class="vc-card-head-title">
-                            <i data-lucide="users" class="vc-icon-sm"></i>
-                            ห้องประชุมวันนี้
-                            <span class="vc-card-head-meta">{{ recent_room|length }} รายการ</span>
-                        </h3>
-                        <div class="vc-card-head-actions">
-                            <a href="/room" class="vc-btn vc-btn-ghost vc-btn-sm" title="ดูทั้งหมด">
-                                ดูทั้งหมด
-                                <i data-lucide="arrow-right" class="vc-icon-sm"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% if recent_room %}
+                    <ul class="dash-today">
+                        {% for it in today_items %}
+                        <li class="dash-today-row">
+                            <span class="dash-today-time">{{ it.time }}</span>
+                            <span class="dash-today-icon"><i data-lucide="{{ it.icon }}" class="vc-icon-sm"></i></span>
+                            <span class="dash-today-body">
+                                <span class="dash-today-title">{{ it.title }}</span>
+                                {% if it.meta %}<span class="dash-recent-sub">{{ it.meta }}</span>{% endif %}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+            {% endif %}
+
+            {# ── คำขอของฉัน (ทุก service) ───────────────────── #}
+            <section class="dash-section dash-fade d-4">
+                <p class="dash-section-label">คำขอของฉัน</p>
+                <div class="vc-card dash-recent-card">
+                    {% if my_requests %}
                     <div class="table-responsive">
                         <table class="vc-table mb-0">
                             <thead>
                                 <tr>
-                                    <th>ห้อง</th>
-                                    <th>หัวข้อ</th>
-                                    <th>ผู้จอง</th>
-                                    <th>เริ่ม</th>
-                                    <th>สิ้นสุด</th>
+                                    <th>รายการ</th>
+                                    <th>สถานะ</th>
+                                    <th>วันที่ส่ง</th>
+                                    <th class="text-end">ทำซ้ำ</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for b in recent_room %}
+                                {% for r in my_requests %}
                                 <tr>
-                                    <td><span class="vc-badge vc-badge-neutral vc-badge-dot">{{ b.room_name }}</span></td>
-                                    <td class="vc-td-strong">{{ b.title }}</td>
-                                    <td>{{ b.user.full_name or b.user.username }}</td>
-                                    <td class="dash-recent-time">{{ b.start_time.strftime('%H:%M') }}</td>
-                                    <td class="dash-recent-time">{{ b.end_time.strftime('%H:%M') }}</td>
+                                    <td>
+                                        <span class="dash-req-title">
+                                            <i data-lucide="{{ r.icon }}" class="vc-icon-sm"></i>
+                                            {{ r.title }}
+                                        </span>
+                                        {% if r.subtitle %}<span class="dash-recent-sub">{{ r.subtitle }}</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="vc-badge vc-badge-{{ r.status_color }} vc-badge-dot">{{ r.status_label }}</span>
+                                    </td>
+                                    <td class="dash-recent-time">{{ r.created_at.strftime('%d/%m/%Y') }}</td>
+                                    <td class="text-end">
+                                        <a href="{{ r.repeat_url }}" class="vc-btn vc-btn-ghost vc-btn-sm" title="ทำซ้ำคำขอนี้ (แก้วันใหม่)">
+                                            <i data-lucide="copy" class="vc-icon-sm"></i>
+                                            ทำซ้ำ
+                                        </a>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                     {% else %}
-                    {{ empty_state(title='ไม่มีการจองห้องประชุมวันนี้', desc='ตารางว่างทั้งวัน', icon='users', compact=True) }}
+                    {{ empty_state(title='ยังไม่มีคำขอของคุณ', desc='เริ่มงานใหม่จากการ์ดด้านบน แล้วคำขอจะมาแสดงที่นี่', icon='inbox', compact=True) }}
                     {% endif %}
                 </div>
             </section>
 
             {# ── Superadmin banner ───────────────────────── #}
-            {% if current_user.is_superadmin %}
+            {% if is_superadmin %}
             <div class="dash-superadmin dash-fade d-5">
                 <div class="dash-superadmin-info">
                     <span class="dash-superadmin-icon"><i data-lucide="shield" class="vc-icon-sm"></i></span>

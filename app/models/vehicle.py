@@ -76,25 +76,20 @@ class VehicleBooking(db.Model):
 
     telegram_message_id = db.Column(db.Integer, nullable=True)
 
-    expense_type       = db.Column(db.String(20), nullable=True)   # string ใช้แสดงผล / backward compat
-    expense_type_id    = db.Column(db.Integer, db.ForeignKey('expense_type.id'), nullable=True)
-    expense_type_ref   = db.relationship('ExpenseType', foreign_keys=[expense_type_id])
-    central_category   = db.Column(db.String(50), nullable=True)  # หมวดย่อย ถ้า expense_type=1 (central)
-    trip_department    = db.Column(db.String(100), nullable=True)  # string ใช้แสดงผล / backward compat
+    expense_type       = db.Column(db.String(20), nullable=True)   # canonical: 'central'|'department'|'personal'
+    central_category   = db.Column(db.String(50), nullable=True)   # หมวดย่อย ถ้า expense_type='central'
+    trip_department    = db.Column(db.String(100), nullable=True)   # ชื่อแผนก (display)
     trip_department_id = db.Column(db.Integer, db.ForeignKey('vehicle_department.id'), nullable=True)
     trip_department_ref = db.relationship('VehicleDepartment', foreign_keys=[trip_department_id])
     pickup_location    = db.Column(db.String(200), nullable=True)  # จุดขึ้นรถ
 
     # Snapshot ณ เวลาที่ admin assign — ป้องกันข้อมูลหายเมื่อแก้/ลบรถ หรือคนขับ
-    snap_vehicle_plate   = db.Column(db.String(20), nullable=True)   # ทะเบียนรถ
-    snap_driver_name     = db.Column(db.String(100), nullable=True)  # ชื่อคนขับ
-    snap_department_name = db.Column(db.String(100), nullable=True)  # ชื่อแผนก
+    snap_vehicle_plate = db.Column(db.String(20), nullable=True)   # ทะเบียนรถ
+    snap_driver_name   = db.Column(db.String(100), nullable=True)  # ชื่อคนขับ
 
     # ── Ad-hoc trip (2026-05-18) ─────────────────────────────
     # is_ad_hoc=True → driver สร้างเอง (งานนอกระบบ), ซ่อนจากปฏิทิน /vehicle
-    is_ad_hoc    = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
-    # contact_name → free-text ผู้ติดต่อ เมื่อ user_id ไม่ใช่ผู้ติดต่อจริง (driver_id ตั้งเป็นตัวเอง)
-    contact_name = db.Column(db.String(100), nullable=True)
+    is_ad_hoc = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
 
 
 # ==========================================

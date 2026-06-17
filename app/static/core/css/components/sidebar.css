@@ -17,6 +17,14 @@
        weight 500→400, added `border-top` between sections
      - badge restyled: dark indigo pill → soft gray pill
      - localStorage `bb-sb-groups` persists open state
+
+   2026-06-13 rev2 — Zendenta-style restyle:
+     - section-label: drop border-top divider, +uppercase
+       +letter-spacing wide, .72→.68rem (flat sections, whitespace)
+     - hover: blue tint → neutral (--vc-bg-hover / --vc-fg)
+     - active: text --vc-blue → --vc-accent (indigo identity)
+       + new ::before left-bar 3px (.sb-item.active + .sb-item--sub.active)
+     - group has-active-child toggle + collapsed dot: --vc-blue → --vc-accent
    ============================================================ */
 
 :root {
@@ -58,8 +66,8 @@
     flex: 1; min-width: 0;
 }
 .sb-logo-icon {
-    width: 28px; height: 28px;
-    background: var(--vc-fg);
+    width: 30px; height: 30px;
+    background: var(--vc-accent);
     color: var(--vc-fg-inverted);
     border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
@@ -93,15 +101,13 @@
    Refresh 2026-05-23: drop UPPERCASE + letter-spacing, lighter weight,
    add subtle top border for section separation (mystuff-style) */
 .sb-section-label {
-    font-size: .72rem;
+    font-size: .68rem;
     font-weight: 400;
     color: var(--vc-fg-subtle);
-    padding: 12px 8px 6px;
+    padding: 14px 8px 6px;
     margin: 4px 0 2px;
-    border-top: 1px solid var(--vc-border);
 }
 .sb-section-label:first-child {
-    border-top: 0;
     padding-top: 4px;
     margin-top: 0;
 }
@@ -109,30 +115,42 @@
 /* Nav item */
 .sb-item {
     display: flex; align-items: center; gap: 10px;
-    padding: 0 8px;
-    height: 35px;
-    margin: 1px 0;
+    padding: 0 15px;
+    height: 40px;
+    margin: 1.5px 0;
     border-radius: 8px;
-    color: var(--vc-fg-muted);
-    font-size: .82rem; font-weight: 400;
+    color: var(--vc-fg);
+    font-size: .82rem; font-weight: 500;
     text-decoration: none;
     cursor: pointer;
     transition: background .14s, color .14s;
     position: relative;
+    font-weight: 700;
 }
 .sb-item:hover {
-    background: var(--vc-bg-hover);
-    color: var(--vc-fg);
+    background: var(--vc-accent-light);
 }
 .sb-item.active {
-    background: var(--vc-bg-hover);
-    color: var(--vc-fg);
-    font-weight: 500;
+    background: var(--vc-accent-light);
+    color: var(--vc-accent);
+    font-weight: 700;
 }
-.sb-item.active .sb-icon { color: var(--vc-fg); }
+.sb-item.active .sb-icon { color: var(--vc-accent); }
+
+/* Active left-bar indicator — top-level items only (Zendenta-style) */
+.sb-item.active::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px; height: 18px;
+    border-radius: 0 3px 3px 0;
+    background: var(--vc-accent);
+}
 
 .sb-icon {
-    width: 18px; height: 18px;
+    width: 21px; height: 21px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -141,33 +159,33 @@
     transition: color .20s;
 }
 .sb-item:hover  .sb-icon { color: var(--vc-fg); }
-.sb-item.active .sb-icon { color: var(--vc-fg); }
+.sb-item.active .sb-icon { color: var(--vc-accent); }
 
 /* size Lucide SVG ภายใน .sb-icon — default 24×24 ใหญ่ไป */
 .sb-icon [data-lucide],
 .sb-icon svg.lucide {
-    width: 16px;
-    height: 16px;
+    width: 21px;
+    height: 21px;
     stroke-width: 1.5;
 }
 
-.sb-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .98rem; }
 
 /* Badge (pending count) — light counter pill (mystuff-style)
    Refresh 2026-05-23: soft gray bg + muted text */
 .sb-badge {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 20px; height: 20px; padding: 0 6px;
-    background: var(--vc-bg-hover);
-    color: var(--vc-fg-muted);
+    background: var(--vc-red);
+    color: var(--vc-bg);
     border-radius: var(--vc-radius-xs);
     font-size: .68rem; font-weight: 500; line-height: 1;
     font-variant-numeric: tabular-nums;
     letter-spacing: .01em;
 }
 .sb-item.active .sb-badge {
-    background: rgba(0, 0, 0, .06);
-    color: var(--vc-fg);
+    background: var(--vc-red);
+    color: var(--vc-bg);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -187,10 +205,10 @@
     border: 0;
     font-family: inherit;
     text-align: left;
-    color: var(--vc-fg-muted);
+    color: var(--vc-fg);
     cursor: pointer;
 }
-.sb-group.has-active-child .sb-group-toggle { color: var(--vc-fg); }
+.sb-group.has-active-child .sb-group-toggle { color: var(--vc-accent); }
 
 /* Make sb-icon a positioning context so the unread dot can anchor */
 .sb-group-toggle .sb-icon { position: relative; }
@@ -225,7 +243,7 @@
     position: absolute;
     top: -1px; right: -2px;
     width: 6px; height: 6px;
-    background: var(--vc-primary);
+    background: var(--vc-accent);
     border-radius: 50%;
     box-shadow: 0 0 0 1.5px var(--vc-bg-subtle);
 }
@@ -242,9 +260,7 @@
     min-height: 0;
 }
 
-/* Sub container — vertical indent guide on the left
-   (re-added 2026-05-23 per user request — sits behind sub-items so
-   active row's neutral bg can cover it cleanly) */
+/* Sub container — holds the continuous track line on the left */
 .sb-sub {
     position: relative;
     padding: 4px 0 8px 0;
@@ -252,26 +268,25 @@
 .sb-sub::before {
     content: '';
     position: absolute;
-    left: 23px;
-    top: 4px;
-    bottom: 8px;
-    width: 1px;
+    left: 13px;
+    top: 6px; bottom: 10px;
+    width: 2px;
+    border-radius: 1px;
     background: var(--vc-border);
-    opacity: .8;
-    transform: scaleY(0);
-    transform-origin: top center;
-    transition: transform .32s var(--sb-ease);
 }
-.sb-group.is-open .sb-sub::before { transform: scaleY(1); }
 
-/* Sub item — no icon, indented; ghost-muted text, hover reveals contrast */
+/* Sub item — bullet-dot style (2026-06-15)
+   margin-left pushes the rounded pill to the RIGHT of the track line,
+   so an active/hover background never covers the line */
 .sb-item--sub {
-    height: 32px;
-    padding: 0 10px 0 36px;
-    font-size: .8rem;
-    font-weight: 400;
-    color: var(--vc-fg-subtle);
-    margin: 1px 0;
+    height: 35px;
+    padding: 0 12px;
+    margin: 2px 6px 2px 21px;
+    border-radius: 8px;
+    gap: 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--vc-fg-muted);
     opacity: 0;
     transform: translateY(-4px);
     transition:
@@ -291,30 +306,55 @@
 .sb-group.is-open .sb-item--sub:nth-child(5) { transition-delay: 0ms, 0ms, 150ms, 150ms; }
 .sb-group.is-open .sb-item--sub:nth-child(6) { transition-delay: 0ms, 0ms, 180ms, 180ms; }
 
+/* Per-item line segment — sits ON the track line (left of the pill),
+   colors up on hover/active so the line "lights up" for the current row */
+.sb-item--sub::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 0; bottom: 0;
+    width: 2px;
+    border-radius: 1px;
+    background: transparent;
+    transition: background .14s;
+}
+
+/* Bullet dot */
+.sb-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--vc-fg-muted);
+    flex-shrink: 0;
+    transition: background .14s;
+}
+
 .sb-item--sub:hover {
     background: var(--vc-bg-hover);
     color: var(--vc-fg);
 }
+.sb-item--sub:hover::before { background: var(--vc-fg-muted); }
+.sb-item--sub:hover .sb-dot  { background: var(--vc-fg); }
 
-/* Active sub — neutral full-row bg (no accent bar)
-   Refresh 2026-05-23: bg accent → bg neutral, drop left bar */
+/* Active sub — pill sits to the right of the track; segment turns accent */
 .sb-item--sub.active {
-    background: var(--vc-bg-hover);
-    color: var(--vc-fg);
-    font-weight: 500;
+    background: var(--vc-accent-light);
+    color: var(--vc-accent);
+    font-weight: 600;
 }
+.sb-item--sub.active::before { background: var(--vc-accent); }
+.sb-item--sub.active .sb-dot { background: var(--vc-accent); }
 
 /* Reduce motion — keep functional, drop flourish */
 @media (prefers-reduced-motion: reduce) {
     .sb-group-body,
     .sb-chevron,
     .sb-item--sub,
-    .sb-sub::before {
+    .sb-item--sub::before {
         transition-duration: 0ms !important;
         animation: none !important;
     }
     .sb-item--sub { transform: none; }
-    .sb-group.is-open .sb-sub::before { transform: scaleY(1); }
 }
 
 /* Footer / logout */

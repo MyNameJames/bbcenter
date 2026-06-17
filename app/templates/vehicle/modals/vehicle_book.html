@@ -16,10 +16,6 @@
                             <div class="row gx-0 d-flex justify-content-between">
                                 <div class="col gap-2 flex-grow-1">
                                     <div class="row gx-0 d-flex align-items-center gap-2">
-                                        <div class="col-auto bk-detail-member-avatar rounded-circle d-flex align-items-center justify-content-center" style="background: var(--vc-fg); color: var(--vc-fg-inverted);">
-                                             <i data-lucide="user" style="width:16px;height:16px;"></i>
-                                            <!-- <i data-lucide="user"></i> -->
-                                        </div>
                                         <div class="col">
                                             <div class="row">
                                                 <span class="bk-row-main">{{ current_user.full_name or current_user.username }}</span>
@@ -100,8 +96,7 @@
                     </div>
 
                     {# คำเตือนค่าล่วงเวลาสารถี — โชว์เมื่อเลือกวันอาทิตย์ / นอกเวลา 08:00–17:00 #}
-                    <div class="bk-ot-warn" id="bk_ot_warn" hidden role="status" aria-live="polite">
-                        <i data-lucide="alert-triangle" class="bk-ot-warn-icon"></i>
+                    <div class="bk-ot-warn mb-2" id="bk_ot_warn" hidden role="status" aria-live="polite">
                         <div class="bk-ot-warn-text" id="bk_ot_warn_text"></div>
                     </div>
 
@@ -153,13 +148,12 @@
                         </div>
                     </div>
 
-                    <div class="bk-info-note col-12 rounded-2 py-3 px-3 mt-3">
+                    <div class="bk-info-note rounded-2 pb-3 pt-2 px-3 mt-2">
                         <div class="row">
-                            <span class="col-1 pe-1"><i data-lucide="info" style="width:16px;height:16px;"></i></span>
                             <div class="col">
-                                <div class="row">
-                                    <small class="fw-bold">Admin :</small>
-                                    <small>จะพิจารณาจัดสรรรถและคนขับให้ตามความเหมาะสม</small>
+                                <div class="">
+                                    <small class="fw-bold">แอดมิน :</small>
+                                    <small>จะจัดสรรรถและคนขับให้ตามความเหมาะสม</small>
                                 </div>
                             </div>
                         </div>

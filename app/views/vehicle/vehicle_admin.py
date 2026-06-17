@@ -1,27 +1,18 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app
+from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from models import db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage, SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment, BudgetType, Notification, DeptApprover, OTRateConfig, DriverOT, DriverOTSlot, FuelPrice, FuelBill, RepairTicket, MaintenanceTicket, RoomBooking
-from sqlalchemy import and_, extract, or_, func
-from datetime import datetime, date, timedelta
-from views.core.telegram_service import (notify_approved, notify_forwarded_to_approver, notify_approver_approved, notify_rejected,
-                                    notify_cancelled            as tg_notify_cancelled)
+from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage,
+                    SystemConfig, VehicleBudget, VehicleDepartment, DeptApprover, FuelPrice)
+from sqlalchemy import func
+from datetime import date
+from views.core.broadcast import notify_approved
 from views.core.notification_service import (
-    notify_booking_created      as _n_booking_created,
     notify_admin_assigned       as _n_admin_assigned,
     notify_admin_approved       as _n_admin_approved,
     notify_forwarded_to_approver as _n_forwarded,
-    notify_approver_approved    as _n_approver_approved,
     notify_rejected             as _n_rejected,
     notify_merged_into_group    as _n_merged,
-    notify_mileage_started      as _n_mileage_start,
-    notify_mileage_ended        as _n_mileage_end,
-    notify_budget_deducted      as _n_budget,
-    notify_payment_required     as _n_payment_required,
-    notify_admin_deleted        as _n_admin_deleted,
-    notify_payment_confirmed    as _n_payment_confirmed,
-    notify_user_cancelled       as _n_user_cancelled,
 )
-import views.vehicle.vehicle_budget_service as budget_svc
+from views.vehicle.vehicle_workflow import guard_budget
 import os, time
 from werkzeug.utils import secure_filename
 from views.vehicle.vehicle_common import (
@@ -43,125 +34,114 @@ def _save_driver_image(field_name, prefix):
     return fname
 
 
-@adminfleet_bp.route('/admin/manage-fleet', methods=['GET', 'POST'])
-@login_required
-def manage_fleet():
-    if not is_vehicle_admin():
-        flash('คุณไม่มีสิทธิ์เข้าหน้านี้', 'danger')
-        return redirect(url_for('vehicle.index'))
+def _fleet_add_vehicle():
+    v = Vehicle(
+        brand         = request.form.get('brand'),
+        model         = request.form.get('model'),
+        license_plate = request.form.get('license_plate'),
+        capacity      = int(request.form.get('capacity')),
+        fuel_rate     = float(request.form.get('fuel_rate') or 10),
+    )
+    db.session.add(v)
+    db.session.commit()
+    flash(f"เพิ่มรถ {v.brand} {v.model} สำเร็จ!", 'success')
 
-    if request.method == 'POST':
-        action = request.form.get('action')
 
-        if action == 'add_vehicle':
-            new_vehicle = Vehicle(
-                brand         = request.form.get('brand'),
-                model         = request.form.get('model'),
-                license_plate = request.form.get('license_plate'),
-                capacity      = int(request.form.get('capacity')),
-                fuel_rate     = float(request.form.get('fuel_rate') or 10)
-            )
-            db.session.add(new_vehicle)
-            db.session.commit()
-            flash(f"เพิ่มรถ {new_vehicle.brand} {new_vehicle.model} สำเร็จ!", 'success')
+def _fleet_add_driver():
+    d = Driver(
+        name             = request.form.get('name'),
+        phone            = request.form.get('phone'),
+        is_active        = bool(request.form.get('is_active')),
+        user_id          = request.form.get('user_id') or None,
+        national_id      = (request.form.get('national_id') or '').strip() or None,
+        addr_line        = (request.form.get('addr_line') or '').strip() or None,
+        addr_subdistrict = (request.form.get('addr_subdistrict') or '').strip() or None,
+        addr_district    = (request.form.get('addr_district') or '').strip() or None,
+        addr_province    = (request.form.get('addr_province') or '').strip() or None,
+        addr_postal      = (request.form.get('addr_postal') or '').strip() or None,
+    )
+    d.avatar_image  = _save_driver_image('avatar_image', 'avatar')
+    d.id_card_image = _save_driver_image('id_card_image', 'idcard')
+    db.session.add(d)
+    db.session.commit()
+    flash(f"เพิ่มพนักงานขับรถ {d.name} สำเร็จ!", 'success')
 
-        elif action == 'add_driver':
-            new_driver = Driver(
-                name             = request.form.get('name'),
-                phone            = request.form.get('phone'),
-                is_active        = bool(request.form.get('is_active')),
-                user_id          = request.form.get('user_id') or None,
-                national_id      = (request.form.get('national_id') or '').strip() or None,
-                addr_line        = (request.form.get('addr_line') or '').strip() or None,
-                addr_subdistrict = (request.form.get('addr_subdistrict') or '').strip() or None,
-                addr_district    = (request.form.get('addr_district') or '').strip() or None,
-                addr_province    = (request.form.get('addr_province') or '').strip() or None,
-                addr_postal      = (request.form.get('addr_postal') or '').strip() or None,
-            )
-            new_driver.avatar_image  = _save_driver_image('avatar_image', 'avatar')
-            new_driver.id_card_image = _save_driver_image('id_card_image', 'idcard')
-            db.session.add(new_driver)
-            db.session.commit()
-            flash(f"เพิ่มพนักงานขับรถ {new_driver.name} สำเร็จ!", 'success')
 
-        elif action == 'edit_vehicle':
-            vid     = int(request.form.get('vehicle_id'))
-            vehicle = Vehicle.query.get_or_404(vid)
-            vehicle.brand         = request.form.get('brand')
-            vehicle.model         = request.form.get('model')
-            vehicle.license_plate = request.form.get('license_plate')
-            vehicle.capacity      = int(request.form.get('capacity'))
-            vehicle.status        = request.form.get('status', 'active')
-            fuel_rate_str = request.form.get('fuel_rate', '').strip()
-            if fuel_rate_str:
-                vehicle.fuel_rate = float(fuel_rate_str)
-            svc_date_str = request.form.get('next_service_date', '').strip()
-            vehicle.next_service_date = date.fromisoformat(svc_date_str) if svc_date_str else None
-            svc_km_str = request.form.get('next_service_km', '').strip()
-            vehicle.next_service_km = int(svc_km_str) if svc_km_str else None
-            tax_date_str = request.form.get('tax_due_date', '').strip()
-            vehicle.tax_due_date = date.fromisoformat(tax_date_str) if tax_date_str else None
-            db.session.commit()
-            flash(f"อัปเดตข้อมูลรถ {vehicle.brand} {vehicle.model} สำเร็จ!", 'success')
+def _fleet_edit_vehicle():
+    vehicle = Vehicle.query.get_or_404(int(request.form.get('vehicle_id')))
+    vehicle.brand         = request.form.get('brand')
+    vehicle.model         = request.form.get('model')
+    vehicle.license_plate = request.form.get('license_plate')
+    vehicle.capacity      = int(request.form.get('capacity'))
+    vehicle.status        = request.form.get('status', 'active')
+    fuel_rate_str = request.form.get('fuel_rate', '').strip()
+    if fuel_rate_str:
+        vehicle.fuel_rate = float(fuel_rate_str)
+    svc_date_str = request.form.get('next_service_date', '').strip()
+    vehicle.next_service_date = date.fromisoformat(svc_date_str) if svc_date_str else None
+    svc_km_str = request.form.get('next_service_km', '').strip()
+    vehicle.next_service_km = int(svc_km_str) if svc_km_str else None
+    tax_date_str = request.form.get('tax_due_date', '').strip()
+    vehicle.tax_due_date = date.fromisoformat(tax_date_str) if tax_date_str else None
+    db.session.commit()
+    flash(f"อัปเดตข้อมูลรถ {vehicle.brand} {vehicle.model} สำเร็จ!", 'success')
 
-        elif action == 'delete_vehicle':
-            vid     = int(request.form.get('vehicle_id'))
-            vehicle = Vehicle.query.get_or_404(vid)
-            db.session.delete(vehicle)
-            db.session.commit()
-            flash('ลบรถออกจากระบบแล้ว', 'success')
 
-        elif action == 'edit_driver':
-            did    = int(request.form.get('driver_id'))
-            driver = Driver.query.get_or_404(did)
-            driver.name      = request.form.get('name')
-            driver.phone     = request.form.get('phone')
-            driver.is_active = True if request.form.get('is_active') else False
-            driver.user_id   = request.form.get('user_id') or None
-            driver.national_id      = (request.form.get('national_id') or '').strip() or None
-            driver.addr_line        = (request.form.get('addr_line') or '').strip() or None
-            driver.addr_subdistrict = (request.form.get('addr_subdistrict') or '').strip() or None
-            driver.addr_district    = (request.form.get('addr_district') or '').strip() or None
-            driver.addr_province    = (request.form.get('addr_province') or '').strip() or None
-            driver.addr_postal      = (request.form.get('addr_postal') or '').strip() or None
-            # อัปโหลดรูปใหม่ทับของเดิม (ถ้าไม่ส่งมา = เก็บของเดิมไว้)
-            new_avatar = _save_driver_image('avatar_image', 'avatar')
-            if new_avatar:
-                driver.avatar_image = new_avatar
-            new_idcard = _save_driver_image('id_card_image', 'idcard')
-            if new_idcard:
-                driver.id_card_image = new_idcard
-            db.session.commit()
-            flash(f"อัปเดตข้อมูลคนขับ {driver.name} สำเร็จ!", 'success')
+def _fleet_delete_vehicle():
+    vehicle = Vehicle.query.get_or_404(int(request.form.get('vehicle_id')))
+    db.session.delete(vehicle)
+    db.session.commit()
+    flash('ลบรถออกจากระบบแล้ว', 'success')
 
-        elif action == 'delete_driver':
-            did    = int(request.form.get('driver_id'))
-            driver = Driver.query.get_or_404(did)
-            db.session.delete(driver)
-            db.session.commit()
-            flash('ลบพนักงานขับรถออกจากระบบแล้ว', 'success')
 
-        # ── CRUD: DeptApprover ──────────────────────────────────
-        elif action == 'add_approver':
-            uid = int(request.form.get('approver_user_id'))
-            did = int(request.form.get('approver_dept_id'))
-            exists = DeptApprover.query.filter_by(user_id=uid, dept_id=did).first()
-            if exists:
-                flash('ผู้อนุมัติคนนี้ถูกเพิ่มในกองนั้นแล้ว', 'warning')
-            else:
-                db.session.add(DeptApprover(user_id=uid, dept_id=did))
-                db.session.commit()
-                flash('เพิ่มผู้อนุมัติเรียบร้อยแล้ว', 'success')
+def _fleet_edit_driver():
+    driver = Driver.query.get_or_404(int(request.form.get('driver_id')))
+    driver.name             = request.form.get('name')
+    driver.phone            = request.form.get('phone')
+    driver.is_active        = True if request.form.get('is_active') else False
+    driver.user_id          = request.form.get('user_id') or None
+    driver.national_id      = (request.form.get('national_id') or '').strip() or None
+    driver.addr_line        = (request.form.get('addr_line') or '').strip() or None
+    driver.addr_subdistrict = (request.form.get('addr_subdistrict') or '').strip() or None
+    driver.addr_district    = (request.form.get('addr_district') or '').strip() or None
+    driver.addr_province    = (request.form.get('addr_province') or '').strip() or None
+    driver.addr_postal      = (request.form.get('addr_postal') or '').strip() or None
+    new_avatar = _save_driver_image('avatar_image', 'avatar')
+    if new_avatar:
+        driver.avatar_image = new_avatar
+    new_idcard = _save_driver_image('id_card_image', 'idcard')
+    if new_idcard:
+        driver.id_card_image = new_idcard
+    db.session.commit()
+    flash(f"อัปเดตข้อมูลคนขับ {driver.name} สำเร็จ!", 'success')
 
-        elif action == 'delete_approver':
-            aid = int(request.form.get('approver_id'))
-            row = DeptApprover.query.get_or_404(aid)
-            db.session.delete(row)
-            db.session.commit()
-            flash('ลบผู้อนุมัติออกจากกองแล้ว', 'success')
 
-        return redirect(url_for('adminfleet.manage_fleet'))
+def _fleet_delete_driver():
+    driver = Driver.query.get_or_404(int(request.form.get('driver_id')))
+    db.session.delete(driver)
+    db.session.commit()
+    flash('ลบพนักงานขับรถออกจากระบบแล้ว', 'success')
 
+
+def _fleet_add_approver():
+    uid = int(request.form.get('approver_user_id'))
+    did = int(request.form.get('approver_dept_id'))
+    if DeptApprover.query.filter_by(user_id=uid, dept_id=did).first():
+        flash('ผู้อนุมัติคนนี้ถูกเพิ่มในกองนั้นแล้ว', 'warning')
+    else:
+        db.session.add(DeptApprover(user_id=uid, dept_id=did))
+        db.session.commit()
+        flash('เพิ่มผู้อนุมัติเรียบร้อยแล้ว', 'success')
+
+
+def _fleet_delete_approver():
+    row = DeptApprover.query.get_or_404(int(request.form.get('approver_id')))
+    db.session.delete(row)
+    db.session.commit()
+    flash('ลบผู้อนุมัติออกจากกองแล้ว', 'success')
+
+
+def _load_fleet_data():
     vehicles  = Vehicle.query.order_by(Vehicle.id).all()
     drivers   = Driver.query.order_by(Driver.id).all()
     users     = User.query.order_by(User.full_name).all()
@@ -171,31 +151,56 @@ def manage_fleet():
     approvers = (DeptApprover.query
                  .join(DeptApprover.dept)
                  .order_by(VehicleDepartment.name).all())
-
-    odo_rows = (db.session.query(
-            VehicleBooking.assigned_vehicle_id,
-            func.max(VehicleMileage.odometer_end))
-        .join(VehicleMileage, VehicleMileage.booking_id == VehicleBooking.id)
-        .filter(VehicleBooking.assigned_vehicle_id.isnot(None),
-                VehicleMileage.odometer_end.isnot(None))
-        .group_by(VehicleBooking.assigned_vehicle_id).all())
+    odo_rows  = (db.session.query(
+                     VehicleBooking.assigned_vehicle_id,
+                     func.max(VehicleMileage.odometer_end))
+                 .join(VehicleMileage, VehicleMileage.booking_id == VehicleBooking.id)
+                 .filter(VehicleBooking.assigned_vehicle_id.isnot(None),
+                         VehicleMileage.odometer_end.isnot(None))
+                 .group_by(VehicleBooking.assigned_vehicle_id).all())
     vehicle_odometers = {vid: odo for vid, odo in odo_rows}
-
     now_dt      = get_bkk_time()
     month_start = now_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     job_rows = (db.session.query(VehicleBooking.driver_id, func.count(VehicleBooking.id))
-        .filter(VehicleBooking.driver_id.isnot(None),
-                VehicleBooking.start_datetime >= month_start,
-                VehicleBooking.status == 'approved')
-        .group_by(VehicleBooking.driver_id).all())
+                .filter(VehicleBooking.driver_id.isnot(None),
+                        VehicleBooking.start_datetime >= month_start,
+                        VehicleBooking.status == 'approved')
+                .group_by(VehicleBooking.driver_id).all())
     driver_jobs = {did: cnt for did, cnt in job_rows}
+    return vehicles, drivers, users, depts, approvers, vehicle_odometers, driver_jobs, now_dt
 
+
+@adminfleet_bp.route('/admin/manage-fleet', methods=['GET', 'POST'])
+@login_required
+def manage_fleet():
+    if not is_vehicle_admin():
+        flash('คุณไม่มีสิทธิ์เข้าหน้านี้', 'danger')
+        return redirect(url_for('vehicle.index'))
+
+    if request.method == 'POST':
+        _POST_HANDLERS = {
+            'add_vehicle':     _fleet_add_vehicle,
+            'add_driver':      _fleet_add_driver,
+            'edit_vehicle':    _fleet_edit_vehicle,
+            'delete_vehicle':  _fleet_delete_vehicle,
+            'edit_driver':     _fleet_edit_driver,
+            'delete_driver':   _fleet_delete_driver,
+            'add_approver':    _fleet_add_approver,
+            'delete_approver': _fleet_delete_approver,
+        }
+        handler = _POST_HANDLERS.get(request.form.get('action'))
+        if handler:
+            handler()
+        return redirect(url_for('adminfleet.manage_fleet'))
+
+    vehicles, drivers, users, depts, approvers, vehicle_odometers, driver_jobs, now_dt = \
+        _load_fleet_data()
     return render_template('vehicle/admin/vehicle_fleet.html',
                            vehicles=vehicles, drivers=drivers, users=users,
                            depts=depts, approvers=approvers,
                            vehicle_odometers=vehicle_odometers,
                            driver_jobs=driver_jobs,
-                           now=get_bkk_time())
+                           now=now_dt)
 
 
 # ─────────────────────────────────────────────
@@ -381,15 +386,10 @@ def admin_merge():
     trip_group          = request.form.get('trip_group', '').strip()
     expense_type        = request.form.get('expense_type') or None
 
-    import sys
-    print(f'[DEBUG admin_merge] booking_ids={booking_ids} vehicle={assigned_vehicle_id} driver={driver_id} trip_group={trip_group!r} expense_type={expense_type}', file=sys.stderr, flush=True)
-
     if len(booking_ids) < 2:
-        print(f'[DEBUG admin_merge] BLOCKED: need >= 2 booking_ids, got {len(booking_ids)}', file=sys.stderr, flush=True)
         return jsonify({'ok': False, 'msg': 'กรุณาเลือกรายการอย่างน้อย 2 รายการเพื่อรวมทริป'}), 400
 
     if not assigned_vehicle_id:
-        print(f'[DEBUG admin_merge] BLOCKED: no assigned_vehicle_id', file=sys.stderr, flush=True)
         return jsonify({'ok': False, 'msg': 'กรุณาเลือกรถที่จะใช้สำหรับทริปนี้'}), 400
 
     # หมายเหตุ: ไม่บังคับเลือกคนขับตอน merge — สามารถ assign ทีหลังได้
@@ -403,7 +403,6 @@ def admin_merge():
 
     # กำหนด status — ถ้างบกอง → waiting_approver
     new_status = 'waiting_approver' if expense_type == 'department' else 'approved'
-    print(f'[DEBUG admin_merge] trip_group={trip_group!r} expense_type={expense_type} new_status={new_status} updating {len(booking_ids)} bookings', file=sys.stderr, flush=True)
 
     # อัปเดตทุก booking ที่เลือก
     for bid in booking_ids:
@@ -415,12 +414,8 @@ def admin_merge():
             booking.expense_type        = expense_type
             if driver_id and booking.need_driver:
                 booking.driver_id = int(driver_id)
-            print(f'[DEBUG admin_merge]   updated booking #{booking.id} → status={new_status}', file=sys.stderr, flush=True)
-        else:
-            print(f'[DEBUG admin_merge]   booking #{bid} NOT FOUND', file=sys.stderr, flush=True)
 
     db.session.commit()
-    print(f'[DEBUG admin_merge] commit OK', file=sys.stderr, flush=True)
 
     # แจ้งเตือน (Telegram + In-app) ทุก booking ใน group
     # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07) — merge confirm ส่งแค่ in-app
@@ -453,7 +448,6 @@ def admin_assign(booking_id):
 
     booking              = VehicleBooking.query.get_or_404(booking_id)
     assigned_vehicle_id  = request.form.get('assigned_vehicle_id')
-    assigned_vehicle2_id = request.form.get('assigned_vehicle2_id') or None
     driver_id            = request.form.get('driver_id') or None
     trip_group           = request.form.get('trip_group', '').strip() or None
     action               = request.form.get('action', 'assign')
@@ -462,7 +456,6 @@ def admin_assign(booking_id):
     if action == 'ungroup':
         booking.trip_group           = None
         booking.assigned_vehicle_id  = None
-        booking.assigned_vehicle2_id = None
         db.session.commit()
         flash(f'นำ #{booking_id} ออกจากกลุ่มทริปแล้ว', 'success')
     else:
@@ -476,8 +469,7 @@ def admin_assign(booking_id):
                 return jsonify({'ok': False, 'msg': f'รายการ #{booking_id} ขอคนขับ กรุณาเลือกคนขับด้วย'}), 400
             # กำหนดรถและคนขับเฉพาะทริปอิสระ
             if assigned_vehicle_id:
-                booking.assigned_vehicle_id  = int(assigned_vehicle_id)
-            booking.assigned_vehicle2_id = int(assigned_vehicle2_id) if assigned_vehicle2_id else None
+                booking.assigned_vehicle_id = int(assigned_vehicle_id)
             if driver_id:
                 booking.driver_id  = int(driver_id)
 
@@ -502,7 +494,13 @@ def admin_assign(booking_id):
             _n_rejected(booking, current_user, by_approver=False)  # In-app Event #6
             db.session.commit()
         else:
-            # approve — ถ้างบกอง → ส่ง Approver อัตโนมัติ
+            # approve — เช็ค budget active ก่อน (gap: admin_assign ไม่เคยเช็ค)
+            if booking.expense_type in ('central', 'department'):
+                ok, err = guard_budget(booking)
+                if not ok:
+                    return jsonify({'ok': False, 'msg': err}), 400
+
+            # ถ้างบกอง → ส่ง Approver อัตโนมัติ
             if not is_join_trip and (booking.assigned_vehicle_id or booking.driver_id):
                 _n_admin_assigned(booking)                         # In-app Event #2
             if booking.expense_type == 'department':

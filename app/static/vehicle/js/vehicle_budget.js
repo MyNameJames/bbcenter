@@ -153,6 +153,36 @@ document.addEventListener('click', function (e) {
     });
 });
 
+// ── Main tabs (2026-06-15): ตารางรวม / ส่วนกลาง / ส่วนกอง / ส่วนตัว / งบไม่ใช้แล้ว
+//    client-side switch (data set render มาครบแล้ว). default = pivot.
+//    (toolbar filter/add ถูกลบออก 2026-06-16 ตามคำสั่งผู้ใช้)
+(function initBudgetTabs() {
+    const tabs   = Array.from(document.querySelectorAll('[data-budget-tab]'));
+    const panels = Array.from(document.querySelectorAll('[data-budget-panel]'));
+    if (!tabs.length) return;
+
+    function activate(name) {
+        tabs.forEach(function (t) {
+            const on = t.dataset.budgetTab === name;
+            t.classList.toggle('is-active', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        panels.forEach(function (p) {
+            const on = p.dataset.budgetPanel === name;
+            p.classList.toggle('is-active', on);
+            p.hidden = !on;
+        });
+    }
+
+    tabs.forEach(function (t) {
+        t.addEventListener('click', function () { activate(t.dataset.budgetTab); });
+    });
+
+    // sync toolbar/add กับ tab ที่ active อยู่ตอน load (default = pivot → toolbar ซ่อน)
+    const current = tabs.find(function (t) { return t.classList.contains('is-active'); }) || tabs[0];
+    activate(current.dataset.budgetTab);
+})();
+
 // ── Phase 2E (2026-05-22): ยืนยันรับเงินส่วนตัวจากผู้จอง (AJAX)
 //    route ปลายทาง return JSON — ต้องใช้ fetch (form POST จะได้ raw JSON page)
 document.addEventListener('submit', async function (e) {
@@ -373,4 +403,52 @@ if (refundModal) {
             if (trigger) trigger.focus();
         }
     }, true);
+})();
+
+// ── Sortable tables (2026-06-15): คลิก <th data-sort> → จัดเรียง tbody rows ──
+//    data-sort="num" → parse ตัวเลข (ลอก ฿ , % ออก); "text" → localeCompare ไทย.
+//    คลิกซ้ำคอลัมน์เดิม = สลับ asc/desc; คอลัมน์ใหม่ = เริ่ม asc.
+(function initSortableTables() {
+    const tables = document.querySelectorAll('[data-sortable-table]');
+    if (!tables.length) return;
+
+    function cellNum(td) {
+        const s = (td.textContent || '').replace(/[฿,\s]/g, '');
+        const m = s.match(/-?\d+(?:\.\d+)?/);
+        return m ? parseFloat(m[0]) : 0;
+    }
+    function cellText(td) { return (td.textContent || '').trim(); }
+
+    tables.forEach(function (table) {
+        const thead = table.tHead;
+        const tbody = table.tBodies[0];
+        if (!thead || !tbody) return;
+
+        thead.querySelectorAll('th[data-sort]').forEach(function (th) {
+            th.addEventListener('click', function () {
+                const idx  = th.cellIndex;
+                const type = th.dataset.sort;
+                const asc  = !th.classList.contains('sort-asc');
+
+                thead.querySelectorAll('th').forEach(function (h) {
+                    h.classList.remove('sort-asc', 'sort-desc');
+                });
+                th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+
+                const rows = Array.prototype.slice.call(tbody.rows);
+                rows.sort(function (a, b) {
+                    const ca = a.cells[idx], cb = b.cells[idx];
+                    if (!ca || !cb) return 0;
+                    let r;
+                    if (type === 'num') {
+                        r = cellNum(ca) - cellNum(cb);
+                    } else {
+                        r = cellText(ca).localeCompare(cellText(cb), 'th');
+                    }
+                    return asc ? r : -r;
+                });
+                rows.forEach(function (row) { tbody.appendChild(row); });
+            });
+        });
+    });
 })();

@@ -1,6 +1,6 @@
 # 2026-06-11 — cancel-refund rework + auto-reject cron
 
-> status: in_progress · plan: ~/.claude/plans/1-noble-fox.md
+> status: completed · plan: ~/.claude/plans/1-noble-fox.md · closed: 2026-06-12
 
 ## Scope
 
@@ -10,15 +10,24 @@
 - [ข้อจำกัด]: test-first (logic เงิน/สถานะ) · ห้ามแตะ used_amount ตรง · ไม่มี model change · ห้าม import app/app.py ใน tests
 - [output]: code + tests เขียว + docs sync (INDEX_routes/INDEX_code/CHANGELOG/future_features)
 
-## Checklist
+## Checklist — Phase 1
 
 - [x] 1 PLAN — scoped 5 field ครบ + log file
 - [x] 2 GUARD — test_booking_cancel_guards.py 10 tests + route_app/client fixtures
 - [x] 3 BUILD — Phase 1 เสร็จ: guards + refund removal + submitRevert fix + UI
-- [ ] 4 VERIFY — pytest รอ confirm จากผู้ใช้
+- [x] 4 VERIFY — pytest 29/29 ✓
 - [x] 5 SYNC — Maintenance Protocol + checker ผ่าน (INDEX_routes/code/ui + CHANGELOG + future_features)
-- [ ] 6 CLOSE — log → doc/ (รอ pytest ผ่าน)
+- [x] 6 CLOSE — log → doc/
+
+## Checklist — Phase 2
+
+- [x] 1 PLAN — scoped ครบ
+- [x] 2 GUARD — test_auto_reject_cron.py 6 tests
+- [x] 3 BUILD — notify_auto_rejected + auto_reject_overdue_bookings + init_scheduler (08:10) · conftest.py StaticPool
+- [x] 4 VERIFY — pytest 29/29 ✓
+- [x] 5 SYNC — INDEX_code + CHANGELOG + architecture.md (cron list + event count)
+- [x] 6 CLOSE — ร่วมกับ Phase 1
 
 ## Notes ระหว่างงาน
 
-- (ว่าง)
+- Phase 2: app fixture เพิ่ม StaticPool เพราะ cron เปิด app_context() ของตัวเอง ถ้าไม่มีจะเห็น DB ว่าง

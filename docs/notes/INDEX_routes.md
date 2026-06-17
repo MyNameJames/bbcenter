@@ -1,7 +1,7 @@
 # INDEX — Routes
 
 > Part ของ INDEX.md แยก เพื่อ token budget — [กลับ hub](INDEX.md)
-> **อัปเดตล่าสุด:** 2026-06-12
+> **อัปเดตล่าสุด:** 2026-06-14
 
 ---
 
@@ -13,14 +13,14 @@
 | GET/POST | `/login` | [auth_view.py:12](../../app/views/auth_view.py#L12) | `login()` |
 | GET | `/dev/login/<username>` | [auth_view.py:58](../../app/views/auth_view.py#L58) | `dev_login()` — **dev bypass** |
 | GET | `/logout` | [auth_view.py:74](../../app/views/auth_view.py#L74) | `logout()` |
-| GET | `/dashboard` | [auth_view.py:81](../../app/views/auth_view.py#L81) | `dashboard()` |
+| GET | `/dashboard` | [auth_view.py:172](../../app/views/auth_view.py#L172) | `dashboard()` — **Action Hub** (2026-06-16): ทุก role เห็นหน้าเดียวกัน = Quick Actions (สร้างใหม่) + คำขอของฉัน (รวมทุก service + ปุ่มทำซ้ำ) + วันนี้ของฉัน. ไม่มี admin KPI strip แล้ว. helper `_build_my_requests()` / `_build_today_items()` |
 | GET | `/manage_users` | [auth_view.py:195](../../app/views/auth_view.py#L195) | `manage_users()` — superadmin |
 | POST | `/update_user/<id>` | [auth_view.py:206](../../app/views/auth_view.py#L206) | `update_user()` — superadmin |
 
 ### repair
 | Method | Path | File:Line |
 |--------|------|-----------|
-| GET/POST | `/repair` | [repair_view.py:45](../../app/views/repair_view.py#L45) |
+| GET/POST | `/repair` | [repair_view.py:45](../../app/views/repair_view.py#L45) — query `?copy_from=<id>` (ทำซ้ำ: prefill ฟอร์ม owner-only) / `?new=1` (เปิดฟอร์มเปล่า) — **2026-06-16** |
 | GET/POST | `/repair/edit/<id>` | [repair_view.py:86](../../app/views/repair_view.py#L86) |
 | POST | `/repair/delete/<id>` | [repair_view.py:112](../../app/views/repair_view.py#L112) |
 | POST | `/repair/update_status/<id>` | [repair_view.py:128](../../app/views/repair_view.py#L128) |
@@ -28,7 +28,7 @@
 ### maintenance
 | Method | Path | File:Line |
 |--------|------|-----------|
-| GET/POST | `/maintenance` | [maintenance_view.py:59](../../app/views/maintenance_view.py#L59) |
+| GET/POST | `/maintenance` | [maintenance_view.py:60](../../app/views/maintenance_view.py#L60) — query `?copy_from=<id>` (ทำซ้ำ: prefill ฟอร์ม owner-only) / `?new=1` (เปิดฟอร์มเปล่า) — **2026-06-16** |
 | GET/POST | `/maintenance/edit/<id>` | [maintenance_view.py:92](../../app/views/maintenance_view.py#L92) |
 | POST | `/maintenance/delete/<id>` | [maintenance_view.py:118](../../app/views/maintenance_view.py#L118) |
 | POST | `/maintenance/update_status/<id>` | [maintenance_view.py:134](../../app/views/maintenance_view.py#L134) |
@@ -37,11 +37,11 @@
 ### vehicle (user)
 | Method | Path | File:Line |
 |--------|------|-----------|
-| GET | `/vehicle` | [vehicle_view.py:63](../../app/views/vehicle_view.py#L63) |
+| GET | `/vehicle` | [vehicle_booking.py:29](../../app/views/vehicle/vehicle_booking.py#L29) — `index()`. query `?copy_from=<id>` (ทำซ้ำ: JS เปิด modal จองรถ prefill จาก `window.BOOKINGS`) / `?new=1` (เปิด modal เปล่า) — handler ใน vehicle.js **2026-06-16** |
 | POST | `/vehicle/book` | [vehicle_view.py:81](../../app/views/vehicle_view.py#L81) |
 | GET/POST | `/vehicle/edit/<id>` | [vehicle_view.py:136](../../app/views/vehicle_view.py#L136) |
 | POST | `/vehicle/delete/<id>` | [vehicle_booking.py:174](../../app/views/vehicle/vehicle_booking.py#L174) — ลบ booking (hard delete). owner: pending/rejected เท่านั้น; admin: ทุกสถานะ ยกเว้นถ้ามี `mileage.budget_deducted_at` → blocked (กัน ledger orphan) **2026-06-12** |
-| POST | `/vehicle/cancel/<id>` | [vehicle_booking.py:218](../../app/views/vehicle/vehicle_booking.py#L218) — soft cancel. owner: status ∈ {pending, waiting_approver} เท่านั้น; admin: +approved; time guard `now < start_datetime`; notify (owner/admin/approver/driver/mate) + Telegram + flip `status='cancelled'`. **ไม่มี refund งบ** — งบหักเฉพาะตอนปิดทริป **2026-06-12** |
+| POST | `/vehicle/cancel/<id>` | [vehicle_booking.py:268](../../app/views/vehicle/vehicle_booking.py#L268) — soft cancel. owner: status ∈ {pending, waiting_approver} เท่านั้น; admin: +approved; time guard `now < start_datetime`; notify (owner/admin/approver/driver/mate) + Telegram + flip `status='cancelled'`. **ไม่มี refund งบ** — งบหักเฉพาะตอนปิดทริป **2026-06-12** |
 | GET | `/vehicle/detail/<id>` | `vehicle_booking.py` — **2026-06-07: redirect → `/vehicle?detail=<id>`** (detail page ลบ, แสดงผ่าน modal `vehicle/modals/vehicle_detail.html` + JS deeplink); เก็บ permission check |
 | GET | `/api/vehicle/bookings` | `vehicle_booking.py` |
 | GET | `/api/custom-bookings` | `vehicle_booking.py` |
@@ -61,27 +61,27 @@
 | POST | `/vehicle/admin/booking/<id>/swap` | [vehicle_view.py:738](../../app/views/vehicle_view.py#L738) |
 | POST | `/vehicle/admin/merge` | [vehicle_view.py:757](../../app/views/vehicle_view.py#L757) |
 | POST | `/vehicle/admin/assign/<id>` | [vehicle_view.py:832](../../app/views/vehicle_view.py#L832) |
-| GET/POST | `/vehicle/mileage` | [vehicle_view.py:1063](../../app/views/vehicle_view.py#L1063) |
-| GET | `/vehicle/mileage/export` | [vehicle_view.py:1430](../../app/views/vehicle_view.py#L1430) — Excel export ตาม filter |
+| GET/POST | `/vehicle/mileage` | [vehicle_mileage.py:312](../../app/views/vehicle/vehicle_mileage.py#L312) |
+| GET | `/vehicle/mileage/export` | [vehicle_mileage.py:420](../../app/views/vehicle/vehicle_mileage.py#L420) — Excel export ตาม filter |
 | GET | `/api/admin/bookings` | [vehicle_view.py:1841](../../app/views/vehicle_view.py#L1841) |
 | POST | `/api/check-merge` | [vehicle_view.py:1719](../../app/views/vehicle_view.py#L1719) |
 
 ### adminfleet (`/admin/manage-fleet`, `/admin/budget`)
 | Method | Path | File:Line |
 |--------|------|-----------|
-| GET/POST | `/admin/manage-fleet` | [vehicle_view.py:613](../../app/views/vehicle_view.py#L613) |
-| POST | `/admin/manage-fleet/service` | [vehicle_view.py:2114](../../app/views/vehicle_view.py#L2114) |
+| GET/POST | `/admin/manage-fleet` | [vehicle_admin.py:175](../../app/views/vehicle/vehicle_admin.py#L175) |
+| POST | `/admin/manage-fleet/service` | [vehicle_admin.py:558](../../app/views/vehicle/vehicle_admin.py#L558) |
 | GET | `/api/vehicle/<vid>/history` | [vehicle_view.py:1552](../../app/views/vehicle_view.py#L1552) |
-| GET/POST | `/admin/budget` | [vehicle_view.py:1278](../../app/views/vehicle_view.py#L1278) |
-| GET | `/admin/budget/personal` | [vehicle_view.py:1435](../../app/views/vehicle_view.py#L1435) |
-| POST | `/admin/budget/personal/mark_paid` | [vehicle_view.py:1505](../../app/views/vehicle_view.py#L1505) |
-| POST | `/admin/budget/personal/mark_unpaid` | [vehicle_view.py:1532](../../app/views/vehicle_view.py#L1532) |
+| GET/POST | `/admin/budget` | [vehicle_budget.py:404](../../app/views/vehicle/vehicle_budget.py#L404) |
+| GET | `/admin/budget/personal` | [vehicle_budget.py:628](../../app/views/vehicle/vehicle_budget.py#L628) |
+| POST | `/admin/budget/personal/mark_paid` | [vehicle_budget.py:694](../../app/views/vehicle/vehicle_budget.py#L694) |
+| POST | `/admin/budget/personal/mark_unpaid` | [vehicle_budget.py:722](../../app/views/vehicle/vehicle_budget.py#L722) |
 
 ### admincost
 | Method | Path | File:Line |
 |--------|------|-----------|
 | POST | `/vehicle/mileage/override-fuel` | [vehicle_cost.py:70](../../app/views/vehicle/vehicle_cost.py#L70) |
-| GET | `/admin/cost` | [vehicle_cost.py:124](../../app/views/vehicle/vehicle_cost.py#L124) — tab `''`(live)/unpaid/paid/self_paid/deleted + KPI ยอดรวม/ยังไม่จ่าย/จ่ายแล้ว (ไม่นับ deleted) + col งบ per row |
+| GET | `/admin/cost` | [vehicle_cost.py:185](../../app/views/vehicle/vehicle_cost.py#L185) — tab `''`(live)/unpaid/paid/self_paid/deleted + KPI ยอดรวม/ยังไม่จ่าย/จ่ายแล้ว (ไม่นับ deleted) + col งบ per row. **2026-06-14:** query param `budget_type`/`budget_sub` → filter งบ (derive จาก booking ผ่าน `_apply_budget_filter`, กระทบทั้ง KPI + table) |
 | POST | `/admin/ot/<id>/mark_paid` | [vehicle_cost.py:201](../../app/views/vehicle/vehicle_cost.py#L201) — toggle จ่าย/ไม่จ่าย |
 | POST | `/admin/ot/<id>/toggle_no_receipt` | [vehicle_cost.py:226](../../app/views/vehicle/vehicle_cost.py#L226) — tab ผู้ใช้จ่ายเอง |
 | POST | `/admin/ot/create` | [vehicle_cost.py:243](../../app/views/vehicle/vehicle_cost.py#L243) — manual standalone OT (booking_id=None, ไม่หักงบ) |
@@ -89,7 +89,7 @@
 | POST | `/admin/ot/<id>/delete` | [vehicle_cost.py:312](../../app/views/vehicle/vehicle_cost.py#L312) — soft delete |
 | POST | `/admin/ot/<id>/restore` | [vehicle_cost.py:330](../../app/views/vehicle/vehicle_cost.py#L330) — กู้คืนจาก tab ลบ |
 | POST | `/admin/ot/rate_config/update` | [vehicle_cost.py:346](../../app/views/vehicle/vehicle_cost.py#L346) |
-| GET | `/admin/cost/export` | [vehicle_cost.py:396](../../app/views/vehicle/vehicle_cost.py#L396) — filter ตาม tab status เดียวกับ `/admin/cost` |
+| GET | `/admin/cost/export` | [vehicle_cost.py:412](../../app/views/vehicle/vehicle_cost.py#L412) — filter ตาม tab status + งบ (`budget_type`/`budget_sub`) เดียวกับ `/admin/cost` |
 
 ### driver
 | Method | Path | File:Line |
@@ -97,12 +97,12 @@
 | GET | `/driver` | [vehicle_driver.py:36](../../app/views/vehicle/vehicle_driver.py#L36) — ส่ง `latest_odo` (MAX odometer ต่อรถ) เข้า template |
 | POST | `/driver/ad-hoc-trip` | [vehicle_driver.py:90](../../app/views/vehicle/vehicle_driver.py#L90) — งานนอกระบบ driver สร้างเอง (collapse UI, strict contact_user_id) + บันทึกเลขไมล์ออกทันที (สร้าง VehicleMileage start ถ้าส่ง odometer_start) |
 | POST | `/driver/change-vehicle` | [vehicle_driver.py:174](../../app/views/vehicle/vehicle_driver.py#L174) — เปลี่ยนรถฉุกเฉินก่อนออก (swap + เช็ก active + ไม่ชนคิว approved; block ถ้าบันทึกไมล์ออกแล้ว) |
-| POST | `/driver/mileage` | [vehicle_driver.py:219](../../app/views/vehicle/vehicle_driver.py#L219) |
+| POST | `/driver/mileage` | [vehicle_driver.py:303](../../app/views/vehicle/vehicle_driver.py#L303) |
 
 ### room
 | Method | Path | File:Line |
 |--------|------|-----------|
-| GET | `/room` | [room_view.py:16](../../app/views/room_view.py#L16) |
+| GET | `/room` | [room_view.py:16](../../app/views/room_view.py#L16) — query `?copy_from=<id>` (ทำซ้ำ: JS เปิด modal prefill ห้อง+หัวข้อ) / `?new=1` (เปิด modal เปล่า) — handler ใน room.js **2026-06-16** |
 | POST | `/room/book` | [room_view.py:23](../../app/views/room_view.py#L23) |
 | POST | `/room/edit/<id>` | [room_view.py:58](../../app/views/room_view.py#L58) |
 | POST | `/room/delete/<id>` | [room_view.py:96](../../app/views/room_view.py#L96) |
@@ -129,11 +129,17 @@
 ### notification API (in vehicle_bp)
 | Method | Path | File:Line |
 |--------|------|-----------|
-| GET | `/api/notifications` | [vehicle_view.py:350](../../app/views/vehicle_view.py#L350) |
-| POST | `/api/notifications/read-all` | [vehicle_view.py:449](../../app/views/vehicle_view.py#L449) |
-| POST | `/api/notifications/<id>/read` | [vehicle_view.py:458](../../app/views/vehicle_view.py#L458) |
-| POST | `/api/payment/report/<mileage_id>` | [vehicle_view.py:474](../../app/views/vehicle_view.py#L474) |
-| POST | `/api/payment/report-by-booking/<id>` | [vehicle_view.py:495](../../app/views/vehicle_view.py#L495) |
+| GET | `/api/notifications` | [vehicle_notification.py:72](../../app/views/vehicle/vehicle_notification.py#L72) — returns `{groups[], items[], sticky[], unread, unread_payment, badge}` (hybrid: booking→groups, solo→items; filter `superseded_at IS NULL`). per-notif dict มี `title` (display บรรทัดแรก จาก `_notif_title()` map event_key→ไทยสั้น, 2026-06-15) |
+| POST | `/api/notifications/read-all` | [vehicle_notification.py:139](../../app/views/vehicle/vehicle_notification.py#L139) |
+| POST | `/api/notifications/<id>/read` | [vehicle_notification.py:148](../../app/views/vehicle/vehicle_notification.py#L148) |
+| POST | `/api/payment/report/<mileage_id>` | [vehicle_notification.py:164](../../app/views/vehicle/vehicle_notification.py#L164) |
+| POST | `/api/payment/report-by-booking/<id>` | [vehicle_notification.py:181](../../app/views/vehicle/vehicle_notification.py#L181) |
+
+### core (LINE — `core_bp`)
+| Method | Path | File:Line | Function |
+|--------|------|-----------|----------|
+| POST | `/line/webhook` | [line_webhook.py](../../app/views/core/line_webhook.py) | `line_webhook()` — verify signature + ผูกบัญชีผ่านโค้ด + log groupId |
+| GET | `/line/link` | [line_webhook.py](../../app/views/core/line_webhook.py) | `line_link()` — หน้าโค้ด 6 หลักผูกบัญชี LINE (login required) |
 
 ---
 

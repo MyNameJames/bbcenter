@@ -1,11 +1,17 @@
 # BBCenter V2 — Design System Reference
+
+> 🎨 **DNA redesign 2026-06-17 → migration spec + component cookbook:** [design_dna_redesign.md](design_dna_redesign.md) (reference page = `vehicle_budget.html`)
+
+**Updated:** 2026-06-17 (DNA redesign — unify ทุก blue token (`--vc-primary`/`--vc-accent`/`--vc-blue`) `#014198` → **`#4059e6`** (indigo; hover `#2f46c4`, dark `#25379e`, light `#e6ecfa`, border `#c3cdf7`, ring/rgb `rgba(64,89,230,.18)`/`64, 89, 230`); `--vc-blue-mid` `#6D92C4`→`#8b9bf0`. `--vc-fg` `#1C2E4A`→**`#162334`**; `--vc-border` `#E5E7EB`→**`#f0f0f0`**. **เพิ่ม token:** `--vc-icon` `#9999b0` + `--vc-icon-bg` `#f0f0f0` (icon monochrome บนวงกลม/tile), `--vc-sidebar-bg` `#fafbfc`, `--vc-sidebar-active` `#e6ecfa`. **Font:** `--vc-font-mono` Sarabun→**Manrope** (`'Manrope','Sarabun'`) — ตัวเลขใช้ Manrope ผ่าน `.vc-mono`, ข้อความไทยคง Sarabun (โหลด Manrope ใน head เฉพาะหน้าที่ใช้; หน้าอื่น fallback Sarabun). **เหตุผล:** user redesign DNA ตาม ref (Zendenta-clean) — indigo accent + Manrope numerals. มีผลทุกหน้า (token global). radius บนหน้า redesign = 6px (`--vc-radius-sm` = bootstrap `rounded-2`). **vehicle_budget:** table→`.bcard` card grid + tab/toolbar บรรทัดเดียว — ดู INDEX_ui.)
+**Updated:** 2026-06-16 (sila5 rebrand — unify ทุก blue token (`--vc-primary`/`--vc-accent`/`--vc-blue`) `#0046FF`/`#2563EB` → **`#014198`** (hover `#01357D`, dark `#012E6A`, light `#D9E2EF`, border `#B3C6E0`, ring/rgb `rgba(1,65,152,.18)`/`1, 65, 152`); `--vc-blue-mid` `#8AABF5`→`#6D92C4` (dept 2-tone). **เหตุผล:** user ขอสี sila5 (`rgb(1,65,152)`) เป็น brand. **Font ไม่เปลี่ยน** (Sarabun body + Sukhumvit heading เดิม). + drop fallback `var(--vc-accent, #0046FF)` ที่เหลือ (admin/budget) → `var(--vc-accent)`. มีผลทุกหน้า.)
+**Updated:** 2026-06-14 (Blue rebrand — `--vc-primary` + `--vc-accent` navy/indigo → **น้ำเงิน `#0046FF`** (hover `#003AD6`, dark `#00318F`, light `#E6EDFF`, border `#B9CCFF`, ring `rgba(0,70,255,.18)`). **เหตุผล:** user ขอให้สีน้ำเงินเป็นสีหลัก (Zendenta-inspired vehicle redesign) — รวม primary+accent เป็น hue เดียว. `--vc-fg` คงเป็น navy `#1C2E4A` = สี text. มีผลทุกหน้า. + เพิ่ม util `.text-header` (Sukhumvit light) / `.text-header-bold` (bold) ใน design-system.css)
 **Updated:** 2026-06-06 (Token palette refresh + single-font: สี core ปรับเป็น gray-scale/Tailwind-style — `--vc-fg`/`--vc-primary` `#000`→`#111827`, `--vc-fg-muted` `#666`→`#6B7280`, `--vc-fg-subtle` `#888`→`#9CA3AF`, `--vc-border` `#EAEAEA`→`#E5E7EB`, `--vc-primary-hover` `#333`→`#1F2937`; semantic `--vc-green` `#16A34A` / `--vc-amber` `#D97706` / `--vc-red` `#DC2626` (hover `#B91C1C`) / `--vc-blue` `#2563EB` (hover `#1D4ED8`) + bg/border rgba ปรับตาม. Accent indigo `#4F46E5` คงไว้. **Font:** บังคับ Sarabun อย่างเดียวทุกที่ — `--vc-font-mono` Poppins→Sarabun + เพิ่ม `--vc-font-sans`; ลบ Geist Mono/IBM Plex/Poppins/Montserrat/Inter/Prompt ออกหมด (link + CSS); `_shared/header.html` โหลด Sarabun global; base `body{font-family:--vc-font-sans}` ใน design-system.css. `.ds-btn-primary:hover` hardcode→token)
 **Updated:** 2026-05-22 (budget_manage Phase 8: dead purple CSS cleanup — `.vc-btn-purple` + `.vc-badge-purple` (budget_manage.css §7) + `.vc-kpi-value--purple` (components/kpi.css) ลบครบ. Tokens `--vc-purple*` ใน tokens.css เก็บไว้สำหรับ swatch demo. Closes purple retirement loop ที่เริ่ม Phase 4 (markup) — ตอนนี้ functional CSS file zero references; only design_system_reference.html ใช้ใน demo)
 **Updated:** 2026-05-22 (budget_manage Phase 7: Pivot section — fiscal year (Mar→Feb) × dept, 2 collapsed cards (central + dept). **CSS architecture move:** `.vc-pivot-*` block (~165 lines) extracted from `fuel_admin.css` §22 → `components/pivot.css` shared component (loaded globally via `design-system.css` @import). Reusable principle: **collapsible pivot via `<details class="vc-card vc-pivot-wrap">`** — sticky-col table, heat-tinted cells (`--cell-heat: 0..100` via indigo low-opacity), drill-down links per cell + total col + grand total tfoot, footer mono tabular-nums. Pattern ใช้ได้ใน admin pages อื่นที่ต้องการ overview table ที่ "ย่อได้" และ "scroll-able sticky column". Personal pivot deferred → future_features #14 (BudgetType ไม่มี personal, ต้อง query VehicleMileage แทน))
 **Updated:** 2026-05-22 (budget_manage Phase 6: 3 modal `ds-alert-*` info/warning boxes → meta lines. Pattern (a) `<dl class="budget-modal-meta">` Stripe-style label-value pairs (border-block divider + flex baseline rows + `<dt>` SMALL CAPS uppercase muted + `<dd>` sm/600/fg) สำหรับ context info; pattern (b) `<p.budget-modal-notice>` thin top-border info line w/ lucide icon สำหรับ "อธิบายผลของ action". Reusable principle: **เลือกใช้ alert box เฉพาะ destructive/error warning จริง** — context info (label-value) ที่อยู่ในฟอร์มอนุญาตให้ใช้ meta block แทน เพื่อ focus กลับไปที่ form input)
 **Updated:** 2026-05-22 (budget_manage Phase 5: personal row card → inline line — drop card chrome (border/bg/radius/padding) → `padding-block` + bottom border separator; `.meta` flex baseline inline (label+value 1 บรรทัด); typography demoted (label sm lowercase, value sm mono fg); reusable principle: **lightweight inline strip** สำหรับ secondary info section ที่ไม่ควรแข่ง prominence กับ primary card grid — เก็บ color signal บน icon (green warmth) แทน value text)
 **Updated:** 2026-05-21 (Clean UI spec — apply 5 carousel principles: borders not shadows · 60-30-10 palette · spacing · 3-weight typography · hierarchy by size+weight; budget_manage Phase 1: CTA `vc-btn-purple`→`vc-btn-primary` · `.vc-bcard--inactive` stripe→dashed flat (§13) · dropdown padding 6→8px; budget_manage Phase 2: KPI 6→4 cells (`vc-kpi-group--6`→`--4`) · "งบส่วนกลาง"+"งบงานกอง" amounts ย้ายขึ้น `.vc-section-hdr-amount` (mono/tnum/600); budget_manage Phase 3: card hierarchy — `.vc-bcard-row` → `.vc-bcard-pct-hero` (percent เป็น hero text-lg/600/mono + label muted xs) · `.vc-bcard-amounts` demoted (used md/600→sm/500/muted, total sm/muted→xs/subtle) · ลบ `.used.is-purple` (purple บน data value หลุด scope); budget_manage Phase 4 premium polish — purple retirement complete (markup zero, CSS rules `.vc-btn-purple`/`.vc-badge-purple` kept for Phase 8) · `.vc-progress > span` baseline `--vc-green`→`--vc-fg` (Linear monochrome — reusable principle) · SMALL CAPS labels (`.vc-bcard-pct-label` + `.vc-section-hdr-amount-label` 11px/500 uppercase tracking-wide — reusable premium tag pattern) · `.vc-bcard-pct` text-lg→text-2xl/tracking-tight · asymmetric child margin-top แทน flat gap · `.vc-kpi-cell--signal` modifier (bg-subtle highlight 1 cell แทนใช้สี) · page-scoped animation tokens `--bm-ease-out`/`--bm-dur-fast/-base/-slow` + 3 keyframes (`bm-fade-up/-progress-fill/-fade-in`) + per-card stagger via inline `--bm-delay` + signature progress-fill animation + `.budget-modal-enter` scoped modal entrance + `prefers-reduced-motion` block)
-**Style:** Vercel-inspired Light Mode | **Primary:** Gray-900 `#111827` (`--vc-primary`) | **Accent:** Indigo `#4F46E5` (`--vc-accent`, focus ring + sidebar active only) | **Font:** Sarabun เท่านั้น (ทุก context รวม numeric/code — `--vc-font-sans` = `--vc-font-mono` = Sarabun; ห้ามใช้ font อื่น)
+**Style:** Light Mode (clean, border-based) | **Primary + Accent:** indigo `#4059e6` (`--vc-primary` = `--vc-accent`; CTA + focus ring + sidebar active) | **Text:** navy `#162334` (`--vc-fg`) | **Font:** Sarabun (ไทย, `--vc-font-sans`) + **Manrope** (ตัวเลข, `--vc-font-mono` ผ่าน `.vc-mono`)
 
 > **Canonical rule:** Use `--vc-*` tokens only in new CSS/templates. `--ds-*` is legacy (Indigo-era pre-2026-05) and still alive in `tokens.css` for un-migrated pages — do not introduce new references. See [SKILL §3.2](../../.claude/skills/bbcenter-design/SKILL.md) for the binary list of allowed tokens.
 >
@@ -24,12 +30,14 @@
 
 | หลักการ | รายละเอียด |
 |---|---|
-| **Gray-900 primary** | `--vc-primary` = `#111827` สำหรับ CTA หลัก ปุ่ม Save/Confirm |
-| **Indigo accent secondary** | `--vc-accent` = `#4F46E5` focus ring · sidebar active · secondary CTA |
-| **Extra-light borders** | `--vc-border` = `#E5E7EB` แทน shadow ทุกที่ |
+| **Indigo primary** | `--vc-primary` = `#4059e6` สำหรับ CTA หลัก ปุ่ม Save/Confirm/จองรถ |
+| **Indigo accent** | `--vc-accent` = `#4059e6` (= primary) focus ring · sidebar active · selected/today |
+| **Extra-light borders** | `--vc-border` = `#f0f0f0` แทน shadow ทุกที่ |
 | **Prominent white space** | padding넉넉한, header สูง, nav item หายใจได้ |
 | **No shadow** | `box-shadow: none` ทุก component — ยกเว้น `--vc-focus-ring` (2px outline) |
-| **Tight radius** | 4–8px เท่านั้น (`--vc-radius-xs/sm/md`) |
+| **Tight radius** | 6px (`--vc-radius-sm` = bootstrap `rounded-2`) บนหน้า redesign · token xs/sm/md ยังมี 4/6/8 |
+| **Monochrome icons** | `--vc-icon` `#9999b0` บนวงกลม/tile `--vc-icon-bg` `#f0f0f0` — ไม่ใช้ icon หลากสี (ยกเว้น status pill) |
+| **Numerals = Manrope** | ตัวเลข/เงิน ใช้ `.vc-mono` (`--vc-font-mono` = Manrope) · ไทย = Sarabun |
 | **Vercel-style surfaces** | `vc-card` เป็น base surface (ไม่ใช้ Bootstrap `.card` ใน vc-scope) |
 | **Lucide icons ใน vc-scope** | `<i data-lucide="...">` (Font Awesome เฉพาะ legacy pages) |
 
@@ -42,7 +50,7 @@
 | 1 | **Borders, not shadows** | `box-shadow: none` ทุก surface — ยกเว้น `--vc-accent-ring` (focus). Border 1px `--vc-border` แทน |
 | 2 | **60-30-10 palette** | 60% page bg (`--vc-bg-subtle`) · 30% surface (`--vc-bg`) · 10% signal (text + border + black CTA). Status colors = exception, ใช้แค่ badge/dot |
 | 3 | **Generous spacing** | Page padding 24-32px · card body 16-24px · ห้าม `padding < 8px` บน interactive element · touch target ≥ 32×32px |
-| 4 | **Fewer fonts & weights** | 1 font (Sarabun เท่านั้น — UI + numeric/code). **Weight allowlist: 400 / 500 / 600 เท่านั้น** — ban 300, 700, 800 |
+| 4 | **Fewer fonts & weights** | Sarabun (ไทย/UI) + Manrope (ตัวเลขผ่าน `.vc-mono`). **Weight: 400 / 500 / 600** สำหรับ UI; Manrope 700 อนุญาตบนตัวเลข hero (KPI/card amount) |
 | 5 | **Hierarchy by size+weight** | 1 element = 1 size + 1 weight + 1 color. ห้ามใช้สี accent (indigo) เป็น primary heading — ใช้ `--vc-fg` |
 
 > **Indigo accent (`--vc-accent`) scope:** focus ring + sidebar active + secondary hover เท่านั้น. **ห้ามใช้บน CTA fill** — primary CTA = `--vc-primary` (black) เสมอ
@@ -57,43 +65,48 @@
 | Token | Value | ใช้กับ |
 |---|---|---|
 | `--vc-bg` | `#FFFFFF` | card / sidebar / modal base |
-| `--vc-bg-subtle` | `#FAFAFA` | thead / section muted / KPI cell |
+| `--vc-bg-subtle` | `#f5f8fb` | thead / section muted / KPI cell |
 | `--vc-bg-hover` | `#F5F5F5` | row hover / nav hover |
 | `--vc-bg-inverted` | `#000000` | dark surface (rare) |
 
 ### Foreground / Text
 | Token | Value | ใช้กับ |
 |---|---|---|
-| `--vc-fg` | `#111827` | heading / strong body |
+| `--vc-fg` | `#162334` | heading / strong body (navy, 2026-06-17) |
 | `--vc-fg-muted` | `#6B7280` | paragraph / table cell |
 | `--vc-fg-subtle` | `#9CA3AF` | label / meta / "—" / placeholders |
 | `--vc-fg-disabled` | `#BBBBBB` | disabled state |
 | `--vc-fg-inverted` | `#FFFFFF` | text บน vc-primary/solid bg |
+| `--vc-icon` | `#9999b0` | icon monochrome (2026-06-17) |
+| `--vc-icon-bg` | `#f0f0f0` | วงกลม/tile รองรับ icon |
+| `--vc-sidebar-bg` | `#fafbfc` | sidebar surface |
+| `--vc-sidebar-active` | `#e6ecfa` | sidebar active item |
 
 ### Border
 | Token | Value | ใช้กับ |
 |---|---|---|
-| `--vc-border` | `#E5E7EB` | divider / card border ทั่วไป |
+| `--vc-border` | `#f0f0f0` | divider / card border ทั่วไป |
 | `--vc-border-hover` | `#999999` | hover state divider |
 | `--vc-border-strong` | `#666666` | emphasis divider (rare) |
 
 ### Primary & Accent
 | Token | Value | ใช้กับ |
 |---|---|---|
-| `--vc-primary` | `#111827` | CTA หลัก (Save/Confirm/บันทึก) |
-| `--vc-primary-hover` | `#1F2937` | hover state |
+| `--vc-primary` | `#4059e6` | CTA หลัก (Save/Confirm/บันทึก/จองรถ) — indigo 2026-06-17 |
+| `--vc-primary-hover` | `#2f46c4` | hover state |
 | `--vc-on-primary` | `#FFFFFF` | text on primary bg |
-| `--vc-accent` | `#4F46E5` | focus ring tint / sidebar active / secondary CTA |
-| `--vc-accent-hover` | `#4338CA` | hover state |
-| `--vc-accent-dark` | `#3730A3` | pressed state |
-| `--vc-accent-light` | `#EEF2FF` | tinted background |
-| `--vc-accent-border` | `#C7D2FE` | tinted border |
-| `--vc-accent-ring` | `0 0 0 3px rgba(79,70,229,.18)` | focus ring |
+| `--vc-accent` | `#4059e6` | focus ring tint / sidebar active / selected (= primary) |
+| `--vc-accent-hover` | `#2f46c4` | hover state |
+| `--vc-accent-dark` | `#25379e` | pressed state |
+| `--vc-accent-light` | `#e6ecfa` | tinted background |
+| `--vc-accent-border` | `#c3cdf7` | tinted border |
+| `--vc-accent-ring` | `0 0 0 3px rgba(64,89,230,.18)` | focus ring |
+| `--vc-accent-rgb` | `64, 89, 230` | channel triplet สำหรับ `rgba(var(--vc-accent-rgb), …)` ที่ต้องคุม opacity (heat-tint pivot ฯลฯ) |
 
 ### Semantic Colors (Vercel palette) — used **outside** 60-30-10 budget
 | ชื่อ | Base | Bg-tint | Border-tint | ใช้กับ | Allowed surfaces |
 |---|---|---|---|---|---|
-| **Blue** (info / approved) | `--vc-blue` `#2563EB` | `--vc-blue-bg` (10%) | `--vc-blue-border` (25%) | สถานะอนุมัติ / informational | badge, dot, link |
+| **Blue** (info / approved) | `--vc-blue` `#4059e6` | `--vc-blue-bg` (10%) | `--vc-blue-border` (25%) | สถานะอนุมัติ / informational | badge, dot, link (unify เข้า brand 2026-06-17) |
 | **Amber** (warning / pending) | `--vc-amber` `#D97706` | `--vc-amber-bg` (10%) | `--vc-amber-border` (25%) | รออนุมัติ / รอเบิก | badge, dot, KPI value (over-budget) |
 | **Red** (danger / error) | `--vc-red` `#DC2626` | `--vc-red-bg` (8%) | `--vc-red-border` (20%) | ปฏิเสธ / ลบ / over budget | badge, dot, delete button, error text |
 | **Green** (success / received) | `--vc-green` `#16A34A` | `--vc-green-bg` (10%) | `--vc-green-border` (25%) | สำเร็จ / ได้เงิน | badge, dot |
@@ -104,9 +117,9 @@
 ### 60-30-10 Proportions
 | % | Role | Token | Hex | ตัวอย่าง |
 |---|---|---|---|---|
-| **60%** | Page surface | `--vc-bg-subtle` | `#FAFAFA` | `<body>` / `main` background |
+| **60%** | Page surface | `--vc-bg-subtle` | `#f5f8fb` | `<body>` / `main` background |
 | **30%** | Component surface | `--vc-bg` | `#FFFFFF` | card / sidebar / modal / table tbody |
-| **10%** | Signal (text + border + CTA) | `--vc-fg` + `--vc-border` + `--vc-primary` | `#111827` / `#E5E7EB` / `#111827` | heading, divider, primary button |
+| **10%** | Signal (text + border + CTA) | `--vc-fg` + `--vc-border` + `--vc-primary` | `#1C2E4A` / `#E5E7EB` / `#014198` | heading, divider, primary button |
 
 ---
 
@@ -515,7 +528,7 @@ Reference: [vehicle-warm-mockup.html](../design/vehicle-warm-mockup.html) lines 
 | 4 | `app/static/css/main.css:258, 269, 276` | Glow shadow `0px 0px 70px 25px` (legacy login decoration) | ลบทั้งหมด |
 | 5 | `app/static/css/fuel_admin.css:548, 637, 680` | Modal/toast shadows | แทนด้วย border + radius |
 | 6 | `app/static/css/vehicle_admin.css:177, 586, 740` | `font-weight: 800` | → `600` |
-| 7 | `app/static/css/vercel.css:71` | `font-weight: 300` (breadcrumb sep) | → `400` |
+| 7 | ~~`vercel.css` breadcrumb sep~~ | **obsolete 2026-06-17** — breadcrumb (`.vrc-topbar-crumb*`) ถูกลบ → แทนด้วย `.vrc-topbar-title` (DNA redesign) | ✅ N/A |
 | 8 | `app/static/css/notification.css:416` | `border-left: 2px solid` accent strip | → `border-bottom` หรือ `border-top` |
 | 9 | `docs/design/vehicle-warm-mockup.html:354` | `.evt:hover { box-shadow }` ใน mockup เอง | port เป็น `border-color` hover เท่านั้น |
 | 10 | Audit ทั่ว codebase | `border-radius > 12px` | ลดเหลือ 4/6/8/full |

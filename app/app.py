@@ -77,6 +77,9 @@ app.register_blueprint(room_bp)
 from views.fuel_view import fuel_bp
 app.register_blueprint(fuel_bp)
 
+from views.core.line_webhook import core_bp
+app.register_blueprint(core_bp)
+
 
 # ==========================================
 # Context processors

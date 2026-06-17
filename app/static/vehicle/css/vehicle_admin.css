@@ -114,7 +114,7 @@
 ───────────────────────────────────────────── */
 .va-week-card {
     border-radius: var(--vc-radius-md);
-    background: var(--vc-bg);
+    background: var(--vc-bg-subtle);
     overflow: hidden;
     /* BFC ถาวร — กัน margin-bottom ของ .va-week-bar collapse ออกนอก card
        ตอน :has() สลับ overflow:visible (ไม่งั้น card หด ~8px = กระตุก) */
@@ -432,8 +432,9 @@
 ───────────────────────────────────────────── */
 .va-filter-tabs {
     display: flex;
-    gap: var(--vc-space-4);
-    border-bottom: 1px solid var(--vc-border);
+    align-items: stretch;
+    gap: 2px;
+    border-bottom: 0.3px solid var(--vc-border);
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -927,11 +928,13 @@
     background: var(--vc-bg);
     cursor: pointer;
     transition: border-color var(--vc-dur-instant) var(--vc-ease-snap),
-                background var(--vc-dur-instant) var(--vc-ease-snap);
+                background var(--vc-dur-instant) var(--vc-ease-snap),
+                transform var(--vc-dur-fast) var(--vc-ease-snap);
 }
 .bl-card:hover {
     border-color: var(--vc-border-hover);
     background: var(--vc-bg-subtle);
+    transform: translateY(-1px);
 }
 
 /* approved → ทำงานเสร็จ: ขาวสะอาด + title หรี่ลงเล็กน้อย */
@@ -1214,7 +1217,10 @@
     position: relative;
     border-radius: 0;
     background: transparent;
-    padding: var(--vc-space-2) 0 var(--vc-space-3);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 7px;
     transition: color var(--vc-dur-fast) var(--vc-ease-snap);
 }
 .va-filter-tabs .ftab::after {
@@ -1224,7 +1230,7 @@
     right: 0;
     bottom: -1px;
     height: 2px;
-    background: var(--vc-fg);
+    background: var(--vc-accent);
     transform: scaleX(0);
     transform-origin: center;
     transition: transform var(--vc-dur-base) var(--vc-ease-out);
@@ -1236,7 +1242,7 @@
 }
 .va-filter-tabs .ftab.active {
     background: transparent;
-    color: var(--vc-fg);
+    color: var(--vc-accent);
     font-weight: 600;
 }
 .va-filter-tabs .ftab.active::after { transform: scaleX(1); }
@@ -1264,7 +1270,7 @@
 
 /* active — pill ดำกลม (badge เด้งบอก tab ที่เลือก ตาม reference Tasks⑦) */
 .va-filter-tabs .ftab.active .ftab-cnt {
-    background: var(--vc-fg);
+    background: var(--vc-accent);
     color: var(--vc-bg);
 }
 
@@ -1282,6 +1288,30 @@
 /* Modal entry animation — ใช้ bootstrap default (.modal.fade) ไม่ override (2026-06-07) */
 
 
+/* ════════════════════════════════════════════════════
+   PHASE 5 — Micro-interactions (2026-06-12)
+   - pending dot pulse (status dot ของ booking รออนุมัติ)
+   - action button press feedback
+   ════════════════════════════════════════════════════ */
+
+@keyframes pendingDotPulse {
+    0%, 100% { opacity: 1;   transform: scale(1);    }
+    50%       { opacity: 0.4; transform: scale(0.7);  }
+}
+
+/* pending badge dot ใน booking list พัลส์เบาๆ ดึงความสนใจ */
+.vc-badge-warning.vc-badge-dot::before {
+    animation: pendingDotPulse 2.4s ease-in-out infinite;
+}
+
+/* action button press — scale feedback */
+.bl-actions .vc-btn:active,
+.bl-actions button:active {
+    transform: scale(0.93);
+    transition: transform 60ms ease;
+}
+
+
 /* Reduce motion preference */
 @media (prefers-reduced-motion: reduce) {
     .va-kpi-card .vc-kpi-cell::before,
@@ -1291,4 +1321,5 @@
     .bl-notify-selected,
     .vs-btn { transition: none !important; transform: none !important; }
     .vs-btn { opacity: 1 !important; }
+    .vc-badge-warning.vc-badge-dot::before { animation: none !important; }
 }

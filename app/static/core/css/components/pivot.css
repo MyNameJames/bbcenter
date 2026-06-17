@@ -120,7 +120,7 @@
     font-family: var(--vc-font-mono);
     font-feature-settings: "tnum" 1;
     font-variant-numeric: tabular-nums;
-    background: rgba(79, 70, 229, calc(var(--cell-heat, 0) * 0.002));
+    background: rgba(var(--vc-accent-rgb), calc(var(--cell-heat, 0) * 0.002));
     transition: background var(--vc-transition);
     min-width: 72px;
     text-align: right;
@@ -172,16 +172,16 @@
     transition: background var(--vc-transition), color var(--vc-transition);
 }
 .vc-pivot-link:hover {
-    color: var(--vc-accent, #4F46E5);
-    background: rgba(79, 70, 229, 0.08);
+    color: var(--vc-accent);
+    background: rgba(var(--vc-accent-rgb), 0.08);
     text-decoration: none;
 }
 .vc-pivot-link:focus-visible {
-    outline: 2px solid var(--vc-accent, #4F46E5);
+    outline: 2px solid var(--vc-accent);
     outline-offset: 1px;
 }
 .vc-pivot-cell:has(.vc-pivot-link:hover) {
-    background: rgba(79, 70, 229, calc(var(--cell-heat, 0) * 0.003 + 0.05));
+    background: rgba(var(--vc-accent-rgb), calc(var(--cell-heat, 0) * 0.003 + 0.05));
 }
 
 /* ─────────────────────────────────────────────
@@ -222,4 +222,13 @@
 .vc-pivot-section-head td,
 .vc-pivot-table .vc-pivot-section-head:hover td {
     background: var(--vc-bg-subtle);
+}
+
+/* per-user sub-rows inside personal pivot (Phase 5, 2026-06-12) */
+.vc-pivot-row-summary .vc-pivot-td-sticky { font-weight: 600; }
+.vc-pivot-td-sub {
+    font-weight: 400;
+    color: var(--vc-fg-muted);
+    padding-left: calc(var(--vc-space-4) + 12px) !important;
+    font-size: 0.8125rem;
 }

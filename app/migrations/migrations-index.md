@@ -24,6 +24,10 @@
 | 2026-06-08 | [2026-06-08_driver-profile-fields.sql](2026-06-08_driver-profile-fields.sql) | `driver` (+8 fields: national_id, addr_line/subdistrict/district/province/postal, id_card_image, avatar_image) | [v2.14](../../docs/notes/database/schema.md#v214--driver-profile-fields-2026-06-08) |
 | 2026-06-08 | [2026-06-08_driver-ot-paid-softdelete.sql](2026-06-08_driver-ot-paid-softdelete.sql) | `driver_ot` (+`no_receipt`, +`is_deleted`, +`deleted_at`; backfill status pending/approved → unpaid) — ตัด approval, soft delete | [v2.15](../../docs/notes/database/schema.md#v215--driver-ot-paid-softdelete-2026-06-08) |
 | 2026-06-09 | [2026-06-09_driver-ot-standalone.sql](2026-06-09_driver-ot-standalone.sql) | `driver_ot` (`booking_id` NOT NULL → nullable, table rebuild) — รองรับ manual standalone OT | [v2.16](../../docs/notes/database/schema.md#v216--driver-ot-standalone-2026-06-09) |
+| 2026-06-12 | [2026-06-12_user-line-id.sql](2026-06-12_user-line-id.sql) | `user` (+line_user_id, +line_link_code, unique index `ix_user_line_user_id`) — LINE Messaging API | [v2.17](../../docs/notes/database/schema.md#v217--user-line-messaging-api-2026-06-12) |
+| 2026-06-14 | [2026-06-14_drop-dead-columns.sql](2026-06-14_drop-dead-columns.sql) | `vehicle_booking` (-expense_type_id, -snap_department_name, -contact_name); `expense_type` table dropped | [v2.18](../../docs/notes/database/schema.md#v218--drop-dead-columns-2026-06-14) |
+| 2026-06-15 | [2026-06-15_notification-supersede.sql](2026-06-15_notification-supersede.sql) | `notification` (+event_key, +superseded_at) — supersede กัน notif ชนิดเดียวกันสะสมซ้ำ | [v2.19](../../docs/notes/database/schema.md#v219--notification-supersede-2026-06-15) |
+| 2026-06-16 | [2026-06-16_notification-add-title.sql](2026-06-16_notification-add-title.sql) | `notification` (+title) — freeze title ตอนสร้าง notif (เดิม compute จาก event_key) | [v2.20](../../docs/notes/database/schema.md#v220--notification-title-2026-06-16) |
 
 ---
 

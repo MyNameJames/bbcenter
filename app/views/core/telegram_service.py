@@ -1,12 +1,15 @@
+import logging
 import os
 import requests
 from datetime import datetime
+
+_log = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN     = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_GROUP_CHAT_ID = os.getenv("TELEGRAM_GROUP_CHAT_ID")
 
 if not TELEGRAM_BOT_TOKEN or not TELEGRAM_GROUP_CHAT_ID:
-    print("[Telegram] ⚠️  TELEGRAM_BOT_TOKEN / TELEGRAM_GROUP_CHAT_ID ไม่ได้ตั้งใน .env — การแจ้งเตือน Telegram จะถูกข้าม")
+    _log.warning("TELEGRAM_BOT_TOKEN / TELEGRAM_GROUP_CHAT_ID ไม่ได้ตั้งใน .env — การแจ้งเตือน Telegram จะถูกข้าม")
 
 TH_MONTHS = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
              'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
@@ -33,8 +36,8 @@ def _send(text: str) -> int | None:
         }, timeout=5)
         if resp.ok:
             return resp.json().get("result", {}).get("message_id")
-    except Exception as e:
-        print(f"[Telegram] Send error: {e}")
+    except Exception:
+        _log.exception("Telegram send error")
     return None
 
 
@@ -50,8 +53,8 @@ def delete_old_message(booking):
             "chat_id":    TELEGRAM_GROUP_CHAT_ID,
             "message_id": booking.telegram_message_id,
         }, timeout=5)
-    except Exception as e:
-        print(f"[Telegram] Delete error: {e}")
+    except Exception:
+        _log.exception("Telegram delete error")
 
 
 def _save_message_id(booking, message_id):
