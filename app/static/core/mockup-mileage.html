@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup · เลขไมล์ (Admin) — .bb-* redesign</title>
+<!--
+  ════════════════════════════════════════════════════════════════
+  MOCKUP — vehicle_mileage.html redesign ด้วย Component Library .bb-*
+  design source: components-gallery.html  ·  css: ./css/components.css
+  *** ไฟล์ proposal เท่านั้น — ไม่กระทบ template จริง ***
+  desktop (app shell) + mobile (card list) + modal (2 รูปแบบ) + pattern
+  ════════════════════════════════════════════════════════════════
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/components.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Sarabun', system-ui, sans-serif; color: var(--bb-str); background: var(--bb-n100); padding: 2rem 1.5rem 5rem; }
+  .m-wrap { max-width: 1240px; margin: 0 auto; }
+  .m-head h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 .375rem; letter-spacing: -.01em; }
+  .m-head p { color: var(--bb-mut); margin: 0; font-size: .9375rem; line-height: 1.6; }
+  .m-head code { font-family: var(--bb-num-font); background: var(--bb-n0); border: 1px solid var(--bb-n200); padding: 1px .375rem; border-radius: var(--bb-r-xs); font-size: .8125rem; }
+  .m-section-label { display: flex; align-items: center; gap: .5rem; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--bb-mut); margin: 2.75rem 0 1rem; }
+  .m-section-label::after { content: ''; flex: 1; height: 1px; background: var(--bb-n200); }
+  .m-section-label [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-accent-i); }
+
+  /* ───────── notes panel ───────── */
+  .m-notes { background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); padding: 1.25rem 1.5rem; margin-top: 1.25rem; }
+  .m-notes h3 { font-size: .9375rem; margin: 0 0 .75rem; display: flex; align-items: center; gap: .5rem; }
+  .m-notes h3:not(:first-child) { margin-top: 1rem; }
+  .m-notes h3 [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-accent-i); }
+  .m-notes ul { margin: 0; padding-left: 1.125rem; }
+  .m-notes li { font-size: .84375rem; color: var(--bb-str); line-height: 1.7; }
+  .m-notes b { color: var(--bb-accent-h); }
+  .m-notes code { font-family: var(--bb-num-font); background: var(--bb-n50); padding: 1px .3125rem; border-radius: var(--bb-r-xs); font-size: .78125rem; color: var(--bb-accent-h); }
+  .m-pat { background: var(--bb-n50); border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md); padding: 1rem 1.25rem; margin-top: .75rem; font-family: var(--bb-num-font); font-size: .8125rem; color: var(--bb-str); line-height: 1.8; }
+  .m-pat b { color: var(--bb-accent-h); }
+
+  /* ───────── REUSABLE: trip-summary pattern ─────────
+     ผู้เดินทาง | subbudget  /  ทะเบียน (คนขับ) → สถานที่ไป
+     ใช้ใน: mobile card body, modal body */
+  .m-trip-sum { background: var(--bb-n50); border-radius: var(--bb-r-md); padding: .75rem .875rem; }
+  .m-trip-sum-top { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+  .m-trip-sum-name { font-weight: 600; font-size: .9375rem; color: var(--bb-str); }
+  .m-trip-sum-budget { font-size: .8125rem; color: var(--bb-mut); white-space: nowrap; }
+  .m-trip-sum-route { font-size: .8125rem; color: var(--bb-mut); margin-top: .3125rem; display: flex; align-items: center; gap: .375rem; flex-wrap: wrap; }
+  .m-trip-sum-route b { color: var(--bb-str); font-weight: 600; }
+  .m-trip-sum-route [data-lucide] { width: .875rem; height: .875rem; color: var(--bb-ph); }
+
+  /* ───────── desktop app shell ───────── */
+  .m-app { display: grid; grid-template-columns: 236px 1fr; background: var(--bb-n50); border: 1px solid var(--bb-n200);
+           border-radius: var(--bb-r-xl); overflow: hidden; box-shadow: var(--bb-shadow-lg); min-height: 740px; }
+  .m-sidebar { background: #fff; border-right: 1px solid var(--bb-n200); padding: 1.25rem 1rem; display: flex; flex-direction: column; }
+  .m-logo { display: flex; align-items: center; gap: .625rem; font-weight: 700; font-size: 1.0625rem; margin-bottom: 1.5rem; padding: 0 .5rem; }
+  .m-logo-mark { width: 2rem; height: 2rem; border-radius: var(--bb-r-md); background: var(--bb-accent-i); color: #fff; display: flex; align-items: center; justify-content: center; }
+  .m-logo-mark [data-lucide] { width: 1.125rem; height: 1.125rem; }
+  .m-nav-label { font-size: .6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--bb-ph); padding: .625rem .625rem .25rem; }
+  .m-nav a { display: flex; align-items: center; gap: .6875rem; font-size: .875rem; color: var(--bb-mut); text-decoration: none; padding: .5625rem .625rem; border-radius: var(--bb-r-md); margin-bottom: 2px; font-weight: 500; }
+  .m-nav a [data-lucide] { width: 1.0625rem; height: 1.0625rem; }
+  .m-nav a:hover { background: var(--bb-n50); color: var(--bb-str); }
+  .m-nav a.is-on { background: var(--bb-accent-bg); color: var(--bb-accent-h); font-weight: 600; }
+  .m-side-user { margin-top: auto; display: flex; align-items: center; gap: .625rem; padding: .75rem .5rem 0; border-top: 1px solid var(--bb-n100); }
+  .m-su-name { font-size: .8125rem; font-weight: 600; line-height: 1.3; }
+  .m-su-role { font-size: .75rem; color: var(--bb-mut); }
+
+  .m-main { display: flex; flex-direction: column; min-width: 0; }
+  .m-topbar { height: 60px; background: #fff; border-bottom: 1px solid var(--bb-n200); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; flex-shrink: 0; }
+  .m-tb-crumb { font-size: .75rem; color: var(--bb-mut); margin-bottom: 1px; }
+  .m-tb-title { font-size: 1.0625rem; font-weight: 600; line-height: 1; }
+  .m-tb-actions { display: flex; align-items: center; gap: .75rem; }
+  .m-page { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+
+  .m-kpi-strip { display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; }
+  .m-kpi-div { width: 1px; align-self: stretch; min-height: 2.5rem; background: var(--bb-n200); }
+
+  .m-toolbar { display: flex; flex-direction: column; gap: 1rem; }
+  .m-tr { display: flex; align-items: center; gap: .75rem; }
+  .m-tr .bb-search { flex: 1; max-width: 440px; }
+  .m-tr-right { margin-left: auto; display: flex; align-items: center; gap: .625rem; }
+
+  /* tabs — horizontal scroll, ไม่บีบ */
+  .m-tabs-wrap { overflow-x: auto; }
+  .m-tabs-wrap::-webkit-scrollbar { height: 0; }
+  .m-tabs-wrap .bb-tabs { flex-wrap: nowrap; min-width: max-content; }
+  .bb-tab { flex-shrink: 0; }
+
+  /* table — horizontal scroll, ไม่บีบ col */
+  .m-xscroll { overflow-x: auto; }
+  .m-table-card .bb-table { min-width: 1080px; }
+  .m-table-card .bb-table th, .m-table-card .bb-table td { white-space: nowrap; }
+  .m-sub { font-size: .78125rem; color: var(--bb-mut); margin-top: 1px; }
+  .m-odo { font-family: var(--bb-num-font); }
+  .m-date-row td { background: var(--bb-n50) !important; font-size: .78125rem; font-weight: 600; color: var(--bb-mut); padding: .5rem .875rem !important; }
+
+  /* fuel tooltip (เติมน้ำมัน — icon only) */
+  .m-tip { position: relative; display: inline-flex; }
+  .m-fuel-btn { color: var(--bb-accent-i); }
+  .m-fuel-btn:hover { background: var(--bb-accent-bg); color: var(--bb-accent-h); }
+  .m-tip-pop { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: var(--bb-str); color: #fff; font-size: .6875rem; line-height: 1.5; padding: .4375rem .625rem; border-radius: var(--bb-r-sm); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 30; box-shadow: var(--bb-shadow-md); }
+  .m-tip-pop::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--bb-str); }
+  .m-tip-pop b { font-family: var(--bb-num-font); }
+  .m-tip:hover .m-tip-pop { opacity: 1; }
+
+  /* ───────── mobile phone mock ───────── */
+  .m-phones { display: flex; gap: 2.5rem; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .m-phone { width: 380px; background: #fff; border-radius: 38px; border: 12px solid #0F1A2E; box-shadow: var(--bb-shadow-lg); overflow: hidden; position: relative; }
+  .m-phone-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 138px; height: 26px; background: #0F1A2E; border-radius: 0 0 16px 16px; z-index: 6; }
+  .m-screen { height: 800px; overflow-y: auto; background: var(--bb-n50); }
+  .m-screen::-webkit-scrollbar { width: 0; }
+  .m-ph-topbar { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--bb-n200); padding: 2.25rem 1rem .75rem; display: flex; align-items: center; justify-content: space-between; }
+  .m-ph-icon { width: 2.25rem; height: 2.25rem; border-radius: var(--bb-r-md); display: flex; align-items: center; justify-content: center; color: var(--bb-mut); }
+  .m-ph-icon:hover { background: var(--bb-n100); }
+  .m-ph-icon [data-lucide] { width: 1.25rem; height: 1.25rem; }
+  .m-ph-title { font-size: 1rem; font-weight: 600; }
+  .m-ph-body { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+  .m-ph-kpi { display: flex; background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); overflow: hidden; }
+  .m-ph-kpi-item { flex: 1; padding: .75rem .625rem; text-align: center; }
+  .m-ph-kpi-item + .m-ph-kpi-item { border-left: 1px solid var(--bb-n100); }
+  .m-ph-kpi-label { font-size: .6875rem; color: var(--bb-mut); }
+  .m-ph-kpi-val { font-family: var(--bb-num-font); font-weight: 300; font-size: 1.375rem; letter-spacing: -.02em; margin-top: 2px; }
+  .m-ph-kpi-val small { font-size: .75rem; font-weight: 500; color: var(--bb-mut); }
+  .m-ph-tabs { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 1px solid var(--bb-n200); }
+  .m-ph-tabs::-webkit-scrollbar { height: 0; }
+  .m-ph-tools { display: flex; gap: .5rem; }
+  .m-ph-tools .bb-search { flex: 1; }
+  .m-ph-group { font-size: .75rem; font-weight: 700; color: var(--bb-mut); padding: .25rem .125rem; }
+  /* mobile trip card */
+  .m-trip-head { display: flex; align-items: center; justify-content: space-between; padding: .75rem .875rem; }
+  .m-trip-bk { font-family: var(--bb-num-font); font-weight: 700; font-size: .875rem; display: inline-flex; align-items: center; gap: .5rem; }
+  .m-trip-card-body { padding: 0 .875rem .25rem; }
+  .m-trip-stats { display: flex; gap: 1.75rem; padding: .625rem .875rem; background: var(--bb-n50); border-top: 1px solid var(--bb-n100); margin-top: .75rem; }
+  .m-trip-stat-label { font-size: .6875rem; color: var(--bb-mut); }
+  .m-trip-stat-val { font-family: var(--bb-num-font); font-weight: 600; font-size: .9375rem; margin-top: 1px; }
+  .m-trip-foot { padding: .75rem .875rem; }
+  .m-fab { position: absolute; bottom: 1.25rem; right: 1.25rem; width: 3.25rem; height: 3.25rem; border-radius: 50%; background: var(--bb-accent-i); color: #fff; border: none; box-shadow: 0 8px 20px rgba(30,64,175,.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; }
+
+  /* ───────── modal: field head (label + meta) + state head ───────── */
+  .m-field-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-bottom: .375rem; }
+  .m-field-meta { font-size: .78125rem; color: var(--bb-mut); white-space: nowrap; }
+  .m-field-meta b { font-family: var(--bb-num-font); color: var(--bb-str); font-weight: 600; }
+  .m-state-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem 0 .875rem; }
+  .m-state-title { display: inline-flex; align-items: center; gap: .4375rem; font-size: .9375rem; font-weight: 600; color: var(--bb-accent-h); }
+  .m-state-title [data-lucide] { width: 1rem; height: 1rem; }
+  .m-calc { border: 1px solid var(--bb-accent); background: var(--bb-accent-bg); border-radius: var(--bb-r-md); padding: .75rem .875rem; margin-bottom: 1rem; }
+  .m-calc-title { font-size: .75rem; font-weight: 600; color: var(--bb-accent-h); margin-bottom: .5rem; display: inline-flex; align-items: center; gap: .375rem; }
+  .m-calc-title [data-lucide] { width: .8125rem; height: .8125rem; }
+  .m-calc-grid { display: flex; gap: 1.75rem; }
+  .m-calc-val { font-family: var(--bb-num-font); font-weight: 600; font-size: .9375rem; }
+
+  /* desktop modal demo (ขึ้นกลางจอ) */
+  .m-modal-demo { background: rgba(10,37,64,.4); border-radius: var(--bb-r-xl); padding: 2.5rem; display: flex; justify-content: center; }
+
+  @media (max-width: 980px) { .m-app { grid-template-columns: 1fr; } .m-sidebar { display: none; } }
+</style>
+</head>
+<body>
+<div class="m-wrap">
+
+  <div class="m-head">
+    <h1>Mockup · เลขไมล์ (Admin)</h1>
+    <p>Redesign <code>vehicle_mileage.html</code> ด้วย Component Library <code>.bb-*</code> — desktop + มือถือ + modal 2 รูปแบบ<br>
+       ไฟล์ proposal เท่านั้น ไม่กระทบ template จริง · ใช้ <code>components.css</code> ตัวเดียวกับ gallery</p>
+  </div>
+
+  <!-- ════════════════ DESKTOP ════════════════ -->
+  <div class="m-section-label"><i data-lucide="monitor"></i> Desktop · 1200px</div>
+
+  <div class="m-app">
+    <aside class="m-sidebar">
+      <div class="m-logo"><span class="m-logo-mark"><i data-lucide="car-front"></i></span> BBCenter</div>
+      <div class="m-nav-label">ภาพรวม</div>
+      <nav class="m-nav">
+        <a href="#"><i data-lucide="layout-dashboard"></i> แดชบอร์ด</a>
+        <a href="#"><i data-lucide="calendar-check"></i> จองรถ</a>
+      </nav>
+      <div class="m-nav-label">ยานพาหนะ</div>
+      <nav class="m-nav">
+        <a href="#" class="is-on"><i data-lucide="gauge"></i> เลขไมล์</a>
+        <a href="#"><i data-lucide="wallet"></i> งบประมาณ</a>
+        <a href="#"><i data-lucide="fuel"></i> เติมน้ำมัน</a>
+        <a href="#"><i data-lucide="bar-chart-3"></i> รายงาน</a>
+      </nav>
+      <div class="m-nav-label">ระบบ</div>
+      <nav class="m-nav"><a href="#"><i data-lucide="settings"></i> ตั้งค่า</a></nav>
+      <div class="m-side-user">
+        <span class="bb-avatar">ปจ</span>
+        <div><div class="m-su-name">ป. จตุพร</div><div class="m-su-role">ผู้ดูแลระบบ</div></div>
+      </div>
+    </aside>
+
+    <div class="m-main">
+      <header class="m-topbar">
+        <div>
+          <div class="m-tb-crumb">ผู้ดูแลระบบ · ยานพาหนะ</div>
+          <div class="m-tb-title">เลขไมล์</div>
+        </div>
+        <div class="m-tb-actions">
+          <button class="bb-btn is-sec is-icon"><i data-lucide="bell"></i></button>
+          <span class="bb-avatar">ปจ</span>
+        </div>
+      </header>
+
+      <div class="m-page">
+
+        <!-- Zone 1: KPI -->
+        <div class="m-kpi-strip">
+          <div class="bb-kpi is-ghost">
+            <div class="bb-kpi-tile"><i data-lucide="route"></i></div>
+            <div><div class="bb-kpi-label">รายการทั้งหมด</div><div class="bb-kpi-value bb-num">48</div></div>
+          </div>
+          <div class="m-kpi-div"></div>
+          <div class="bb-kpi is-ghost">
+            <div class="bb-kpi-tile"><i data-lucide="map-pin"></i></div>
+            <div><div class="bb-kpi-label">ระยะรวม</div><div class="bb-kpi-value bb-num">3,840 <span class="bb-kpi-den">กม.</span></div></div>
+          </div>
+          <div class="m-kpi-div"></div>
+          <div class="bb-kpi is-ghost">
+            <div class="bb-kpi-tile"><i data-lucide="fuel"></i></div>
+            <div><div class="bb-kpi-label">ค่าน้ำมันรวม</div><div class="bb-kpi-value bb-num">฿ 7,680</div></div>
+          </div>
+          <div style="margin-left:auto"><span class="bb-badge is-accent"><i data-lucide="pencil-line"></i> รอกรอก 6</span></div>
+        </div>
+
+        <!-- Zone 2: toolbar -->
+        <div class="bb-card"><div class="bb-card-body m-toolbar">
+          <div class="m-tabs-wrap">
+            <div class="bb-tabs">
+              <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">48</span></button>
+              <button class="bb-tab">รอกรอก <span class="bb-tab-count">6</span></button>
+              <button class="bb-tab">รอกลับ <span class="bb-tab-count">9</span></button>
+              <button class="bb-tab">ครบ <span class="bb-tab-count">33</span></button>
+            </div>
+          </div>
+          <div class="m-tr">
+            <div class="bb-search"><i data-lucide="search"></i><input placeholder="ค้นหา ผู้จอง · ทะเบียน · คนขับ · ปลายทาง…"></div>
+            <div class="m-tr-right">
+              <div class="bb-dr is-align-right" data-bb-daterange data-preset="" data-placeholder="ช่วงวันที่">
+                <button type="button" class="bb-select bb-dr-trigger" data-bb-dr-btn aria-haspopup="dialog" aria-expanded="false">
+                  <i data-lucide="calendar"></i><span class="bb-dr-label" data-bb-dr-label>ช่วงวันที่</span><i data-lucide="chevron-down" class="bb-dr-caret"></i>
+                </button>
+                <input type="hidden" name="date_start" data-bb-dr-start><input type="hidden" name="date_end" data-bb-dr-end>
+                <div class="bb-daterange" data-bb-dr-pop role="dialog" hidden>
+                  <div class="bb-daterange-presets" data-bb-dr-presets>
+                    <button type="button" data-preset="today">วันนี้</button>
+                    <button type="button" data-preset="7d">7 วันล่าสุด</button>
+                    <button type="button" data-preset="4w">4 สัปดาห์ล่าสุด</button>
+                    <button type="button" data-preset="3m">3 เดือนล่าสุด</button>
+                    <button type="button" data-preset="6m">6 เดือนล่าสุด</button>
+                    <button type="button" data-preset="12m">12 เดือนล่าสุด</button>
+                    <button type="button" data-preset="mtd">เดือนนี้ถึงปัจจุบัน</button>
+                    <button type="button" data-preset="qtd">ไตรมาสนี้ถึงปัจจุบัน</button>
+                    <button type="button" data-preset="ytd">ปีนี้ถึงปัจจุบัน</button>
+                  </div>
+                  <div class="bb-daterange-main">
+                    <div class="bb-daterange-top">
+                      <label class="bb-dr-io"><span>เริ่ม</span><input type="text" class="bb-dr-input" data-bb-dr-start-in placeholder="วว/ดด/ปปปป" autocomplete="off"></label>
+                      <label class="bb-dr-io"><span>ถึง</span><input type="text" class="bb-dr-input" data-bb-dr-end-in placeholder="วว/ดด/ปปปป" autocomplete="off"></label>
+                    </div>
+                    <div class="bb-daterange-header">
+                      <button type="button" class="bb-dr-nav" data-bb-dr-prev><i data-lucide="chevron-left"></i></button>
+                      <div class="bb-dr-titles" data-bb-dr-titles></div>
+                      <button type="button" class="bb-dr-nav" data-bb-dr-next><i data-lucide="chevron-right"></i></button>
+                    </div>
+                    <div class="bb-daterange-cals" data-bb-dr-cals></div>
+                    <div class="bb-daterange-foot">
+                      <button type="button" class="bb-btn is-ghost is-sm" data-bb-dr-clear>ล้าง</button>
+                      <button type="button" class="bb-btn is-pri is-sm" data-bb-dr-apply>ใช้</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button class="bb-btn is-sec"><i data-lucide="download"></i> Export</button>
+              <button class="bb-btn is-sec"><i data-lucide="sliders-horizontal"></i> ตัวกรอง</button>
+            </div>
+          </div>
+        </div></div>
+
+        <!-- Zone 3: table (horizontal scroll, ไม่บีบ col) -->
+        <div class="bb-card m-table-card">
+          <div class="m-xscroll">
+            <table class="bb-table">
+              <thead><tr>
+                <th style="width:36px"><span class="bb-check-box"></span></th>
+                <th class="bb-th sortable">Booking <span class="bb-sort-icon"><i data-lucide="chevrons-up-down"></i></span></th>
+                <th class="bb-th sortable">ผู้จอง <span class="bb-sort-icon"><i data-lucide="chevrons-up-down"></i></span></th>
+                <th class="bb-th sortable">รถ <span class="bb-sort-icon"><i data-lucide="chevrons-up-down"></i></span></th>
+                <th class="bb-th">คนขับ</th>
+                <th class="bb-th">ปลายทาง</th>
+                <th class="bb-th sortable text-end">ไมล์ ออก→กลับ <span class="bb-sort-icon"><i data-lucide="chevrons-up-down"></i></span></th>
+                <th class="bb-th sortable text-end">ค่าน้ำมัน <span class="bb-sort-icon"><i data-lucide="chevrons-up-down"></i></span></th>
+                <th class="bb-th text-center">เติมน้ำมัน</th>
+                <th class="bb-th">สถานะ</th>
+                <th class="bb-th text-end">จัดการ</th>
+              </tr></thead>
+              <tbody>
+                <tr class="m-date-row"><td colspan="11">29 มิถุนายน 2569</td></tr>
+
+                <tr>
+                  <td><span class="bb-check-box is-on"><i data-lucide="check"></i></span></td>
+                  <td class="bb-cell-strong">BK-1042</td>
+                  <td>สมชาย ใจดี<div class="m-sub">กองสนับสนุนฯ</div></td>
+                  <td class="bb-cell-strong">กข-1234</td>
+                  <td>ประยุทธ</td>
+                  <td>โรงพยาบาลศิริราช</td>
+                  <td class="bb-cell-num m-odo">125,400 → 125,527<div class="m-sub">127 กม.</div></td>
+                  <td class="bb-cell-num">฿ 254</td>
+                  <td class="text-center">
+                    <span class="m-tip">
+                      <button class="bb-icon-btn m-fuel-btn"><i data-lucide="fuel"></i></button>
+                      <span class="m-tip-pop">เติมน้ำมัน · เลขไมล์ <b>125,480</b></span>
+                    </span>
+                  </td>
+                  <td><span class="bb-status is-ok"><span class="bb-dot"></span>ครบ</span></td>
+                  <td><div class="bb-table-actions"><button class="bb-icon-btn"><i data-lucide="pencil"></i></button></div></td>
+                </tr>
+
+                <tr>
+                  <td><span class="bb-check-box"></span></td>
+                  <td class="bb-cell-strong">BK-1043 <span class="bb-badge is-accent">+1</span></td>
+                  <td>งานร่วม 2 รายการ<div class="m-sub">งานโภชนาการ</div></td>
+                  <td class="bb-cell-strong">งจ-5678</td>
+                  <td>วิชัย</td>
+                  <td>ศาลากลางจังหวัด</td>
+                  <td class="bb-cell-num m-odo">88,200 → <span class="bb-cell-muted">—</span></td>
+                  <td class="bb-cell-num bb-cell-muted">—</td>
+                  <td class="text-center"><span class="bb-cell-muted">—</span></td>
+                  <td><span class="bb-status is-wr"><span class="bb-dot"></span>รอกลับ</span></td>
+                  <td><div class="bb-table-actions"><button class="bb-icon-btn"><i data-lucide="pencil"></i></button></div></td>
+                </tr>
+
+                <tr>
+                  <td><span class="bb-check-box"></span></td>
+                  <td class="bb-cell-strong">BK-1044</td>
+                  <td>สุดา รักงาน<div class="m-sub">งานการเงิน</div></td>
+                  <td class="bb-cell-muted">—</td>
+                  <td class="bb-cell-muted">—</td>
+                  <td>สนามบินดอนเมือง</td>
+                  <td class="bb-cell-num bb-cell-muted">—</td>
+                  <td class="bb-cell-num bb-cell-muted">—</td>
+                  <td class="text-center"><span class="bb-cell-muted">—</span></td>
+                  <td><span class="bb-status is-neutral"><span class="bb-dot"></span>รอกรอก</span></td>
+                  <td><div class="bb-table-actions"><button class="bb-icon-btn"><i data-lucide="pencil"></i></button></div></td>
+                </tr>
+
+                <tr class="m-date-row"><td colspan="11">28 มิถุนายน 2569</td></tr>
+
+                <tr>
+                  <td><span class="bb-check-box is-on"><i data-lucide="check"></i></span></td>
+                  <td class="bb-cell-strong">BK-1039</td>
+                  <td>อนันต์ พงษ์<div class="m-sub">กองยุทธศาสตร์</div></td>
+                  <td class="bb-cell-strong">ขค-9012</td>
+                  <td>ธนา</td>
+                  <td>คลังสินค้าบางนา</td>
+                  <td class="bb-cell-num m-odo">60,100 → 60,212<div class="m-sub">112 กม.</div></td>
+                  <td class="bb-cell-num">฿ 224</td>
+                  <td class="text-center">
+                    <span class="m-tip">
+                      <button class="bb-icon-btn m-fuel-btn"><i data-lucide="fuel"></i></button>
+                      <span class="m-tip-pop">เติมน้ำมัน · เลขไมล์ <b>60,150</b></span>
+                    </span>
+                  </td>
+                  <td><span class="bb-status is-ok"><span class="bb-dot"></span>ครบ</span></td>
+                  <td><div class="bb-table-actions"><button class="bb-icon-btn"><i data-lucide="pencil"></i></button></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bb-pag">
+          <span class="bb-pag-info">แสดง 1–20 จาก 48</span>
+          <div class="bb-pag-nav">
+            <button class="bb-pg is-disabled"><i data-lucide="chevron-left"></i></button>
+            <button class="bb-pg is-on">1</button><button class="bb-pg">2</button><button class="bb-pg">3</button>
+            <button class="bb-pg"><i data-lucide="chevron-right"></i></button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ MOBILE ════════════════ -->
+  <div class="m-section-label"><i data-lucide="smartphone"></i> Mobile · 380px — card list (trip-summary pattern)</div>
+
+  <div class="m-phones">
+    <div class="m-phone">
+      <div class="m-phone-notch"></div>
+      <div class="m-screen">
+        <div class="m-ph-topbar">
+          <div class="m-ph-icon"><i data-lucide="menu"></i></div>
+          <div class="m-ph-title">เลขไมล์</div>
+          <span class="bb-avatar">ปจ</span>
+        </div>
+
+        <div class="m-ph-body">
+          <div class="m-ph-kpi">
+            <div class="m-ph-kpi-item"><div class="m-ph-kpi-label">ทั้งหมด</div><div class="m-ph-kpi-val">48</div></div>
+            <div class="m-ph-kpi-item"><div class="m-ph-kpi-label">ระยะรวม</div><div class="m-ph-kpi-val">3,840<small> กม.</small></div></div>
+            <div class="m-ph-kpi-item"><div class="m-ph-kpi-label">ค่าน้ำมัน</div><div class="m-ph-kpi-val"><small>฿ </small>7,680</div></div>
+          </div>
+
+          <div class="m-ph-tabs">
+            <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">48</span></button>
+            <button class="bb-tab">รอกรอก <span class="bb-tab-count">6</span></button>
+            <button class="bb-tab">รอกลับ <span class="bb-tab-count">9</span></button>
+            <button class="bb-tab">ครบ <span class="bb-tab-count">33</span></button>
+          </div>
+
+          <div class="m-ph-tools">
+            <div class="bb-search"><i data-lucide="search"></i><input placeholder="ค้นหา…"></div>
+            <button class="bb-btn is-sec is-icon"><i data-lucide="calendar"></i></button>
+            <button class="bb-btn is-sec is-icon"><i data-lucide="sliders-horizontal"></i></button>
+          </div>
+
+          <div class="m-ph-group">29 มิถุนายน 2569</div>
+
+          <div class="bb-card">
+            <div class="m-trip-head">
+              <span class="m-trip-bk"><span class="bb-check-box is-on"><i data-lucide="check"></i></span> BK-1042</span>
+              <span class="bb-status is-ok"><span class="bb-dot"></span>ครบ</span>
+            </div>
+            <div class="m-trip-card-body">
+              <!-- trip-summary pattern -->
+              <div class="m-trip-sum">
+                <div class="m-trip-sum-top"><span class="m-trip-sum-name">สมชาย ใจดี</span><span class="m-trip-sum-budget">กองสนับสนุนฯ</span></div>
+                <div class="m-trip-sum-route"><b>กข-1234</b> (ประยุทธ) <i data-lucide="arrow-right"></i> โรงพยาบาลศิริราช</div>
+              </div>
+            </div>
+            <div class="m-trip-stats">
+              <div><div class="m-trip-stat-label">ไมล์ ออก→กลับ</div><div class="m-trip-stat-val">125,400 → 125,527</div></div>
+              <div><div class="m-trip-stat-label">ค่าน้ำมัน</div><div class="m-trip-stat-val">฿ 254 <i data-lucide="fuel" style="width:13px;color:var(--bb-accent-i)"></i></div></div>
+            </div>
+            <div class="m-trip-foot"><button class="bb-btn is-sec is-sm" style="width:100%"><i data-lucide="pencil"></i> แก้ไขเลขไมล์</button></div>
+          </div>
+
+          <div class="bb-card">
+            <div class="m-trip-head">
+              <span class="m-trip-bk"><span class="bb-check-box"></span> BK-1043 <span class="bb-badge is-accent">+1</span></span>
+              <span class="bb-status is-wr"><span class="bb-dot"></span>รอกลับ</span>
+            </div>
+            <div class="m-trip-card-body">
+              <div class="m-trip-sum">
+                <div class="m-trip-sum-top"><span class="m-trip-sum-name">งานร่วม 2 รายการ</span><span class="m-trip-sum-budget">งานโภชนาการ</span></div>
+                <div class="m-trip-sum-route"><b>งจ-5678</b> (วิชัย) <i data-lucide="arrow-right"></i> ศาลากลางจังหวัด</div>
+              </div>
+            </div>
+            <div class="m-trip-stats">
+              <div><div class="m-trip-stat-label">ไมล์ ออก→กลับ</div><div class="m-trip-stat-val">88,200 → —</div></div>
+              <div><div class="m-trip-stat-label">ค่าน้ำมัน</div><div class="m-trip-stat-val bb-cell-muted">—</div></div>
+            </div>
+            <div class="m-trip-foot"><button class="bb-btn is-pri is-sm" style="width:100%"><i data-lucide="flag"></i> กรอกไมล์กลับ</button></div>
+          </div>
+
+          <div class="bb-card">
+            <div class="m-trip-head">
+              <span class="m-trip-bk"><span class="bb-check-box"></span> BK-1044</span>
+              <span class="bb-status is-neutral"><span class="bb-dot"></span>รอกรอก</span>
+            </div>
+            <div class="m-trip-card-body">
+              <div class="m-trip-sum">
+                <div class="m-trip-sum-top"><span class="m-trip-sum-name">สุดา รักงาน</span><span class="m-trip-sum-budget">งานการเงิน</span></div>
+                <div class="m-trip-sum-route"><b class="bb-cell-muted">ยังไม่จ่ายรถ</b> <i data-lucide="arrow-right"></i> สนามบินดอนเมือง</div>
+              </div>
+            </div>
+            <div class="m-trip-foot"><button class="bb-btn is-pri is-sm" style="width:100%"><i data-lucide="play-circle"></i> กรอกไมล์ออก</button></div>
+          </div>
+
+          <div class="m-ph-group">28 มิถุนายน 2569</div>
+          <div class="bb-card">
+            <div class="m-trip-head">
+              <span class="m-trip-bk"><span class="bb-check-box is-on"><i data-lucide="check"></i></span> BK-1039</span>
+              <span class="bb-status is-ok"><span class="bb-dot"></span>ครบ</span>
+            </div>
+            <div class="m-trip-card-body">
+              <div class="m-trip-sum">
+                <div class="m-trip-sum-top"><span class="m-trip-sum-name">อนันต์ พงษ์</span><span class="m-trip-sum-budget">กองยุทธศาสตร์</span></div>
+                <div class="m-trip-sum-route"><b>ขค-9012</b> (ธนา) <i data-lucide="arrow-right"></i> คลังสินค้าบางนา</div>
+              </div>
+            </div>
+            <div class="m-trip-stats">
+              <div><div class="m-trip-stat-label">ไมล์ ออก→กลับ</div><div class="m-trip-stat-val">60,100 → 60,212</div></div>
+              <div><div class="m-trip-stat-label">ค่าน้ำมัน</div><div class="m-trip-stat-val">฿ 224</div></div>
+            </div>
+            <div class="m-trip-foot"><button class="bb-btn is-sec is-sm" style="width:100%"><i data-lucide="pencil"></i> แก้ไขเลขไมล์</button></div>
+          </div>
+
+          <div style="height:1rem"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ MODAL (component เดียว · responsive) ════════════════ -->
+  <div class="m-section-label"><i data-lucide="square-pen"></i> Modal · 1 component (.bb-modal) — desktop กลางจอ 500px · mobile bottom sheet (@media ≤576px)</div>
+
+  <p class="m-sub" style="margin:-.25rem 0 1rem; max-width:760px">
+    markup <b>เดียวกันเป๊ะ</b> ทั้ง 2 — ต่างแค่ container ที่ media query สลับ (กลางจอ ↔ ชิดล่างเต็มกว้าง) + <code>.bb-modal-sheet-handle</code> โผล่เฉพาะมือถือ
+  </p>
+
+  <div class="m-phones">
+
+    <!-- desktop: centered, 500px (component จริง) -->
+    <div style="flex:1; min-width:440px">
+      <div class="m-sub" style="margin-bottom:.5rem; text-align:center">Desktop — กลางจอ · 500px</div>
+      <div class="m-modal-demo">
+        <div class="bb-modal">
+          <div class="bb-modal-sheet-handle"></div>
+          <div class="bb-modal-head">
+            <div>
+              <div class="bb-modal-title">บันทึกเลขไมล์</div>
+              <div class="bb-modal-sub bb-num">BK-1043 · 09:00 – 12:00</div>
+            </div>
+            <button class="bb-modal-x"><i data-lucide="x"></i></button>
+          </div>
+          <div class="bb-modal-body" style="color:var(--bb-str)">
+            <div class="m-trip-sum">
+              <div class="m-trip-sum-top"><span class="m-trip-sum-name">งานร่วม 2 รายการ</span><span class="m-trip-sum-budget">งานโภชนาการ</span></div>
+              <div class="m-trip-sum-route"><b>งจ-5678</b> (วิชัย) <i data-lucide="arrow-right"></i> ศาลากลางจังหวัด</div>
+            </div>
+            <div class="m-state-head">
+              <span class="m-state-title"><i data-lucide="flag"></i> บันทึกเลขไมล์กลับ</span>
+              <span class="m-field-meta">ไมล์ออกล่าสุด <b>88,200</b> km</span>
+            </div>
+            <div class="bb-field">
+              <label class="bb-label">เลขไมล์กลับ (กม.)</label>
+              <input class="bb-input" value="88,327" inputmode="numeric">
+            </div>
+            <div class="m-calc">
+              <div class="m-calc-title"><i data-lucide="calculator"></i> คำนวณอัตโนมัติ</div>
+              <div class="m-calc-grid">
+                <div><div class="m-sub">ระยะทาง</div><div class="m-calc-val">127 กม.</div></div>
+                <div><div class="m-sub">ค่าน้ำมัน</div><div class="m-calc-val">฿ 254</div></div>
+                <div><div class="m-sub">อัตรา</div><div class="m-calc-val">10 กม./ล. · ฿20/ล.</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="bb-modal-foot">
+            <button class="bb-btn is-ghost">ยกเลิก</button>
+            <button class="bb-btn is-pri"><i data-lucide="save"></i> บันทึกไมล์กลับ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- mobile: เนื้อในเดียวกัน — container ถูกบังคับเป็น sheet (จำลองผล @media ในกรอบ) -->
+    <div>
+      <div class="m-sub" style="margin-bottom:.5rem; text-align:center">Mobile — bottom sheet</div>
+      <div class="m-phone">
+        <div class="m-phone-notch"></div>
+        <div class="m-screen" style="background:rgba(10,37,64,.4); display:flex; flex-direction:column; justify-content:flex-end">
+          <!-- บังคับ sheet ผ่าน inline (จริง = @media ≤576px ใน components.css) -->
+          <div class="bb-modal" style="width:100%; max-width:100%; border-radius:var(--bb-r-xl) var(--bb-r-xl) 0 0; max-height:92vh; overflow-y:auto">
+            <div class="bb-modal-sheet-handle" style="display:block"></div>
+            <div class="bb-modal-head">
+              <div>
+                <div class="bb-modal-title">บันทึกเลขไมล์</div>
+                <div class="bb-modal-sub bb-num">BK-1043 · 09:00 – 12:00</div>
+              </div>
+              <button class="bb-modal-x"><i data-lucide="x"></i></button>
+            </div>
+            <div class="bb-modal-body" style="color:var(--bb-str)">
+              <div class="m-trip-sum">
+                <div class="m-trip-sum-top"><span class="m-trip-sum-name">งานร่วม 2 รายการ</span><span class="m-trip-sum-budget">งานโภชนาการ</span></div>
+                <div class="m-trip-sum-route"><b>งจ-5678</b> (วิชัย) <i data-lucide="arrow-right"></i> ศาลากลางจังหวัด</div>
+              </div>
+              <div class="m-state-head">
+                <span class="m-state-title"><i data-lucide="flag"></i> บันทึกเลขไมล์กลับ</span>
+                <span class="m-field-meta">ไมล์ออกล่าสุด <b>88,200</b> km</span>
+              </div>
+              <div class="bb-field">
+                <label class="bb-label">เลขไมล์กลับ (กม.)</label>
+                <input class="bb-input" value="88,327" inputmode="numeric">
+              </div>
+              <div class="m-calc">
+                <div class="m-calc-title"><i data-lucide="calculator"></i> คำนวณอัตโนมัติ</div>
+                <div class="m-calc-grid">
+                  <div><div class="m-sub">ระยะทาง</div><div class="m-calc-val">127 กม.</div></div>
+                  <div><div class="m-sub">ค่าน้ำมัน</div><div class="m-calc-val">฿ 254</div></div>
+                  <div><div class="m-sub">อัตรา</div><div class="m-calc-val">10 กม./ล. · ฿20/ล.</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="bb-modal-foot">
+              <button class="bb-btn is-ghost">ยกเลิก</button>
+              <button class="bb-btn is-pri"><i data-lucide="save"></i> บันทึกไมล์กลับ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ NOTES + PATTERN ════════════════ -->
+  <div class="m-section-label"><i data-lucide="lightbulb"></i> Design decisions + pattern</div>
+  <div class="m-notes">
+    <h3><i data-lucide="table-2"></i> Desktop table — 11 คอลัมน์ · horizontal scroll (ไม่บีบ)</h3>
+    <ul>
+      <li><b>รถ / คนขับ แยกคอลัมน์</b> — รถ = ทะเบียน · คนขับ = ชื่อต้น (ไม่มีนามสกุล)</li>
+      <li><b>ผู้จอง</b> sub-line เหลือเฉพาะ <b>subbudget</b> (กองสนับสนุนฯ / งานโภชนาการ…) ไม่แสดงประเภทงบ</li>
+      <li><b>เติมน้ำมัน</b> กลับมาเป็นคอลัมน์ — แสดงแค่ icon <code>fuel</code> · hover/กด = tooltip "เติมน้ำมัน · เลขไมล์ NNN"</li>
+      <li>ตาราง <code>min-width:1080px</code> + <code>white-space:nowrap</code> → <b>เลื่อนแนวนอน</b> ไม่บีบ col</li>
+    </ul>
+    <h3><i data-lucide="layout-grid"></i> Mobile — card list · trip-summary pattern</h3>
+    <ul>
+      <li>ตาราง → <code>.bb-card</code> · head = checkbox+BK + สถานะ · foot = ปุ่มเต็มกว้าง (เปลี่ยนตามสถานะ)</li>
+      <li>tabs = <b>horizontal scroll</b> (ทั้ง desktop + mobile, ไม่บีบ)</li>
+    </ul>
+    <h3><i data-lucide="square-pen"></i> Modal — responsive</h3>
+    <ul>
+      <li>Desktop = ขึ้นกลางจอ (<code>.bb-modal</code>) · Mobile = bottom sheet (drag handle)</li>
+      <li>header subtext = <b>BK + ช่วงเวลาเดินทาง</b> · body = trip-summary pattern (เหมือน card)</li>
+      <li>title "บันทึกเลขไมล์กลับ" → อีกฝั่งแสดง <b>เลขไมล์ออกล่าสุด</b> (เหมือนหน้า driver)</li>
+    </ul>
+
+    <h3><i data-lucide="bookmark"></i> 🔖 Trip-summary pattern (เก็บไว้ใช้ซ้ำ)</h3>
+    <div class="m-pat">
+      <b>ใช้:</b> mobile card body · modal body<br>
+      ┌──────────────────────────────────────┐<br>
+      │ <b>[ผู้เดินทาง]</b> &nbsp;…ชิดขวา… &nbsp;[subbudget] │ &nbsp;← <code>.m-trip-sum-top</code><br>
+      │ <b>[ทะเบียน]</b> (คนขับ) → [สถานที่ไป] &nbsp;&nbsp;&nbsp;│ &nbsp;← <code>.m-trip-sum-route</code><br>
+      └──────────────────────────────────────┘<br>
+      class: <code>.m-trip-sum</code> &gt; <code>.m-trip-sum-top</code> (<code>-name</code> | <code>-budget</code>) + <code>.m-trip-sum-route</code> (<code>b</code>=ทะเบียน)
+    </div>
+  </div>
+
+</div>
+
+<script src="./js/bb-daterange.js"></script>
+<script> lucide.createIcons(); </script>
+</body>
+</html>

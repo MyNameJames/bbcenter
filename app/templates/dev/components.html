@@ -1,0 +1,301 @@
+{% from '_components/bb/ue_chip.html' import ue_chip, ue_chip_dd, ue_chip_opt %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BBCenter · Living Component Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='core/css/components.css') }}">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Sarabun', system-ui, sans-serif; color: var(--bb-str); background: var(--bb-n50); }
+  .g-wrap { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+  .g-nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+           background: #fff; border-right: 1px solid var(--bb-n200); padding: 1.25rem 1rem; }
+  .g-brand { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: .5rem; }
+  .g-brand [data-lucide] { width: 1.125rem; height: 1.125rem; color: var(--bb-accent-i); }
+  .g-brand-sub { font-size: .75rem; color: var(--bb-mut); margin-bottom: 1.25rem; }
+  .g-nav-label { font-size: .6875rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+                 color: var(--bb-ph); padding: .5rem .5625rem .25rem; margin-top: .5rem; }
+  .g-nav a { display: block; font-size: .8125rem; color: var(--bb-mut); text-decoration: none;
+             padding: .375rem .5625rem; border-radius: var(--bb-r-sm); margin-bottom: 1px; }
+  .g-nav a:hover { background: var(--bb-n50); color: var(--bb-str); }
+  .g-main { padding: 2.25rem 2.5rem 6rem; max-width: 1080px; }
+  .g-head h1 { font-size: 1.625rem; font-weight: 700; margin: 0 0 .375rem; }
+  .g-head p { font-size: .9375rem; color: var(--bb-mut); margin: 0 0 2rem; line-height: 1.6; }
+  .g-head code { font-family: var(--bb-num-font); background: var(--bb-n100); padding: 1px .375rem; border-radius: var(--bb-r-xs); font-size: .8125rem; }
+  .g-sec { margin-bottom: 2.5rem; scroll-margin-top: 1rem; }
+  .g-sec-head { display: flex; align-items: baseline; gap: .625rem; margin-bottom: .25rem; }
+  .g-sec-head h2 { font-size: 1.1875rem; font-weight: 600; margin: 0; }
+  .g-sec-head .g-cls { font-family: var(--bb-num-font); font-size: .8125rem; color: var(--bb-accent-i); }
+  .g-sec-desc { font-size: .84375rem; color: var(--bb-mut); margin: 0 0 1rem; }
+  .g-block { border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); background: #fff; padding: 1.75rem; margin-bottom: 1rem; }
+  .g-demo { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+  .g-label { font-size: .6875rem; font-weight: 600; color: var(--bb-mut); width: 100%; margin-bottom: -.25rem; }
+  .g-py { font-family: var(--bb-num-font); font-size: .78125rem; color: #C9D6E8; background: #0A1B33;
+          border-radius: var(--bb-r-md); padding: .75rem 1rem; margin: .5rem 0 0; overflow-x: auto; }
+  @media (max-width: 860px) { .g-wrap { grid-template-columns: 1fr; } .g-nav { display: none; } }
+  /* UE Chip demo — canonical CSS: core/css/ue.css § CHIP (inline ที่นี่กัน ue.css override token ของ gallery) */
+  :root { --bb-accent-dk: #0B7A3E; }
+  .ue-chip { display:inline-flex; align-items:center; gap:8px; white-space:nowrap; flex-shrink:0; height:44px; padding:0 18px; border-radius:999px; border:2px solid var(--bb-n300); background:var(--bb-n0); font-family:inherit; font-size:15px; font-weight:600; color:var(--bb-str); cursor:pointer; transition:border-color .15s, color .15s, transform .12s; }
+  .ue-chip:hover { border-color:var(--bb-mut); }
+  .ue-chip:active { transform:scale(.97); }
+  .ue-chip.is-on { border-color:var(--bb-accent-dk); color:var(--bb-accent-dk); }
+  .ue-chip [data-lucide], .ue-chip svg { width:19px; height:19px; }
+  .ue-chip-chev { transition:transform .2s; }
+  .ue-chip-badge { display:none; }
+  .ue-chip-badge.is-show { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--bb-accent-dk); color:#fff; font-size:12px; font-weight:700; }
+  .ue-chip-dd { display:inline-block; }
+  .ue-chip-dd.is-open > .ue-chip, .ue-chip-dd.is-active > .ue-chip { border-color:var(--bb-accent-dk); color:var(--bb-accent-dk); }
+  .ue-chip-dd.is-open .ue-chip-chev { transform:rotate(180deg); }
+  .ue-chip-pop { position:fixed; z-index:1060; min-width:240px; max-width:320px; background:var(--bb-n0); border:1px solid var(--bb-n300); border-radius:16px; box-shadow:0 12px 32px rgba(0,0,0,.14); padding:8px; }
+  .ue-chip-pop-head { display:flex; align-items:center; justify-content:space-between; padding:8px 12px 6px; }
+  .ue-chip-pop-title { font-size:13px; font-weight:700; color:var(--bb-mut); text-transform:uppercase; letter-spacing:.4px; }
+  .ue-chip-pop-clear { color:var(--bb-mut); font-weight:600; font-size:14px; cursor:pointer; text-decoration:none; }
+  .ue-chip-pop-clear:hover { color:var(--bb-accent-dk); text-decoration:underline; }
+  .ue-chip-opt { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 12px; border-radius:10px; font-size:15px; color:var(--bb-str); cursor:pointer; }
+  .ue-chip-opt:hover { background:var(--bb-n100); }
+  .ue-chip-opt input { accent-color:var(--bb-accent-dk); width:18px; height:18px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="g-wrap">
+  <nav class="g-nav">
+    <div class="g-brand"><i data-lucide="component"></i> Living Gallery</div>
+    <div class="g-brand-sub">render Python component จริง</div>
+    <div class="g-nav-label">มี Python class</div>
+    <a href="#button">Button</a>
+    <a href="#input">Input</a>
+    <a href="#search">Search</a>
+    <a href="#tabs">Tabs</a>
+    <a href="#segmented">Segmented</a>
+    <a href="#chip">Chip / Token</a>
+    <a href="#uechip">UE Chip</a>
+    <a href="#daterange">Date Range</a>
+    <a href="#dropdown">Dropdown</a>
+    <a href="#pagination">Pagination</a>
+    <a href="#modal">Modal</a>
+    <a href="#timeline">Timeline</a>
+    <a href="#card">Card</a>
+    <a href="#kpi">KPI</a>
+    <a href="#table">Table</a>
+    <a href="#badge">Badge</a>
+    <a href="#status">Status</a>
+  </nav>
+
+  <main class="g-main">
+    <div class="g-head">
+      <h1>Living Component Gallery</h1>
+      <p>
+        ต่างจาก <code>components-gallery.html</code> (static catalog ของ CSS) — หน้านี้ <b>render จาก Python component จริง</b>
+        ผ่าน <code>{% raw %}{{ component(obj) }}{% endraw %}</code> → markup เปลี่ยนตาม macro อัตโนมัติ <b>drift ไม่ได้</b>.<br>
+        โตทีละ component จนครบแล้ว retire static gallery
+      </p>
+    </div>
+
+    <section class="g-sec" id="button">
+      <div class="g-sec-head"><h2>Button</h2><span class="g-cls">components.Button</span></div>
+      <p class="g-sec-desc">variant: <code>pri·sec·ghost·danger</code> · <code>size='sm'</code> · <code>icon_only</code> · <code>on_click</code> → data-action</p>
+      <div class="g-block">
+        <div class="g-demo">
+          {% for b in buttons %}{{ component(b) }}{% endfor %}
+        </div>
+      </div>
+      <pre class="g-py">Button('ส่งออก', 'sec', icon='download')   ·   Button(variant='sec', icon='settings', icon_only=True)</pre>
+    </section>
+
+    <section class="g-sec" id="input">
+      <div class="g-sec-head"><h2>Input</h2><span class="g-cls">components.Input</span></div>
+      <p class="g-sec-desc">label + input + hint · <code>icon</code> → ห่อ wrap · <code>error</code> → .is-error (input + hint)</p>
+      <div class="g-block">
+        <div style="max-width:320px;display:flex;flex-direction:column;gap:1rem">
+          {% for i in inputs %}{{ component(i) }}{% endfor %}
+        </div>
+      </div>
+      <pre class="g-py">Input('mile', label='เลขไมล์', icon='gauge', hint='หน่วยกิโลเมตร')   ·   Input('budget', value='-500', error='ต้องมากกว่า 0')</pre>
+    </section>
+
+    <section class="g-sec" id="search">
+      <div class="g-sec-head"><h2>Search</h2><span class="g-cls">components.Search</span></div>
+      <p class="g-sec-desc"><code>on_input</code> → data-action</p>
+      <div class="g-block">
+        <div style="max-width:380px">{{ component(search) }}</div>
+      </div>
+      <pre class="g-py">Search(placeholder='ค้นหาทะเบียน, ผู้ขับ, ปลายทาง…')</pre>
+    </section>
+
+    <section class="g-sec" id="tabs">
+      <div class="g-sec-head"><h2>Tabs</h2><span class="g-cls">components.Tabs + Tab</span></div>
+      <p class="g-sec-desc">underline = status filter · <code>count</code> → .bb-tab-count · <code>on_click</code> → data-action</p>
+      <div class="g-block">
+        {{ component(tabs) }}
+      </div>
+      <pre class="g-py">Tabs([Tab('ทั้งหมด', 128, active=True), Tab('รออนุมัติ', 12), ...])</pre>
+    </section>
+
+    <section class="g-sec" id="segmented">
+      <div class="g-sec-head"><h2>Segmented</h2><span class="g-cls">components.Segmented + Seg</span></div>
+      <p class="g-sec-desc">toggle ช่วงเวลา/มุมมอง (1 active) · <code>on_click</code> → data-action</p>
+      <div class="g-block">
+        {{ component(segmented) }}
+      </div>
+      <pre class="g-py">Segmented([Seg('วันนี้', active=True), Seg('7 วัน'), Seg('30 วัน')])</pre>
+    </section>
+
+    <section class="g-sec" id="chip">
+      <div class="g-sec-head"><h2>Chip / Token</h2><span class="g-cls">components.Chip · components.Token</span></div>
+      <p class="g-sec-desc">chip = toggle filter (มี count) · token = filter ที่ใช้แล้ว (field op value + ปุ่มลบ) · <code>on_click</code>/<code>on_remove</code> → data-action</p>
+      <div class="g-block">
+        <div class="g-demo">
+          <span class="g-label">chip (toggle filter)</span>
+          {% for c in chips %}{{ component(c) }}{% endfor %}
+        </div>
+        <div class="g-demo" style="margin-top:1rem">
+          <span class="g-label">token (applied filter) + add</span>
+          {% for t in tokens %}{{ component(t) }}{% endfor %}
+          <button class="bb-addfilter"><i data-lucide="plus"></i> เพิ่มตัวกรอง</button>
+        </div>
+      </div>
+      <pre class="g-py">Chip('ทั้งหมด', 128, active=True)   ·   Token('แผนก', '=', 'ขนส่ง', on_remove='removeFilter')</pre>
+    </section>
+
+    <section class="g-sec" id="uechip">
+      <div class="g-sec-head"><h2>UE Chip</h2><span class="g-cls">ue_chip · ue_chip_dd</span></div>
+      <p class="g-sec-desc">pill filter chip แบบ Uber Eats · <b>toggle</b> (กดติด/ดับ) + <b>dropdown</b> (เปิด panel · live เลือก=ใช้ทันที · "ล้าง" ขวา header ไม่มีปุ่มใช้) · active/is-on = เขียว · <b>ทำงานจริง</b> (โหลด bb-components.js) · icon ผ่าน data-lucide (หน้า UE → Material Symbols)</p>
+      <div class="g-block">
+        <div class="g-demo" style="align-items:center">
+          {{ ue_chip('ต่ำกว่า ฿10', icon='bike', name='max_price', value='10') }}
+          {{ ue_chip('ต่ำกว่า 25 นาที', icon='zap', name='max_time', value='25', active=true) }}
+          {{ ue_chip('4.5+', icon='star', name='rating', value='4.5') }}
+          {% call ue_chip_dd('ประเภทอาหาร', icon='tag', id='ddCat') %}
+            {{ ue_chip_opt('ไก่ทอด', name='cat', value='fried') }}
+            {{ ue_chip_opt('ตามสั่ง', name='cat', value='rice') }}
+            {{ ue_chip_opt('ก๋วยเตี๋ยว', name='cat', value='noodle') }}
+            {{ ue_chip_opt('ของหวาน', name='cat', value='sweet') }}
+          {% endcall %}
+          {% call ue_chip_dd('เรียงลำดับ', icon='arrow-down-up', id='ddSort', align='right') %}
+            {{ ue_chip_opt('แนะนำ', name='sort', value='rec', type='radio', checked=true) }}
+            {{ ue_chip_opt('ใกล้ที่สุด', name='sort', value='near', type='radio') }}
+            {{ ue_chip_opt('เรตติ้งสูงสุด', name='sort', value='rating', type='radio') }}
+          {% endcall %}
+        </div>
+      </div>
+      <pre class="g-py">ue_chip('ต่ำกว่า ฿10', icon='bike', name='max_price', value='10')
+{% raw %}{% call ue_chip_dd('ประเภทอาหาร', icon='tag') %}{{ ue_chip_opt('ไก่ทอด', name='cat', value='fried') }}{% endcall %}{% endraw %}</pre>
+    </section>
+
+    <section class="g-sec" id="daterange">
+      <div class="g-sec-head"><h2>Date Range</h2><span class="g-cls">components.DateRange</span></div>
+      <p class="g-sec-desc">trigger เดียว → popover (preset ซ้าย + ปฏิทิน 2 เดือน) · <b>ทำงานจริง</b> (โหลด bb-daterange.js) · commit ผ่านปุ่ม "ใช้" → hidden input + event <code>bb-daterange:change</code></p>
+      <div class="g-block" style="overflow:visible">
+        <div style="max-width:280px">{{ component(daterange) }}</div>
+      </div>
+      <pre class="g-py">DateRange(name_start='date_start', name_end='date_end', placeholder='เลือกช่วงวันที่')</pre>
+    </section>
+
+    <section class="g-sec" id="dropdown">
+      <div class="g-sec-head"><h2>Dropdown</h2><span class="g-cls">components.Dropdown</span></div>
+      <p class="g-sec-desc">trigger <code>bb-select</code> + panel <code>bb-menu</code> · item 4 ชนิด: <code>MenuLabel · MenuItem · MenuDivider · MenuRich</code> · <code>on_click</code> → data-action</p>
+      <div class="g-block">
+        <div class="g-demo" style="align-items:flex-start">
+          {{ component(dropdown) }}
+        </div>
+      </div>
+      <pre class="g-py">Dropdown('ขนส่ง', hint='แผนก:', width=220, items=[MenuLabel('เลือกสถานะ'), MenuItem('รออนุมัติ', active=True), MenuDivider(), MenuRich('เฉพาะของฉัน', 'แสดงเฉพาะรายการที่ฉันสร้าง')])</pre>
+    </section>
+
+    <section class="g-sec" id="pagination">
+      <div class="g-sec-head"><h2>Pagination</h2><span class="g-cls">components.Pagination</span></div>
+      <p class="g-sec-desc">Python คำนวณ window/gap + info → macro render เฉยๆ · <code>edge</code>=หน้ารอบ current · <code>on_click</code> → data-action (data-page บนปุ่ม)</p>
+      <div class="g-block">
+        {{ component(pagination) }}
+      </div>
+      <pre class="g-py">Pagination(total=128, page=1, limit=20)   # → "แสดง 1–20 จาก 128" + 1 2 3 … 7</pre>
+    </section>
+
+    <section class="g-sec" id="modal">
+      <div class="g-sec-head"><h2>Modal</h2><span class="g-cls">components.Modal</span></div>
+      <p class="g-sec-desc">head (title + sub + x) · body (ใส่ component อื่นได้) · <code>actions</code> = ปุ่ม (Button) ลง foot · <code>overlay</code>=True (canonical, hidden รอ JS) · JS เปิด/ปิดอยู่ใน .js</p>
+      <div class="g-block">
+        <div class="g-demo is-block" style="background:var(--bb-n100)">
+          <div style="margin:0 auto;max-width:440px">{{ component(modal) }}</div>
+        </div>
+      </div>
+      <pre class="g-py">Modal('ยืนยันการลบ', sub='...', body=Markup('...'), actions=[Button('ยกเลิก','sec'), Button('ลบรายการ','danger')])</pre>
+    </section>
+
+    <section class="g-sec" id="timeline">
+      <div class="g-sec-head"><h2>Timeline</h2><span class="g-cls">components.Timeline + TLItem</span></div>
+      <p class="g-sec-desc">state แต่ละ item: <code>done</code> · <code>cur</code> · <code>todo</code> · <code>time</code> เว้น = "—" · <code>desc</code> optional</p>
+      <div class="g-block">
+        <div style="max-width:420px">{{ component(timeline) }}</div>
+      </div>
+      <pre class="g-py">Timeline([TLItem('สร้างคำขอ', '08:30', 'โดย...', state='done'), TLItem('เริ่มเดินทาง', state='todo')])</pre>
+    </section>
+
+    <section class="g-sec" id="card">
+      <div class="g-sec-head"><h2>Card</h2><span class="g-cls">components.Card</span></div>
+      <p class="g-sec-desc">head แสดงเมื่อมี title/link · <code>body</code> ใส่ component อื่นได้ (str/Markup/component/list)</p>
+      <div class="g-block">
+        <div style="max-width:420px">{{ component(card) }}</div>
+      </div>
+      <pre class="g-py">Card(title='สรุปการใช้รถ', link='ดูทั้งหมด', body=Markup('...'))</pre>
+    </section>
+
+    <section class="g-sec" id="kpi">
+      <div class="g-sec-head"><h2>KPI</h2><span class="g-cls">components.KPI</span></div>
+      <p class="g-sec-desc">variant: <code>card</code> (กรอบ) · <code>ghost</code> (ลอย) · <code>den</code>=หน่วย · <code>delta_dir='up'|'down'</code></p>
+      <div class="g-block">
+        <div class="g-demo">
+          {% for k in kpis %}{{ component(k) }}{% endfor %}
+        </div>
+      </div>
+      <pre class="g-py">KPI('ระยะทางรวม', '12,480', icon='route', den='กม.', delta='8.2%', delta_dir='up')</pre>
+    </section>
+
+    <section class="g-sec" id="table">
+      <div class="g-sec-head"><h2>Table</h2><span class="g-cls">components.Table + Cell Component</span></div>
+      <p class="g-sec-desc">controller สร้าง <code>Table(data=..., columns=[Column(...)])</code> · คอลัมน์สถานะ = <b>Cell Component</b> render ผ่าน <code>Status</code></p>
+      <div class="g-block">
+        {{ component(table) }}
+      </div>
+      <pre class="g-py">Column(label='สถานะ', cell=lambda r: Status(r['status'][0], r['status'][1], inline=True))</pre>
+    </section>
+
+    <section class="g-sec" id="badge">
+      <div class="g-sec-head"><h2>Badge</h2><span class="g-cls">components.Badge</span></div>
+      <p class="g-sec-desc">tag/count — variant: <code>neutral</code> · <code>accent</code></p>
+      <div class="g-block">
+        <div class="g-demo">
+          {% for b in badges %}{{ component(b) }}{% endfor %}
+        </div>
+      </div>
+      <pre class="g-py">Badge('ใหม่', 'accent', icon='zap')</pre>
+    </section>
+
+    <section class="g-sec" id="status">
+      <div class="g-sec-head"><h2>Status</h2><span class="g-cls">components.Status</span></div>
+      <p class="g-sec-desc">tone: <code>ok·wr·dg·info·neutral</code> — <code>inline=True</code> สำหรับในตาราง</p>
+      <div class="g-block">
+        <div class="g-demo">
+          <span class="g-label">pill (มีพื้น + dot)</span>
+          {% for s in statuses %}{{ component(s) }}{% endfor %}
+        </div>
+        <div class="g-demo" style="margin-top:1rem">
+          <span class="g-label">inline (icon + text, ในตาราง)</span>
+          {% for s in inline_statuses %}{{ component(s) }}{% endfor %}
+        </div>
+      </div>
+      <pre class="g-py">Status('รออนุมัติ', 'wr')   ·   Status('เสร็จสิ้น', 'ok', inline=True, icon='check-circle-2')</pre>
+    </section>
+  </main>
+</div>
+<script>lucide.createIcons();</script>
+<script src="{{ url_for('static', filename='core/js/bb-daterange.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='core/js/bb-components.js') }}"></script>
+</body>
+</html>

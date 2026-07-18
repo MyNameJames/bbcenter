@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup — ปฏิทินจองรถ (Desktop)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<style>
+  :root{
+    --green:#06C167; --green-dark:#05a058; --accent:#0B7A3E; --ink:#06060a;
+    --gray-900:#1a1a1a; --gray-700:#4a4a4a; --gray-500:#757575;
+    --gray-300:#e0e0e0; --gray-200:#ededed; --gray-100:#f6f6f6; --white:#fff;
+    --amber:#B45309; --amber-bg:#FEF3E2;
+    --blue:#2563EB; --blue-bg:#EAF1FE;
+    --red:#C0392B; --red-bg:#FDECEA;
+    --lo-bg:#E6F9EF; --lo-tx:#05a058;
+    --r-sm:10px; --r:16px; --r-lg:22px;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.05),0 2px 6px rgba(0,0,0,.06);
+    --shadow:0 8px 24px rgba(0,0,0,.08);
+    --shadow-lg:0 18px 44px rgba(0,0,0,.18);
+  }
+  *{ box-sizing:border-box; }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+  html,body{ margin:0; scrollbar-width:none; -ms-overflow-style:none; }
+  ::-webkit-scrollbar{ display:none; }
+  body{ font-family:'Sarabun','Inter',sans-serif; background:var(--white); color:var(--ink); min-height:100vh; -webkit-font-smoothing:antialiased; }
+  .material-symbols-outlined{ font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; font-size:20px; line-height:1; }
+  button{ font-family:inherit; }
+
+  @keyframes frameIn{ from{ opacity:0; transform:translateY(16px) scale(.99); } to{ opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes cellIn{ from{ opacity:0; transform:scale(.96); } to{ opacity:1; transform:scale(1); } }
+  @keyframes modalIn{ from{ opacity:0; transform:translate(-50%,-46%) scale(.97); } to{ opacity:1; transform:translate(-50%,-50%) scale(1); } }
+
+  .frame{ width:100%; height:100vh; display:flex; flex-direction:column; animation:frameIn .5s cubic-bezier(.2,.8,.2,1) both; }
+
+  /* Topbar */
+  .brand{ font-size:20px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:2px; }
+  .brand .accent{ color:var(--green); } .brand .thin{ font-weight:600; margin-left:6px; }
+  .topbar-left{ display:flex; align-items:center; gap:12px; }
+  .topbar-right{ display:flex; align-items:center; gap:18px; }
+  .icon-btn.menu-btn{ display:none; border:none; padding:0; font:inherit; }
+  .offcanvas-backdrop{ --bs-backdrop-bg:#06060a; --bs-backdrop-opacity:.4; }
+  .icon-btn{ display:flex; align-items:center; justify-content:center; width:36px; height:36px; background:var(--gray-100); color:var(--gray-700); cursor:pointer; transition:background-color .18s ease, transform .18s ease; }
+  .icon-btn:hover{ background:var(--gray-300); transform:rotate(-8deg); }
+  .link-btn{ font-size:14px; font-weight:600; color:var(--ink); text-decoration:none; cursor:pointer; position:relative; }
+  .link-btn::after{ content:""; position:absolute; left:0; bottom:-2px; width:0; height:1.5px; background:var(--ink); transition:width .2s ease; }
+  .link-btn:hover::after{ width:100%; }
+
+  .body-row{ display:flex; flex:1; min-height:0; }
+
+  /* Sidebar */
+  .sidebar{ width:260px; --bs-offcanvas-width:260px; flex-shrink:0; background:var(--white); border-right:1px solid var(--gray-300); display:flex; flex-direction:column; overflow-y:auto; }
+  @media (min-width:768px){ .offcanvas.sidebar{ position:static !important; transform:none !important; visibility:visible !important; width:260px !important; height:auto !important; background-color:var(--white) !important; border-right:1px solid var(--gray-300) !important; box-shadow:none !important; z-index:auto !important; } }
+  .biz-switch{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px 20px; }
+  .biz-switch .name{ font-size:16px; font-weight:700; color:var(--ink); }
+  .biz-switch .sub{ font-size:13px; color:var(--gray-500); font-weight:500; }
+  .sidebar-divider{ border:none; border-bottom:1px solid var(--gray-300); margin:12px 0; }
+  .all-stores-label{ padding:8px 12px 16px; font-size:15px; font-weight:700; color:var(--ink); }
+  .nav-item{ display:flex; align-items:center; gap:14px; padding:11px 12px; color:var(--gray-700); font-size:15px; font-weight:600; text-decoration:none; position:relative; cursor:pointer; opacity:0; animation:fadeUp .4s ease both; transition:background-color .18s ease, color .18s ease, padding-left .18s ease; }
+  .sidebar .nav-item:nth-of-type(1){ animation-delay:.12s; } .sidebar .nav-item:nth-of-type(2){ animation-delay:.17s; } .sidebar .nav-item:nth-of-type(3){ animation-delay:.22s; } .sidebar .nav-item:nth-of-type(4){ animation-delay:.27s; } .sidebar .nav-item:nth-of-type(5){ animation-delay:.32s; }
+  .nav-item:hover{ background:var(--gray-100); padding-left:16px; }
+  .nav-item.active{ background:var(--gray-100); color:var(--ink); }
+  .nav-item.active::before{ content:""; position:absolute; left:-16px; top:6px; bottom:6px; width:4px; border-radius:0 4px 4px 0; background:var(--green); }
+  .nav-item .material-symbols-outlined{ font-size:22px; transition:transform .18s ease; }
+  .nav-item:hover .material-symbols-outlined{ transform:scale(1.1); }
+
+  /* Content */
+  .content{ flex:1; padding:36px 48px 56px; min-width:0; overflow-y:auto; }
+  .content-inner{ max-width:1200px; margin:0 auto; }
+  h1.page-title{ font-size:34px; font-weight:800; color:var(--ink); margin:0 0 6px; letter-spacing:-.5px; }
+  .page-sub{ font-size:15px; color:var(--gray-500); font-weight:600; margin:0 0 26px; }
+  .block-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .block-title{ font-size:20px; font-weight:800; letter-spacing:-.3px; display:flex; align-items:center; gap:8px; }
+
+  /* ---------- สถานะการจองรถ (grab-card) ---------- */
+  .grab-wrap{ max-width:380px; margin-bottom:34px; }
+  .grab-card{ position:relative; border:1px solid var(--gray-300); border-radius:16px; background:#fff; padding:18px 20px 20px; overflow:hidden; }
+  .grab-time{ font-size:20px; font-weight:800; color:#111; letter-spacing:-.3px; padding-right:56px; }
+  .grab-status{ font-size:15px; font-weight:600; color:var(--gray-700); margin-top:4px; padding-right:56px; }
+  .grab-illus{ position:absolute; top:14px; right:16px; width:60px; height:60px; border-radius:50%; background:var(--lo-bg); display:flex; align-items:center; justify-content:center; }
+  .grab-illus .material-symbols-outlined{ font-size:34px; color:var(--lo-tx); }
+  .grab-bar{ position:relative; height:40px; margin:18px 2px 0; }
+  .grab-track{ position:absolute; left:15px; right:15px; top:50%; transform:translateY(-50%); height:5px; border-radius:999px; background:#e8e8e8; }
+  .grab-fill{ position:absolute; left:15px; top:50%; transform:translateY(-50%); height:5px; border-radius:999px; background:var(--green); }
+  .grab-icons{ position:absolute; inset:0; display:flex; align-items:center; justify-content:space-between; }
+  .grab-ic{ min-width:28px; height:28px; padding:0 4px; background:#fff; display:flex; align-items:center; justify-content:center; }
+  .grab-ic .material-symbols-outlined{ font-size:20px; }
+  .grab-ic.done{ color:var(--green); }
+  .grab-ic.current{ width:32px; height:32px; border-radius:50%; background:var(--green); color:#fff; box-shadow:0 0 0 4px rgba(6,193,103,.16); }
+  .grab-ic.future{ color:#c7c7c7; }
+  .grab-helper{ font-size:13px; font-weight:500; color:var(--gray-500); margin-top:14px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .grab-date{ color:var(--gray-700); font-weight:700; white-space:nowrap; }
+
+  /* ---------- Calendar (event booking, flat gray) ---------- */
+  .cal-card{ background:var(--white); border:1px solid var(--gray-300); border-radius:var(--r-lg); padding:20px; }
+  .cal-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+  .cal-toolbar{ display:flex; align-items:center; gap:10px; }
+  .btn-today{ height:38px; padding:0 16px; border:1.5px solid var(--gray-300); background:#fff; border-radius:999px; font-weight:800; font-size:14px; cursor:pointer; color:var(--ink); }
+  .btn-today:hover{ border-color:var(--ink); }
+  .nav-round{ width:38px; height:38px; border-radius:50%; border:1.5px solid var(--gray-300); background:var(--white); color:var(--ink); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color .16s ease, transform .16s ease; }
+  .nav-round:hover{ border-color:var(--ink); } .nav-round:active{ transform:scale(.92); }
+  .month-label{ font-size:20px; font-weight:800; min-width:150px; text-align:center; letter-spacing:-.3px; }
+  .cal-caption{ font-size:12.5px; color:var(--gray-500); font-weight:600; }
+  .btn-book{ height:40px; padding:0 18px; border:none; border-radius:999px; background:var(--ink); color:#fff; font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; transition:background-color .15s ease, transform .15s ease; }
+  .btn-book:hover{ background:var(--green-dark); transform:translateY(-1px); }
+  .btn-book .material-symbols-outlined{ font-size:18px; }
+
+  .weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:8px; }
+  .weekdays div{ text-align:left; padding-left:4px; font-size:13px; font-weight:800; color:var(--gray-500); }
+  .weekdays .sun{ color:var(--red); } .weekdays .sat{ color:var(--blue); }
+
+  .grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
+  .cell{ position:relative; min-width:0; min-height:110px; border-radius:12px; cursor:pointer; padding:8px; background:#fff; border:1.5px solid var(--gray-200); display:flex; flex-direction:column; gap:4px; overflow:hidden; opacity:0; animation:cellIn .3s ease both; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  .cell.empty{ background:transparent; border:none; cursor:default; }
+  .cell:not(.empty):hover{ border-color:var(--gray-300); box-shadow:var(--shadow); }
+  .cell.sel{ border-color:var(--ink); box-shadow:0 0 0 3px rgba(6,6,10,.08); }
+  .cell.off{ background:var(--gray-100); }
+  .cell .num{ font-size:14px; font-weight:800; color:var(--ink); align-self:flex-start; }
+  .cell.sun .num{ color:var(--red); } .cell.sat .num{ color:var(--blue); }
+  .cell.today .num{ background:var(--green); color:#fff; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; }
+  .cell-events{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .ev{ display:flex; align-items:center; gap:5px; min-width:0; font-size:11px; font-weight:700; border-radius:6px; padding:3px 6px; background:var(--gray-100); cursor:pointer; }
+  .ev:hover{ background:var(--gray-200); }
+  .ev .dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .ev .dot.pending, .ev .dot.waiting_approver{ background:var(--amber); }
+  .ev .dot.approved{ background:var(--green); } .ev .dot.completed{ background:var(--gray-500); }
+  .ev .etxt{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ev-more{ font-size:11px; font-weight:800; color:var(--green-dark); cursor:pointer; padding:1px 6px; }
+  .ev-more:hover{ text-decoration:underline; }
+  .cell-dots{ display:none; gap:3px; margin-top:auto; }
+  .cell-dots .d{ width:6px; height:6px; border-radius:50%; }
+  .cell-dots .d.pending, .cell-dots .d.waiting_approver{ background:var(--amber); }
+  .cell-dots .d.approved{ background:var(--green); } .cell-dots .d.completed{ background:var(--gray-500); }
+
+  /* mobile daybar + list */
+  .m-daybar{ display:none; }
+  .m-list{ display:none; }
+
+  /* ---------- Modals (shared) ---------- */
+  .modal-back{ position:fixed; inset:0; z-index:60; background:rgba(6,6,10,.42); opacity:0; pointer-events:none; transition:opacity .25s ease; }
+  .modal-back.show{ opacity:1; pointer-events:auto; }
+  .modal{ position:fixed; left:50%; top:50%; z-index:65; width:min(560px, calc(100% - 32px)); max-height:90vh; overflow:hidden; transform:translate(-50%,-50%) scale(.97); opacity:0; pointer-events:none; background:var(--white); border-radius:var(--r-lg); box-shadow:var(--shadow-lg); display:flex; flex-direction:column; }
+  .modal.show{ opacity:1; pointer-events:auto; animation:modalIn .28s cubic-bezier(.2,.8,.2,1); }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 22px; border-bottom:1px solid var(--gray-200); flex-shrink:0; }
+  .modal-title{ font-size:19px; font-weight:800; letter-spacing:-.3px; }
+  .modal-close{ width:36px; height:36px; border-radius:50%; border:none; background:var(--gray-100); color:var(--gray-700); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background-color .15s ease; }
+  .modal-close:hover{ background:var(--gray-300); }
+  .modal-body{ padding:20px 22px 24px; overflow-y:auto; }
+
+  /* event list rows (more_events + mobile list) */
+  .ev-row{ display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--gray-200); cursor:pointer; }
+  .ev-row:last-child{ border-bottom:none; }
+  .ev-row:hover{ background:var(--gray-100); }
+  .ev-row-ic{ width:40px; height:40px; border-radius:10px; background:var(--gray-100); color:var(--gray-700); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .ev-row-main{ flex:1; min-width:0; }
+  .ev-row-title{ font-size:14.5px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ev-row-meta{ font-size:12.5px; color:var(--gray-500); font-weight:600; margin-top:2px; }
+  .status-badge{ font-size:11.5px; font-weight:800; padding:4px 10px; border-radius:999px; flex-shrink:0; white-space:nowrap; }
+  .status-badge.pending, .status-badge.waiting_approver{ background:var(--amber-bg); color:var(--amber); }
+  .status-badge.approved{ background:var(--lo-bg); color:var(--lo-tx); }
+  .status-badge.completed{ background:var(--gray-100); color:var(--gray-700); }
+  .list-empty{ padding:26px 4px; text-align:center; color:var(--gray-500); font-size:14px; font-weight:600; }
+
+  /* detail rows */
+  .detail-row{ display:flex; justify-content:space-between; gap:16px; padding:11px 0; border-bottom:1px solid var(--gray-200); font-size:14px; }
+  .detail-row:last-child{ border-bottom:none; }
+  .detail-row .k{ color:var(--gray-500); font-weight:700; flex-shrink:0; }
+  .detail-row .v{ font-weight:700; text-align:right; }
+
+  /* form (book modal) */
+  .form-note{ font-size:12px; color:var(--gray-500); font-weight:700; margin:0 0 16px; display:flex; align-items:flex-start; gap:6px; line-height:1.5; }
+  .form-note .material-symbols-outlined{ font-size:16px; color:var(--green-dark); flex-shrink:0; margin-top:1px; }
+  .field{ margin-bottom:15px; }
+  .field > label{ display:block; font-size:12.5px; font-weight:800; color:var(--gray-700); margin-bottom:7px; }
+  .control{ width:100%; height:44px; padding:0 13px; border:1.5px solid var(--gray-300); border-radius:var(--r-sm); font-family:inherit; font-size:14.5px; font-weight:600; color:var(--ink); background:var(--white); outline:none; transition:border-color .16s ease, box-shadow .16s ease; }
+  textarea.control{ height:auto; padding:11px 13px; resize:vertical; min-height:62px; }
+  .control:focus{ border-color:var(--ink); box-shadow:0 0 0 3px rgba(6,6,10,.08); }
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stepper-row{ display:flex; align-items:center; gap:14px; }
+  .step-btn{ width:42px; height:42px; border-radius:50%; border:1.5px solid var(--gray-300); background:var(--white); color:var(--ink); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color .15s ease; }
+  .step-btn:hover{ border-color:var(--ink); } .step-btn:active{ transform:scale(.92); }
+  .step-val{ font-size:19px; font-weight:800; min-width:36px; text-align:center; }
+  .step-unit{ font-size:13px; font-weight:700; color:var(--gray-500); }
+  .submit-btn{ width:100%; height:50px; border:none; border-radius:999px; cursor:pointer; margin-top:8px; background:var(--ink); color:var(--white); font-size:15px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform .15s ease, background-color .15s ease; }
+  .submit-btn:hover{ background:var(--green-dark); transform:translateY(-1px); }
+
+  .app-toast{ position:fixed; left:50%; bottom:32px; z-index:80; transform:translate(-50%,16px); display:flex; align-items:center; gap:10px; padding:13px 20px; background:var(--ink); color:var(--white); font-size:14px; font-weight:700; box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease; border-radius:999px; }
+  .app-toast.show{ opacity:1; transform:translate(-50%,0); }
+  .app-toast .material-symbols-outlined{ font-size:19px; color:#3DDC84; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:768px){
+    .icon-btn.menu-btn{ display:flex; }
+    .content{ padding:20px 16px 32px; }
+    h1.page-title{ font-size:26px; }
+    .cal-card{ padding:14px; }
+    .grid, .weekdays{ gap:5px; }
+    .cell{ min-height:52px; padding:6px; }
+    .cell-events{ display:none; }         /* ซ่อน chip ใน grid ย่อ */
+    .cell-dots{ display:flex; }            /* โชว์ dot แทน */
+    .month-label{ font-size:17px; min-width:120px; }
+    .cal-caption, .btn-book.desktop-book{ display:none; }
+
+    .m-daybar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:16px; padding:12px 14px; border:1px solid var(--gray-300); border-radius:14px; }
+    .m-daybar-text{ min-width:0; }
+    .m-daybar-label{ font-weight:800; font-size:15px; }
+    .m-daybar-count{ font-size:12.5px; color:var(--gray-500); font-weight:600; }
+    .m-book-btn{ height:42px; padding:0 16px; border:none; border-radius:999px; background:var(--ink); color:#fff; font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:6px; flex-shrink:0; }
+    .m-book-btn .material-symbols-outlined{ font-size:18px; }
+    .m-list{ display:block; margin-top:12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <div class="topbar d-flex align-items-center justify-content-between py-3 px-3 px-md-4 bg-white border-bottom flex-shrink-0">
+    <div class="topbar-left">
+      <button class="icon-btn menu-btn rounded-circle" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-label="เปิดเมนู"><span class="material-symbols-outlined">menu</span></button>
+      <div class="brand">BB- <span class="accent">Center</span><span class="thin">User</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="icon-btn rounded-circle"><span class="material-symbols-outlined">notifications</span></div>
+      <a class="link-btn d-none d-md-inline-flex">ออกจากระบบ</a>
+      <div class="icon-btn rounded-circle d-md-none"><span class="material-symbols-outlined">logout</span></div>
+    </div>
+  </div>
+
+  <div class="body-row">
+
+    <div class="offcanvas offcanvas-start offcanvas-md sidebar py-4 px-3 gap-1" tabindex="-1" id="sidebarOffcanvas">
+      <div class="biz-switch">
+        <div><div class="name">พระมหาจตุพร ธมฺมาโภ</div><div class="sub">กองสนับสนุนและบริการ</div></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <a class="nav-item rounded-3"><span class="material-symbols-outlined">home</span>หน้าหลัก</a>
+      <div class="all-stores-label">บริการ</div>
+      <a class="nav-item active rounded-3"><span class="material-symbols-outlined">directions_car</span>ปฏิทินจองรถ</a>
+      <a class="nav-item rounded-3"><span class="material-symbols-outlined">diversity_3</span>ปฏิทินห้องประชุม</a>
+      <a class="nav-item rounded-3"><span class="material-symbols-outlined">build</span>แจ้งซ่อมทั่วไป</a>
+      <a class="nav-item rounded-3"><span class="material-symbols-outlined">computer</span>แจ้งซ่อม IT</a>
+    </div>
+
+    <div class="content">
+      <div class="content-inner">
+        <h1 class="page-title">ปฏิทินจองรถ</h1>
+        <p class="page-sub">ดูว่าวันไหนมีการจองอะไรบ้าง แล้วกดจองรถในวันที่ต้องการ</p>
+
+        <!-- สถานะการจองรถ (grab-card) -->
+        <div class="block-head"><div class="block-title">สถานะการจองรถ</div></div>
+        <div class="grab-wrap">
+          <div class="grab-card">
+            <div class="grab-illus"><span class="material-symbols-outlined">car_tag</span></div>
+            <div class="grab-time">7:05 - 7:20 PM</div>
+            <div class="grab-status">ไปเรียนหนังสือ <span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">arrow_right_alt</span> ที่วัดพระธรรมกาย</div>
+            <div class="grab-bar">
+              <div class="grab-track"></div>
+              <div class="grab-fill" style="width:calc((100% - 30px) * 0.34)"></div>
+              <div class="grab-icons">
+                <div class="grab-ic done"><span class="material-symbols-outlined">hail</span></div>
+                <div class="grab-ic current"><span class="material-symbols-outlined">car_tag</span></div>
+                <div class="grab-ic future"><span class="material-symbols-outlined">directions_run</span></div>
+                <div class="grab-ic future"><span class="material-symbols-outlined">home</span></div>
+              </div>
+            </div>
+            <div class="grab-helper"><span>งานได้รับการอนุมัติแล้ว กำลังรอเวลาเพื่อเดินทาง</span><span class="grab-date">(วันนี้) 19 ก.ค.</span></div>
+          </div>
+        </div>
+
+        <!-- Calendar -->
+        <div class="cal-card">
+          <div class="cal-head">
+            <div class="cal-toolbar">
+              <button class="btn-today" id="todayBtn">วันนี้</button>
+              <button class="nav-round" id="prevMonth"><span class="material-symbols-outlined">chevron_left</span></button>
+              <div class="month-label" id="monthLabel">ธันวาคม 2569</div>
+              <button class="nav-round" id="nextMonth"><span class="material-symbols-outlined">chevron_right</span></button>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <span class="cal-caption">08:00–17:00 · วันอาทิตย์ไม่ให้บริการ</span>
+              <button class="btn-book desktop-book" id="bookBtnDesktop"><span class="material-symbols-outlined">add</span>จองรถ</button>
+            </div>
+          </div>
+
+          <div class="weekdays">
+            <div class="sun">อาทิตย์</div><div>จันทร์</div><div>อังคาร</div><div>พุธ</div><div>พฤหัส</div><div>ศุกร์</div><div class="sat">เสาร์</div>
+          </div>
+          <div class="grid" id="calGrid"></div>
+
+          <!-- Mobile daybar + list -->
+          <div class="m-daybar">
+            <div class="m-daybar-text">
+              <div class="m-daybar-label" id="mDayLabel">รายการจอง</div>
+              <div class="m-daybar-count" id="mDayCount"></div>
+            </div>
+            <button class="m-book-btn" id="bookBtnMobile"><span class="material-symbols-outlined">add</span>จองรถ</button>
+          </div>
+          <div class="m-list" id="mList"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════ Modals (3) ══════════ -->
+<div class="modal-back" id="modalBack"></div>
+
+<!-- 1) vehicle_book -->
+<div class="modal" id="bookModal">
+  <div class="modal-head">
+    <div class="modal-title" id="bookTitle">จองรถ</div>
+    <button class="modal-close" data-close><span class="material-symbols-outlined">close</span></button>
+  </div>
+  <div class="modal-body">
+    <form id="bookForm">
+      <div class="form-note"><span class="material-symbols-outlined">info</span>ไม่ต้องเลือกรถ — เจ้าหน้าที่จะจัดรถและคนขับให้หลังอนุมัติคำขอ</div>
+      <div class="field">
+        <label>ช่วงเวลาเดินทาง (ในวันเดียวกัน)</label>
+        <div class="two"><input type="time" class="control" id="fTimeStart" value="09:00" required><input type="time" class="control" id="fTimeEnd" value="12:00" required></div>
+      </div>
+      <div class="field"><label>สถานที่ให้ไปรับ</label><input type="text" class="control" id="fPickup" placeholder="เช่น หน้าอาคารกองสนับสนุนฯ" required></div>
+      <div class="field"><label>ปลายทาง</label><input type="text" class="control" id="fDest" placeholder="เช่น โรงพยาบาลศิริราช" required></div>
+      <div class="field"><label>เหตุผล / วัตถุประสงค์การเดินทาง</label><textarea class="control" id="fPurpose" placeholder="เช่น รับส่งผู้ป่วยไปตรวจตามนัด" required></textarea></div>
+      <div class="field">
+        <label>จำนวนผู้เดินทาง</label>
+        <div class="stepper-row">
+          <button type="button" class="step-btn" id="paxMinus"><span class="material-symbols-outlined">remove</span></button>
+          <span class="step-val" id="paxVal">1</span><span class="step-unit">ท่าน</span>
+          <button type="button" class="step-btn" id="paxPlus"><span class="material-symbols-outlined">add</span></button>
+        </div>
+      </div>
+      <button type="submit" class="submit-btn"><span class="material-symbols-outlined">send</span>ส่งคำขอจองรถ</button>
+    </form>
+  </div>
+</div>
+
+<!-- 2) vehicle_more_events -->
+<div class="modal" id="moreModal">
+  <div class="modal-head">
+    <div class="modal-title" id="moreTitle">การเดินทางในวันนี้</div>
+    <button class="modal-close" data-close><span class="material-symbols-outlined">close</span></button>
+  </div>
+  <div class="modal-body" id="moreBody"></div>
+</div>
+
+<!-- 3) vehicle_detail -->
+<div class="modal" id="detailModal">
+  <div class="modal-head">
+    <div class="modal-title">รายละเอียดการจอง</div>
+    <button class="modal-close" data-close><span class="material-symbols-outlined">close</span></button>
+  </div>
+  <div class="modal-body" id="detailBody"></div>
+</div>
+
+<div class="app-toast" id="toast"><span class="material-symbols-outlined">check_circle</span><span id="toastMsg">สำเร็จ</span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  var THAI_MONTH='ธันวาคม 2569', FIRST_WEEKDAY=2, DAYS=31, TODAY=11;
+  function weekday(d){ return (FIRST_WEEKDAY + d - 1) % 7; }   // 0=อาทิตย์
+
+  var STATUS_LABEL={ pending:'รออนุมัติ', waiting_approver:'ส่งให้กอง', approved:'อนุมัติแล้ว', completed:'จบทริป' };
+
+  function B(day,t,te,dest,purpose,pax,booker,dept,status,car,driver){
+    return { day:day, time:t, timeEnd:te, dest:dest, purpose:purpose, pax:pax, booker:booker, dept:dept, status:status, car:car, driver:driver };
+  }
+  var BOOKINGS=[
+    B(2,'08:00','11:00','โรงพยาบาลศิริราช','รับส่งผู้ป่วย',2,'พระสมชาย','กองวิชาการ','approved','Toyota Commuter (1กก 1234)','สมศักดิ์ 081-111-1111'),
+    B(4,'07:30','09:30','ศาลากลางจังหวัด','ยื่นเอกสาร',1,'พระมหาสมบัติ','กองคลัง','approved','Isuzu D-Max (2ขข 5678)','ประสิทธิ์ 081-222-2222'),
+    B(4,'10:00','15:00','สนามบินดอนเมือง','รับพระอาคันตุกะ',3,'พระครูใบฎีกา','สำนักอธิการ','waiting_approver','',''),
+    B(4,'13:00','16:00','วัดพระเชตุพนฯ','กิจนิมนต์',4,'พระปลัด','กองกิจการนิสิต','pending','',''),
+    B(4,'14:00','17:00','ม.มหิดล','ประชุมวิชาการ',2,'อ.สมหญิง','กองวิชาการ','pending','',''),
+    B(8,'09:00','12:00','โรงพยาบาลศิริราช','ตรวจสุขภาพ',3,'พระใบฎีกา','กองสนับสนุน','approved','Toyota Hiace (3คค 9012)','วิรัตน์ 081-333-3333'),
+    B(11,'08:00','10:00','กระทรวงสาธารณสุข','ประชุม',2,'พระมหาจตุพร','กองสนับสนุน','approved','Honda City (4งง 3456)','อนันต์ 081-444-4444'),
+    B(11,'13:00','16:30','ตลาดไท','จัดซื้อวัสดุ',1,'เจ้าหน้าที่พัสดุ','กองคลัง','pending','',''),
+    B(15,'07:00','09:00','สถานีกลางบางซื่อ','รับส่งผู้ร่วมงาน',2,'พระวินัยธร','สำนักอธิการ','approved','Toyota Commuter (1กก 1234)','สมศักดิ์ 081-111-1111'),
+    B(15,'10:00','14:00','วัดพระธรรมกาย','ไปเรียนหนังสือ',5,'สามเณรกลุ่ม','กองวิชาการ','waiting_approver','',''),
+    B(15,'15:00','18:00','ศาลากลางจังหวัด','ประชุมคณะกรรมการ',3,'พระครูสังฆรักษ์','กองกิจการนิสิต','pending','',''),
+    B(18,'09:30','12:30','ม.มหิดล','สัมมนา',2,'อ.ประเสริฐ','กองวิชาการ','approved','Isuzu D-Max (2ขข 5678)','ประสิทธิ์ 081-222-2222'),
+    B(22,'08:00','11:00','โรงพยาบาลศิริราช','รับส่งผู้ป่วย',2,'พระสมุห์','กองสนับสนุน','approved','',''),
+    B(22,'09:00','12:00','สนามบินดอนเมือง','รับพระอาคันตุกะ',4,'พระครูใบฎีกา','สำนักอธิการ','pending','',''),
+    B(22,'13:00','17:00','กระทรวงสาธารณสุข','ประชุมใหญ่',3,'พระมหาบุญ','กองคลัง','pending','',''),
+    B(22,'14:00','16:00','ตลาดไท','จัดซื้อวัสดุ',1,'เจ้าหน้าที่พัสดุ','กองคลัง','pending','',''),
+    B(25,'07:00','09:00','วัดพระเชตุพนฯ','กิจนิมนต์',2,'พระปลัด','กองกิจการนิสิต','approved','Honda City (4งง 3456)','อนันต์ 081-444-4444'),
+    B(28,'10:00','13:00','ม.มหิดล','ประชุมวิชาการ',3,'อ.สมหญิง','กองวิชาการ','pending','','')
+  ];
+  function indicesOn(day){ var a=[]; for(var i=0;i<BOOKINGS.length;i++){ if(BOOKINGS[i].day===day) a.push(i); } return a; }
+
+  var grid=document.getElementById('calGrid'), selDay=TODAY;
+
+  function renderCalendar(){
+    grid.innerHTML='';
+    for(var i=0;i<FIRST_WEEKDAY;i++){ var e=document.createElement('div'); e.className='cell empty'; grid.appendChild(e); }
+    for(var d=1; d<=DAYS; d++){
+      var wd=weekday(d), cell=document.createElement('div');
+      var cls='cell';
+      if(wd===0) cls+=' sun off'; if(wd===6) cls+=' sat';
+      if(d===TODAY) cls+=' today'; if(d===selDay) cls+=' sel';
+      cell.className=cls; cell.dataset.day=d; cell.style.animationDelay=(0.1+d*0.008)+'s';
+
+      var idx=indicesOn(d), evHtml='', dotHtml='';
+      if(idx.length){
+        evHtml='<div class="cell-events">';
+        for(var k=0;k<Math.min(idx.length,2);k++){ var b=BOOKINGS[idx[k]];
+          evHtml+='<div class="ev" data-bk="'+idx[k]+'"><span class="dot '+b.status+'"></span><span class="etxt">'+b.time+' '+b.dest+'</span></div>';
+        }
+        if(idx.length>2) evHtml+='<div class="ev-more" data-day="'+d+'">+'+(idx.length-2)+' ดูเพิ่ม</div>';
+        evHtml+='</div>';
+        dotHtml='<div class="cell-dots">';
+        for(var m=0;m<Math.min(idx.length,3);m++){ dotHtml+='<span class="d '+BOOKINGS[idx[m]].status+'"></span>'; }
+        dotHtml+='</div>';
+      }
+      cell.innerHTML='<span class="num">'+d+'</span>'+evHtml+dotHtml;
+      grid.appendChild(cell);
+    }
+  }
+
+  // delegated clicks on grid
+  grid.addEventListener('click', function(e){
+    var chip=e.target.closest('.ev'); if(chip){ openDetail(+chip.dataset.bk); return; }
+    var more=e.target.closest('.ev-more'); if(more){ openMore(+more.dataset.day); return; }
+    var cell=e.target.closest('.cell'); if(cell && !cell.classList.contains('empty')){ selectDay(+cell.dataset.day); }
+  });
+
+  function selectDay(day){
+    selDay=day;
+    document.querySelectorAll('.cell').forEach(function(c){ c.classList.toggle('sel', +c.dataset.day===day); });
+    renderMobileList(day);
+  }
+
+  // ---- mobile daybar + list ----
+  function statusBadge(s){ return '<span class="status-badge '+s+'">'+STATUS_LABEL[s]+'</span>'; }
+  function evRowHtml(i){ var b=BOOKINGS[i];
+    return '<div class="ev-row" data-bk="'+i+'">'+
+      '<div class="ev-row-ic"><span class="material-symbols-outlined">schedule</span></div>'+
+      '<div class="ev-row-main"><div class="ev-row-title">'+b.dest+'</div>'+
+      '<div class="ev-row-meta">'+b.time+'–'+b.timeEnd+' · '+b.purpose+' · '+b.pax+' ท่าน</div></div>'+
+      statusBadge(b.status)+'</div>';
+  }
+  function renderMobileList(day){
+    var idx=indicesOn(day);
+    document.getElementById('mDayLabel').textContent='รายการจอง '+day+' ธ.ค.';
+    document.getElementById('mDayCount').textContent = idx.length? (idx.length+' รายการ') : 'ไม่มีการจอง';
+    var mList=document.getElementById('mList');
+    if(!idx.length){ mList.innerHTML='<div class="list-empty">ยังไม่มีการจองในวันนี้</div>'; return; }
+    mList.innerHTML=idx.map(evRowHtml).join('');
+  }
+
+  // ---- modals ----
+  var modalBack=document.getElementById('modalBack');
+  function openModal(id){ modalBack.classList.add('show'); document.getElementById(id).classList.add('show'); }
+  function closeModals(){ modalBack.classList.remove('show'); document.querySelectorAll('.modal').forEach(function(m){ m.classList.remove('show'); }); }
+  modalBack.addEventListener('click', closeModals);
+  document.querySelectorAll('[data-close]').forEach(function(b){ b.addEventListener('click', closeModals); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModals(); });
+
+  function openDetail(i){
+    var b=BOOKINGS[i], rows=[
+      ['สถานะ', STATUS_LABEL[b.status]],
+      ['วันที่', b.day+' '+THAI_MONTH],
+      ['เวลา', b.time+'–'+b.timeEnd+' น.'],
+      ['ปลายทาง', b.dest],
+      ['วัตถุประสงค์', b.purpose],
+      ['จำนวนผู้เดินทาง', b.pax+' ท่าน'],
+      ['ผู้จอง', b.booker],
+      ['กอง', b.dept],
+      ['รถที่จัด', b.car||'— (รอเจ้าหน้าที่จัด)'],
+      ['คนขับ', b.driver||'— (รอเจ้าหน้าที่จัด)']
+    ];
+    document.getElementById('detailBody').innerHTML=rows.map(function(r){
+      return '<div class="detail-row"><span class="k">'+r[0]+'</span><span class="v">'+r[1]+'</span></div>';
+    }).join('');
+    openModal('detailModal');
+  }
+
+  function openMore(day){
+    var idx=indicesOn(day);
+    document.getElementById('moreTitle').textContent='การเดินทาง '+day+' '+THAI_MONTH+' ('+idx.length+' รายการ)';
+    document.getElementById('moreBody').innerHTML = idx.length? idx.map(evRowHtml).join('') : '<div class="list-empty">ไม่มีการจอง</div>';
+    openModal('moreModal');
+  }
+
+  // rows in more-modal + mobile list → open detail
+  document.getElementById('moreBody').addEventListener('click', function(e){ var r=e.target.closest('.ev-row'); if(r){ closeModals(); openDetail(+r.dataset.bk); } });
+  document.getElementById('mList').addEventListener('click', function(e){ var r=e.target.closest('.ev-row'); if(r) openDetail(+r.dataset.bk); });
+
+  // ---- book modal ----
+  var pax=1, paxVal=document.getElementById('paxVal');
+  document.getElementById('paxPlus').addEventListener('click', function(){ pax++; paxVal.textContent=pax; });
+  document.getElementById('paxMinus').addEventListener('click', function(){ if(pax>1){ pax--; paxVal.textContent=pax; } });
+
+  function openBook(day){
+    if(weekday(day)===0){ showToast('วันอาทิตย์ไม่ให้บริการ'); return; }
+    selDay=day;
+    document.getElementById('bookTitle').textContent='จองรถ — '+day+' '+THAI_MONTH;
+    openModal('bookModal');
+  }
+  document.getElementById('bookBtnDesktop').addEventListener('click', function(){ openBook(selDay); });
+  document.getElementById('bookBtnMobile').addEventListener('click', function(){ openBook(selDay); });
+
+  document.getElementById('bookForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var t1=document.getElementById('fTimeStart').value, t2=document.getElementById('fTimeEnd').value;
+    var dest=document.getElementById('fDest').value||'ปลายทาง', purpose=document.getElementById('fPurpose').value||'เดินทาง';
+    BOOKINGS.push(B(selDay, t1, t2, dest, purpose, pax, 'คุณ (ทดสอบ)', 'กองสนับสนุน', 'pending', '', ''));
+    renderCalendar(); renderMobileList(selDay);
+    closeModals(); showToast('ส่งคำขอจองรถวันที่ '+selDay+' ธ.ค. แล้ว รอเจ้าหน้าที่อนุมัติ');
+    this.reset(); document.getElementById('fTimeStart').value='09:00'; document.getElementById('fTimeEnd').value='12:00'; pax=1; paxVal.textContent=1;
+  });
+
+  // ---- toolbar ----
+  document.getElementById('todayBtn').addEventListener('click', function(){ selectDay(TODAY); });
+  document.getElementById('prevMonth').addEventListener('click', function(){ showToast('เดโม: เดือนก่อนหน้า'); });
+  document.getElementById('nextMonth').addEventListener('click', function(){ showToast('เดโม: เดือนถัดไป'); });
+
+  // ---- toast ----
+  var toast=document.getElementById('toast'), toastMsg=document.getElementById('toastMsg'), toastTimer=null;
+  function showToast(msg){ toastMsg.textContent=msg; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(function(){ toast.classList.remove('show'); },2400); }
+
+  // init
+  renderCalendar();
+  renderMobileList(TODAY);
+</script>
+</body>
+</html>

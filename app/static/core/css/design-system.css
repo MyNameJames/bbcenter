@@ -44,9 +44,22 @@
 @import url('./components/pivot.css');
 @import url('./components/dropdown.css');
 
-/* Sarabun = font เดียวของระบบ. กันหน้าที่ไม่ได้ตั้ง body font เองตกไป system font */
+/* Global body (single source ทุกหน้า) — font + สีพื้น gray canvas
+   --bb-* fallback กันหน้าที่ไม่โหลด components.css (มีแต่ --vc-*) */
 body {
+    margin: 0;
     font-family: var(--vc-font-sans);
+    color: var(--bb-str, #0A2540);
+    background: var(--bb-n50, #F6F9FC);
+}
+
+/* ซ่อน scrollbar ทุกหน้า (global) — scroll ยังทำงานได้ปกติ แค่ไม่โชว์แถบ */
+html, body {
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* IE/Edge legacy */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none;              /* Chrome/Safari/Edge Chromium */
 }
 
 /* Reserve scrollbar gutter to prevent layout shift when content height changes */
@@ -768,7 +781,7 @@ h1, h2, h3 {
 }
 
 /* Lucide icon sizing helpers — stroke 1.5 is set inline on <i data-lucide=""> via JS */
-.vc-icon-sm { width: 14px; height: 14px; }
+/* .vc-icon-sm { width: 14px; height: 14px; } */
 .vc-icon    { width: 16px; height: 16px; }
 .vc-icon-md { width: 18px; height: 18px; }
 .vc-icon-lg { width: 20px; height: 20px; }
@@ -777,8 +790,8 @@ h1, h2, h3 {
    without leaking to other pages (e.g. <main class="vc-scope">) */
 .vc-scope {
     color: var(--vc-fg);
-    background: var(--vc-bg);
+    background: var(--bb-n50);
     font-size: var(--vc-text-base);
-    padding-bottom: 1.5rem;   /* extra breathing room for mobile */
+    padding-bottom: 1.5rem; 
 }
 

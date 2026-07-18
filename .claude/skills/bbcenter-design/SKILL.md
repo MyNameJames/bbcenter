@@ -4,6 +4,8 @@ description: |
   BBCenter V2 design system — copy-paste templates + binary rules so any
   model can produce pages that match admin_fuel.html exactly without
   judgment calls.
+  ⛔ LEGACY (2026-06-28) — canonical design source = docs/notes/design_guideline.md.
+  ใช้ skill นี้เฉพาะแก้หน้าเดิมที่ยังไม่ migrate; งานออกแบบ/redesign ใหม่ยึด guideline.
 
   Triggers:
   - "/bbcenter-design" / "/design" / "ออกแบบหน้า..." / "ทำหน้า...สวยๆ"
@@ -15,12 +17,16 @@ description: |
 
 # BBCenter Design Skill — Mechanical Mode
 
+> ⛔ **LEGACY (2026-06-28).** Canonical design source = [design_guideline.md](../../docs/notes/design_guideline.md) — **อ่านก่อนเสมอ**.
+> - **งานออกแบบ / redesign ใหม่ → ยึด design_guideline.md** (blurple `#533AFD` · Sarabun+Inter · rem · soft-shadow). **อย่าใช้ template/rules ด้านล่างมาตัดสิน design ใหม่** — มันเป็นระบบเก่า (`--vc-*` indigo · no-shadow · Manrope · admin_fuel.html).
+> - **template ด้านล่าง = legacy reference** ใช้เฉพาะตอนแก้หน้าเดิมที่ยัง**ไม่** migrate (เพื่อให้กลมกลืนกับโค้ดเก่า) เท่านั้น.
+
 You are not designing from scratch. You are **copying patterns from
 admin_fuel.html** and renaming page-specific bits. Every section below
 gives you exact HTML / CSS / decision rules. Do not invent.
 
 **Canonical reference:** [admin_fuel.html](app/templates/vehicle/admin/admin_fuel.html)
-**Tokens reference:** [design_system.md](docs/notes/design_system.md)
+**Tokens reference:** [design_guideline.md](docs/notes/design_guideline.md) (canonical)
 **Macros (Phase 3+):** [`app/templates/_components/`](app/templates/_components/) — see §2.0
 
 ---
@@ -489,7 +495,7 @@ CSS:
 
 **Never** write a hex color in any template or page CSS. Use a token.
 
-> **Token namespace rule:** Use **`--vc-*` only**. `--ds-*` is legacy (Indigo-era) and will be retired in Phase 5 cleanup ([roadmap](../../docs/notes/log/2026-05-14_frontend-architecture-plan.md)) — already removed from canonical examples here. If you see `var(--ds-*)` in an existing file, leave it alone unless you're explicitly migrating that page (don't mix add-ds + add-vc in the same change). Migration map → [design_system.md §14](../../docs/notes/design_system.md).
+> **Token namespace rule:** Use **`--vc-*` only**. `--ds-*` is legacy (Indigo-era) and will be retired in Phase 5 cleanup ([roadmap](../../docs/notes/log/2026-05-14_frontend-architecture-plan.md)) — already removed from canonical examples here. If you see `var(--ds-*)` in an existing file, leave it alone unless you're explicitly migrating that page (don't mix add-ds + add-vc in the same change). (`--ds-*` ลบครบแล้ว Phase 5.1 · canonical → [design_guideline.md](../../docs/notes/design_guideline.md)).
 
 ### 3.3 Status → badge color (memorize this)
 

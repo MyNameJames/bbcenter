@@ -37,6 +37,8 @@ def notify_approved(booking):
 def notify_forwarded_to_approver(booking):
     _safe(_tg.notify_forwarded_to_approver, booking)
     _safe(_line.notify_forwarded_to_approver, booking)
+    # ส่ง flex card + ปุ่มอนุมัติไปหา approver รายคนผ่าน LINE DM
+    _safe(_line.notify_approver_action_required_dm, booking)
 
 
 def notify_approver_approved(booking, approver):

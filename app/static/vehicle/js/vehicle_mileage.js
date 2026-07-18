@@ -1,10 +1,8 @@
 /* ══════════════════════════════════════════════════
    pages/mileage-admin.js — Mileage Admin (ES module)
-   Modal 3-state (start/end/complete), realtime cost preview,
+   Modal: unified single-form (odo ออก+กลับ พร้อมกัน),
    checkbox selection summary, export-link sync.
 ══════════════════════════════════════════════════ */
-
-const FUEL_PRICE = window.MLG_FUEL_PRICE || 40;
 
 /* ── Helpers ──────────────────────────────────── */
 function fmt(n) {
@@ -18,415 +16,282 @@ function nowTimestampValue() {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function nowTimestampLabel() {
-    const d = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear() + 543}  ${pad(d.getHours())}:${pad(d.getMinutes())} น.`;
-}
+/* ── Motion helpers — shared จาก core/js/ue-motion.js (window.ueMotion, โหลดก่อน module นี้) ── */
+const { REDUCE, sleep, SKEL_MIN_MS, countUp, staggerRows, showSkeleton } = window.ueMotion;
 
 /* ── State refs ───────────────────────────────── */
-const $modal        = document.getElementById('mileageModal');
-const formStart     = document.getElementById('formStart');
-const formEnd       = document.getElementById('formEnd');
-const stateComplete = document.getElementById('stateComplete');
+const $modal      = document.getElementById('mileageModal');
+const formMileage = document.getElementById('formMileage');
+const mmOdoStart  = document.getElementById('mmOdoStart');
+const mmOdoEnd    = document.getElementById('mmOdoEnd');
+const mmOdoEndErr = document.getElementById('mmOdoEndErr');
+const mmEntryType = document.getElementById('mmEntryType');
 let bsModal    = null;
 let currentRow = null;
 
-function showState(which) {
-    formStart.style.display     = which === 'start'    ? 'block' : 'none';
-    formEnd.style.display       = which === 'end'      ? 'block' : 'none';
-    stateComplete.style.display = which === 'complete' ? 'block' : 'none';
+const BADGE_STYLE = {
+    none:     { text: 'รอกรอกไมล์ออก',   bg: '--bb-n200',  fg: '--bb-mut'  },
+    partial:  { text: 'รอกรอกไมล์กลับ', bg: '--bb-wr-bg', fg: '--bb-wr-tx' },
+    complete: { text: 'กรอกเลขไมล์ครบ',  bg: '--bb-ok-bg', fg: '--bb-ok-tx' }
+};
+const AVATAR_ICON_COLOR = { none: '--bb-mut', partial: '--bb-wr', complete: '--bb-ok' };
+
+function clearEndError() {
+    mmOdoEnd.classList.remove('is-error');
+    mmOdoEndErr.style.display = 'none';
 }
 
 /* ── Modal open ───────────────────────────────── */
 function openMileage(btn) {
-    const row = btn.closest('tr.mlg-row');
+    const row = btn.closest('[data-booking]');
     if (!row) return;
     currentRow = row;
 
     const ds = row.dataset;
-    document.getElementById('mmBookingId').textContent = 'BK-' + ds.booking;
-    document.getElementById('mmUser').textContent      = ds.user || '—';
+    document.getElementById('mmFormBookingId').value   = ds.booking;
+    document.getElementById('mmBudgetSub').textContent = 'BK-' + ds.booking + (ds.budgetSub ? ' · ' + ds.budgetSub : '');
+    document.getElementById('mmName').textContent      = ds.user || '—';
     document.getElementById('mmTime').textContent      = ds.time || '—';
-    document.getElementById('mmVehicle').textContent   = ds.vehicle || '—';
-    document.getElementById('mmDest').textContent      = ds.destination || '—';
+    document.getElementById('mmDriver').textContent    = ds.driver || '—';
+    document.getElementById('mmPlateDest').textContent = (ds.plate ? ds.plate + ' → ' : '') + (ds.destination || '—');
+    document.getElementById('mmDistance').textContent  = ds.distance ? fmt(ds.distance) : '-';
+    document.getElementById('mmCost').textContent      = ds.cost ? fmt(ds.cost) : '-';
 
-    const odoStart   = ds.odoStart ? Number(ds.odoStart) : null;
-    const odoEnd     = ds.odoEnd   ? Number(ds.odoEnd)   : null;
-    const fuelRate   = Number(ds.fuelRate) || 10;
-    const manualFuel = ds.manualFuel ? Number(ds.manualFuel) : null;
+    const odoStart = ds.odoStart ? Number(ds.odoStart) : null;
+    const odoEnd   = ds.odoEnd   ? Number(ds.odoEnd)   : null;
 
-    if (!odoStart) {
-        document.getElementById('fsBookingId').value = ds.booking;
-        document.getElementById('fsActualStart').value = nowTimestampValue();
-        document.getElementById('fsTimeLabel').textContent = nowTimestampLabel();
-        document.getElementById('fsOdo').value = '';
-        showState('start');
-    } else if (!odoEnd) {
-        document.getElementById('feBookingId').value = ds.booking;
-        document.getElementById('feActualEnd').value = nowTimestampValue();
-        document.getElementById('feOdoStartRef').textContent = fmt(odoStart) + ' กม.';
-        document.getElementById('feFuelRate').textContent = fuelRate;
-        document.getElementById('feOdoEnd').value = '';
-        document.getElementById('feFuelManual').value = '';
-        document.getElementById('feRefuel').checked = false;
-        document.getElementById('feRefuelWrap').style.display = 'none';
-        document.getElementById('fePreview').style.display = 'none';
-        document.getElementById('feOdoErr').style.display = 'none';
-        document.getElementById('feSubmit').disabled = true;
-        formEnd.dataset.odoStart = odoStart;
-        formEnd.dataset.fuelRate = fuelRate;
-        showState('end');
+    let state;
+    if (!odoStart) state = 'none';
+    else if (!odoEnd) state = 'partial';
+    else state = 'complete';
+
+    const { text, bg, fg } = BADGE_STYLE[state];
+    const badge  = document.getElementById('mmBadge');
+    badge.textContent    = text;
+    badge.style.background = `var(${bg})`;
+    badge.style.color      = `var(${fg})`;
+
+    const avatar = document.getElementById('mmAvatar');
+    avatar.style.background = `var(${bg})`;
+    avatar.querySelector('svg, i').style.color = `var(${AVATAR_ICON_COLOR[state]})`;
+
+    clearEndError();
+
+    if (state === 'none') {
+        mmOdoStart.value    = '';
+        mmOdoStart.disabled = false;
+        mmOdoStart.required = true;
+        mmOdoEnd.value      = '';
+        mmOdoEnd.disabled   = true;
+        mmOdoEnd.required   = false;
+        document.getElementById('mmActualStart').value = nowTimestampValue();
+        mmEntryType.value = 'start';
     } else {
-        const distance = odoEnd - odoStart;
-        const formulaCost = (distance / fuelRate) * FUEL_PRICE;
-        document.getElementById('cOdoStart').textContent     = fmt(odoStart);
-        document.getElementById('cOdoEnd').textContent       = fmt(odoEnd);
-        document.getElementById('cDistance').textContent     = fmt(distance);
-        document.getElementById('cCostFormula').textContent  = fmt(formulaCost);
-        const manualRow = document.getElementById('cManualRow');
-        if (manualFuel && manualFuel > 0) {
-            manualRow.style.display = 'flex';
-            document.getElementById('cCostManual').textContent = fmt(manualFuel);
-        } else {
-            manualRow.style.display = 'none';
-        }
-        showState('complete');
+        mmOdoStart.value    = odoStart;
+        mmOdoStart.disabled = true;
+        mmOdoStart.required = false;
+        mmOdoEnd.value      = odoEnd || '';
+        mmOdoEnd.disabled   = false;
+        mmOdoEnd.required   = true;
+        document.getElementById('mmActualEnd').value = nowTimestampValue();
+        mmEntryType.value = 'end';
     }
 
     if (!bsModal) bsModal = new bootstrap.Modal($modal);
     bsModal.show();
 }
 
-function goEditEnd() {
-    if (!currentRow) return;
-    const ds = currentRow.dataset;
-    const odoStart = Number(ds.odoStart);
-    const fuelRate = Number(ds.fuelRate) || 10;
-    document.getElementById('feBookingId').value = ds.booking;
-    document.getElementById('feActualEnd').value = nowTimestampValue();
-    document.getElementById('feOdoStartRef').textContent = fmt(odoStart) + ' กม.';
-    document.getElementById('feFuelRate').textContent = fuelRate;
-    document.getElementById('feOdoEnd').value = ds.odoEnd || '';
-    document.getElementById('feFuelManual').value = ds.manualFuel || '';
-    formEnd.dataset.odoStart = odoStart;
-    formEnd.dataset.fuelRate = fuelRate;
-    recalcEndPreview();
-    showState('end');
-}
+mmOdoEnd.addEventListener('input', clearEndError);
 
-/* ── Realtime preview (state 2) ───────────────── */
-function recalcEndPreview() {
-    const odoStart = Number(formEnd.dataset.odoStart || 0);
-    const fuelRate = Number(formEnd.dataset.fuelRate || 10);
-    const odoEnd   = Number(document.getElementById('feOdoEnd').value || 0);
-    const preview  = document.getElementById('fePreview');
-    const errBox   = document.getElementById('feOdoErr');
-    const submit   = document.getElementById('feSubmit');
-
-    if (!odoEnd) {
-        preview.style.display = 'none';
-        errBox.style.display = 'none';
-        submit.disabled = true;
-        return;
+formMileage.addEventListener('submit', function (e) {
+    if (mmEntryType.value !== 'end') return;
+    const start = Number(mmOdoStart.value || (currentRow && currentRow.dataset.odoStart) || 0);
+    const end   = Number(mmOdoEnd.value || 0);
+    if (!end || end <= start) {
+        e.preventDefault();
+        mmOdoEnd.classList.add('is-error');
+        mmOdoEndErr.style.display = 'block';
     }
-    if (odoEnd <= odoStart) {
-        preview.style.display = 'none';
-        errBox.style.display = 'block';
-        submit.disabled = true;
-        return;
-    }
-    errBox.style.display = 'none';
-    const distance = odoEnd - odoStart;
-    const cost     = (distance / fuelRate) * FUEL_PRICE;
-    document.getElementById('feCalcDistance').textContent = fmt(distance);
-    document.getElementById('feCalcCost').textContent     = fmt(cost);
-    preview.style.display = 'block';
-    submit.disabled = false;
-}
-
-document.getElementById('feOdoEnd').addEventListener('input', recalcEndPreview);
-
-document.getElementById('feRefuel').addEventListener('change', function () {
-    document.getElementById('feRefuelWrap').style.display = this.checked ? 'block' : 'none';
 });
 
-/* ── Toolbar: status chips ────────────────────── */
-(function bindStatusChips() {
+/* ── Toolbar: status tabs (tab2 component, 2026-07-07 แทน bb_tabs) ──
+   tab2_tabs ออก data-tab เป็น <div> (ไม่ใช่ button) → ไม่ต้อง preventDefault */
+(function bindStatusTabs() {
     const form = document.getElementById('filterForm');
     const hidden = document.getElementById('statusFilter');
     if (!form || !hidden) return;
-    document.querySelectorAll('.mlg-status-chips .mlg-chip').forEach(btn => {
+    document.querySelectorAll('#statusTabs .tab2-tab').forEach(btn => {
         btn.addEventListener('click', () => {
-            hidden.value = btn.dataset.status || '';
+            hidden.value = btn.dataset.tab || '';
             // update active state ทันที (ไม่ reload → server ไม่ได้ render ให้)
-            document.querySelectorAll('.mlg-status-chips .mlg-chip')
-                .forEach(c => c.classList.toggle('is-active', c === btn));
+            document.querySelectorAll('#statusTabs .tab2-tab')
+                .forEach(c => c.classList.toggle('active', c === btn));
             runFilter();
         });
     });
 })();
 
-/* ── Toolbar: advanced filter popover ──────────── */
-(function bindAdvToggle() {
-    const btn   = document.getElementById('advFilterBtn');
-    const sheet = document.getElementById('advSheet');
-    if (!btn || !sheet) return;
+/* ── Filter (bb_filter live) + date range → trigger AJAX ──
+   bb_filter toggle/clear = JS ของ bb-components.js · ที่นี่แค่ผูก trigger
+   bb-filter:change ยิงเมื่อ native input/select ใน filter เปลี่ยน (cost, booker, budget_sub)
+   bb_combo set hidden value แต่ไม่ยิง native change → bridge เป็น native 'change'
+   เพื่อให้ bb_filter จับ (badge is-active + ยิง bb-filter:change ต่อ) → ไหลเข้า runFilter จุดเดียว */
+document.addEventListener('bb-daterange:change', () => runFilter());
+document.addEventListener('bb-filter:change', () => runFilter());
 
-    const isOpen = () => !sheet.hasAttribute('hidden');
-    function setOpen(open) {
-        if (open) sheet.removeAttribute('hidden');
-        else sheet.setAttribute('hidden', '');
-        btn.setAttribute('aria-expanded', String(open));
+/* filter controls: bb_dropdown (menu) + booker combo + budget cascade
+   dropdown (bb-select + .bb-menu) เป็น decorative → wire เอง:
+     เลือก item → set hidden input [name] + native change → bb_filter (bb-components)
+     จับ change → recompute badge + ยิง bb-filter:change → runFilter
+   booker = bb_combo → bridge bb-combo:change → native change (เหมือนเดิม)
+   budget_type เปลี่ยน → rebuild เมนู budget_sub (cascade) */
+(function bindFilterControls() {
+    const root = document.getElementById('bbMlFilter');
+    if (!root) return;
+    const cats       = window.EXPENSE_CATS || { central: [], department: [] };
+    const initialSub = window.BBML_FILTER_SUB || '';
+    const subSec     = document.getElementById('filterBudgetSubSec');
+    const dds        = Array.from(root.querySelectorAll('[data-bb-ml-dd]'));
+    const ddByName   = name => dds.find(dd => dd.querySelector('[data-bb-ml-dd-input]').name === name);
+
+    function closeMenus(except) {
+        dds.forEach(dd => {
+            if (dd === except) return;
+            dd.querySelector('[data-bb-ml-dd-menu]').hidden = true;
+            dd.querySelector('[data-bb-ml-dd-trigger]').setAttribute('aria-expanded', 'false');
+        });
     }
 
-    // stopPropagation: keep our own outside-click handler from closing
-    // immediately on the same click that opened it.
-    btn.addEventListener('click', e => { e.stopPropagation(); setOpen(!isOpen()); });
-
-    // close on click outside (clicks inside the popover — incl. its
-    // vc-dd dropdowns, which are descendants — keep it open)
-    document.addEventListener('click', e => {
-        if (!isOpen()) return;
-        if (sheet.contains(e.target) || btn.contains(e.target)) return;
-        setOpen(false);
-    });
-
-    // close on Esc
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && isOpen()) { setOpen(false); btn.focus(); }
-    });
-})();
-
-/* ── Toolbar: date preset ─────────────────────── */
-(function bindDatePreset() {
-    const preset = document.getElementById('datePreset');
-    const form   = document.getElementById('filterForm');
-    const dStart = form && form.querySelector('input[name="date_start"]');
-    const dEnd   = form && form.querySelector('input[name="date_end"]');
-    const showAll = document.getElementById('showAllInput');
-    const rangeGroup = document.getElementById('dateRangeGroup');
-    if (!preset || !form || !dStart || !dEnd) return;
-
-    const fmt = d => d.toISOString().slice(0, 10);
-    const today = () => new Date();
-    const daysAgo = n => { const d = today(); d.setDate(d.getDate() - n); return d; };
-    const monthStart = () => { const d = today(); d.setDate(1); return d; };
-
-    // Initial preset detection
-    function detectInitial() {
-        if (showAll && showAll.value === '1') return 'all';
-        if (!dStart.value && !dEnd.value) return 'month';
-        return 'custom';
-    }
-    preset.value = detectInitial();
-    if (preset.value === 'custom') rangeGroup.removeAttribute('hidden');
-    else if (preset.value === 'all') rangeGroup.setAttribute('hidden', '');
-    else rangeGroup.setAttribute('hidden', '');
-
-    preset.addEventListener('change', () => {
-        const v = preset.value;
-        if (v === 'custom') {
-            rangeGroup.removeAttribute('hidden');
-            if (showAll) showAll.value = '';
-            return; // wait for user to pick dates + click Apply
-        }
-        rangeGroup.setAttribute('hidden', '');
-        if (v === 'all') {
-            dStart.value = '';
-            dEnd.value = '';
-            if (showAll) showAll.value = '1';
-        } else if (v === 'month') {
-            dStart.value = '';
-            dEnd.value = '';
-            if (showAll) showAll.value = '';
-        } else if (v === '7d') {
-            dStart.value = fmt(daysAgo(7));
-            dEnd.value = fmt(today());
-            if (showAll) showAll.value = '';
-        } else if (v === '30d') {
-            dStart.value = fmt(daysAgo(30));
-            dEnd.value = fmt(today());
-            if (showAll) showAll.value = '';
-        }
-        runFilter();
-    });
-})();
-
-/* ── Toolbar: custom date-range calendar pickers (แทน native date input) ──
-   2 instance (start/end) ใช้ .va-cal popover (style จาก vehicle_admin.css).
-   คลิกปุ่ม → ปฏิทินเปิด → คลิกวัน → set hidden input + submit form ทันที. */
-(function bindDateRangePickers() {
-    const form    = document.getElementById('filterForm');
-    const pickers = document.querySelectorAll('#dateRangeGroup [data-datepick]');
-    if (!form || !pickers.length) return;
-
-    const TH_DAYS_S = ['อา','จ','อ','พ','พฤ','ศ','ส'];
-    const TH_MON_F  = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-                       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-    const TH_MON_S  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
-                       'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-    const showAll = document.getElementById('showAllInput');
-
-    const pad2  = n => String(n).padStart(2, '0');
-    const toISO = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const sameDay = (a, b) => a.getFullYear() === b.getFullYear() &&
-                             a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-    function parseISO(v) {
-        if (!v) return null;
-        const [y, m, d] = v.split('-').map(Number);
-        const dt = new Date(y, m - 1, d);
-        return isNaN(dt.getTime()) ? null : dt;
+    // set ค่า dropdown (is-on + label + hidden input) · silent = ไม่ยิง change
+    function pick(dd, value, label, silent) {
+        const input = dd.querySelector('[data-bb-ml-dd-input]');
+        const lbl   = dd.querySelector('[data-bb-ml-dd-label]');
+        dd.querySelectorAll('.bb-menu-item').forEach(x =>
+            x.classList.toggle('is-on', (x.dataset.value || '') === (value || '')));
+        input.value = value || '';
+        lbl.textContent = label || 'ทั้งหมด';
+        if (!silent) input.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    const instances = [];
-    function closeAll(except) {
-        instances.forEach(i => { if (i.root !== except) i.close(); });
-    }
-
-    pickers.forEach(root => {
-        const btn      = root.querySelector('[data-datepick-btn]');
-        const labelEl  = root.querySelector('[data-datepick-label]');
-        const input    = root.querySelector('[data-datepick-input]');
-        const pop      = root.querySelector('[data-datepick-pop]');
-        const dowWrap  = root.querySelector('[data-cal-dow]');
-        const daysWrap = root.querySelector('[data-cal-days]');
-        const titleEl  = root.querySelector('[data-cal-title]');
-        const prevBtn  = root.querySelector('[data-cal-prev]');
-        const nextBtn  = root.querySelector('[data-cal-next]');
-        if (!btn || !input || !pop) return;
-
-        const placeholder = labelEl.textContent.trim();
-        let cursor = parseISO(input.value) || new Date(today);
-
-        function syncLabel() {
-            const sel = parseISO(input.value);
-            if (sel) {
-                labelEl.textContent = `${sel.getDate()} ${TH_MON_S[sel.getMonth()]} ${sel.getFullYear() + 543}`;
-                btn.classList.add('mlg-date-btn--filled');
+    dds.forEach(dd => {
+        const trigger = dd.querySelector('[data-bb-ml-dd-trigger]');
+        const menu    = dd.querySelector('[data-bb-ml-dd-menu]');
+        const name    = dd.querySelector('[data-bb-ml-dd-input]').name;
+        trigger.addEventListener('click', e => {
+            e.stopPropagation();
+            const willOpen = menu.hidden;
+            closeMenus(dd);
+            menu.hidden = !willOpen;
+            trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
+        menu.addEventListener('click', e => {
+            const opt = e.target.closest('.bb-menu-item');
+            if (!opt) return;
+            menu.hidden = true;
+            trigger.setAttribute('aria-expanded', 'false');
+            if (name === 'budget_type') {
+                pick(dd, opt.dataset.value, opt.dataset.label, true);  // defer change
+                rebuildBudgetSub(opt.dataset.value);                   // sync budget_sub (silent)
+                dd.querySelector('[data-bb-ml-dd-input]').dispatchEvent(new Event('change', { bubbles: true }));
             } else {
-                labelEl.textContent = placeholder;
-                btn.classList.remove('mlg-date-btn--filled');
+                pick(dd, opt.dataset.value, opt.dataset.label);
             }
-        }
-
-        function render() {
-            const y = cursor.getFullYear(), m = cursor.getMonth();
-            titleEl.textContent = `${TH_MON_F[m]} ${y + 543}`;
-            if (!dowWrap.childElementCount) {
-                dowWrap.innerHTML = TH_DAYS_S.map((d, i) => {
-                    const c = i === 0 ? ' va-cal-dow-cell--sun' : i === 6 ? ' va-cal-dow-cell--sat' : '';
-                    return `<span class="va-cal-dow-cell${c}">${d}</span>`;
-                }).join('');
-            }
-            const sel = parseISO(input.value);
-            const startPad = new Date(y, m, 1).getDay();
-            const days = new Date(y, m + 1, 0).getDate();
-            let cells = '';
-            for (let i = 0; i < startPad; i++) cells += `<span class="va-cal-cell va-cal-cell--empty"></span>`;
-            for (let dn = 1; dn <= days; dn++) {
-                const d = new Date(y, m, dn), dow = d.getDay();
-                let cls = 'va-cal-cell';
-                if (sel && sameDay(d, sel)) cls += ' va-cal-cell--active';
-                if (sameDay(d, today))      cls += ' va-cal-cell--today';
-                if (dow === 0)      cls += ' va-cal-cell--sun';
-                else if (dow === 6) cls += ' va-cal-cell--sat';
-                cells += `<button type="button" class="${cls}" data-date="${toISO(d)}">${dn}</button>`;
-            }
-            daysWrap.innerHTML = cells;
-        }
-
-        function open() {
-            closeAll(root);
-            cursor = parseISO(input.value) || new Date(today);
-            render();
-            pop.hidden = false;
-            btn.setAttribute('aria-expanded', 'true');
-        }
-        function close() {
-            pop.hidden = true;
-            btn.setAttribute('aria-expanded', 'false');
-        }
-
-        btn.addEventListener('click', e => {
-            e.stopPropagation();
-            if (pop.hidden) open(); else close();
         });
-        prevBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
-            render();
-        });
-        nextBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
-            render();
-        });
-        daysWrap.addEventListener('click', e => {
-            const cell = e.target.closest('[data-date]');
-            if (!cell) return;
-            input.value = cell.dataset.date;
-            if (showAll) showAll.value = '';
-            syncLabel();
-            close();
-            runFilter();
-        });
-
-        syncLabel();
-        instances.push({ root, close });
     });
 
-    document.addEventListener('click', e => {
-        instances.forEach(i => { if (!i.root.contains(e.target)) i.close(); });
-    });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(null); });
-})();
-
-/* ── Budget filter: sub-options follow type (pattern: updateExpSubDropdown) ── */
-(function bindBudgetFilter() {
-    const typeSel  = document.getElementById('filterBudgetType');
-    const subSel   = document.getElementById('filterBudgetSub');
-    const subWrap  = document.getElementById('filterBudgetSubWrap');
-    const typeWrap = document.getElementById('filterBudgetTypeWrap');
-    if (!typeSel || !subSel || !subWrap) return;
-
-    const cats = window.EXPENSE_CATS || { central: [], department: [] };
-    const initialSub = window.MLG_FILTER_SUB || '';
-
-    function updateBudgetSubDropdown() {
-        const t = typeSel.value;
-        if (t !== 'central' && t !== 'department') {
-            subWrap.style.display = 'none';
-            subSel.innerHTML = '<option value="">ทั้งหมด</option>';
-            // ไม่มีหมวด/กอง → "งบ" ขยายเต็ม 2 col
-            if (typeWrap) typeWrap.classList.add('mlg-adv-col-full');
+    // budget_type → rebuild เมนู budget_sub (cascade) · pick แบบ silent เสมอ
+    function rebuildBudgetSub(type) {
+        const dd = ddByName('budget_sub');
+        if (!dd) return;
+        const menu = dd.querySelector('[data-bb-ml-dd-menu]');
+        if (type !== 'central' && type !== 'department') {
+            if (subSec) subSec.hidden = true;
+            menu.innerHTML = '<div class="bb-menu-item is-on" data-value="" data-label="ทั้งหมด">ทั้งหมด</div>';
+            pick(dd, '', 'ทั้งหมด', true);
             return;
         }
-        subWrap.style.display = '';
-        // มีหมวด/กอง → "งบ" เหลือ 1 col, sub อยู่ข้างๆ
-        if (typeWrap) typeWrap.classList.remove('mlg-adv-col-full');
-        const list    = cats[t] || [];
-        const prevKey = subSel.value || initialSub;
-        subSel.innerHTML = '<option value="">ทั้งหมด</option>' +
-            list.map(x => `<option value="${x.key}" ${x.key === prevKey ? 'selected' : ''}>${x.label}</option>`).join('');
+        if (subSec) subSec.hidden = false;
+        const list = cats[type] || [];
+        menu.innerHTML = '<div class="bb-menu-item" data-value="" data-label="ทั้งหมด">ทั้งหมด</div>' +
+            list.map(x => `<div class="bb-menu-item" data-value="${x.key}" data-label="${x.label}">${x.label}</div>`).join('');
+        const keep = list.some(x => x.key === initialSub) ? initialSub : '';
+        const kept = keep ? list.find(x => x.key === keep) : null;
+        pick(dd, keep, kept ? kept.label : 'ทั้งหมด', true);
     }
-    typeSel.addEventListener('change', updateBudgetSubDropdown);
-    updateBudgetSubDropdown();
+
+    // booker combo → bridge bb-combo:change → native change (ให้ bb_filter จับ)
+    document.addEventListener('bb-combo:change', e => {
+        const el = e.target;
+        if (!el.classList || !el.classList.contains('bb-combo')) return;
+        const input = el.querySelector('[data-bb-combo-input]');
+        if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    // click ใน filter body นอก dropdown → ปิดเมนูที่เปิดอยู่
+    const body = root.querySelector('[data-bb-filter-body]');
+    if (body) body.addEventListener('click', e => { if (!e.target.closest('[data-bb-ml-dd]')) closeMenus(null); });
+
+    /* ล้างการเลือก — reset controls in-place (ไม่โหลดหน้าใหม่) แล้ว AJAX filter จุดเดียว
+       bb-components clear ใช้ baseline = ค่าที่กรองอยู่ (server-persisted) → reset ผิด ·
+       จึ่ง override: capture + stopImmediatePropagation กัน handler เดิม แล้ว reset เอง */
+    const clearBtn = root.querySelector('[data-bb-filter-clear]');
+    if (clearBtn) clearBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        // dropdowns → 'ทั้งหมด' (silent) · budget_type รีเซ็ต cascade budget_sub ด้วย
+        dds.forEach(dd => {
+            pick(dd, '', 'ทั้งหมด', true);
+            if (dd.querySelector('[data-bb-ml-dd-input]').name === 'budget_type') rebuildBudgetSub('');
+        });
+        // booker combo → placeholder (silent)
+        const combo = root.querySelector('.bb-combo');
+        if (combo) {
+            const cin = combo.querySelector('[data-bb-combo-input]');
+            const clbl = combo.querySelector('[data-bb-combo-label]');
+            if (cin) cin.value = '';
+            if (clbl) { clbl.textContent = 'ทั้งหมด'; clbl.classList.add('is-ph'); }
+            combo.querySelectorAll('.bb-combo-opt').forEach(x => {
+                x.classList.remove('is-on');
+                const c = x.querySelector('[data-lucide="check"]'); if (c) c.remove();
+            });
+        }
+        // cost slider (dual) → เต็มพิสัย (silent render)
+        const slider = root.querySelector('[data-bb-slider]');
+        if (slider) slider.dispatchEvent(new CustomEvent('bb-slider:reset'));
+        // badge off + filter จุดเดียว
+        root.classList.remove('is-active');
+        runFilter();
+    }, true);   // capture: stop ก่อน bubble listener ของ bb-components
+})();
+
+/* cost slider (dual) → debounce → native change ให้ bb_filter จับ (badge + runFilter) */
+(function bindFilterSlider() {
+    const root = document.getElementById('bbMlFilter');
+    if (!root) return;
+    const slider = root.querySelector('[data-bb-slider]');
+    if (!slider) return;
+    let t;
+    slider.addEventListener('bb-slider:change', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+            const input = slider.querySelector('[data-bb-slider-input]');
+            if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
+        }, 300);
+    });
 })();
 
 /* ── Selection / Summary (re-bindable หลัง AJAX swap) ── */
 let $checkAll, $modeAll, $modeSel, $strip;
 
 function getRows() {
-    return Array.from(document.querySelectorAll('tr.mlg-row'));
+    return Array.from(document.querySelectorAll('tr.bb-ml-row'));
 }
 
 function recalcSummary() {
     if (!$strip) return;
     const rows = getRows();
     const selected = rows.filter(r => {
-        const cb = r.querySelector('.mlg-row-check');
+        const cb = r.querySelector('.bb-ml-row-check');
         return cb && cb.checked;
     });
 
@@ -450,16 +315,16 @@ function recalcSummary() {
 
     if (!$checkAll) return;
     const enabled = rows.filter(r => {
-        const cb = r.querySelector('.mlg-row-check');
+        const cb = r.querySelector('.bb-ml-row-check');
         return cb && !cb.disabled;
     });
     if (enabled.length === 0) {
         $checkAll.indeterminate = false;
         $checkAll.checked = false;
-    } else if (enabled.every(r => r.querySelector('.mlg-row-check').checked)) {
+    } else if (enabled.every(r => r.querySelector('.bb-ml-row-check').checked)) {
         $checkAll.indeterminate = false;
         $checkAll.checked = true;
-    } else if (enabled.some(r => r.querySelector('.mlg-row-check').checked)) {
+    } else if (enabled.some(r => r.querySelector('.bb-ml-row-check').checked)) {
         $checkAll.indeterminate = true;
     } else {
         $checkAll.indeterminate = false;
@@ -467,6 +332,7 @@ function recalcSummary() {
     }
 }
 
+let _sumInit = false, _sumLast = null;
 function calcAllSummary() {
     const rows = getRows();
     let d = 0, c = 0;
@@ -474,57 +340,273 @@ function calcAllSummary() {
         d += Number(r.dataset.distance || 0);
         c += Number(r.dataset.cost || 0);
     });
+    const elN = document.getElementById('sumAllCount');
     const elD = document.getElementById('sumAllDistance');
     const elC = document.getElementById('sumAllCost');
+    if (elN) elN.textContent = fmt(rows.length);
     if (elD) elD.textContent = fmt(d);
-    if (elC) elC.textContent = fmt(c);
+    if (elC) {
+        if (!_sumInit) {                     // B2 — โหลดครั้งแรก → count-up
+            countUp(elC, c, { format: fmt });
+            _sumInit = true;
+        } else {                             // filter เปลี่ยน → set + bump ถ้าค่าต่าง
+            elC.textContent = fmt(c);
+            if (c !== _sumLast && !REDUCE) {
+                elC.classList.remove('is-bump');
+                void elC.offsetWidth;
+                elC.classList.add('is-bump');
+            }
+        }
+        _sumLast = c;
+    }
 }
 
 function clearSelection() {
-    document.querySelectorAll('.mlg-row-check').forEach(cb => { cb.checked = false; });
+    document.querySelectorAll('.bb-ml-row-check').forEach(cb => { cb.checked = false; });
     if ($checkAll) { $checkAll.checked = false; $checkAll.indeterminate = false; }
     recalcSummary();
 }
 
-/* (re)grab refs ภายใน #mlgResults + bind listeners — เรียกตอน init + หลังทุก swap */
+/* ══════════════════════════════════════════════════
+   TABLE SEARCH — client-side filter + highlight (เหลือง)
+   ค้นในแถว (cell text + dataset) → match: show + <mark>; ไม่ match: ซ่อน
+   search input อยู่นอก #bbMlResults → ค่าคงหลัง AJAX swap, re-apply ใน bindResults
+══════════════════════════════════════════════════ */
+let bbMlQuery = '';
+
+/* unwrap <mark> เดิมทั้งหมด + รวม text node ที่แตก */
+function clearHighlight(root) {
+    root.querySelectorAll('mark.bb-ml-search-hl').forEach(m => {
+        m.replaceWith(document.createTextNode(m.textContent));
+    });
+    root.normalize();
+}
+
+/* wrap ทุก occurrence ของ q ในแถว — เฉพาะ text node ที่ปลอดภัย
+   (ข้าม checkbox/action/badge/button/a เพื่อไม่ทำลาย structure) */
+function highlightRow(row, q) {
+    const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+            const p = node.parentElement;
+            if (!p || p.closest('.bb-ml-col-check, .bb-ml-col-actions, .bb-badge, .bb-status, button, a, mark'))
+                return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+    const targets = [];
+    let n; while ((n = walker.nextNode())) targets.push(n);
+
+    targets.forEach(node => {
+        const text  = node.nodeValue;
+        const lower = text.toLowerCase();
+        let i = lower.indexOf(q);
+        if (i === -1) return;
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        while (i !== -1) {
+            if (i > last) frag.appendChild(document.createTextNode(text.slice(last, i)));
+            const mark = document.createElement('mark');
+            mark.className = 'bb-ml-search-hl';
+            mark.textContent = text.slice(i, i + q.length);
+            frag.appendChild(mark);
+            last = i + q.length;
+            i = lower.indexOf(q, last);
+        }
+        if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(frag, node);
+    });
+}
+
+function applySearch(q) {
+    bbMlQuery = (q || '').trim().toLowerCase();
+    const results = document.getElementById('bbMlResults');
+    if (results) clearHighlight(results);
+
+    // Desktop rows
+    getRows().forEach(row => {
+        if (!bbMlQuery) { row.style.display = ''; return; }
+        const hay = (row.textContent + ' ' + (row.dataset.user || '') + ' ' +
+            (row.dataset.vehicle || '') + ' ' + (row.dataset.destination || '')).toLowerCase();
+        const match = hay.includes(bbMlQuery);
+        row.style.display = match ? '' : 'none';
+        if (match) highlightRow(row, bbMlQuery);
+    });
+
+    // Mobile cards
+    document.querySelectorAll('.bb-ml-trip-card').forEach(card => {
+        if (!bbMlQuery) { card.style.display = ''; return; }
+        const hay = (card.textContent + ' ' + (card.dataset.user || '') + ' ' +
+            (card.dataset.plate || '') + ' ' + (card.dataset.destination || '')).toLowerCase();
+        card.style.display = hay.includes(bbMlQuery) ? '' : 'none';
+    });
+
+    // Desktop date-group headers
+    document.querySelectorAll('tr.bb-ml-date-group').forEach(g => {
+        if (!bbMlQuery) { g.style.display = ''; return; }
+        let sib = g.nextElementSibling, hasVisible = false;
+        while (sib && !sib.classList.contains('bb-ml-date-group')) {
+            if (sib.classList.contains('bb-ml-row') && sib.style.display !== 'none') { hasVisible = true; break; }
+            sib = sib.nextElementSibling;
+        }
+        g.style.display = hasVisible ? '' : 'none';
+    });
+
+    // Mobile date headers
+    document.querySelectorAll('.bb-ml-date-cell--mobile').forEach(hdr => {
+        if (!bbMlQuery) { hdr.style.display = ''; return; }
+        let sib = hdr.nextElementSibling, hasVisible = false;
+        while (sib && !sib.classList.contains('bb-ml-date-cell--mobile')) {
+            if (sib.classList.contains('bb-ml-trip-card') && sib.style.display !== 'none') { hasVisible = true; break; }
+            sib = sib.nextElementSibling;
+        }
+        hdr.style.display = hasVisible ? '' : 'none';
+    });
+}
+
+(function bindSearch() {
+    const input = document.getElementById('bbMlSearch');
+    if (!input) return;
+    let t;
+    input.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => applySearch(input.value), 150);
+    });
+})();
+
+/* ══════════════════════════════════════════════════
+   TABLE SORT — click header → asc → desc → none
+   sortState module-level → คงอยู่หลัง AJAX swap; re-applied ใน bindSortHeaders
+══════════════════════════════════════════════════ */
+let sortState = { col: null, dir: 1 };
+
+function getSortValue(row, col) {
+    switch (col) {
+        case 'booking':     return Number(row.dataset.booking) || 0;
+        case 'distance':    return Number(row.dataset.distance) || 0;
+        case 'cost':        return Number(row.dataset.cost) || 0;
+        case 'odo-start':   return Number(row.dataset.odoStart) || 0;
+        case 'odo-end':     return Number(row.dataset.odoEnd) || 0;
+        case 'status': {
+            const order = { none: 0, partial: 1, complete: 2 };
+            return order[row.dataset.status] ?? 0;
+        }
+        case 'user':        return (row.dataset.user || '').toLowerCase();
+        case 'vehicle':     return (row.dataset.vehicle || '').toLowerCase();
+        case 'destination': return (row.dataset.destination || '').toLowerCase();
+        default: return '';
+    }
+}
+
+function applySortToTbody() {
+    const table = document.querySelector('.bb-table');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    if (!sortState.col) {
+        tbody.querySelectorAll('tr.bb-ml-date-group').forEach(r => r.style.display = '');
+        return;
+    }
+    tbody.querySelectorAll('tr.bb-ml-date-group').forEach(r => r.style.display = 'none');
+
+    const rows = Array.from(tbody.querySelectorAll('tr.bb-ml-row'));
+    rows.sort((a, b) => {
+        const va = getSortValue(a, sortState.col);
+        const vb = getSortValue(b, sortState.col);
+        if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * sortState.dir;
+        return String(va).localeCompare(String(vb), 'th') * sortState.dir;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+    if (bbMlQuery) applySearch(bbMlQuery);
+}
+
+const _MS_SORT = { 'arrow-up': 'arrow_upward', 'arrow-down': 'arrow_downward', 'chevrons-up-down': 'unfold_more' };
+function updateSortIcons() {
+    document.querySelectorAll('.bb-table th[data-sort]').forEach(th => {
+        const col = th.dataset.sort;
+        const iconEl = th.querySelector('.bb-sort-icon [data-lucide], .bb-sort-icon .material-symbols-outlined');
+        if (sortState.col === col) {
+            th.setAttribute('aria-sort', sortState.dir === 1 ? 'ascending' : 'descending');
+        } else {
+            th.removeAttribute('aria-sort');
+        }
+        if (!iconEl) return;
+        const name = sortState.col === col
+            ? (sortState.dir === 1 ? 'arrow-up' : 'arrow-down')
+            : 'chevrons-up-down';
+        iconEl.setAttribute('data-lucide', name);
+        // MS span → set ligature ตรงๆ (deterministic, ไม่พึ่ง observer); Lucide เดิม → createIcons
+        if (iconEl.classList.contains('material-symbols-outlined')) {
+            iconEl.textContent = _MS_SORT[name] || name.replace(/-/g, '_');
+        } else {
+            bbMlInitIcons(th);
+        }
+    });
+}
+
+function bindSortHeaders() {
+    document.querySelectorAll('.bb-table th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.sort;
+            if (sortState.col === col) {
+                if (sortState.dir === -1) { sortState.col = null; sortState.dir = 1; }
+                else sortState.dir = -1;
+            } else {
+                sortState.col = col;
+                sortState.dir = 1;
+            }
+            updateSortIcons();
+            applySortToTbody();
+        });
+    });
+    updateSortIcons();
+    if (sortState.col) applySortToTbody();
+}
+
+/* (re)grab refs ภายใน #bbMlResults + bind listeners — เรียกตอน init + หลังทุก swap */
 function bindResults() {
     $checkAll = document.getElementById('checkAll');
     $modeAll  = document.getElementById('modeAll');
     $modeSel  = document.getElementById('modeSelected');
     $strip    = document.getElementById('summaryStrip');
 
+    // checkbox = bb-check-box component (span) → toggle .is-on (ไม่มี native .checked)
+    // is-disabled = เลือกไม่ได้ (ยังไม่ครบ)
     if ($checkAll) {
-        $checkAll.addEventListener('change', function () {
-            const checked = this.checked;
+        $checkAll.addEventListener('click', function () {
+            const on = !$checkAll.classList.contains('is-on');
+            setCheck($checkAll, on);
             getRows().forEach(r => {
-                const cb = r.querySelector('.mlg-row-check');
-                if (cb && !cb.disabled) cb.checked = checked;
+                const cb = r.querySelector('.bb-ml-row-check');
+                if (cb && !cb.classList.contains('is-disabled')) setCheck(cb, on);
             });
-            recalcSummary();
         });
     }
-    document.querySelectorAll('.mlg-row-check').forEach(cb => {
-        cb.addEventListener('change', recalcSummary);
-    });
-    document.querySelectorAll('tr.mlg-row').forEach(row => {
+    document.querySelectorAll('tr.bb-ml-row').forEach(row => {
         row.addEventListener('click', function (e) {
-            if (e.target.closest('button, input, a')) return;
-            const cb = row.querySelector('.mlg-row-check');
-            if (cb && !cb.disabled) {
-                cb.checked = !cb.checked;
-                recalcSummary();
-            }
+            if (e.target.closest('button, a')) return;   // span checkbox = ปล่อยให้ toggle
+            const cb = row.querySelector('.bb-ml-row-check');
+            if (cb && !cb.classList.contains('is-disabled')) setCheck(cb, !cb.classList.contains('is-on'));
         });
     });
     calcAllSummary();
-    recalcSummary();
+    if (bbMlQuery) applySearch(bbMlQuery);    // re-apply search หลัง AJAX swap (rows ใหม่)
+    bindSortHeaders();                      // re-bind sort + re-apply sortState หลัง swap
+    staggerRows('#bbMlResults', { rows: 'tr.bb-ml-row, .bb-ml-trip-card', dots: '.bb-status .bb-dot, .bb-avatar' });
+}
+
+/* toggle bb-check-box (span) — class .is-on + aria */
+function setCheck(el, on) {
+    el.classList.toggle('is-on', on);
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
 }
 
 /* ══════════════════════════════════════════════════
    AJAX FILTERING — กรองโดยไม่ reload หน้า (โดยเฉพาะกรองวัน)
-   fetch URL เดิม (GET) → parse #mlgResults → swap + rebind
+   fetch URL เดิม (GET) → parse #bbMlResults → swap + rebind
 ══════════════════════════════════════════════════ */
-function mlgInitIcons(scope) {
+function bbMlInitIcons(scope) {
     const l = window.lucide;
     if (!l || !l.createIcons) return;
     try {
@@ -553,15 +635,16 @@ function syncExportLink(url) {
     link.setAttribute('href', base + (qs ? '?' + qs : ''));
 }
 
-let _mlgReqToken = 0;
-async function runFilter(push = true) {
-    const results = document.getElementById('mlgResults');
+let _bbMlReqToken = 0;
+async function runFilter() {
+    const results = document.getElementById('bbMlResults');
     const form    = document.getElementById('filterForm');
     if (!results || !form) { if (form) form.submit(); return; }
 
     const url   = buildFilterURL();
-    const token = ++_mlgReqToken;
+    const token = ++_bbMlReqToken;
     results.classList.add('is-loading');
+    const _skelAt = showSkeleton(results, { count: Math.min(getRows().length || 5, 6) });   // B4 — skeleton ระหว่างโหลด
     try {
         const res = await fetch(url, {
             headers: { 'X-Requested-With': 'fetch' },
@@ -569,37 +652,33 @@ async function runFilter(push = true) {
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
-        if (token !== _mlgReqToken) return;            // มี request ใหม่กว่า → ทิ้งผลเก่า
+        if (token !== _bbMlReqToken) return;            // มี request ใหม่กว่า → ทิ้งผลเก่า
+        if (_skelAt) {                                   // ให้ skeleton โชว์ ≥ SKEL_MIN_MS กัน flash
+            const left = SKEL_MIN_MS - (performance.now() - _skelAt);
+            if (left > 0) { await sleep(left); if (token !== _bbMlReqToken) return; }
+        }
         const doc   = new DOMParser().parseFromString(text, 'text/html');
-        const fresh = doc.getElementById('mlgResults');
-        if (!fresh) throw new Error('no #mlgResults in response');
+        const fresh = doc.getElementById('bbMlResults');
+        if (!fresh) throw new Error('no #bbMlResults in response');
         results.innerHTML = fresh.innerHTML;
-        mlgInitIcons(results);
+        bbMlInitIcons(results);
         bindResults();
-        if (push) history.pushState({ mlg: true }, '', url);
+        // ไม่ pushState — ตั้งใจไม่ให้ query string ค้าง address bar
+        // เพื่อให้ reload หน้าเสมอกลับไป default filter (ไม่ใช่ filter เดิม)
         syncExportLink(url);
     } catch (e) {
         window.location.href = url;                     // fallback: full nav
     } finally {
-        if (token === _mlgReqToken) results.classList.remove('is-loading');
+        if (token === _bbMlReqToken) results.classList.remove('is-loading');
     }
 }
 
-/* back/forward → reload ให้ server render state ตาม URL (ตรงเสมอ) */
-window.addEventListener('popstate', () => { window.location.reload(); });
-
-/* intercept native submit (ปุ่ม "นำไปใช้" ใน adv-sheet) → AJAX */
+/* intercept native submit (เช่น Enter ในช่อง search/cost) → AJAX */
 (function bindFilterFormAjax() {
     const form = document.getElementById('filterForm');
     if (!form) return;
     form.addEventListener('submit', e => {
         e.preventDefault();
-        // ปิด adv-filter popover — runFilter swap แค่ #mlgResults
-        // (popover อยู่นอก region นั้น เลยไม่ปิดเองหลังกด "นำไปใช้")
-        const sheet = document.getElementById('advSheet');
-        const advBtn = document.getElementById('advFilterBtn');
-        if (sheet) sheet.setAttribute('hidden', '');
-        if (advBtn) advBtn.setAttribute('aria-expanded', 'false');
         runFilter();
     });
 })();
@@ -608,7 +687,7 @@ window.addEventListener('popstate', () => { window.location.reload(); });
 syncExportLink(window.location.href);
 
 /* ── Expose to window for legacy onclick handlers ── */
-Object.assign(window, { openMileage, goEditEnd, clearSelection });
+Object.assign(window, { openMileage, clearSelection });
 
 /* ── Init ─────────────────────────────────────── */
 bindResults();

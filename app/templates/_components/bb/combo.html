@@ -1,0 +1,42 @@
+{#
+  bb_combo — dropdown ที่ค้นหาได้ (searchable select) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-combo)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-combo])
+
+  trigger → popover (ช่องค้นหา + รายการกรองสด) · เลือก = เซ็ต hidden input (name)
+  + dispatch 'bb-combo:change' {detail:{value, label}}
+
+  Usage:
+    {% from '_components/bb/combo.html' import bb_combo %}
+    {{ bb_combo(name='driver_id', options=drivers, value=sel, placeholder='เลือกคนขับ') }}
+
+  params:
+    name                ชื่อ hidden input
+    options             list ของ {'value':..,'label':..}
+    value               value ที่เลือกไว้ ('' = ยังไม่เลือก)
+    placeholder         label ตอนยังไม่เลือก (default 'เลือก…')
+    search_placeholder  placeholder ช่องค้นหา (default 'ค้นหา…')
+    id                  id บน root
+#}
+{% macro bb_combo(name='', options=[], value='', placeholder='เลือก…', search_placeholder='ค้นหา…', id='') -%}
+{% set ns = namespace(label='') %}
+{% for o in options if o.value|string == value|string %}{% set ns.label = o.label %}{% endfor %}
+<div class="bb-combo" data-bb-combo data-value="{{ value }}"{% if id %} id="{{ id }}"{% endif %}>
+  <button type="button" class="bb-select bb-combo-trigger" data-bb-combo-btn aria-haspopup="listbox" aria-expanded="false">
+    <span class="bb-combo-val{% if not ns.label %} is-ph{% endif %}" data-bb-combo-label>{{ ns.label or placeholder }}</span>
+    <i data-lucide="chevron-down" class="bb-combo-caret"></i>
+  </button>
+  <input type="hidden" name="{{ name }}" value="{{ value }}" data-bb-combo-input>
+  <div class="bb-combo-pop" data-bb-combo-pop role="listbox" hidden>
+    <div class="bb-combo-search"><i data-lucide="search"></i><input type="text" data-bb-combo-search placeholder="{{ search_placeholder }}" autocomplete="off"></div>
+    <div class="bb-combo-list" data-bb-combo-list>
+      {% for o in options %}
+      <div class="bb-combo-opt{% if o.value|string == value|string %} is-on{% endif %}" role="option" data-value="{{ o.value }}" data-label="{{ o.label }}">
+        <span>{{ o.label }}</span>{% if o.value|string == value|string %}<i data-lucide="check"></i>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="bb-combo-empty" data-bb-combo-empty hidden>ไม่พบรายการ</div>
+    </div>
+  </div>
+</div>
+{%- endmacro %}

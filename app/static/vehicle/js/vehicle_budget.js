@@ -6,24 +6,28 @@ import { initIcons, bindModalReinit } from '../../core/js/icons.js';
 initIcons();
 bindModalReinit();
 
-// ── Dropdown action menus (per card / row) ──────────────────
+// ── Dropdown action menus (per card / row) — bb-ml-dd + [hidden] toggle ──
 document.addEventListener('click', function (e) {
     const trigger = e.target.closest('[data-dropdown-trigger]');
-    const inMenu  = e.target.closest('.vc-dropdown-menu');
+    const inMenu  = e.target.closest('[data-dropdown-menu]');
 
     // close all open dropdowns first
-    document.querySelectorAll('.vc-dropdown.is-open').forEach(function (d) {
-        if (!trigger || !d.contains(trigger)) d.classList.remove('is-open');
+    document.querySelectorAll('[data-dropdown]').forEach(function (d) {
+        const menu = d.querySelector('[data-dropdown-menu]');
+        if (!menu || menu.hidden) return;
+        if (!trigger || !d.contains(trigger)) menu.hidden = true;
     });
     if (trigger) {
         e.preventDefault();
-        const dd = trigger.closest('.vc-dropdown');
-        if (dd) dd.classList.toggle('is-open');
+        const dd   = trigger.closest('[data-dropdown]');
+        const menu = dd && dd.querySelector('[data-dropdown-menu]');
+        if (menu) menu.hidden = !menu.hidden;
     }
     // click on item inside menu → close after the click is processed
     if (inMenu && e.target.closest('[data-dropdown-close]')) {
-        const dd = inMenu.closest('.vc-dropdown');
-        if (dd) setTimeout(function () { dd.classList.remove('is-open'); }, 0);
+        const dd   = inMenu.closest('[data-dropdown]');
+        const menu = dd && dd.querySelector('[data-dropdown-menu]');
+        if (menu) setTimeout(function () { menu.hidden = true; }, 0);
     }
 });
 
@@ -111,15 +115,15 @@ if (setBudgetModal) {
         const fieldLabel = isCentral ? 'หมวดงาน (ส่วนกลาง)' : 'ชื่อกอง / แผนก';
 
         if (isEdit) {
-            ttl.innerHTML = '<i data-lucide="pencil" class="vc-icon-sm"></i> แก้เพดาน' + groupLabel + ' — ' + deptName;
+            ttl.innerHTML = '<i data-lucide="pencil" style="width:1rem;height:1rem"></i> แก้เพดาน' + groupLabel + ' — ' + deptName;
             if (noticeTxt) noticeTxt.innerHTML = 'อัปเดตเพดาน' + groupLabel + 'ของ <strong>' + deptName + '</strong> — ยอดที่หักไว้แล้วจะคงเดิม กระทบเฉพาะเพดานสูงสุด';
             if (submitTxt) submitTxt.textContent = 'อัปเดตเพดาน';
         } else {
-            ttl.innerHTML = '<i data-lucide="' + groupIcon + '" class="vc-icon-sm"></i> ตั้ง' + groupLabel + 'ใหม่';
+            ttl.innerHTML = '<i data-lucide="' + groupIcon + '" style="width:1rem;height:1rem"></i> ตั้ง' + groupLabel + 'ใหม่';
             if (noticeTxt) noticeTxt.innerHTML = 'ตั้ง' + groupLabel + 'สำหรับเดือนที่เลือก — ถ้ามีงบของ' + (isCentral ? 'หมวด' : 'กอง') + 'นี้อยู่แล้ว ระบบจะอัปเดตทับ';
             if (submitTxt) submitTxt.textContent = 'บันทึกงบ';
         }
-        lbl.innerHTML = fieldLabel + ' <span class="vc-required">*</span>';
+        lbl.innerHTML = fieldLabel + ' <span style="color:var(--bb-dg)">*</span>';
 
         initIcons(setBudgetModal);
     });
@@ -145,7 +149,7 @@ document.addEventListener('click', function (e) {
     if (!tab) return;
     const filter = tab.dataset.personalFilter;
     document.querySelectorAll('[data-personal-filter]').forEach(function (t) {
-        t.classList.toggle('is-active', t === tab);
+        t.classList.toggle('is-on', t === tab);
     });
     document.querySelectorAll('[data-personal-row]').forEach(function (row) {
         const s = row.dataset.personalRow;
@@ -164,12 +168,11 @@ document.addEventListener('click', function (e) {
     function activate(name) {
         tabs.forEach(function (t) {
             const on = t.dataset.budgetTab === name;
-            t.classList.toggle('is-active', on);
+            t.classList.toggle('is-on', on);
             t.setAttribute('aria-selected', on ? 'true' : 'false');
         });
         panels.forEach(function (p) {
             const on = p.dataset.budgetPanel === name;
-            p.classList.toggle('is-active', on);
             p.hidden = !on;
         });
     }
@@ -179,7 +182,7 @@ document.addEventListener('click', function (e) {
     });
 
     // sync toolbar/add กับ tab ที่ active อยู่ตอน load (default = pivot → toolbar ซ่อน)
-    const current = tabs.find(function (t) { return t.classList.contains('is-active'); }) || tabs[0];
+    const current = tabs.find(function (t) { return t.classList.contains('is-on'); }) || tabs[0];
     activate(current.dataset.budgetTab);
 })();
 
@@ -201,7 +204,7 @@ document.addEventListener('submit', async function (e) {
     if (btn) {
         btn.disabled = true;
         btn.dataset.origHtml = btn.innerHTML;
-        btn.innerHTML = '<i data-lucide="loader" class="vc-icon-sm"></i> กำลังบันทึก...';
+        btn.innerHTML = '<i data-lucide="loader"></i> กำลังบันทึก...';
     }
 
     try {
@@ -231,15 +234,15 @@ if (refundModal) {
         const form = refundModal.querySelector('form');
         if (form) form.querySelector('[name="booking_id"]').value = pick.dataset.pickBooking;
         refundModal.querySelectorAll('[data-pick-booking]').forEach(function (r) {
-            r.classList.remove('is-picked');
+            r.style.background = '';
         });
-        pick.classList.add('is-picked');
+        pick.style.background = 'var(--bb-accent-bg)';
         const submit = refundModal.querySelector('[data-refund-submit]');
         if (submit) submit.disabled = false;
     });
     refundModal.addEventListener('hide.bs.modal', function () {
         refundModal.querySelectorAll('[data-pick-booking]').forEach(function (r) {
-            r.classList.remove('is-picked');
+            r.style.background = '';
         });
         const submit = refundModal.querySelector('[data-refund-submit]');
         if (submit) submit.disabled = true;
@@ -248,10 +251,10 @@ if (refundModal) {
     });
 }
 
-/* ── Date pickers (va-cal) — แทน native type="date" ในทุก modal ──
-   ปุ่ม trigger → .va-cal popover → คลิกวัน → set hidden input (ISO) + sync label.
-   ไม่ submit เอง (ค่าอยู่ในฟอร์มจน submit). pre-fill จาก modal show → sync label
-   ตอน shown.bs.modal. required (extend modal) ตรวจตอน submit. */
+/* ── Date pickers — แทน native type="date" ในทุก modal ──
+   ปุ่ม trigger (.bb-dp-trigger) → .bb-datepicker popover (reuse bb-cal* CSS) →
+   คลิกวัน → set hidden input (ISO) + sync label. ไม่ submit เอง (ค่าอยู่ในฟอร์มจน submit).
+   pre-fill จาก modal show → sync label ตอน shown.bs.modal. required (extend modal) ตรวจตอน submit. */
 (function initBudgetDatepickers() {
     const roots = document.querySelectorAll('[data-datepick]');
     if (!roots.length) return;
@@ -296,35 +299,30 @@ if (refundModal) {
             const sel = parseISO(input.value);
             if (sel) {
                 labelEl.textContent = `${sel.getDate()} ${TH_MON_S[sel.getMonth()]} ${sel.getFullYear() + 543}`;
-                btn.classList.add('budget-date-btn--filled');
+                labelEl.classList.remove('is-ph');
             } else {
                 labelEl.textContent = placeholder;
-                btn.classList.remove('budget-date-btn--filled');
+                labelEl.classList.add('is-ph');
             }
-            root.classList.remove('is-invalid');
+            btn.style.borderColor = '';
         }
 
         function render() {
             const y = cursor.getFullYear(), m = cursor.getMonth();
             titleEl.textContent = `${TH_MON_F[m]} ${y + 543}`;
             if (!dowWrap.childElementCount) {
-                dowWrap.innerHTML = TH_DAYS_S.map((d, i) => {
-                    const c = i === 0 ? ' va-cal-dow-cell--sun' : i === 6 ? ' va-cal-dow-cell--sat' : '';
-                    return `<span class="va-cal-dow-cell${c}">${d}</span>`;
-                }).join('');
+                dowWrap.innerHTML = TH_DAYS_S.map(d => `<span class="bb-cal-dow">${d}</span>`).join('');
             }
             const sel = parseISO(input.value);
             const startPad = new Date(y, m, 1).getDay();
             const days = new Date(y, m + 1, 0).getDate();
             let cells = '';
-            for (let i = 0; i < startPad; i++) cells += `<span class="va-cal-cell va-cal-cell--empty"></span>`;
+            for (let i = 0; i < startPad; i++) cells += `<span class="bb-cal-day is-empty"></span>`;
             for (let dn = 1; dn <= days; dn++) {
-                const d = new Date(y, m, dn), dow = d.getDay();
-                let cls = 'va-cal-cell';
-                if (sel && sameDay(d, sel)) cls += ' va-cal-cell--active';
-                if (sameDay(d, today))      cls += ' va-cal-cell--today';
-                if (dow === 0)      cls += ' va-cal-cell--sun';
-                else if (dow === 6) cls += ' va-cal-cell--sat';
+                const d = new Date(y, m, dn);
+                let cls = 'bb-cal-day';
+                if (sel && sameDay(d, sel)) cls += ' is-selected';
+                if (sameDay(d, today))      cls += ' is-today';
                 cells += `<button type="button" class="${cls}" data-date="${toISO(d)}">${dn}</button>`;
             }
             daysWrap.innerHTML = cells;
@@ -389,12 +387,13 @@ if (refundModal) {
         if (!form.querySelector) return;
         let firstMissing = null;
         form.querySelectorAll('[data-datepick-required]').forEach(inp => {
-            const root = inp.closest('[data-datepick]');
+            const root    = inp.closest('[data-datepick]');
+            const trigger = root.querySelector('[data-datepick-btn]');
             if (!inp.value) {
-                root.classList.add('is-invalid');
+                if (trigger) trigger.style.borderColor = 'var(--bb-dg)';
                 if (!firstMissing) firstMissing = root;
             } else {
-                root.classList.remove('is-invalid');
+                if (trigger) trigger.style.borderColor = '';
             }
         });
         if (firstMissing) {

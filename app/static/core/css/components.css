@@ -1,0 +1,1132 @@
+/* ============================================================
+   BBCenter Component Library  ·  canonical (2026-06-28)
+   spec: docs/notes/design_guideline.md §12
+   prefix .bb-*  (target ใหม่ — --vc-* / .zen-* / .data-table = legacy, migrate เข้าหา)
+   icon = Lucide (data-lucide) · เลข = .bb-num (Inter)
+   ⚠️ ต้องโหลด font Inter (numbers) เพิ่มเมื่อ adopt — ตอนนี้ fallback Manrope/system
+   ============================================================ */
+
+/* ซ่อน scrollbar ทุกหน้า (global) — scroll ยังทำงานได้ปกติ แค่ไม่โชว์แถบ */
+html, body {
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* IE/Edge legacy */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none;              /* Chrome/Safari/Edge Chromium */
+}
+
+:root {
+  /* accent — น้ำเงิน (migrate จาก blurple, 2026-07-05 — ดู design_guideline.md §2 Decisions log) */
+  --bb-accent:    #4081EC;   /* identity / dot / fill ใหญ่ */
+  --bb-accent-i:  #4081EC;   /* interactive / CTA / link (AA) */
+  --bb-accent-h:  #1766E8;   /* hover */
+  --bb-accent-bg: #EFF6FF;   /* tint bg */
+  /* chip/filter accent — เขียว (sync จาก mockup-orders.html, 2026-07-07, ดู design_guideline.md §4 Decisions log)
+     ⚠️ ใช้เฉพาะ .bb-chip/.bb-select/.bb-menu — ปุ่ม/ลิงก์อื่นยังใช้ --bb-accent (น้ำเงิน) เหมือนเดิม */
+  --bb-chip-green:  #06C167;
+  --bb-chip-accent: #0B7A3E;
+  /* neutral — cool (เทาอมฟ้า) */
+  --bb-n0:   #FFFFFF;
+  --bb-n50:  #F6F9FC;
+  --bb-n100: #EEF2F8;
+  --bb-n200: #E2E8F1;
+  --bb-n300: #CBD5E1;
+  --bb-mut:  #5B6B83;   /* text-muted (AA) */
+  --bb-str:  #0A2540;   /* text-strong */
+  --bb-ph:   #8A98AE;   /* placeholder */
+  /* semantic */
+  --bb-ok: #16A34A;  --bb-ok-tx: #15803D;  --bb-ok-bg: #E7F6ED;
+  --bb-wr: #D97706;  --bb-wr-tx: #B45309;  --bb-wr-bg: #FCF1E2;
+  --bb-dg: #DC2626;  --bb-dg-tx: #C81E1E;  --bb-dg-bg: #FCEBEB;
+  --bb-info: #2563EB; --bb-info-tx: #1D5FD0; --bb-info-bg: #E8F0FE;
+  /* radius */
+  --bb-r-xs: 4px; --bb-r-sm: 6px; --bb-r-md: 8px; --bb-r-lg: 12px; --bb-r-xl: 16px;
+  /* shadow (cool-tint) */
+  --bb-shadow-sm: 0 1px 2px rgba(16,37,64,.06), 0 1px 3px rgba(16,37,64,.04);
+  --bb-shadow-md: 0 4px 8px rgba(16,37,64,.08), 0 2px 4px rgba(16,37,64,.06);
+  --bb-shadow-lg: 0 12px 28px rgba(16,37,64,.12), 0 4px 10px rgba(16,37,64,.08);
+  /* focus ring */
+  --bb-ring: 0 0 0 3px rgba(64,129,236,.18);
+  /* number font */
+  --bb-num-font: 'Inter', 'Manrope', system-ui, sans-serif;
+}
+
+body { margin: 0; font-family: 'Sarabun', system-ui, sans-serif; color: var(--bb-str); background: #fff; }
+.bb-main { padding: 2.25rem 2.5rem 6rem;  }
+.bb-num { font-family: var(--bb-num-font); font-weight: 400; font-feature-settings: 'tnum'; }
+
+/* ============================================================ 1 · BUTTON */
+.bb-btn {
+  font-weight: 600; font-size: .875rem; line-height: 1;
+  border-radius: 0; padding: .5625rem 1rem;
+  border: 1px solid transparent; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: .5rem;
+  transition: background .12s, border-color .12s, box-shadow .12s;
+}
+.bb-btn [data-lucide], .bb-btn svg { width: 1rem; height: 1rem; }
+.bb-btn.is-pri    { background: var(--bb-accent-i); color: #fff; box-shadow: 0 1px 1px rgba(10,37,64,.10), 0 2px 5px rgba(64,129,236,.28); }
+.bb-btn.is-pri:hover    { background: var(--bb-accent-h); }
+.bb-btn.is-sec    { background: #fff; color: var(--bb-str); border-color: var(--bb-n200); box-shadow: 0 1px 1px rgba(10,37,64,.04); }
+.bb-btn.is-sec:hover    { background: var(--bb-n50); border-color: var(--bb-n300); }
+.bb-btn.is-ghost  { background: transparent; color: var(--bb-accent-i); }
+.bb-btn.is-ghost:hover  { background: var(--bb-accent-bg); }
+.bb-btn.is-danger { background: var(--bb-dg); color: #fff; box-shadow: 0 1px 1px rgba(10,37,64,.10), 0 2px 5px rgba(220,38,38,.25); }
+.bb-btn.is-danger:hover { background: var(--bb-dg-tx); }
+.bb-btn.is-sm     { padding: .375rem .75rem; font-size: .8125rem; }
+.bb-btn.is-icon   { padding: .5rem; width: 2.125rem; height: 2.125rem; justify-content: center; }
+.bb-btn:disabled, .bb-btn.is-disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+/* mobile: is-mobile-icon → ยุบเหลือ icon (ซ่อน .bb-btn-text) */
+@media (max-width: 575.98px) {
+  .bb-btn.is-mobile-icon { padding: .5rem; width: 2.125rem; height: 2.125rem; justify-content: center; gap: 0; }
+  .bb-btn.is-mobile-icon .bb-btn-text { display: none; }
+}
+
+/* ============================================================ 2 · INPUT */
+.bb-field { margin-bottom: .875rem; }
+.bb-label { display: block; font-size: .8125rem; font-weight: 500; margin-bottom: .375rem; color: var(--bb-str); }
+.bb-input {
+  width: 100%; font-size: .875rem; color: var(--bb-str); background: #fff;
+  border: 1px solid var(--bb-n200); border-radius: var(--bb-r-sm);
+  padding: .5625rem .75rem; outline: none; transition: border-color .12s, box-shadow .12s;
+}
+.bb-input::placeholder { color: var(--bb-ph); }
+.bb-input:focus { border-color: var(--bb-accent); box-shadow: var(--bb-ring); }
+.bb-input.is-error { border-color: var(--bb-dg); box-shadow: 0 0 0 3px rgba(220,38,38,.15); }
+.bb-input:disabled { background: var(--bb-n100); color: var(--bb-ph); cursor: not-allowed; }
+.bb-input-wrap { position: relative; }
+.bb-input-wrap [data-lucide] { position: absolute; left: .6875rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: var(--bb-mut); }
+.bb-input-wrap .bb-input { padding-left: 2.125rem; }
+.bb-hint { font-size: .75rem; margin-top: .3125rem; color: var(--bb-mut); }
+.bb-hint.is-error { color: var(--bb-dg-tx); }
+
+/* ============================================================ 3 · SEARCH */
+/* ⚠️ (2026-07-07, sync จาก mockup-orders.html) collapse เป็น icon กลม → คลิก/focus ขยายเป็น pill
+   ปิดกลับอัตโนมัติเมื่อ blur ตอนไม่มีข้อความ · JS: bb-components.js initSearch() */
+.bb-search {
+  position: relative; display: inline-flex; align-items: center; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 999px; background: #fff;
+  border: 2px solid var(--bb-n300); overflow: hidden; cursor: pointer;
+  transition: width .28s cubic-bezier(.2,.8,.2,1), border-color .15s ease;
+}
+.bb-search:hover { border-color: var(--bb-str); }
+.bb-search.is-expanded { width: 100%; max-width: 320px; min-width: 14rem; cursor: default; }
+.bb-search [data-lucide] { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 1.0625rem; height: 1.0625rem; color: var(--bb-mut); pointer-events: none; }
+.bb-search.is-expanded [data-lucide] { left: .75rem; transform: translateY(-50%); }
+.bb-search input {
+  width: 100%; height: 100%; font-size: .875rem; background: transparent;
+  border: none; padding: 0 2.25rem 0 2.375rem; outline: none;
+}
+.bb-search input::placeholder { color: var(--bb-ph); }
+.bb-search-clear {
+  display: none; position: absolute; right: .375rem; top: 50%; transform: translateY(-50%);
+  width: 1.75rem; height: 1.75rem; align-items: center; justify-content: center;
+  border: none; border-radius: 50%; background: transparent; color: var(--bb-mut); cursor: pointer;
+}
+.bb-search-clear:hover { background: var(--bb-n100); color: var(--bb-str); }
+.bb-search-clear [data-lucide] { position: static; width: .875rem; height: .875rem; }
+.bb-search.has-text .bb-search-clear { display: flex; }
+
+/* ============================================================ 4 · FILTER */
+/* segmented (tab-like time/status) */
+.bb-seg { display: inline-flex; background: var(--bb-n100); border-radius: var(--bb-r-md); padding: 3px; gap: 2px; }
+.bb-seg-btn { font-family: var(--bb-num-font); font-size: .8125rem; font-weight: 500; color: var(--bb-mut); background: transparent; border: none; border-radius: var(--bb-r-sm); padding: .375rem .8125rem; cursor: pointer; transition: .12s; }
+.bb-seg-btn:hover { color: var(--bb-str); }
+.bb-seg-btn.is-on { background: #fff; color: var(--bb-str); box-shadow: var(--bb-shadow-sm); font-weight: 600; }
+/* chip */
+.bb-chip { font-size: .8125rem; font-weight: 600; padding: .4375rem .875rem; border-radius: 999px; border: 2px solid var(--bb-n300); background: #fff; color: var(--bb-mut); cursor: pointer; display: inline-flex; align-items: center; gap: .375rem; transition: border-color .15s ease, color .15s ease; }
+.bb-chip:hover { border-color: var(--bb-str); color: var(--bb-str); }
+.bb-chip.is-on { background: #fff; border-color: var(--bb-chip-accent); color: var(--bb-chip-accent); font-weight: 600; }
+.bb-chip-count { font-family: var(--bb-num-font); font-weight: 500; font-size: .75rem; opacity: .7; }
+.bb-chip.is-on .bb-chip-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.25rem; height: 1.25rem; padding: 0 .375rem; background: var(--bb-chip-accent); color: #fff; border-radius: 999px; opacity: 1; font-weight: 700; }
+/* token */
+.bb-token { font-size: .8125rem; border: 1px solid var(--bb-accent); background: var(--bb-accent-bg); color: var(--bb-accent-h); border-radius: var(--bb-r-md); padding: .3125rem .375rem .3125rem .6875rem; display: inline-flex; align-items: center; gap: .5rem; }
+.bb-token b { font-weight: 600; }
+.bb-token .op { font-family: var(--bb-num-font); font-weight: 500; opacity: .75; font-size: .75rem; }
+.bb-token-x { cursor: pointer; display: inline-flex; width: 1.125rem; height: 1.125rem; align-items: center; justify-content: center; border-radius: var(--bb-r-sm); }
+.bb-token-x:hover { background: rgba(64,129,236,.14); }
+.bb-token-x [data-lucide] { width: .875rem; height: .875rem; }
+.bb-addfilter { font-size: .8125rem; font-weight: 500; color: var(--bb-accent-i); background: none; border: 1px dashed var(--bb-n300); border-radius: var(--bb-r-md); padding: .375rem .75rem; cursor: pointer; display: inline-flex; align-items: center; gap: .375rem; }
+.bb-addfilter:hover { background: var(--bb-accent-bg); border-color: var(--bb-accent); }
+/* date range popover */
+.bb-daterange { display: inline-flex; background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); box-shadow: var(--bb-shadow-lg); overflow: hidden; }
+.bb-daterange-presets { width: 8.75rem; border-right: 1px solid var(--bb-n200); padding: .5rem; display: flex; flex-direction: column; gap: 2px; }
+.bb-daterange-presets button { text-align: left; font-size: .8125rem; color: var(--bb-str); background: none; border: none; border-radius: var(--bb-r-sm); padding: .4375rem .625rem; cursor: pointer; }
+.bb-daterange-presets button:hover { background: var(--bb-n50); }
+.bb-daterange-presets button.is-on { background: var(--bb-accent-bg); color: var(--bb-accent-h); font-weight: 600; }
+.bb-daterange-cals { display: flex; gap: 1.375rem; padding: 1rem; }
+.bb-cal { width: 12.5rem; }
+.bb-cal-month { font-family: var(--bb-num-font); font-size: .8125rem; font-weight: 600; text-align: center; margin-bottom: .625rem; }
+.bb-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.bb-cal-dow { font-family: var(--bb-num-font); font-size: .625rem; font-weight: 600; color: var(--bb-mut); text-align: center; padding: .25rem 0; }
+.bb-cal-day { font-family: var(--bb-num-font); font-size: .75rem; text-align: center; padding: .375rem 0; border-radius: var(--bb-r-sm); cursor: pointer; color: var(--bb-str); }
+.bb-cal-day:hover { background: var(--bb-n100); }
+.bb-cal-day.is-muted { color: var(--bb-n300); }
+.bb-cal-day.in-range { background: var(--bb-accent-bg); border-radius: 0; }
+.bb-cal-day.range-start { background: var(--bb-accent-i); color: #fff; border-radius: var(--bb-r-sm) 0 0 var(--bb-r-sm); }
+.bb-cal-day.range-end   { background: var(--bb-accent-i); color: #fff; border-radius: 0 var(--bb-r-sm) var(--bb-r-sm) 0; }
+.bb-daterange-foot { border-top: 1px solid var(--bb-n200); padding: .75rem 1rem; display: flex; justify-content: space-between; align-items: center; }
+/* date range — trigger + popover wiring (macro: _components/bb/daterange.html · js: core/js/bb-daterange.js) */
+.bb-dr { position: relative; display: inline-flex; }
+.bb-dr-trigger { gap: .5rem; }
+.bb-dr-trigger .bb-dr-caret { margin-left: .125rem; }
+.bb-dr-label { font-weight: 600; }
+.bb-daterange[hidden] { display: none; }
+.bb-daterange { position: absolute; top: calc(100% + 6px); right: 0; z-index: 1200; }
+.bb-daterange-main { display: flex; flex-direction: column; position: relative; }
+.bb-daterange-nav { position: absolute; top: 1rem; right: 1rem; display: flex; gap: .25rem; z-index: 1; }
+.bb-dr-nav { width: 1.75rem; height: 1.75rem; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-sm); background: #fff; color: var(--bb-mut); cursor: pointer; }
+.bb-dr-nav:hover { background: var(--bb-n50); color: var(--bb-str); }
+.bb-dr-nav [data-lucide] { width: .9375rem; height: .9375rem; }
+.bb-cal-day.is-empty { visibility: hidden; cursor: default; }
+.bb-cal-day.is-today { font-weight: 700; color: var(--bb-accent-i); }
+.bb-cal-day.is-today.range-start, .bb-cal-day.is-today.range-end { color: #fff; }
+.bb-dr-range-text { font-size: .8125rem; color: var(--bb-str); font-weight: 500; }
+.bb-dr-foot-btns { display: flex; gap: .5rem; }
+@media (max-width: 767.98px) {
+    .bb-daterange { position: fixed; top: 50%; left: 50%; right: auto; transform: translate(-50%, -50%); max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow: auto; flex-direction: column; }
+    .bb-daterange-cals { flex-direction: column; }
+}
+
+/* ============================================================ 5 · TABS */
+.bb-tabs { display: flex; gap: .25rem; }
+.bb-tab { font-size: 1rem; font-weight: 500; color: var(--bb-mut); padding: .625rem .5rem; margin-right: 1.125rem; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; display: inline-flex; align-items: center; gap: .4375rem; margin-bottom: -1px; }
+.bb-tab:hover { color: var(--bb-str); }
+.bb-tab.is-on { color: var(--bb-accent-i); border-bottom-color: var(--bb-accent-i); font-weight: 700; }
+.bb-tab-count { font-family: var(--bb-num-font); font-size: .6875rem; font-weight: 500; background: var(--bb-n100); color: var(--bb-mut); border-radius: 999px; padding: 1px .4375rem; }
+.bb-tab.is-on .bb-tab-count { background: var(--bb-accent-bg); color: var(--bb-accent-h); }
+
+/* ============================================================ 6 · DROPDOWN */
+.bb-select { font-size: .875rem; font-weight: 600; color: var(--bb-mut); background: #fff; border: 2px solid var(--bb-n300); border-radius: 999px; padding: .4375rem .875rem; display: inline-flex; align-items: center; gap: .375rem; cursor: pointer; box-shadow: none; transition: border-color .15s ease, color .15s ease; }
+.bb-select:hover { border-color: var(--bb-str); color: var(--bb-str); }
+.bb-select.is-active { border-color: var(--bb-chip-accent); color: var(--bb-chip-accent); box-shadow: none; }
+.bb-select .bb-select-hint { color: var(--bb-mut); font-weight: 400; font-size: .8125rem; }
+.bb-select [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-mut); }
+.bb-select.is-active [data-lucide] { color: var(--bb-chip-accent); }
+.bb-menu { background: #fff; border: none; border-radius: 12px; box-shadow: 0 12px 32px rgba(10,37,64,.16); padding: 8px; }
+.bb-menu-rich { display: flex; gap: .75rem; align-items: flex-start; padding: .6875rem .75rem; border-radius: var(--bb-r-md); cursor: pointer; }
+.bb-menu-rich:hover { background: var(--bb-n50); }
+.bb-menu-rich-title { font-size: .875rem; font-weight: 600; color: var(--bb-str); }
+.bb-menu-rich-desc { font-size: .78125rem; color: var(--bb-mut); margin-top: 2px; line-height: 1.45; }
+.bb-check { width: 1.25rem; height: 1.25rem; border-radius: 50%; background: var(--bb-accent-i); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.bb-check [data-lucide] { width: .8125rem; height: .8125rem; color: #fff; }
+.bb-check.is-off { background: transparent; border: 1px solid var(--bb-n300); }
+.bb-menu-item { display: flex; align-items: center; justify-content: space-between; font-size: .875rem; padding: .5rem .6875rem; border-radius: 8px; cursor: pointer; color: var(--bb-str); font-weight: 600; }
+.bb-menu-item:hover { background: var(--bb-n50); }
+.bb-menu-item.is-on { background: var(--bb-n50); color: var(--bb-str); font-weight: 600; }
+.bb-menu-item [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-chip-accent); }
+.bb-menu-divider { height: 1px; background: var(--bb-n200); margin: 5px 4px; }
+.bb-menu-label { font-size: .6875rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--bb-mut); padding: .4375rem .6875rem .25rem; }
+
+/* ============================================================ 7 · CARD */
+.bb-card { background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md); overflow: hidden; }
+.bb-card-head { display: flex; align-items: center; justify-content: space-between; padding: .875rem 1rem; border-bottom: 1px solid var(--bb-n200); }
+.bb-card-title { font-size: .9375rem; font-weight: 600; color: var(--bb-str); }
+.bb-card-body { padding: 1rem; }
+.bb-card-link { font-size: .8125rem; font-weight: 600; color: var(--bb-accent-i); cursor: pointer; }
+
+/* ============================================================ 8 · KPI */
+.bb-kpi { display: flex; align-items: center; gap: 1rem; }
+.bb-kpi.is-card { border: 1px solid var(--bb-n200); border-radius: 4px; padding: 1.125rem 1.25rem; background: #fff; }
+.bb-kpi.is-ghost { padding: .25rem .125rem; }
+.bb-kpi-tile { width: 3.375rem; height: 3.375rem; border-radius: var(--bb-r-lg); flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--bb-n100); color: var(--bb-mut); }
+.bb-kpi.is-ghost .bb-kpi-tile { background: transparent; border: 1px solid var(--bb-n200); }
+.bb-kpi-tile [data-lucide] { width: 1.5rem; height: 1.5rem; }
+.bb-kpi-label { font-size: .875rem; color: var(--bb-mut); display: flex; align-items: center; gap: .375rem; }
+.bb-kpi-value { font-family: var(--bb-num-font); font-weight: 600; font-size: 1.875rem; letter-spacing: -.02em; color: var(--bb-str); line-height: 1.15; margin-top: 3px; }
+.bb-kpi-den { font-weight: 400; font-size: 1rem; color: var(--bb-mut); }
+.bb-kpi-delta { font-size: .75rem; font-weight: 600; margin-top: .375rem; display: inline-flex; align-items: center; gap: 3px; }
+.bb-kpi-delta.is-up { color: var(--bb-ok-tx); }
+.bb-kpi-delta.is-down { color: var(--bb-dg-tx); }
+.bb-kpi-delta [data-lucide] { width: .875rem; height: .875rem; }
+
+/* ============================================================ 9 · TABLE (v2 canonical) */
+.bb-table { width: 100%; border-collapse: collapse; }
+.bb-table thead tr { background: var(--bb-n50); }
+.bb-table thead th { font-size: .875rem; font-weight: 500; color: var(--bb-accent-i); text-align: left; padding: .6875rem .875rem; white-space: nowrap; }
+.bb-table thead th:first-child { border-radius: 0; }
+.bb-table thead th:last-child  { border-radius: 0; }
+.bb-th.sortable { cursor: pointer; }
+.bb-th.sortable .bb-sort-icon { display: inline-flex; vertical-align: -2px; margin-left: 4px; opacity: .7; }
+.bb-th.sortable .bb-sort-icon [data-lucide] { width: .875rem; height: .875rem; }
+.bb-th.sortable:hover { color: var(--bb-str); }
+.bb-table tbody td { padding: .9375rem .875rem; border-bottom: 1px solid var(--bb-n100); font-size: .875rem; vertical-align: middle; }
+.bb-table tbody tr:last-child td { border-bottom: none; }
+.bb-table tbody tr:hover td { background: #FBFCFE; }
+.bb-cell-id { color: var(--bb-mut); }
+.bb-cell-strong { font-weight: 600; color: var(--bb-str); }
+.bb-cell-num { font-family: var(--bb-num-font); font-weight: 400; text-align: right; color: var(--bb-str); }
+.bb-cell-muted { color: var(--bb-mut); }
+.bb-table-actions { display: flex; gap: 4px; justify-content: flex-end; }
+.bb-icon-btn { width: 1.875rem; height: 1.875rem; border-radius: var(--bb-r-sm); border: none; background: none; color: var(--bb-mut); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.bb-icon-btn:hover { background: var(--bb-n100); color: var(--bb-str); }
+.bb-icon-btn [data-lucide] { width: 1rem; height: 1rem; }
+/* checkbox */
+.bb-check-box { width: 1.025rem; height: 1.025rem; border-radius: var(--bb-r-sm); border: 1.5px solid var(--bb-n300); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: #fff; }
+.bb-check-box.is-on { background: var(--bb-str); border-color: var(--bb-str); }
+.bb-check-box.is-on [data-lucide] { width: .75rem; height: .75rem; color: #fff; }
+/* avatar (initials) */
+.bb-avatar { width: 1.875rem; height: 1.875rem; border-radius: 50%; background: var(--bb-accent-bg); color: var(--bb-accent-h); font-family: var(--bb-num-font); font-weight: 600; font-size: .75rem; display: inline-flex; align-items: center; justify-content: center; }
+
+/* thumbnail list row (ต่อยอด Case 10 gallery — ย้ายเข้า components.css เพราะใช้จริงใน vehicle_admin) */
+.bb-buy-thumb { width: 3rem; height: 3rem; background: var(--bb-n100); color: var(--bb-mut); }
+.bb-buy-thumb [data-lucide] { width: 1.375rem; height: 1.375rem; }
+.bb-buy-thumb.is-ok { background: var(--bb-ok-bg); color: var(--bb-ok-tx); }
+.bb-buy-thumb.is-wr { background: var(--bb-wr-bg); color: var(--bb-wr-tx); }
+.bb-buy-item + .bb-buy-item { border-top: 1px dashed var(--bb-n300); margin-top: 1rem; padding-top: 1rem; }
+
+/* config-driven table (bb_table_v2) info bar */
+.bb-table-info { font-size: .8125rem; color: var(--bb-mut); margin-bottom: .5rem; }
+
+/* ============================================================ 10 · BADGE (tag/count) */
+.bb-badge { font-size: .75rem; font-weight: 600; padding: 3px .5625rem; border-radius: var(--bb-r-xs); display: inline-flex; align-items: center; gap: .3125rem; }
+.bb-badge.is-neutral { background: var(--bb-n100); color: var(--bb-mut); }
+.bb-badge.is-accent  { background: var(--bb-accent-bg); color: var(--bb-accent-h); }
+.bb-badge [data-lucide] { width: .8125rem; height: .8125rem; }
+
+/* ============================================================ 11 · STATUS (pill + dot) */
+.bb-status { font-size: .75rem; font-weight: 600; padding: 3px .625rem; border-radius: 999px; display: inline-flex; align-items: center; gap: .375rem; }
+.bb-dot { width: 6px; height: 6px; border-radius: 50%; }
+.bb-status.is-ok      { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }   .bb-status.is-ok .bb-dot      { background: var(--bb-ok); }
+.bb-status.is-wr      { background: var(--bb-wr-bg);   color: var(--bb-wr-tx); }   .bb-status.is-wr .bb-dot      { background: var(--bb-wr); }
+.bb-status.is-dg      { background: var(--bb-dg-bg);   color: var(--bb-dg-tx); }   .bb-status.is-dg .bb-dot      { background: var(--bb-dg); }
+.bb-status.is-info    { background: var(--bb-info-bg); color: var(--bb-info-tx); } .bb-status.is-info .bb-dot    { background: var(--bb-info); }
+.bb-status.is-neutral { background: var(--bb-n100);    color: var(--bb-mut); }     .bb-status.is-neutral .bb-dot { background: var(--bb-n300); }
+/* inline (icon/dot + text, ไม่มีพื้น) — ใช้ใน table */
+.bb-status-inline { display: inline-flex; align-items: center; gap: .4375rem; font-size: .875rem; font-weight: 500; }
+.bb-status-inline [data-lucide] { width: 1.0625rem; height: 1.0625rem; }
+.bb-status-inline.is-ok   { color: var(--bb-ok-tx); }
+.bb-status-inline.is-info { color: var(--bb-info-tx); }
+.bb-status-inline.is-wr   { color: var(--bb-wr-tx); }
+.bb-status-inline.is-dg   { color: var(--bb-dg-tx); }
+
+/* ============================================================ 12 · PAGINATION */
+.bb-pag { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
+.bb-pag-info { font-size: .8125rem; color: var(--bb-mut); }
+.bb-pag-nav { display: flex; gap: 4px; }
+.bb-pg { min-width: 2rem; height: 2rem; padding: 0 .5rem; border-radius: var(--bb-r-md); border: 1px solid var(--bb-n200); background: #fff; font-family: var(--bb-num-font); font-size: .8125rem; color: var(--bb-str); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.bb-pg:hover { background: var(--bb-n50); }
+.bb-pg.is-on { background: var(--bb-accent-i); border-color: var(--bb-accent-i); color: #fff; font-weight: 600; }
+.bb-pg.is-disabled { opacity: .4; cursor: not-allowed; }
+.bb-pg.is-gap { border: none; background: none; }
+.bb-pg [data-lucide] { width: 1rem; height: 1rem; }
+
+/* ============================================================ 13 · MODAL */
+.bb-modal-overlay { position: fixed; inset: 0; background: rgba(10,37,64,.45); display: flex; align-items: center; justify-content: center; padding: 1.5rem; z-index: 1050; }
+.bb-modal { width: 31.25rem; max-width: 100%; background: #fff; border-radius: var(--bb-r-lg); box-shadow: var(--bb-shadow-lg); overflow: hidden; }   /* 500px = Bootstrap modal ปกติ */
+.bb-modal-sheet-handle { display: none; width: 36px; height: 4px; background: var(--bb-n300); border-radius: 999px; margin: .75rem auto -.25rem; }
+.bb-modal-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 1.125rem 1.25rem 0; }
+.bb-modal-title { font-size: 1.0625rem; font-weight: 600; color: var(--bb-str); }
+.bb-modal-sub { font-size: .8125rem; color: var(--bb-mut); margin-top: 2px; }
+.bb-modal-x { width: 2rem; height: 2rem; border-radius: var(--bb-r-md); border: none; background: none; color: var(--bb-mut); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.bb-modal-x:hover { background: var(--bb-n100); }
+.bb-modal-x [data-lucide] { width: 1.125rem; height: 1.125rem; }
+.bb-modal-body { padding: .875rem 1.25rem 1.125rem; font-size: .875rem; color: var(--bb-mut); }
+.bb-modal-foot { display: flex; justify-content: flex-end; gap: .625rem; padding: .875rem 1.25rem; border-top: 1px solid var(--bb-n200); background: var(--bb-n50); }
+/* responsive: มือถือ = bottom sheet (component เดียวกัน markup เดียว) */
+@keyframes bb-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (max-width: 575.98px) {
+  .bb-modal-overlay { align-items: flex-end; justify-content: stretch; padding: 0; }
+  .bb-modal { width: 100%; max-width: 100%; max-height: 92vh; overflow-y: auto;
+              border-radius: var(--bb-r-xl) var(--bb-r-xl) 0 0; animation: bb-sheet-up .24s ease; }
+  .bb-modal-sheet-handle { display: block; }
+}
+
+/* ============================================================ + · TIMELINE */
+.bb-timeline { position: relative; padding-left: .275rem; }
+.bb-tl-item { position: relative; padding: 0 0 1.375rem 1.625rem; }
+.bb-tl-item:last-child { padding-bottom: 0; }
+.bb-tl-item::before { content: ''; position: absolute; left: 6px; top: 1rem; bottom: -.25rem; width: 2px; background: var(--bb-n200); }
+.bb-tl-item:last-child::before { display: none; }
+.bb-tl-dot { position: absolute; left: 0; top: 3px; width: .875rem; height: .875rem; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--bb-n300); background: #fff; }
+.bb-tl-item.done .bb-tl-dot { background: var(--bb-ok); box-shadow: 0 0 0 1.5px var(--bb-ok); }
+.bb-tl-item.cur  .bb-tl-dot { background: var(--bb-accent-i); box-shadow: 0 0 0 1.5px var(--bb-accent-i); }
+.bb-tl-time { font-family: var(--bb-num-font); font-weight: 400; font-size: .75rem; color: var(--bb-mut); }
+.bb-tl-title { font-size: .875rem; font-weight: 600; color: var(--bb-str); margin-top: 1px; }
+.bb-tl-item.todo .bb-tl-title { color: var(--bb-mut); font-weight: 500; }
+.bb-tl-desc { font-size: .8125rem; color: var(--bb-mut); margin-top: 1px; }
+
+/* ============================================================ + · EMPTY */
+.bb-empty { text-align: center; padding: 1.875rem 1.25rem; }
+.bb-empty-icon { width: 3.75rem; height: 3.75rem; border-radius: var(--bb-r-lg); background: var(--bb-n100); color: var(--bb-mut); display: inline-flex; align-items: center; justify-content: center; margin-bottom: .875rem; }
+.bb-empty-icon [data-lucide] { width: 1.75rem; height: 1.75rem; }
+.bb-empty-title { font-size: 1rem; font-weight: 600; color: var(--bb-str); }
+.bb-empty-desc { font-size: .84375rem; color: var(--bb-mut); margin: .3125rem auto 1rem; max-width: 18.75rem; }
+
+/* ============================================================ + · LOADING */
+.bb-skeleton { background: var(--bb-n100); border-radius: var(--bb-r-sm); animation: bb-pulse 1.4s ease-in-out infinite; }
+@keyframes bb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+.bb-spinner { width: 1.875rem; height: 1.875rem; border: 3px solid var(--bb-n200); border-top-color: var(--bb-accent-i); border-radius: 50%; animation: bb-spin .7s linear infinite; }
+.bb-spinner.is-sm { width: 1.125rem; height: 1.125rem; border-width: 2.5px; }
+@keyframes bb-spin { to { transform: rotate(360deg); } }
+.bb-loading-inline { display: inline-flex; align-items: center; gap: .625rem; font-size: .875rem; color: var(--bb-mut); }
+
+/* ============================================================ date range v2 (Stripe-style · 2026-06-29)
+   override layout เดิม: Start/End input บน · split nav < > · ชื่อเดือน caret · band เต็มแถว · month picker */
+.bb-daterange-presets { width: 11.5rem; }
+.bb-daterange-presets button { padding: .5rem .75rem; border-radius: var(--bb-r-md); }
+/* Start / End input (บนสุด) */
+.bb-daterange-top { display: flex; gap: 1.25rem; padding: 1rem 1.125rem 0; }
+.bb-dr-io { display: flex; align-items: center; gap: .5rem; font-size: .8125rem; color: var(--bb-mut); margin: 0; }
+.bb-dr-io > span { white-space: nowrap; }
+.bb-dr-input { font-family: var(--bb-num-font); font-size: .8125rem; color: var(--bb-str); width: 8.25rem;
+  border: 1px solid var(--bb-n200); border-radius: var(--bb-r-sm); padding: .4375rem .625rem; outline: none;
+  text-align: center; transition: border-color .12s, box-shadow .12s; }
+.bb-dr-input:focus { border-color: var(--bb-accent); box-shadow: var(--bb-ring); }
+/* cals: 2 คอลัมน์ แต่ละคอลัมน์มี head (< /ชื่อเดือน caret/ >) ของตัวเอง (2026-07-02) */
+.bb-daterange-cals { padding: .25rem 1.125rem 1rem; }
+.bb-dr-cal-col { display: flex; flex-direction: column; }
+.bb-dr-cal-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+.bb-dr-cal-title { flex: 1; display: flex; }
+.bb-dr-monthtitle { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .375rem;
+  font-family: var(--bb-num-font); font-size: .875rem; font-weight: 600; color: var(--bb-str);
+  background: none; border: none; border-radius: var(--bb-r-sm); padding: .375rem .5rem; cursor: pointer; }
+.bb-dr-monthtitle:hover, .bb-dr-monthtitle.is-on { background: var(--bb-n50); }
+.bb-dr-monthtitle [data-lucide] { width: .9375rem; height: .9375rem; color: var(--bb-mut); }
+.bb-cal { width: 13.25rem; }
+.bb-cal-grid { column-gap: 0; row-gap: 2px; }
+.bb-cal-day { padding: .4375rem 0; border: none; background: none; appearance: none; }
+/* align: ชิดซ้าย (default) | ชิดขวา (.bb-dr.is-align-right) — desktop เท่านั้น
+   (มือถือ = position:fixed กึ่งกลางจอ ประกาศใน media query ด้านบน ห้าม override left/right ทับ) */
+@media (min-width: 768px) {
+  .bb-daterange { left: 0; right: auto; }
+  .bb-dr.is-align-right .bb-daterange { left: auto; right: 0; }
+}
+/* band เต็มแถว — โค้งเฉพาะปลายแถว (is-rl/is-rr ใส่โดย JS) */
+.bb-cal-day.in-range { border-radius: 0; }
+.bb-cal-day.in-range.is-rl, .bb-cal-day.range-start { border-top-left-radius: var(--bb-r-md); border-bottom-left-radius: var(--bb-r-md); }
+.bb-cal-day.in-range.is-rr, .bb-cal-day.range-end { border-top-right-radius: var(--bb-r-md); border-bottom-right-radius: var(--bb-r-md); }
+.bb-cal-day.range-start, .bb-cal-day.range-end { background: var(--bb-accent-i); color: #fff; font-weight: 600; }
+.bb-cal-day.range-start.range-end { border-radius: 999px; }   /* วันเดียว = วงกลม */
+/* month / year quick picker (จาก caret) — แทนที่เฉพาะฝั่งที่กด กว้างเท่า .bb-cal เดิม
+   (2026-07-02: 3→4 คอลัมน์ ให้ตรง ธ.ค./ม.ค.-เม.ย./พ.ค.-ส.ค./ก.ย.-ธ.ค. แบบ 1 แถว = 1 ไตรมาส) */
+.bb-dr-mpick { width: 13.25rem; padding: .5rem 1rem 1rem; min-height: 13rem; }
+.bb-dr-mpick-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+.bb-dr-mpick-year { font-family: var(--bb-num-font); font-size: .9375rem; font-weight: 600; color: var(--bb-str); }
+.bb-dr-mpick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .375rem; }
+.bb-dr-mpick-grid button { font-size: .75rem; color: var(--bb-str); background: none;
+  border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md); padding: .5rem 0; cursor: pointer; transition: .12s; }
+.bb-dr-mpick-grid button:hover { background: var(--bb-accent-bg); border-color: var(--bb-accent); color: var(--bb-accent-h); }
+.bb-dr-mpick-grid button.is-on { background: var(--bb-accent-i); border-color: var(--bb-accent-i); color: #fff; font-weight: 600; }
+/* footer: ชิดขวา (Clear + Apply) */
+.bb-daterange-foot { justify-content: flex-end; gap: .5rem; }
+
+/* mobile: preset ยุบเป็นปุ่ม "ช่วงเวลา" → dropdown ลอยทับ (.bb-menu pattern, ไม่ดัน layout)
+   ปฏิทิน 2 เดือน stack แนวตั้ง คอลัมน์+ปฏิทินขยายเต็มความกว้างที่เหลือ (2026-07-02)
+   .bb-dr-presets-wrap = display:contents บน desktop (ไม่กระทบ flex sidebar เดิม)
+   ต้องอยู่หลัง v2 override ด้านบน (ไม่งั้น .bb-select/.bb-cal ที่ตั้ง display/width ไว้จะทับ) */
+.bb-dr-presets-wrap { display: contents; }
+.bb-dr-presets-trigger { display: none; }
+@media (max-width: 767.98px) {
+    .bb-dr-presets-wrap { display: block; position: relative; margin: .75rem .75rem 0; }
+    .bb-dr-presets-trigger { display: inline-flex; }
+    .bb-daterange-presets {
+      display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
+      width: max-content; min-width: 12rem; max-height: 14rem; overflow-y: auto;
+      background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md);
+      box-shadow: var(--bb-shadow-md); padding: .375rem; flex-direction: column;
+    }
+    .bb-daterange-presets.is-open { display: flex; }
+    .bb-dr-cal-col { width: 100%; }
+    .bb-cal, .bb-dr-mpick { width: 100%; }
+}
+
+/* ============================================================ redesign building blocks (promoted จาก mileage mockup · 2026-06-29)
+   generic · ใช้ข้าม domain ได้ — เดิมเป็น page-CSS mlg-* ตอนนี้เป็นของกลาง */
+
+/* caption / sub-line เล็ก muted */
+.bb-subtext { font-size: .78125rem; color: var(--bb-mut); margin-top: 1px; }
+
+/* tabs scroll wrapper (ไม่บีบ tab) */
+.bb-tabs-scroll { overflow-x: auto; }
+.bb-tabs-scroll::-webkit-scrollbar { height: 0; }
+.bb-tabs-scroll .bb-tabs { flex-wrap: nowrap; min-width: max-content; }
+.bb-tabs .bb-tab { flex-shrink: 0; }
+
+/* table scroll wrapper (ไม่บีบ col — ใส่ min-width ที่ <table> เอง) */
+.bb-table-scroll { overflow-x: auto; }
+
+/* icon-btn accent variant */
+.bb-icon-btn.is-accent { color: var(--bb-accent-i); }
+.bb-icon-btn.is-accent:hover { background: var(--bb-accent-bg); color: var(--bb-accent-h); }
+
+/* tooltip (hover bubble) */
+.bb-tooltip { position: relative; display: inline-flex; }
+.bb-tooltip-pop { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+  background: var(--bb-str); color: #fff; font-size: .6875rem; line-height: 1.5; padding: .4375rem .625rem;
+  border-radius: var(--bb-r-sm); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .12s;
+  z-index: 30; box-shadow: var(--bb-shadow-md); }
+.bb-tooltip-pop::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--bb-str); }
+.bb-tooltip-pop b { font-family: var(--bb-num-font); }
+.bb-tooltip:hover .bb-tooltip-pop { opacity: 1; }
+
+/* summary box — [ชื่อ | meta] / sub-line (เช่น ผู้เดินทาง|งบ · ทะเบียน(คนขับ)→ปลายทาง) */
+.bb-summary { background: var(--bb-n50); border-radius: var(--bb-r-md); padding: .75rem .875rem; }
+.bb-summary-top { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.bb-summary-name { font-weight: 600; font-size: .9375rem; color: var(--bb-str); }
+.bb-summary-meta { font-size: .8125rem; color: var(--bb-mut); white-space: nowrap; }
+.bb-summary-line { font-size: .8125rem; color: var(--bb-mut); margin-top: .3125rem; display: flex; align-items: center; gap: .375rem; flex-wrap: wrap; }
+.bb-summary-line b { color: var(--bb-str); font-weight: 600; }
+.bb-summary-line [data-lucide] { width: .875rem; height: .875rem; color: var(--bb-ph); }
+
+/* section head — title (accent) + meta ขวา */
+.bb-section-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem 0 .875rem; }
+.bb-section-title { display: inline-flex; align-items: center; gap: .4375rem; font-size: .9375rem; font-weight: 600; color: var(--bb-accent-h); }
+.bb-section-title [data-lucide] { width: 1rem; height: 1rem; }
+
+/* field head — label + meta (เช่น "เลขไมล์กลับ" … "ล่าสุด NNN") */
+.bb-field-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-bottom: .375rem; }
+.bb-field-meta { font-size: .78125rem; color: var(--bb-mut); white-space: nowrap; }
+.bb-field-meta b { font-family: var(--bb-num-font); color: var(--bb-str); font-weight: 600; }
+
+/* inline stats (label เล็ก + ค่า num) */
+.bb-stats { display: flex; gap: 1.75rem; }
+.bb-stat-label { font-size: .6875rem; color: var(--bb-mut); }
+.bb-stat-val { font-family: var(--bb-num-font); font-weight: 600; font-size: .9375rem; margin-top: 1px; }
+
+/* statbar — การ์ดสรุปแบ่งคอลัมน์ (มือถือ summary) */
+.bb-statbar { display: flex; background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); overflow: hidden; }
+.bb-statbar-item { flex: 1; padding: .75rem .625rem; text-align: center; }
+.bb-statbar-item + .bb-statbar-item { border-left: 1px solid var(--bb-n100); }
+.bb-statbar-label { font-size: .6875rem; color: var(--bb-mut); }
+.bb-statbar-val { font-family: var(--bb-num-font); font-weight: 300; font-size: 1.375rem; letter-spacing: -.02em; margin-top: 2px; }
+.bb-statbar-val small { font-size: .75rem; font-weight: 500; color: var(--bb-mut); }
+
+/* card foot (action area) */
+.bb-card-foot { padding: .75rem .875rem; }
+
+/* ============================================================ + · WEEK STRIP (2026-06-30 · JS: bb-components.js [data-bb-weekstrip])
+   7-day pill strip + prev/next · count badge = แดง (เหมือน bell) · select 1 วัน */
+.bb-weekstrip { display: flex; align-items: center; gap: .5rem; }
+.bb-ws-nav { width: 2rem; height: 2rem; border-radius: var(--bb-r-md); border: 1px solid var(--bb-n200); background: #fff; color: var(--bb-mut); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bb-ws-nav:hover { background: var(--bb-n50); color: var(--bb-str); }
+.bb-ws-nav [data-lucide] { width: 1rem; height: 1rem; }
+.bb-ws-strip { display: flex; justify-content: space-between; flex: 1; }
+.bb-ws-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .25rem; cursor: pointer; background: none; border: none; }
+.bb-ws-dow { font-size: .8125rem; font-weight: 400; color: var(--bb-mut); }
+.bb-ws-day.is-sun .bb-ws-dow, .bb-ws-day.is-sun .bb-ws-dnum { color: var(--bb-dg); }
+.bb-ws-day.is-sat .bb-ws-dow, .bb-ws-day.is-sat .bb-ws-dnum { color: var(--bb-info); }
+.bb-ws-day.is-on .bb-ws-dow { font-weight: 600; color: var(--bb-accent-i); }
+.bb-ws-day:hover .bb-ws-dow { color: var(--bb-str); }
+.bb-ws-dnum-wrap { width: 2rem; height: 2rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.bb-ws-dnum { font-family: var(--bb-num-font); font-size: .8125rem; font-weight: 600; color: var(--bb-str); }
+.bb-ws-dnum-active { width: 2rem; height: 2rem; border-radius: 50%; background: var(--bb-accent-i); color: #fff; font-family: var(--bb-num-font); font-size: .8125rem; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.bb-ws-day.is-today .bb-ws-dnum-wrap { box-shadow: inset 0 0 0 1.5px var(--bb-accent); border-radius: 50%; }
+.bb-ws-ind { height: .375rem; display: flex; align-items: center; justify-content: center; }
+.bb-ws-ind-dot { width: .375rem; height: .375rem; border-radius: 50%; background: var(--bb-n300); }
+.bb-ws-ind-bar { height: .375rem; border-radius: 999px; }
+.bb-ws-ind-bar.is-wr { width: 1.25rem; background: var(--bb-wr); }
+.bb-ws-ind-bar.is-dg { width: 2rem; background: var(--bb-dg); }
+
+/* ============================================================ + · DATE PICKER (single · 2026-06-30 · JS: [data-bb-datepicker])
+   Stripe-style: input บน · header < เดือน > · ปฏิทินเดือนเดียว · footer ล้าง/ใช้ · align left|right
+   reuse .bb-cal* + .bb-dr-nav + .bb-dr-input จาก date range */
+.bb-dp { position: relative; display: inline-block; }
+.bb-dp-trigger { min-width: 12rem; }
+.bb-dp-val { font-family: var(--bb-num-font); font-weight: 600; }
+.bb-dp-val.is-ph { color: var(--bb-ph); font-family: 'Sarabun', system-ui, sans-serif; font-weight: 400; }
+.bb-dp-caret { margin-left: auto; }
+.bb-datepicker { position: absolute; top: calc(100% + 6px); left: 0; width: 17rem; background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); box-shadow: var(--bb-shadow-lg); z-index: 1200; }
+.bb-dp.is-align-right .bb-datepicker { left: auto; right: 0; }
+.bb-datepicker[hidden] { display: none; }
+.bb-dp-io { padding: .875rem 1rem 0; }
+.bb-dp-io .bb-dr-input { width: 100%; }
+.bb-dp-head { display: flex; align-items: center; gap: .5rem; padding: .875rem 1rem .25rem; }
+.bb-dp-month { flex: 1; text-align: center; font-family: var(--bb-num-font); font-size: .875rem; font-weight: 600; color: var(--bb-str); }
+.bb-datepicker .bb-cal { width: 100%; }
+.bb-datepicker .bb-cal-grid { padding: .25rem 1rem .25rem; }
+.bb-dp-foot { display: flex; justify-content: flex-end; gap: .5rem; padding: .75rem 1rem; border-top: 1px solid var(--bb-n200); }
+.bb-cal-day.is-selected { background: var(--bb-accent-i); color: #fff; font-weight: 600; border-radius: 999px; }
+
+/* ============================================================ + · TIME PICKER (column · 2026-06-30 · JS: [data-bb-timepicker])
+   คลิกแล้วเลือก ชม./นาที จาก column (อ่านง่ายกว่ากดทีละขั้น) · step ปรับได้ · cap เป็น header แยกชั้น (option ไม่ทะลุ) */
+.bb-tp { position: relative; display: inline-block; }
+.bb-tp-trigger { min-width: 7.5rem; }
+.bb-tp-val { font-family: var(--bb-num-font); font-weight: 600; font-size: 1rem; letter-spacing: .01em; }
+.bb-tp-caret { margin-left: auto; }
+.bb-tp-trigger.is-warn { border-color: var(--bb-wr); background: var(--bb-wr-bg); }
+.bb-tp-trigger.is-warn .bb-tp-val, .bb-tp-trigger.is-warn [data-lucide] { color: var(--bb-wr-tx); }
+.bb-timepicker { position: absolute; top: calc(100% + 6px); left: 0; width: 12.5rem; background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); box-shadow: var(--bb-shadow-lg); z-index: 1200; overflow: hidden; }
+.bb-timepicker[hidden] { display: none; }
+.bb-tp-cols { display: flex; }
+.bb-tp-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.bb-tp-col + .bb-tp-col { border-left: 1px solid var(--bb-n100); }
+.bb-tp-cap { background: #fff; font-size: .625rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--bb-mut); text-align: center; padding: .5rem 0 .4375rem; border-bottom: 1px solid var(--bb-n100); }
+.bb-tp-body { position: relative; overflow-y: auto; max-height: 9.875rem; padding: 6px; scrollbar-width: thin; }
+.bb-tp-body::-webkit-scrollbar { width: 8px; }
+.bb-tp-body::-webkit-scrollbar-thumb { background: var(--bb-n200); border-radius: 99px; }
+.bb-tp-opt { font-family: var(--bb-num-font); font-size: .875rem; text-align: center; padding: .4375rem 0; border-radius: var(--bb-r-sm); cursor: pointer; color: var(--bb-str); margin-bottom: 1px; }
+.bb-tp-opt:hover { background: var(--bb-n100); }
+.bb-tp-opt.is-on { background: var(--bb-accent-i); color: #fff; font-weight: 600; }
+.bb-tp-opt.is-off { color: var(--bb-n300); cursor: not-allowed; }
+.bb-tp-opt.is-off:hover { background: none; }
+/* time range = 2 ช่อง เริ่ม→สิ้นสุด · end กันเวลาก่อน start · warn เมื่อก่อนเกณฑ์ */
+.bb-timerange { display: inline-flex; align-items: center; gap: .625rem; }
+.bb-tr-arrow { color: var(--bb-mut); display: inline-flex; }
+.bb-tr-arrow [data-lucide] { width: 1rem; height: 1rem; }
+
+/* ============================================================ + · COMBO (searchable dropdown · 2026-06-30 · JS: [data-bb-combo])
+   trigger → popover (ช่องค้นหา + รายการกรองสด) · เลือก = set hidden + event */
+.bb-combo { position: relative; display: inline-block; }
+.bb-combo-trigger { min-width: 13rem; }
+.bb-combo-val { font-weight: 600; }
+.bb-combo-val.is-ph { color: var(--bb-ph); font-weight: 400; }
+.bb-combo-caret { margin-left: auto; }
+.bb-combo-pop { position: absolute; top: calc(100% + 6px); left: 0; width: 100%; min-width: 13rem; background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md); box-shadow: var(--bb-shadow-md); z-index: 1200; padding: 7px; }
+.bb-combo-pop[hidden] { display: none; }
+.bb-combo-search { position: relative; margin-bottom: 5px; }
+.bb-combo-search [data-lucide] { position: absolute; left: .625rem; top: 50%; transform: translateY(-50%); width: .9375rem; height: .9375rem; color: var(--bb-mut); }
+.bb-combo-search input { width: 100%; font-size: .8125rem; background: var(--bb-n100); border: 1px solid transparent; border-radius: var(--bb-r-sm); padding: .4375rem .625rem .4375rem 2rem; outline: none; }
+.bb-combo-search input:focus { background: #fff; border-color: var(--bb-accent); box-shadow: var(--bb-ring); }
+.bb-combo-list { max-height: 13rem; overflow-y: auto; scrollbar-width: thin; }
+.bb-combo-opt { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .875rem; padding: .5rem .6875rem; border-radius: var(--bb-r-sm); cursor: pointer; color: var(--bb-str); }
+.bb-combo-opt:hover, .bb-combo-opt.is-active { background: var(--bb-n50); }
+.bb-combo-opt.is-on { background: var(--bb-accent-bg); color: var(--bb-accent-h); font-weight: 600; }
+.bb-combo-opt [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-accent-i); }
+.bb-combo-empty { font-size: .8125rem; color: var(--bb-mut); text-align: center; padding: .875rem; }
+
+/* ============================================================ + · UPLOAD (dropzone · 2026-06-30 · JS: [data-bb-upload])
+   คลิก/ลากวางไฟล์ → รายการไฟล์ (ชื่อ · ขนาด · ลบ) · single/multiple */
+.bb-upload { display: block; }
+.bb-upload-zone { display: flex; flex-direction: column; align-items: center; gap: .5rem; text-align: center; border: 1.5px dashed var(--bb-n300); border-radius: var(--bb-r-lg); padding: 1.5rem 1.25rem; background: var(--bb-n50); cursor: pointer; transition: .12s; }
+.bb-upload-zone:hover, .bb-upload.is-drag .bb-upload-zone { border-color: var(--bb-accent); background: var(--bb-accent-bg); }
+.bb-upload-ic { width: 2.75rem; height: 2.75rem; border-radius: var(--bb-r-lg); background: #fff; border: 1px solid var(--bb-n200); display: flex; align-items: center; justify-content: center; color: var(--bb-accent-i); }
+.bb-upload-ic [data-lucide] { width: 1.375rem; height: 1.375rem; }
+.bb-upload-title { font-size: .875rem; font-weight: 500; color: var(--bb-str); }
+.bb-upload-title b { color: var(--bb-accent-i); font-weight: 600; }
+.bb-upload-hint { font-size: .75rem; color: var(--bb-mut); }
+.bb-upload-list { margin-top: .75rem; display: flex; flex-direction: column; gap: .5rem; }
+.bb-upload-list:empty { display: none; }
+.bb-upload-file { display: flex; align-items: center; gap: .625rem; padding: .5rem .75rem; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md); background: #fff; }
+.bb-upload-ftype { width: 1.125rem; height: 1.125rem; color: var(--bb-mut); flex-shrink: 0; }
+.bb-upload-fname { font-size: .8125rem; color: var(--bb-str); font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-upload-fsize { font-family: var(--bb-num-font); font-size: .75rem; color: var(--bb-mut); flex-shrink: 0; }
+.bb-upload-fx { width: 1.5rem; height: 1.5rem; border: none; background: none; color: var(--bb-ph); cursor: pointer; border-radius: var(--bb-r-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bb-upload-fx:hover { background: var(--bb-n100); color: var(--bb-dg); }
+.bb-upload-fx [data-lucide] { width: .9375rem; height: .9375rem; }
+
+/* ============================================================ + · BELL / ALERT ICON (2026-06-30 · static · count จาก server)
+   ปุ่มไอคอนแจ้งเตือน + count badge แดง · เปิด panel ผ่าน on_click (controller ผูกเอง) */
+.bb-bell { position: relative; width: 2.375rem; height: 2.375rem; border-radius: var(--bb-r-md); border: 1px solid var(--bb-n200); background: #fff; color: var(--bb-mut); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.bb-bell:hover { background: var(--bb-n50); color: var(--bb-str); }
+.bb-bell.is-ghost { border-color: transparent; background: transparent; }
+.bb-bell [data-lucide] { width: 1.1875rem; height: 1.1875rem; }
+.bb-bell-count { position: absolute; top: -5px; right: -5px; min-width: 1.125rem; height: 1.125rem; padding: 0 4px; border-radius: 999px; background: var(--bb-dg); color: #fff; font-family: var(--bb-num-font); font-size: .625rem; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+
+/* ============================================================ + · CALLOUT (inline alert · 2026-06-30 · static)
+   กล่องแจ้งเตือนในหน้า (info/ok/wr/dg) · มี title option · dismissible (data-bb-dismiss) */
+.bb-callout { display: flex; gap: .5rem; border-radius: var(--bb-r-md); padding: .625rem .875rem; font-size: .8125rem; line-height: 1.55; margin-bottom: 1rem;}
+.bb-callout > [data-lucide] { width: 1.125rem; height: 1.125rem; flex-shrink: 0; margin-top: 1px; }
+.bb-callout b { font-weight: 600; }
+.bb-callout-body { flex: 1; min-width: 0; }
+.bb-callout-title { font-weight: 600; margin-bottom: 1px; }
+.bb-callout.is-info { background: var(--bb-accent-bg); color: var(--bb-accent-h); }
+.bb-callout.is-ok { background: var(--bb-ok-bg); color: var(--bb-ok-tx); }
+.bb-callout.is-wr { background: var(--bb-wr-bg); color: var(--bb-wr-tx); }
+.bb-callout.is-dg { background: var(--bb-dg-bg); color: var(--bb-dg-tx); }
+.bb-callout-x { width: 1.5rem; height: 1.5rem; border: none; background: none; color: currentColor; opacity: .6; cursor: pointer; border-radius: var(--bb-r-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bb-callout-x:hover { opacity: 1; background: rgba(10,37,64,.06); }
+.bb-callout-x [data-lucide] { width: .9375rem; height: .9375rem; margin: 0; }
+
+/* ============================================================ + · TOAST (in-app notification · 2026-06-30 · JS API: window.bbToast)
+   เด้งมุมขวาบน · ตั้ง duration ได้ (0 = ค้างไว้) · progress bar นับถอยหลัง · ปิดเอง/กดปิด */
+.bb-toast-region { position: fixed; top: 1rem; right: 1rem; z-index: 1400; display: flex; flex-direction: column; align-items: flex-end; gap: .5rem; pointer-events: none; max-width: calc(100vw - 2rem); }
+.bb-toast { width: 20rem; max-width: 100%; background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md); box-shadow: var(--bb-shadow-lg); overflow: hidden; pointer-events: auto; transform: translateX(120%); opacity: 0; transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .28s; }
+.bb-toast.is-in { transform: translateX(0); opacity: 1; }
+.bb-toast-row { display: flex; gap: .625rem; padding: .75rem .8125rem; }
+.bb-toast-ic { width: 1.75rem; height: 1.75rem; border-radius: var(--bb-r-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bb-toast-ic [data-lucide] { width: 1rem; height: 1rem; }
+.bb-toast.is-ok .bb-toast-ic { background: var(--bb-ok-bg); color: var(--bb-ok-tx); }
+.bb-toast.is-info .bb-toast-ic { background: var(--bb-accent-bg); color: var(--bb-accent-h); }
+.bb-toast.is-wr .bb-toast-ic { background: var(--bb-wr-bg); color: var(--bb-wr-tx); }
+.bb-toast.is-dg .bb-toast-ic { background: var(--bb-dg-bg); color: var(--bb-dg-tx); }
+.bb-toast-body { flex: 1; min-width: 0; }
+.bb-toast-title { font-size: .84375rem; font-weight: 600; color: var(--bb-str); }
+.bb-toast-msg { font-size: .78125rem; color: var(--bb-mut); margin-top: 1px; }
+.bb-toast-x { margin-left: auto; width: 1.5rem; height: 1.5rem; border: none; background: none; color: var(--bb-ph); cursor: pointer; border-radius: var(--bb-r-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bb-toast-x:hover { background: var(--bb-n100); color: var(--bb-str); }
+.bb-toast-x [data-lucide] { width: .875rem; height: .875rem; }
+.bb-toast-bar { height: 3px; background: var(--bb-accent-i); width: 100%; }
+.bb-toast.is-ok .bb-toast-bar { background: var(--bb-ok); }
+.bb-toast.is-wr .bb-toast-bar { background: var(--bb-wr); }
+.bb-toast.is-dg .bb-toast-bar { background: var(--bb-dg); }
+@media (max-width: 575.98px) {
+  .bb-toast-region { left: 1rem; align-items: stretch; }
+  .bb-toast { width: 100%; }
+}
+
+/* ============================================================ + · SIDEBAR (2026-06-30 · JS: bb-components.js [data-bb-sidebar])
+   app shell nav (Stripe-style) — position:fixed + .bb-sidebar-main margin-left
+   account selector · group-label · collapsible group (grid-rows anim) · sub (text เยื้อง)
+   active = พื้น accent-bg · badge = แดง/ขาว · footer = logout แดง
+   ⚠️ prefix .bb-sidebar-* (กันชน .sidebar legacy) */
+.bb-sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 17.25rem; background: #fff; border-right: 1px solid var(--bb-n200); display: flex; flex-direction: column; z-index: 1030; }
+.bb-sidebar-main { margin-left: 17.25rem; }
+/* brand = account selector */
+.bb-sidebar-brand { flex-shrink: 0; display: flex; align-items: center; gap: .25rem; padding: .625rem .5rem .25rem; }
+.bb-sidebar-logo { display: flex; align-items: center; gap: .625rem; flex: 1; min-width: 0; background: none; border: none; cursor: pointer; border-radius: var(--bb-r-md); padding: .5rem; margin-top: 40px; text-align: left; font-family: inherit; }
+.bb-sidebar-logo:hover { background: var(--bb-n50); }
+.bb-sidebar-logo-mark { width: 2rem; height: 2rem; border-radius: var(--bb-r-sm); flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--bb-n100); color: var(--bb-str); font-family: var(--bb-num-font); font-weight: 700; font-size: .8125rem; }
+.bb-sidebar-logo-text { flex: 1; min-width: 0; }
+.bb-sidebar-logo-name { font-size: .875rem; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bb-sidebar-logo-sub { font-size: .75rem; color: var(--bb-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bb-sidebar-logo-caret { color: var(--bb-ph); flex-shrink: 0; display: inline-flex; }
+.bb-sidebar-logo-caret [data-lucide] { width: 1rem; height: 1rem; }
+/* close (drawer mode เท่านั้น — ซ่อน ≥1200) */
+.bb-sidebar-close { display: none; width: 2rem; height: 2rem; flex-shrink: 0; border: none; background: none; color: var(--bb-mut); border-radius: var(--bb-r-md); cursor: pointer; align-items: center; justify-content: center; }
+.bb-sidebar-close:hover { background: var(--bb-n100); color: var(--bb-str); }
+.bb-sidebar-close [data-lucide] { width: 1.1875rem; height: 1.1875rem; }
+/* nav */
+.bb-sidebar-nav { flex: 1; overflow-y: auto; padding: .5rem; scrollbar-width: thin; }
+.bb-sidebar-nav::-webkit-scrollbar { width: 4px; }
+.bb-sidebar-nav::-webkit-scrollbar-thumb { background: var(--bb-n200); border-radius: 99px; }
+/* group label — sentence case · เว้นบนกว้าง (gap ระหว่างกลุ่ม) */
+.bb-sidebar-group-label { font-size: .8125rem; font-weight: 500; color: var(--bb-mut); padding: .375rem .625rem; margin-top: 1.625rem; }
+.bb-sidebar-group-label:first-child { margin-top: .25rem; }
+/* link (top-level + shortcut) */
+.bb-sidebar-link { position: relative; display: flex; align-items: center; gap: .6875rem; font-size: .8925rem; font-weight: 500; color: var(--bb-mut); text-decoration: none; padding: .625rem .5625rem; border-radius: var(--bb-r-md); cursor: pointer; margin-bottom: 6px; transition: background .12s, color .12s; }
+.bb-sidebar-link:hover { background: var(--bb-n50); }
+.bb-sidebar-link.active { background: var(--bb-accent-bg); color: var(--bb-accent-h); font-weight: 600; }
+.bb-sidebar-icon { width: 1.25rem; height: 1.25rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--bb-mut); }
+.bb-sidebar-link.active .bb-sidebar-icon { color: var(--bb-accent-i); }
+.bb-sidebar-icon [data-lucide] { width: 1.1875rem; height: 1.1875rem; }
+.bb-sidebar-link-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* badge — แดง/ขาว · เหมือนกันทุกอัน · ชิดขวา (เฉพาะ leaf → ตำแหน่งตรงกัน) */
+.bb-sidebar-badge { font-family: var(--bb-num-font); font-size: .6875rem; font-weight: 600; min-width: 1.25rem; height: 1.25rem; padding: 0 .4375rem; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: var(--bb-dg); color: #fff; flex-shrink: 0; }
+/* collapsible group (grid-rows animation — ไม่ต้องวัด JS) */
+.bb-sidebar-group { margin-bottom: 1px; }
+.bb-sidebar-group-toggle { width: 100%; background: none; border: none; text-align: left; font-family: inherit; }
+.bb-sidebar-chevron { width: 1rem; height: 1rem; flex-shrink: 0; color: var(--bb-ph); transition: transform .18s ease; display: inline-flex; }
+.bb-sidebar-chevron [data-lucide] { width: 1rem; height: 1rem; }
+.bb-sidebar-group.is-open > .bb-sidebar-group-toggle .bb-sidebar-chevron { transform: rotate(180deg); }
+.bb-sidebar-group-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease; }
+.bb-sidebar-group-body > .bb-sidebar-sub { overflow: hidden; min-height: 0; }
+.bb-sidebar-group.is-open > .bb-sidebar-group-body { grid-template-rows: 1fr; }
+/* sub items — text เยื้อง (ไม่มี dot/icon) ตรงกับ text ของ parent */
+.bb-sidebar-sub { padding-bottom: .25rem; }
+.bb-sidebar-link.sub { padding-top: .375rem; padding-bottom: .375rem; padding-left: 2.625rem; color: var(--bb-mut); }
+.bb-sidebar-link.sub:hover { color: var(--bb-str); }
+.bb-sidebar-link.sub.active { background: var(--bb-accent-bg); color: var(--bb-accent-h); font-weight: 600; }
+/* footer — เหลือแค่ logout (พื้นแดงอ่อน · ตัวแดง · hover แดงเข้มตัวขาว) */
+.bb-sidebar-footer { flex-shrink: 0; border-top: 1px solid var(--bb-n100); padding: .625rem; }
+.bb-sidebar-logout { display: flex; align-items: center; gap: .6875rem; width: 100%; font-family: inherit; font-size: .9375rem; font-weight: 600; color: var(--bb-dg-tx); background: var(--bb-dg-bg); border: none; text-decoration: none; padding: .5rem .625rem; border-radius: var(--bb-r-md); cursor: pointer; transition: .12s; }
+.bb-sidebar-logout:hover { background: var(--bb-dg); color: #fff; }
+.bb-sidebar-logout [data-lucide] { width: 1.1875rem; height: 1.1875rem; }
+/* overlay (drawer backdrop) — JS toggle .is-show */
+.bb-sidebar-overlay { position: fixed; inset: 0; background: rgba(10,37,64,.45); z-index: 1029; opacity: 0; visibility: hidden; transition: opacity .2s ease; }
+.bb-sidebar-overlay.is-show { opacity: 1; visibility: visible; }
+body.bb-drawer-lock { overflow: hidden; }
+/* ── responsive: ≥1200 = expanded (default ด้านบน) · <1200 = drawer (off-canvas) ── */
+@media (min-width: 1200px) {
+  .bb-sidebar-overlay { display: none !important; }
+}
+@media (max-width: 1199.98px) {
+  .bb-sidebar { transform: translateX(-100%); transition: transform .24s ease; box-shadow: var(--bb-shadow-lg); }
+  .bb-sidebar.is-drawer-open { transform: translateX(0); }
+  .bb-sidebar-main { margin-left: 0; }
+  .bb-sidebar-close { display: inline-flex; }
+}
+
+/* ============================================================ + · FILTER BUTTON (2026-06-30 · shell macro bb_filter · JS: [data-bb-filter])
+   dropdown ที่ filter ข้างใน · live (ไม่มีปุ่มยืนยัน — ออกจาก default = filter)
+   active = border accent + badge dot แดง · มีแค่ปุ่มล้าง
+   controls ใส่เอง: [data-filter-group](+[data-multi])/[name] → JS auto-track · event 'bb-filter:change' */
+.bb-filter { position: relative; display: inline-block; }
+.bb-filter-btn { position: relative; display: inline-flex; align-items: center; gap: .5rem; font-size: .875rem; font-weight: 600; line-height: 1; color: var(--bb-str); background: #fff; border: 1px solid var(--bb-n200); border-radius: 0; padding: .5625rem .75rem; cursor: pointer; box-shadow: 0 1px 1px rgba(10,37,64,.04); transition: border-color .12s, box-shadow .12s, color .12s; }
+.bb-filter-btn:hover { border-color: var(--bb-n300); }
+.bb-filter-btn [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-mut); }
+.bb-filter.is-active .bb-filter-btn { border-color: var(--bb-accent); box-shadow: var(--bb-ring); color: var(--bb-accent-h); }
+.bb-filter.is-active .bb-filter-btn [data-lucide] { color: var(--bb-accent-i); }
+/* badge = dot แดงล้วน (ไม่มีเลข) — สีเดียวกับ sidebar */
+.bb-filter-badge { position: absolute; top: -.25rem; right: -.25rem; width: .5rem; height: .5rem; border-radius: 50%; background: var(--bb-dg); display: none; }
+.bb-filter.is-active .bb-filter-badge { display: block; }
+/* mobile: filter button = icon only (ซ่อน label · badge ยังโชว์) */
+@media (max-width: 575.98px) {
+  .bb-filter-btn > span:not(.bb-filter-badge) { display: none; }
+  .bb-filter-btn { padding: .5rem; }
+}
+/* panel */
+.bb-filter-pop { position: absolute; top: calc(100% + 6px); left: 0; width: 18rem; background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); box-shadow: var(--bb-shadow-lg); z-index: 1200; }
+.bb-filter.is-align-right .bb-filter-pop { left: auto; right: 0; }
+.bb-filter-pop[hidden] { display: none; }
+.bb-filter-head { display: flex; align-items: center; justify-content: space-between; padding: .75rem .875rem; border-bottom: 1px solid var(--bb-n100); }
+.bb-filter-title { font-size: .8125rem; font-weight: 600; color: var(--bb-str); }
+.bb-filter-clear { font-size: .78125rem; font-weight: 600; color: var(--bb-accent-i); background: none; border: none; cursor: pointer; padding: .25rem .375rem; border-radius: var(--bb-r-sm); display: none; align-items: center; gap: .25rem; }
+.bb-filter-clear:hover { background: var(--bb-accent-bg); }
+.bb-filter-clear [data-lucide] { width: .8125rem; height: .8125rem; }
+.bb-filter.is-active .bb-filter-clear { display: inline-flex; }
+.bb-filter-body { padding: .875rem; display: flex; flex-direction: column; gap: 1rem; max-height: 21rem; overflow-y: auto; scrollbar-width: thin; }
+.bb-filter-sec-label { font-size: .6875rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--bb-mut);}
+.bb-filter-chips { display: flex; flex-wrap: wrap; gap: .375rem; }
+.bb-filter-body .bb-seg { display: flex; width: 100%; }
+.bb-filter-body .bb-seg-btn { flex: 1; text-align: center; }
+.bb-filter-select { width: 100%; font-size: .8125rem; color: var(--bb-str); background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-sm); padding: .5rem .625rem; outline: none; cursor: pointer; }
+.bb-filter-select:focus { border-color: var(--bb-accent); box-shadow: var(--bb-ring); }
+
+/* ============================================================ + · RANGE SLIDER (2026-06-30 · macro bb_slider · JS: [data-bb-slider])
+   single | dual (เลือกช่วง) · ลาก/คีย์บอร์ด/คลิกราง · bubble โชว์ค่าตลอด · scale min–max
+   เซ็ต hidden input ให้ post ได้ · event 'bb-slider:change' */
+.bb-slider { width: 100%; padding-top: 1.75rem; }   /* เผื่อที่ bubble ที่โชว์ตลอดด้านบน */
+.bb-slider-rail { position: relative; height: 1.5rem; display: flex; align-items: center; cursor: pointer; touch-action: none; }
+.bb-slider-track { position: absolute; left: 0; right: 0; height: 6px; border-radius: 999px; background: var(--bb-n200); }
+.bb-slider-fill { position: absolute; height: 6px; border-radius: 999px; background: var(--bb-accent-i); }
+.bb-slider-thumb { position: absolute; top: 50%; width: 1.125rem; height: 1.125rem; border-radius: 50%; background: #fff; border: 2px solid var(--bb-accent-i); box-shadow: var(--bb-shadow-sm); cursor: grab; transform: translate(-50%, -50%); padding: 0; transition: box-shadow .12s, border-color .12s; z-index: 2; }
+.bb-slider-thumb:hover { border-color: var(--bb-accent-h); }
+.bb-slider-thumb:focus-visible { outline: none; box-shadow: var(--bb-ring); }
+.bb-slider-thumb.is-active { cursor: grabbing; box-shadow: var(--bb-ring); z-index: 3; }
+/* bubble — โชว์ค่าปัจจุบันตลอด (tooltip) */
+.bb-slider-bubble { position: absolute; bottom: calc(100% + 9px); left: 50%; transform: translateX(-50%); background: var(--bb-str); color: #fff; font-size: .6875rem; font-weight: 600; padding: .25rem .4375rem; border-radius: var(--bb-r-sm); white-space: nowrap; box-shadow: var(--bb-shadow-md); }
+.bb-slider-bubble::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: var(--bb-str); }
+.bb-slider-thumb.is-active .bb-slider-bubble { background: var(--bb-accent-i); }
+.bb-slider-thumb.is-active .bb-slider-bubble::after { border-top-color: var(--bb-accent-i); }
+/* scale (min–max) */
+.bb-slider-scale { display: flex; justify-content: space-between; margin-top: .5rem; font-family: var(--bb-num-font); font-size: .6875rem; color: var(--bb-ph); }
+
+/* ─────────────────────────────────────────────────────────────
+   CALENDAR (month + event chips)  ·  macro bb_calendar · JS [data-bb-calendar]
+   namespace .bb-mcal (แยกจาก .bb-cal-* ของ datepicker/daterange)
+   ───────────────────────────────────────────────────────────── */
+.bb-mcal { position: relative; }
+/* toolbar */
+.bb-mcal-toolbar { display: flex; align-items: center; gap: .5rem; padding: 0 .125rem .625rem; }
+.bb-mcal-btn { height: 2.125rem; padding: 0 .8125rem; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bb-n200); background: var(--bb-n0); border-radius: var(--bb-r-md); color: var(--bb-str); font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s; }
+.bb-mcal-btn:hover { background: var(--bb-n50); border-color: var(--bb-n300); }
+.bb-mcal-btn-icon { width: 2.125rem; padding: 0; color: var(--bb-mut); }
+.bb-mcal-btn-icon [data-lucide] { width: 1.0625rem; height: 1.0625rem; }
+.bb-mcal-month { font-size: 1.02rem; font-weight: 700; color: var(--bb-str); margin: 0 .25rem; }
+.bb-mcal-cap { margin-left: auto; font-size: .78rem; color: var(--bb-ph); }
+/* frame + grid */
+.bb-mcal-frame { border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md); overflow: hidden; background: var(--bb-n0); }
+.bb-mcal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.bb-mcal-head { background: var(--bb-n50); border-bottom: 1px solid var(--bb-n200); }
+.bb-mcal-hc { text-align: center; padding: .5625rem 0; font-size: .72rem; font-weight: 700; letter-spacing: .04em; color: var(--bb-mut); }
+.bb-mcal-hc.is-sun { color: var(--bb-dg-tx); }
+.bb-mcal-hc.is-sat { color: var(--bb-accent-i); }
+/* cell — สูงเท่ากันตายตัว, ล้นให้ตัด */
+.bb-mcal-cell { height: 7rem; padding: .375rem .4375rem; display: flex; flex-direction: column; gap: .1875rem; cursor: pointer; overflow: hidden; border-right: 1px solid var(--bb-n100); border-bottom: 1px solid var(--bb-n100); transition: background .08s; }
+.bb-mcal-cell:nth-child(7n) { border-right: 0; }
+.bb-mcal-cell:hover { background: var(--bb-n50); }
+.bb-mcal-cell.is-out { background: var(--bb-n50); cursor: default; }
+.bb-mcal-cell.is-out .bb-mcal-dn { color: var(--bb-ph); }
+.bb-mcal-cell.is-sel { background: var(--bb-accent-bg); }
+.bb-mcal-top { display: flex; align-items: center; min-height: 1.375rem; flex-shrink: 0; }
+.bb-mcal-dn { margin-left: auto; width: 1.375rem; height: 1.375rem; display: inline-flex; align-items: center; justify-content: center; font-family: var(--bb-num-font); font-feature-settings: 'tnum'; font-size: .75rem; font-weight: 500; color: var(--bb-mut); line-height: 1; }
+.bb-mcal-cell.is-today .bb-mcal-dn { border: 1.5px solid var(--bb-str); border-radius: 50%; color: var(--bb-str); font-weight: 700; }
+.bb-mcal-cell.is-sel .bb-mcal-dn { background: var(--bb-accent-i); color: #fff; border-radius: 50%; }
+/* event chips */
+.bb-mcal-ec { display: flex; flex-direction: column; gap: .125rem; min-height: 0; overflow: hidden; }
+.bb-mcal-ev { display: flex; align-items: center; gap: .25rem; min-width: 0; flex-shrink: 0; font-size: .71rem; font-weight: 500; padding: .125rem .3125rem; border-radius: var(--bb-r-xs); }
+.bb-mcal-ev-t { font-family: var(--bb-num-font); font-feature-settings: 'tnum'; font-weight: 700; flex-shrink: 0; }
+.bb-mcal-ev-d { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-mcal-ev.is-ok      { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
+.bb-mcal-ev.is-wr      { background: var(--bb-wr-bg);   color: var(--bb-wr-tx); }
+.bb-mcal-ev.is-dg      { background: var(--bb-dg-bg);   color: var(--bb-dg-tx); }
+.bb-mcal-ev.is-info    { background: var(--bb-info-bg);  color: var(--bb-info-tx); }
+.bb-mcal-ev.is-neutral { background: var(--bb-n100);     color: var(--bb-mut); }
+.bb-mcal-more { font-size: .7rem; font-weight: 600; color: var(--bb-mut); cursor: pointer; flex-shrink: 0; }
+.bb-mcal-more:hover { color: var(--bb-accent-i); }
+/* overflow popover */
+.bb-mcal-pop { position: absolute; z-index: 40; width: 17rem; background: var(--bb-n0); border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); box-shadow: var(--bb-shadow-lg); overflow: hidden; }
+.bb-mcal-pop-hd { display: flex; align-items: center; gap: .5rem; padding: .625rem .8125rem; border-bottom: 1px solid var(--bb-n100); }
+.bb-mcal-pop-title { font-size: .88rem; font-weight: 700; color: var(--bb-str); }
+.bb-mcal-pop-count { font-size: .72rem; font-weight: 600; color: var(--bb-mut); background: var(--bb-n100); padding: .125rem .5rem; border-radius: 999px; }
+.bb-mcal-pop-book { margin-left: auto; display: inline-flex; align-items: center; gap: .25rem; height: 1.625rem; padding: 0 .625rem; border: 0; background: var(--bb-accent-i); color: #fff; border-radius: var(--bb-r-sm); font-family: inherit; font-size: .72rem; font-weight: 600; cursor: pointer; transition: background .12s; }
+.bb-mcal-pop-book:hover { background: var(--bb-accent-h); }
+.bb-mcal-pop-book [data-lucide] { width: .8125rem; height: .8125rem; }
+.bb-mcal-pop-bd { max-height: 15rem; overflow: auto; padding: .125rem 0; }
+.bb-mcal-prow { display: flex; align-items: center; gap: .5625rem; width: 100%; padding: .5rem .8125rem; border: 0; background: transparent; text-align: left; cursor: pointer; transition: background .08s; }
+.bb-mcal-prow + .bb-mcal-prow { border-top: 1px solid var(--bb-n100); }
+.bb-mcal-prow:hover { background: var(--bb-n50); }
+.bb-mcal-pdot { width: .5rem; height: .5rem; border-radius: 50%; flex-shrink: 0; }
+.bb-mcal-pdot.is-ok      { background: var(--bb-ok); }
+.bb-mcal-pdot.is-wr      { background: var(--bb-wr); }
+.bb-mcal-pdot.is-dg      { background: var(--bb-dg); }
+.bb-mcal-pdot.is-info    { background: var(--bb-info); }
+.bb-mcal-pdot.is-neutral { background: var(--bb-n300); }
+.bb-mcal-ptime { font-family: var(--bb-num-font); font-feature-settings: 'tnum'; font-weight: 700; font-size: .78rem; color: var(--bb-str); width: 2.625rem; flex-shrink: 0; }
+.bb-mcal-pdest { flex: 1; min-width: 0; font-size: .8rem; font-weight: 500; color: var(--bb-str); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-mcal-pchev { color: var(--bb-ph); width: .9375rem; height: .9375rem; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MILEAGE PAGE (bb-ml-*) — ย้ายจาก static/vehicle/css/vehicle_mileage.css (2026-07-01)
+   page-specific ของหน้าเลขไมล์: toolbar · filter override · table · modal · cards
+   (เดิมไฟล์แยกไม่ถูก <link> → ย้ายเข้า components.css ที่โหลดจริง · เลิกใช้ prefix mlg)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* layout = Bootstrap flex util (.d-flex .gap-2 .ms-auto .flex-grow-1)
+   min-width ของ search ย้ายไปอยู่ที่ .bb-search.is-expanded แทน (2026-07-07)
+   — ตอน collapse เป็น icon กลม ไม่ให้ wrapper บังคับกว้าง 14rem จนดันตัวกรองอื่นห่างออกไป */
+/* export (bb_button mobile_icon) + filter mobile icon-only · caret/badge = shared component
+   (components.css .bb-btn.is-mobile-icon + .bb-filter-btn) — ไม่ override ที่นี่แล้ว */
+
+/* AJAX filter — dim results during fetch */
+#bbMlResults { transition: opacity 0.12s ease; }
+#bbMlResults.is-loading { opacity: 0.55; pointer-events: none; }
+
+/* ───────────────────────── Filter (bb_filter · slider · bb_dropdown · combo) ───
+   popover overflow:visible กัน menu/combo popover (absolute) ถูก clip
+   controls ทุกตัวเต็มความกว้าง (layout #6) */
+/* max-height:none → popover สูงพอบรรจุ trigger ทุกตัว (ไม่ล้นออกนอกกล่อง) ·
+   overflow:visible → เฉพาะ dropdown menu (absolute) ที่เปิดถึง escape ออกนอกได้ */
+#bbMlFilter .bb-filter-body { overflow: visible; max-height: none; }
+/* bb-select เต็มความกว้าง แต่ cap 18rem (req1) · dropdown escape จาก overflow:visible ด้านบน */
+#bbMlFilter .bb-ml-dd { max-width: 18rem; }
+#bbMlFilter .bb-select,
+#bbMlFilter .bb-combo,
+#bbMlFilter .bb-combo-trigger { width: 100%; min-width: 0; max-width: 18rem; }
+#bbMlFilter .bb-select { justify-content: flex-start; }
+#bbMlFilter .bb-ml-dd-label,
+#bbMlFilter .bb-combo-val { flex: 1 1 auto; text-align: left; }
+#bbMlFilter .bb-ml-dd-label { font-weight: 600; color: var(--bb-str); }
+
+
+/* dropdown menu (bb-menu) — absolute ใต้ trigger · scroll เองเมื่อ option เยอะ */
+.bb-ml-dd { position: relative; }
+.bb-ml-dd-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    z-index: 1300;
+    max-height: 14rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+.bb-ml-dd-menu[hidden] { display: none; }
+
+/* mobile: bb-select (popover) + bb-dr-trigger (toolbar) เต็ม row */
+@media (max-width: 575.98px) {
+    /* popover: ยกเลิก cap 18rem → เต็มความกว้าง popover */
+    #bbMlFilter .bb-ml-dd,
+    #bbMlFilter .bb-select,
+    #bbMlFilter .bb-combo,
+    #bbMlFilter .bb-combo-trigger { max-width: none; }
+    /* toolbar daterange (.bb-dr > .bb-select.bb-dr-trigger) เต็ม row */
+    .bb-ml-toolbar .bb-dr { width: 100%; }
+    .bb-ml-toolbar .bb-dr-trigger { width: 100%; }
+}
+
+/* ───────────────────────── Zone 3: Table overrides ────────────────────── */
+/* col ไม่บีบ → table กว้างตามเนื้อ (max-content) · wrapper scroll แนวนอนแทน */
+.bb-table-scroll { overflow-x: auto; }
+.bb-table { width: max-content; min-width: 100%; }
+.bb-table td { white-space: nowrap; }
+
+/* checkbox = bb-check-box (span) · icon โชว์เฉพาะตอน is-on (กันไอคอน 24px ล้นตอนยังไม่เลือก) */
+.bb-check-box [data-lucide] { display: none; }
+.bb-check-box.is-on [data-lucide] { display: block; }
+.bb-check-box.is-disabled { opacity: 0.4; cursor: not-allowed; }
+.bb-ml-col-check { width: 2rem; }
+.bb-ml-col-actions { width: 2.5rem; }
+.bb-ml-dash { color: var(--bb-mut); }
+
+/* Row states */
+.bb-ml-row { transition: background 150ms ease; }
+
+
+/* Table cells */
+.bb-ml-col-dest {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bb-ml-col-bk {
+    font-family: var(--bb-num-font);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--bb-str);
+    white-space: nowrap;
+}
+.bb-ml-col-odo { white-space: nowrap; min-width: 130px; }
+.bb-ml-col-cost { font-weight: 600; }
+.bb-ml-group-badge { margin-left: 4px; font-size: 10px; padding: 1px 5px; }
+.bb-ml-group-label { display: inline-flex; align-items: center; gap: 4px; }
+/* .bb-ml-group-label .vc-icon-sm { color: var(--bb-mut); } */
+
+/* Search highlight */
+mark.bb-ml-search-hl {
+    background: rgba(254, 240, 138, 0.9);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODAL: Mileage Entry (bb-modal-* look, Bootstrap modal JS)
+   JS-toggled elements: #fePreview #feRefuelWrap #cManualRow .bb-ml-state
+   CSS ห้ามใส่ display บน element เหล่านั้น — JS คุม
+   ═══════════════════════════════════════════════════════════════════════════ */
+.bb-ml-modal { border-radius: var(--bb-r-lg); overflow: hidden; }
+.bb-ml-dialog { max-width: 520px; }
+
+/* Timestamp box */
+.bb-ml-timestamp-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-sm);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--bb-mut);
+    margin-bottom: 0.875rem;
+}
+.bb-ml-timestamp-box strong { color: var(--bb-str); font-family: var(--bb-num-font); }
+
+/* Realtime preview */
+.bb-ml-preview {
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-sm);
+    padding: 0.75rem;
+    margin-bottom: 0.875rem;
+}
+.bb-ml-preview-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--bb-mut);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+}
+.bb-ml-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+.bb-ml-preview-label { display: block; font-size: 0.75rem; color: var(--bb-mut); margin: 0 0 2px; }
+.bb-ml-preview-value { font-size: 0.875rem; color: var(--bb-str); }
+.bb-ml-preview-value strong { font-family: var(--bb-num-font); }
+.bb-ml-preview-value small { color: var(--bb-mut); }
+
+/* Refuel box */
+.bb-ml-refuel-box {
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-sm);
+    padding: 0.75rem;
+    margin-bottom: 0.875rem;
+}
+.bb-ml-refuel-box .form-check { margin: 0; }
+.bb-ml-refuel-check-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--bb-str);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.bb-ml-refuel-wrap {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--bb-n200);
+}
+
+/* Summary box (complete state) */
+.bb-ml-summary-box {
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-sm);
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.875rem;
+}
+.bb-ml-summary-box--complete {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0;
+}
+
+/* Complete summary rows */
+.bb-ml-complete-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.875rem;
+    color: var(--bb-mut);
+}
+.bb-ml-complete-row strong { color: var(--bb-str); font-family: var(--bb-num-font); }
+.bb-ml-complete-row small { color: var(--bb-mut); font-family: inherit; }
+.bb-ml-complete-row--manual {
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--bb-n200);
+}
+
+/* Modal footer */
+.bb-ml-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bb-n200);
+}
+.bb-ml-modal-footer--split { justify-content: space-between; }
+
+/* ───────────────────────── Mobile cards (d-md-none) ───────────────────── */
+.bb-ml-date-cell--mobile {
+    background: var(--bb-n50);
+    color: var(--bb-mut);
+    font-size: 0.975rem;
+    font-weight: 500;
+    padding: 0.375rem;
+    border-bottom: 1px solid var(--bb-n200);
+    margin-bottom: 0;
+}
+.bb-ml-trip-card {
+    border-radius: var(--bb-r-md);
+    border: 1px solid var(--bb-n200);
+    background: var(--bb-n0);
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+.bb-ml-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 0.875rem 0;
+}
+.bb-ml-card-body { padding: 0.5rem 0.875rem; }
+.bb-ml-card-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--bb-n50);
+    border-top: 1px solid var(--bb-n200);
+}
+.bb-ml-card-stats .bb-stat-label {
+    font-size: 0.6875rem;
+    color: var(--bb-mut);
+    margin-bottom: 2px;
+}
+.bb-ml-card-stats .bb-stat-val {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--bb-str);
+    font-family: var(--bb-num-font);
+}
+
+/* ───────────────────────── Responsive ──────────────────────────────────── */
+/* toolbar mobile layout → Bootstrap flex-wrap จัดเอง (search เต็มบรรทัด · กลุ่มขวา wrap) */
+
+/* Bottom sheet modal on mobile */
+@media (max-width: 575.98px) {
+    .modal .bb-ml-dialog {
+        margin: 0 !important;
+        max-width: 100% !important;
+        align-self: flex-end;
+    }
+    .bb-ml-modal {
+        border-radius: var(--bb-r-xl) var(--bb-r-xl) 0 0;
+        max-height: 90dvh;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .bb-ml-preview-grid { grid-template-columns: 1fr 1fr; }
+}

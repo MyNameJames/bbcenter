@@ -21,9 +21,9 @@
 /* ─────────────────── PAGE BG ───────────────────
    body bg = subtle gray → กลมกลืนกับ topbar + sidebar ที่ใช้ bg-subtle.
    .vc-card / .card ภายในยังคงเป็นพื้นขาว → เด่นออกมาด้วย border */
-body {
+/* body {
     background: var(--vc-bg);
-}
+} */
 
 /* ─────────────────── PAGE HEAD ───────────────────
    ใช้คู่กับ Bootstrap utility ใน markup:
@@ -221,10 +221,6 @@ body {
     stroke-width: 1.5;
 }
 
-/* ─────────────────── LUCIDE ICON SIZE ใน topbar ───────────────────
-   default Lucide SVG render ที่ 24×24 — ใหญ่เกินใน button 32×32
-   ปรับเป็น 18×18 ให้สมดุลกับ breadcrumb text 14px
-   ★ ปรับขนาด icon ได้ที่ rule นี้ (width/height) */
 .vrc-topbar [data-lucide],
 .vrc-topbar svg.lucide,
 .vrc-topbar .ds-btn-icon svg {
@@ -233,13 +229,6 @@ body {
   stroke-width: 1.5;
 }
 
-/* ─────────────────── CALENDAR OVERFLOW POPOVER ───────────────────
-   เปิดจาก trigger ".event-more.vc-cal-more" ในเซลล์ calendar
-   - no shadow (border-only)
-   - no header (trigger label พอแล้ว — ลบ data-bs-title ใน vehicle.js)
-   - grid row: dot | time (44px) | dest (truncate)
-   - status dot 6px ใช้สี --vc-green / --vc-amber / --vc-blue / --vc-red
-   ────────────────────────────────────────────────────────────────── */
 .popover.vc-cal-pop {
     background: var(--vc-bg);
     border: 1px solid var(--vc-border);

@@ -1,0 +1,35 @@
+{# templates/_shared/tab2.html
+   Tabs ที่ port มาจาก app/static/core/mockup-orders.html แบบตรงตัว (.tabs/.tab) (2026-07-07)
+   ⚠️ ใช้แทน bb_tabs ใน vehicle_mileage.html แล้ว (statusTabs) — เพจอื่นยังใช้ bb_tabs เดิม
+   - underline หนา 5px, active = สีดำ (ink), ไม่ active = เทา (gray-500)
+   - macro นี้แค่ render markup+CSS — ไม่มี JS ในตัว (หน้าเจ้าของ data ต้องผูก click handler เอง
+     เพราะแต่ละหน้ามี logic filter/สลับ panel ต่างกัน — ดู vehicle_mileage.js bindStatusTabs())
+   tabs = list ของ dict: {label, value, active}
+#}
+<style>
+.tab2-tabs{
+  display:flex;
+  gap:28px;
+  border-bottom:1px solid #e0e0e0;
+}
+.tab2-tab{
+  padding:10px 2px 14px;
+  font-size:15px;
+  font-weight:600;
+  color:#757575;
+  cursor:pointer;
+  border-bottom:5px solid transparent;
+  transition: color .18s ease, border-color .25s ease;
+}
+.tab2-tab:hover{ color:#06060a; }
+.tab2-tab.active{
+  color:#06060a;
+  border-bottom-color:#06060a;
+}
+</style>
+
+{% macro tab2_tabs(tabs) -%}
+<div class="tab2-tabs">
+{%- for t in tabs %}<div class="tab2-tab{% if t.active %} active{% endif %}"{% if t.value %} data-tab="{{ t.value }}"{% endif %}>{{ t.label }}</div>{% endfor %}
+</div>
+{%- endmacro %}

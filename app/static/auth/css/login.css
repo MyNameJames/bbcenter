@@ -166,35 +166,6 @@ body.login-page {
 .login-toggle:hover { color: var(--vc-fg-muted); }
 .login-toggle svg { width: 18px; height: 18px; stroke: currentColor; }
 
-/* ── Row: remember + forgot ───────────────────── */
-.login-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--vc-space-6);
-}
-.login-remember {
-    display: flex;
-    align-items: center;
-    gap: var(--vc-space-2);
-    font-size: var(--vc-text-sm);
-    color: var(--vc-fg-muted);
-    cursor: pointer;
-    user-select: none;
-}
-.login-remember input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--vc-accent);
-    cursor: pointer;
-}
-.login-forgot {
-    font-size: var(--vc-text-sm);
-    color: var(--vc-accent);
-    text-decoration: none;
-}
-.login-forgot:hover { color: var(--vc-accent-hover); text-decoration: underline; }
-
 /* ── Submit ───────────────────────────────────── */
 .login-btn {
     width: 100%;

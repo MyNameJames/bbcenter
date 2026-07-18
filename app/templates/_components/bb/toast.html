@@ -1,0 +1,21 @@
+{#
+  bb_toast_region — จุดวาง toast (in-app notification) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-toast)
+  JS:   core/js/bb-components.js  → window.bbToast({type, title, msg, duration})
+
+  วาง region 1 ครั้งใน base layout (มุมขวาบน) · ยิง toast ด้วย JS API:
+    bbToast({ type:'ok', title:'บันทึกสำเร็จ', msg:'อัปเดตแล้ว', duration:5000 })
+  type: ok | info | wr | dg · duration ms (0 = ค้างไว้จนกดปิด) · มี progress bar
+
+  bridge flash → toast: ใส่ JSON ใน region แล้ว JS อ่านตอนโหลด
+    {{ bb_toast_region(flashes=[{'type':'ok','title':'บันทึกสำเร็จ'}]) }}
+
+  params:
+    flashes  list ของ {type,title,msg,duration} ยิงทันทีตอนโหลด (optional)
+    id       id บน region
+#}
+{% macro bb_toast_region(flashes=[], id='') -%}
+<div class="bb-toast-region" data-bb-toast-region{% if id %} id="{{ id }}"{% endif %}>
+  {%- if flashes %}<script type="application/json" data-bb-toast-flashes>{{ flashes | tojson }}</script>{% endif -%}
+</div>
+{%- endmacro %}

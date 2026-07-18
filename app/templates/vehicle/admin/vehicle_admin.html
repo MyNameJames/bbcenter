@@ -9,113 +9,94 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/gallery.css') }}">
+    <style>
+        /* ── Page-scoped override (เฉพาะหน้านี้) ──
+           #weekJumpDp เล็กลงเหมือน mockup Case 15 (bootstrap-cases-gallery.html) —
+           ไม่แตะ .bb-dp-trigger กลาง (ยังไม่มีหน้าอื่นใช้ bb_datepicker แต่กันไว้เผื่ออนาคต) ── */
+        #weekJumpDp .bb-dp-trigger {
+            min-width: 0; background: var(--bb-n50); border: none; box-shadow: none;
+            padding: .25rem .625rem; font-size: .8125rem; font-weight: 400; color: var(--bb-mut); gap: .25rem;
+        }
+        #weekJumpDp .bb-dp-trigger [data-lucide] { width: .875rem; height: .875rem; }
+    </style>
 </head>
 <body>
-<div class="container-fluid container-p-y">
+{% set page_section = 'ผู้ดูแลระบบ' %}
+{% set page_title = 'อนุมัติรถ' %}
+
+{# ── Header: mobile/tablet only (xl+ ซ่อน เพราะ sidebar ปรากฏอยู่แล้ว) ── #}
+<div class="d-xl-none">
+    {% include '_shared/header.html' %}
+</div>
+
+<div class="container-fluid">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% set active_menu = 'admin' %}
     {% include '_shared/sidebar.html' %}
 
-    <main class="main-content vc-scope">
-        {% set page_section = 'ผู้ดูแลระบบ' %}
-        {% set page_title = 'อนุมัติรถ' %}
-        {% include '_shared/header.html' %}
+    <main class="bb-sidebar-main">
+        <div class="container-xxl px-1 px-md-5">
 
-        <div class="container-xxl px-3 pt-2">
+            {# ── Desktop page title (xl+ only — แทน header) ── #}
+            <div class="d-none d-xl-block pt-5">
+                <h2 class="m-0 fw-bold pt-3" style="color:var(--bb-accent)">{{ page_title }}</h2>
+            </div>
 
             {# ── Flash messages ─────────────────────────── #}
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                <div class="vc-stack" style="margin-bottom: var(--vc-space-4);">
+                <div class="mb-3">
                     {% for category, message in messages %}
-                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
+                    {% set _co = {'success':'ok','danger':'dg','warning':'wr','info':'info'}.get(category, 'info') %}
+                    <div class="bb-callout is-{{ _co }}">{{ message }}</div>
                     {% endfor %}
                 </div>
                 {% endif %}
             {% endwith %}
 
-            {# ── Page Header (budget.html standard, 2026-06-16) ── #}
-            <div class="fuel-header d-flex align-items-end justify-content-between flex-wrap gap-3">
-                <div>
-                    <h1 class="fw-bold text-accent pt-3">อนุมัติรถ</h1>
-                    <h6 class="text-muted text-header">เลือกคนขับรถ · รถ · ประเภทงาน</h6>
-                </div>
-            </div>
-
-            {# ── Week Navigator (Phase 3 hero — meta row + week strip + date picker) ── #}
-            <div class="va-week-card mb-4">
-                <div class="va-week-meta px-4 py-3 d-flex align-items-center justify-content-between">
-                    <h2 class="va-week-selected" id="selDateHeading"></h2>
-                    <div class="va-week-meta-right">
-                        <button type="button" class="va-week-today" id="weekTodayBtn" title="กลับไปวันนี้">วันนี้</button>
-                        <div class="va-week-picker">
-                            <button type="button" class="va-week-picker-btn" id="weekPickerBtn" aria-expanded="false" aria-haspopup="dialog" title="เลือกวันที่จากปฏิทิน">
-                                <i data-lucide="calendar" class="vc-icon-sm"></i>
-                                <span>เลือกวันที่</span>
-                                <i data-lucide="chevron-down" class="vc-icon-sm va-week-picker-caret"></i>
-                            </button>
-                            <div class="va-cal" id="weekPickerPop" role="dialog" aria-label="เลือกวันที่" hidden>
-                                <div class="va-cal-head">
-                                    <button type="button" class="va-cal-nav" id="calPrevBtn" aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
-                                        <i data-lucide="chevron-left" class="vc-icon-sm"></i>
-                                    </button>
-                                    <span class="va-cal-title" id="calTitle"></span>
-                                    <button type="button" class="va-cal-nav" id="calNextBtn" aria-label="เดือนถัดไป" title="เดือนถัดไป">
-                                        <i data-lucide="chevron-right" class="vc-icon-sm"></i>
-                                    </button>
-                                </div>
-                                <div class="va-cal-grid va-cal-dow" id="calDow"></div>
-                                <div class="va-cal-grid" id="calDays"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="va-week-bar px-2 d-flex align-items-center justify-content-center gap-2 mb-2">
-                    <button type="button" class="va-week-nav" onclick="shiftWeek(-1)" aria-label="สัปดาห์ก่อนหน้า" title="สัปดาห์ก่อนหน้า">
-                        <i data-lucide="chevron-left" class="vc-icon-sm"></i>
-                    </button>
-                    <div class="va-week-strip" id="wnStrip"></div>
-                    <button type="button" class="va-week-nav" onclick="shiftWeek(1)" aria-label="สัปดาห์ถัดไป" title="สัปดาห์ถัดไป">
-                        <i data-lucide="chevron-right" class="vc-icon-sm"></i>
-                    </button>
-                </div>
-            </div>
 
             {# ── Main Split (Bootstrap row/col) ───────────── #}
-            <div class="row g-4">
+            <div class="row g-4 pt-4">
 
-                {# ─── Left col-8 : Booking + Trip stack ─── #}
+                {# ─── Left col-8 : date context (weekstrip/tab) + Booking + Trip stack ─── #}
                 <div class="col-12 col-lg-8">
                     <div class="d-flex flex-column gap-4">
 
-                        {# Booking section (ก่อน) — flat (ไม่มีกรอบ card) #}
-                        <div class="va-flat" id="sectionBefore">
-                            <div class="vc-card-head d-flex align-items-center justify-content-between">
-                                <h3 class="vc-card-head-title col">รายการจอง
-                                    <span class="vc-card-head-meta" id="beforeCount"></span>
+                        {# ── Date context — bb-* component (WeekStrip) ห่อ bb-card ── #}
+                        <div class="bb-card rounded-1 p-3" id="adminWeekStripWrap">
+                            <div id="adminDateBar" class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                                <h4 class="fw-bold mb-0">รายละเอียด</h4>
+                                {{ component(week_datepicker) }}
+                            </div>
+                            {{ component(weekstrip) }}
+                        </div>
+
+                        {# Booking section (ก่อน) #}
+                        <div class="bb-card" id="sectionBefore">
+                            <div class="bb-card-head">
+                                <h3 class="bb-card-title mb-0">รายการจอง
+                                    <span style="font-size:.8125rem;font-weight:400;color:var(--bb-mut);margin-left:.375rem;" id="beforeCount"></span>
                                 </h3>
-                                <div class="vc-card-head-actions d-inline-flex col-auto" id="beforeHeaderRight">
-                                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="btnMerge" onclick="toggleGroupMode()" title="รวมหลายงานในเที่ยวเดียว">
-                                        <i data-lucide="merge" class="vc-icon-sm"></i>
+                                <div class="d-inline-flex gap-2" id="beforeHeaderRight">
+                                    <button type="button" class="bb-btn is-sec is-sm" id="btnMerge" onclick="toggleGroupMode()" title="รวมหลายงานในเที่ยวเดียว">
+                                        <i data-lucide="merge"></i>
                                         รวมงาน
                                     </button>
-                                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="btnNotify" onclick="toggleNotifyMode()" title="แจ้งผ่าน Telegram">
-                                        <i data-lucide="send" class="vc-icon-sm"></i>
+                                    <button type="button" class="bb-btn is-sec is-sm" id="btnNotify" onclick="toggleNotifyMode()" title="แจ้งผ่าน Telegram">
+                                        <i data-lucide="send"></i>
                                         แจ้งเตือน
                                     </button>
-                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="btnMergeCancel" onclick="cancelGroupMode()" style="display:none" title="ยกเลิกการรวมงาน">ยกเลิก</button>
-                                    <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="btnMergeConfirm" onclick="confirmMerge()" style="display:none" disabled title="ยืนยันรวมงานที่เลือก">
-                                        <i data-lucide="check" class="vc-icon-sm"></i>
+                                    <button type="button" class="bb-btn is-ghost is-sm" id="btnMergeCancel" onclick="cancelGroupMode()" style="display:none" title="ยกเลิกการรวมงาน">ยกเลิก</button>
+                                    <button type="button" class="bb-btn is-pri is-sm" id="btnMergeConfirm" onclick="confirmMerge()" style="display:none" disabled title="ยืนยันรวมงานที่เลือก">
+                                        <i data-lucide="check"></i>
                                         รวม (0)
                                     </button>
-                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="btnNotifyCancel" onclick="cancelNotifyMode()" style="display:none" title="ยกเลิกการแจ้ง">ยกเลิก</button>
-                                    <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" id="btnNotifyConfirm" onclick="confirmNotify()" style="display:none" disabled title="ส่งแจ้งเตือนผ่าน Telegram">
-                                        <i data-lucide="send" class="vc-icon-sm"></i>
+                                    <button type="button" class="bb-btn is-ghost is-sm" id="btnNotifyCancel" onclick="cancelNotifyMode()" style="display:none" title="ยกเลิกการแจ้ง">ยกเลิก</button>
+                                    <button type="button" class="bb-btn is-pri is-sm" id="btnNotifyConfirm" onclick="confirmNotify()" style="display:none" disabled title="ส่งแจ้งเตือนผ่าน Telegram">
+                                        <i data-lucide="send"></i>
                                         แจ้ง (0)
                                     </button>
                                 </div>
@@ -123,50 +104,25 @@
 
                             {# Booking list — แสดงทุกรายการเสมอ (เลิกใช้ collapsed state) #}
                             <div id="beforeExpanded">
-                                <div class="va-filter-tabs pt-2">
-                                    <button class="ftab active" data-filter="all" onclick="setFilter('all',this)" title="แสดงทั้งหมด">
-                                        ทั้งหมด <span class="ftab-cnt" id="cnt-all">0</span>
-                                    </button>
-                                    <button class="ftab" data-filter="pending" onclick="setFilter('pending',this)" title="รออนุมัติเท่านั้น">
-                                        รออนุมัติ <span class="ftab-cnt" id="cnt-pending">0</span>
-                                    </button>
-                                    <button class="ftab" data-filter="waiting_approver" onclick="setFilter('waiting_approver',this)" title="ส่ง approver แล้ว">
-                                        ส่ง Approver <span class="ftab-cnt" id="cnt-approver">0</span>
-                                    </button>
-                                    <button class="ftab" data-filter="approved" onclick="setFilter('approved',this)" title="อนุมัติแล้วเท่านั้น">
-                                        อนุมัติแล้ว <span class="ftab-cnt" id="cnt-approved">0</span>
-                                    </button>
-                                    <button class="ftab" data-filter="rejected" onclick="setFilter('rejected',this)" title="ปฏิเสธเท่านั้น">
-                                        ปฏิเสธ <span class="ftab-cnt" id="cnt-rejected">0</span>
-                                    </button>
+                                {# Filter — bb-* component (Tabs) ห่อ div ไว้จัด layout · scroll-x บนจอแคบ #}
+                                <div class="bb-tabs-scroll pt-2 px-3" id="adminTabsWrap">
+                                    {{ component(tabs) }}
                                 </div>
-                                <div class="va-list" id="bookingList"></div>
+                                <div class="p-3" id="bookingList"></div>
                             </div>
-                        </div>
-
-                        {# Trip section (หลัง) #}
-                        <div class="va-flat" id="sectionAfter">
-                            <div class="vc-card-head">
-                                <h3 class="vc-card-head-title">รายละเอียดการเดินทาง
-                                    <span class="vc-card-head-meta" id="afterCount">0 รายการ</span>
-                                </h3>
-                            </div>
-                            <div class="va-list" id="tripList"></div>
                         </div>
 
                     </div>
                 </div>
 
-                {# ─── Right col-4 : Vehicle status (sticky) ─── #}
+                {# ─── Right col-4 : Vehicle status (sticky) — โครง Case 10 (bootstrap-cases-gallery.html#case16) ─── #}
                 <div class="col-12 col-lg-4">
-                    <div class="vc-card va-vehicle-card">
-                        <div class="vc-card-head">
-                            <h3 class="vc-card-head-title">
-                                <i data-lucide="car" class="vc-icon-sm"></i>
-                                การใช้รถ
-                            </h3>
+                    <div class="bb-card border-1 shadow-sm rounded-1">
+                        <div class="card-body p-4">
+                            <h3 class="h6 fw-bold mb-3">การใช้รถ</h3>
+                            <hr class="mt-0 mb-3">
+                            <div class="bb-buy-list" id="vehicleList"></div>
                         </div>
-                        <div class="va-vehicle-grid" id="vehicleList"></div>
                     </div>
                 </div>
 
@@ -179,87 +135,83 @@
 {# ════════════════════════════════════════════════
    MODAL: Approve & Assign Resources
    ════════════════════════════════════════════════ #}
-<div class="modal fade vc-modal" id="assignModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
-            <div class="modal-header">
+            <div class="bb-modal-head">
                 <div>
-                    <h5 class="modal-title">
-                        <i data-lucide="circle-check" class="vc-icon-sm"></i>
-                        <span id="assignModalTitle">อนุมัติรถและเลือกคนขับ</span>
-                    </h5>
-                    <p class="va-modal-sub" id="assignModalSub"></p>
+                    <div class="bb-modal-title" id="assignModalTitle">อนุมัติรถและเลือกคนขับ</div>
+                    <div class="bb-modal-sub" id="assignModalSub"></div>
                 </div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
+                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><i data-lucide="x"></i></button>
             </div>
 
-            <div class="modal-body">
+            <div class="bb-modal-body">
 
-                <div class="vc-form-row vc-form-row-2">
-                    <div class="vc-form-group">
-                        <label class="vc-label" for="modalVehSel">เลือกรถ</label>
-                        <select class="vc-select" id="modalVehSel" onchange="checkAssignReady()">
-                            <option value="">— เลือกรถ —</option>
-                        </select>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <div class="bb-field mb-0">
+                            <label class="bb-label" for="modalVehSel">เลือกรถ</label>
+                            <select class="bb-input" id="modalVehSel" onchange="checkAssignReady()">
+                                <option value="">— เลือกรถ —</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="vc-form-group">
-                        <label class="vc-label" for="modalDrvSel">เลือกคนขับ</label>
-                        <select class="vc-select" id="modalDrvSel" onchange="checkAssignReady()">
-                            <option value="">— เลือกคนขับ —</option>
-                        </select>
+                    <div class="col-6">
+                        <div class="bb-field mb-0">
+                            <label class="bb-label" for="modalDrvSel">เลือกคนขับ</label>
+                            <select class="bb-input" id="modalDrvSel" onchange="checkAssignReady()">
+                                <option value="">— เลือกคนขับ —</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 {# conflict warnings — full width ใต้ select grid #}
-                <div class="va-conflict-warn" id="vehConflictWarn" hidden>
-                    <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
+                <div class="bb-callout is-wr" id="vehConflictWarn" hidden>
+                    <i data-lucide="triangle-alert"></i>
                     <span data-conflict-text></span>
                 </div>
-                <div class="va-conflict-warn p-2" id="drvConflictWarn" hidden>
-                    <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
+                <div class="bb-callout is-wr" id="drvConflictWarn" hidden>
+                    <i data-lucide="triangle-alert"></i>
                     <span data-conflict-text></span>
                 </div>
 
-                <div class="va-modal-section">ประเภทค่าใช้จ่าย</div>
-                <div class="va-exp-tabs" id="modalExpTabs">
-                    <button type="button" class="adm-exp-tab active" data-type="central" onclick="setModalExpType('central',this)" title="ใช้งบส่วนกลาง">
-                        <i data-lucide="building" class="vc-icon-sm"></i> ส่วนกลาง
-                    </button>
-                    <button type="button" class="adm-exp-tab" data-type="department" onclick="setModalExpType('department',this)" title="ใช้งบส่วนกอง">
-                        <i data-lucide="users" class="vc-icon-sm"></i> ส่วนกอง
-                    </button>
-                    <button type="button" class="adm-exp-tab" data-type="personal" onclick="setModalExpType('personal',this)" title="จ่ายเอง">
-                        <i data-lucide="user" class="vc-icon-sm"></i> ส่วนตัว
-                    </button>
+                <div class="fw-semibold mb-2" style="font-size:.8125rem;color:var(--bb-str)">ประเภทค่าใช้จ่าย</div>
+                <div class="bb-seg mb-2" id="modalExpTabs">
+                    <button type="button" class="bb-seg-btn is-on" data-type="central" onclick="setModalExpType('central',this)" title="ใช้งบส่วนกลาง">ส่วนกลาง</button>
+                    <button type="button" class="bb-seg-btn" data-type="department" onclick="setModalExpType('department',this)" title="ใช้งบส่วนกอง">ส่วนกอง</button>
+                    <button type="button" class="bb-seg-btn" data-type="personal" onclick="setModalExpType('personal',this)" title="จ่ายเอง">ส่วนตัว</button>
                 </div>
 
-                <div class="vc-form-group va-exp-sub-group">
-                    <select class="vc-select" id="modalExpSubSel" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
+                <div class="bb-field mb-2">
+                    <select class="bb-input" id="modalExpSubSel" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
                         <option value="">— เลือกหมวด —</option>
                     </select>
                 </div>
 
-                <div class="va-approver-info" id="modalApproverInfo" style="display:none">
-                    <i data-lucide="user-check" class="vc-icon-sm"></i>
-                    <span>ผู้อนุมัติ: </span>
-                    <strong id="modalApproverName"></strong>
+                <div class="d-flex align-items-center gap-2 mb-2" id="modalApproverInfo" style="font-size:.8125rem;color:var(--bb-mut);display:none">
+                    <i data-lucide="user-check" style="width:.875rem;height:.875rem"></i>
+                    <span>ผู้อนุมัติ: <strong id="modalApproverName"></strong></span>
                 </div>
 
-                <div class="va-budget-bar" id="modalBudgetBar" style="display:none">
-                    <div class="va-budget-info">
-                        <span id="modalBudgetLabel">งบคงเหลือ</span>
-                        <span class="va-budget-value vc-mono" id="modalBudgetValue">—</span>
+                <div id="modalBudgetBar" style="display:none">
+                    <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.8125rem">
+                        <span id="modalBudgetLabel" style="color:var(--bb-mut)">งบคงเหลือ</span>
+                        <span class="bb-num fw-semibold" id="modalBudgetValue" style="color:var(--bb-str)">—</span>
                     </div>
-                    <div class="va-budget-track"><div class="va-budget-fill" id="modalBudgetFill"></div></div>
-                    <p class="va-budget-warn" id="modalBudgetWarn" hidden></p>
+                    <div style="height:.375rem;border-radius:999px;background:var(--bb-n200);overflow:hidden">
+                        <div id="modalBudgetFill" style="height:100%;width:0%;background:var(--bb-ok);border-radius:999px;transition:width .2s"></div>
+                    </div>
+                    <p class="mt-1 mb-0" id="modalBudgetWarn" style="font-size:.75rem" hidden></p>
                 </div>
 
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary" id="assignConfirmBtn" onclick="submitAssign()" disabled title="ยืนยันการอนุมัติ">
+            <div class="bb-modal-foot">
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="bb-btn is-pri" id="assignConfirmBtn" onclick="submitAssign()" disabled title="ยืนยันการอนุมัติ">
                     ยืนยันการอนุมัติ
                 </button>
             </div>
@@ -271,29 +223,26 @@
 {# ════════════════════════════════════════════════
    MODAL: Swap Vehicle
    ════════════════════════════════════════════════ #}
-<div class="modal fade vc-modal" id="swapModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="swapModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
-            <div class="modal-header">
+            <div class="bb-modal-head">
                 <div>
-                    <h5 class="modal-title">
-                        <i data-lucide="shuffle" class="vc-icon-sm"></i>
-                        เปลี่ยนรถ (Swap)
-                    </h5>
-                    <p class="va-modal-sub" id="swapModalSub"></p>
+                    <div class="bb-modal-title">เปลี่ยนรถ (Swap)</div>
+                    <div class="bb-modal-sub" id="swapModalSub"></div>
                 </div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
+                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><i data-lucide="x"></i></button>
             </div>
 
-            <div class="modal-body">
-                <label class="vc-label">เลือกรถที่ต้องการเปลี่ยน</label>
-                <div class="va-swap-list" id="swapVehicleList"></div>
+            <div class="bb-modal-body">
+                <label class="bb-label mb-2">เลือกรถที่ต้องการเปลี่ยน</label>
+                <div id="swapVehicleList"></div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary" id="swapConfirmBtn" onclick="submitSwap()" disabled title="ยืนยันเปลี่ยนรถ">
+            <div class="bb-modal-foot">
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="bb-btn is-pri" id="swapConfirmBtn" onclick="submitSwap()" disabled title="ยืนยันเปลี่ยนรถ">
                 ยืนยันเปลี่ยนรถ
                 </button>
             </div>
@@ -305,38 +254,35 @@
 {# ════════════════════════════════════════════════
    MODAL: Send Vehicle for Repair
    ════════════════════════════════════════════════ #}
-<div class="modal fade vc-modal" id="repairModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="repairModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
-            <div class="modal-header">
+            <div class="bb-modal-head">
                 <div>
-                    <h5 class="modal-title">
-                        <i data-lucide="wrench" class="vc-icon-sm"></i>
-                        ส่งซ่อมรถ
-                    </h5>
-                    <p class="va-modal-sub" id="repairModalSub"></p>
+                    <div class="bb-modal-title">ส่งซ่อมรถ</div>
+                    <div class="bb-modal-sub" id="repairModalSub"></div>
                 </div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
+                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><i data-lucide="x"></i></button>
             </div>
 
-            <div class="modal-body">
-                <div class="vc-form-group">
-                    <label class="vc-label" for="repairDate">
-                        <i data-lucide="calendar" class="vc-icon-sm"></i> วันที่ส่งซ่อม
+            <div class="bb-modal-body">
+                <div class="bb-field">
+                    <label class="bb-label" for="repairDate">
+                        <i data-lucide="calendar" style="width:.875rem;height:.875rem"></i> วันที่ส่งซ่อม
                     </label>
-                    <input type="date" class="vc-input" id="repairDate">
+                    <input type="date" class="bb-input" id="repairDate">
                 </div>
-                <div class="vc-form-group" style="margin-bottom: 0;">
-                    <label class="vc-label" for="repairNote">หมายเหตุ</label>
-                    <textarea class="vc-textarea" id="repairNote" rows="3" placeholder="อาการเสีย, อู่ซ่อม..."></textarea>
+                <div class="bb-field mb-0">
+                    <label class="bb-label" for="repairNote">หมายเหตุ</label>
+                    <textarea class="bb-input" id="repairNote" rows="3" placeholder="อาการเสีย, อู่ซ่อม..."></textarea>
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-primary" onclick="submitRepair()" title="บันทึกการส่งซ่อม">
-                    <i data-lucide="check" class="vc-icon-sm"></i>
+            <div class="bb-modal-foot">
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="bb-btn is-pri" onclick="submitRepair()" title="บันทึกการส่งซ่อม">
+                    <i data-lucide="check"></i>
                     บันทึกการส่งซ่อม
                 </button>
             </div>
@@ -348,30 +294,27 @@
 {# ════════════════════════════════════════════════
    MODAL: Revert Status (Confirm Dialog)
    ════════════════════════════════════════════════ #}
-<div class="modal fade vc-modal" id="revertModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="revertModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i data-lucide="rotate-ccw" class="vc-icon-sm"></i>
-                    ย้อนสถานะ
-                </h5>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
+            <div class="bb-modal-head">
+                <div class="bb-modal-title">ย้อนสถานะ</div>
+                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><i data-lucide="x"></i></button>
             </div>
 
-            <div class="modal-body">
-                <p class="va-modal-confirm" id="revertModalText"></p>
-                <div class="va-modal-warning">
-                    <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
+            <div class="bb-modal-body">
+                <p id="revertModalText" style="color:var(--bb-str)"></p>
+                <div class="bb-callout is-wr">
+                    <i data-lucide="triangle-alert"></i>
                     <span>การอนุมัติที่แจ้ง Telegram ไปแล้วจะต้องแจ้งใหม่ด้วยตัวเอง</span>
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="vc-btn vc-btn-danger" onclick="submitRevert()" title="ย้อนสถานะกลับเป็นรออนุมัติ">
-                    <i data-lucide="rotate-ccw" class="vc-icon-sm"></i>
+            <div class="bb-modal-foot">
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="bb-btn is-danger" onclick="submitRevert()" title="ย้อนสถานะกลับเป็นรออนุมัติ">
+                    <i data-lucide="rotate-ccw"></i>
                     ย้อนเป็นรออนุมัติ
                 </button>
             </div>
@@ -381,7 +324,7 @@
 </div>
 
 {# ── Toast (in-page) ── #}
-<div class="adm-toast" id="admToast"></div>
+{{ component(toast_region) }}
 
 {# ── Data injection ── #}
 <script>
@@ -422,7 +365,9 @@ window.BOOKINGS_DATA = [
     actualEnd:   {{ (((m.actual_end.day|string) ~ '/' ~ (m.actual_end.month|string) ~ '/' ~ ((m.actual_end.year+543)|string)) if m and m.actual_end else '') | tojson }},
     markPaidUrl: {{ url_for('adminfleet.budget_personal_mark_paid') | tojson }},
     otHours:     {{ (b.driver_ots[0].total_hours | float) if b.driver_ots else 0 }},
-    otAmount:    {{ (b.driver_ots[0].total_amount | float) if b.driver_ots else 0 }}
+    otAmount:    {{ (b.driver_ots[0].total_amount | float) if b.driver_ots else 0 }},
+    editUrl:     {{ url_for('vehicle.admin_edit_booking', booking_id=b.id) | tojson }},
+    pickup:      {{ (b.pickup_location or '') | tojson }}
 }{% if not loop.last %},{% endif %}
 {% endfor %}
 ];
@@ -459,6 +404,7 @@ window.SERVER_NOW = {{ now.isoformat() | tojson }};
 
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='core/js/bb-components.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_admin.js') }}"></script>
 </body>
 </html>

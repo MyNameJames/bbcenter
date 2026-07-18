@@ -24,11 +24,11 @@ const STATUS_ICON = {
 };
 
 const STATUS_BADGE = {
-    pending:          { cls:'vc-badge-warning vc-badge-dot', label:'รออนุมัติ' },
-    waiting_approver: { cls:'vc-badge-blue vc-badge-dot',    label:'ส่ง Approver' },
-    forwarded:        { cls:'vc-badge-blue vc-badge-dot',    label:'ส่ง Approver' },
-    approved:         { cls:'vc-badge-success vc-badge-dot', label:'อนุมัติแล้ว' },
-    rejected:         { cls:'vc-badge-danger vc-badge-dot',  label:'ปฏิเสธ' },
+    pending:          { cls:'is-wr',   label:'รออนุมัติ' },
+    waiting_approver: { cls:'is-info', label:'ส่ง Approver' },
+    forwarded:        { cls:'is-info', label:'ส่ง Approver' },
+    approved:         { cls:'is-ok',   label:'อนุมัติแล้ว' },
+    rejected:         { cls:'is-dg',   label:'ปฏิเสธ' },
 };
 
 /* ── State ────────────────────────────────────── */
@@ -68,14 +68,7 @@ function setStat(id, target) {
     _statRaf.set(id, requestAnimationFrame(tick));
 }
 
-// let weekStart = new Date(today);
-// weekStart.setDate(today.getDate() - (today.getDay() + 6) % 7);
-
-let weekStart = new Date(today);
-weekStart.setDate(today.getDate() - today.getDay());
-
 let selDate    = new Date(today);
-let calCursor  = new Date(today.getFullYear(), today.getMonth(), 1);  // เดือนที่ปฏิทินกำลังแสดง
 let curFilter  = 'all';
 let groupMode  = false;
 let groupSel   = new Set();
@@ -97,8 +90,9 @@ function toDateStr(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function isToday(d) {
-    return d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate();
+function fromDateStr(s) {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
 }
 
 function fmtBaht(n) { return '฿' + Number(n).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:0}); }
@@ -138,225 +132,56 @@ function findConflict(b, resourceKey, resourceId) {
 }
 
 /* ══════════════════════════════════════════════════
-   WEEK NAVIGATION
+   WEEK NAVIGATION — bb-* component (WeekStrip)
+   ตัว strip/prev-next/badge จัดการเองใน core/js/bb-components.js
+   หน้านี้แค่ฟัง event 'bb-weekstrip:change' แล้ว sync selDate + re-render
 ══════════════════════════════════════════════════ */
-// function renderWeekNav() {
-//     const strip = document.getElementById('wnStrip');
-//     strip.innerHTML = '';
-
-//     for (let i = 0; i < 7; i++) {
-//         const d     = new Date(weekStart); d.setDate(weekStart.getDate() + i);
-//         const ds    = toDateStr(d);
-//         const cnt   = bookings.filter(b => b.startIso.startsWith(ds)).length;
-//         const isTd  = isToday(d);
-//         const isSel = d.toDateString() === selDate.toDateString();
-
-//         let dotCls = 'va-week-day-dot';
-//         if (cnt >= 4)      dotCls += ' va-week-day-dot--lg';
-//         else if (cnt >= 2) dotCls += ' va-week-day-dot--md';
-//         else if (cnt === 1) dotCls += ' va-week-day-dot--sm';
-
-//         const el = document.createElement('div');
-//         el.className = `va-week-day${isTd?' va-week-day-today':''}${isSel?' va-week-day-active':''}`;
-//         el.style.setProperty('--va-i', i);
-//         el.innerHTML = `
-//             <span class="va-week-day-name">${TH_DAYS_S[d.getDay()]}</span>
-//             <span class="va-week-day-num">${d.getDate()}</span>
-//             <div class="${dotCls}"${cnt>0?` title="${cnt} รายการ"`:''}></div>`;
-//         el.addEventListener('click', () => {
-//             selDate = new Date(d);
-//             renderAll();
-//         });
-//         strip.appendChild(el);
-//     }
-// }
-
-function renderWeekNav() {
-    const strip = document.getElementById('wnStrip');
-    strip.innerHTML = '';
-
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(weekStart);
-        d.setDate(weekStart.getDate() + i);
-
-        const ds    = toDateStr(d);
-        const cnt   = bookings.filter(b => b.startIso.startsWith(ds)).length;
-        const isTd  = isToday(d);
-        const isSel = d.toDateString() === selDate.toDateString();
-
-        let dotCls = 'va-week-day-dot';
-        if (cnt >= 4)       dotCls += ' va-week-day-dot--lg';
-        else if (cnt >= 2)  dotCls += ' va-week-day-dot--md';
-        else if (cnt === 1) dotCls += ' va-week-day-dot--sm';
-
-        const dayOfWeek = d.getDay();
-
-        let textClass = '';
-        if (dayOfWeek === 0) {
-            textClass = ' text-danger';   // อาทิตย์
-        } else if (dayOfWeek === 6) {
-            textClass = ' text-primary';  // เสาร์
-        }
-
-        const el = document.createElement('div');
-        el.className = `va-week-day${isTd ? ' va-week-day-today' : ''}${isSel ? ' va-week-day-active' : ''}`;
-        el.style.setProperty('--va-i', i);
-
-        el.innerHTML = `
-            <span class="va-week-day-name${textClass} pb-2">${TH_DAYS_S[dayOfWeek]}</span>
-            <span class="va-week-day-num">${d.getDate()}</span>
-            <div class="${dotCls}"${cnt > 0 ? ` title="${cnt} รายการ"` : ''}></div>
-        `;
-
-        el.addEventListener('click', () => {
-            selDate = new Date(d);
-            renderAll();
-        });
-
-        strip.appendChild(el);
-    }
-}
-
 function renderWeekMeta() {
     const dow = selDate.getDay();
-    // heading สั้น: "อา. 7 มิ.ย. 2569" — today มี dot บน strip อยู่แล้ว ไม่ต้องมี tag
+    // aria-label ปุ่ม datepicker สั้น: "อา. 7 มิ.ย. 2569"
     const dayLine = `${TH_DAYS_S[dow]}. ${selDate.getDate()} ${TH_MON_S[selDate.getMonth()+1]} ${selDate.getFullYear()+543}`;
-    const h2 = document.getElementById('selDateHeading');
-    if (h2) h2.textContent = dayLine;
+    const dpBtn = document.querySelector('#weekJumpDp [data-bb-dp-btn]');
+    if (dpBtn) dpBtn.setAttribute('aria-label', dayLine);
 }
 
-function shiftWeek(dir) {
-    weekStart.setDate(weekStart.getDate() + dir * 7);
-    renderWeekNav();
-    renderWeekMeta();
+/* บังคับ WeekStrip กระโดดไปสัปดาห์ของ iso (ใช้ตอนเลือกวันจาก DatePicker #weekJumpDp)
+   component ไม่มี public API เปลี่ยนวันจากนอก → clone node ใหม่ (ไม่ติด listener ซ้ำ) + reinit */
+function jumpWeekStrip(iso) {
+    const old = document.querySelector('[data-bb-weekstrip]');
+    if (!old) return;
+    const fresh = old.cloneNode(true);
+    fresh.dataset.value = iso;
+    delete fresh.dataset.bbWsInit;
+    const input = fresh.querySelector('[data-bb-ws-input]');
+    if (input) input.value = iso;
+    old.replaceWith(fresh);
+    // init(scope) ใช้ querySelectorAll (หาแค่ descendant) — ต้องส่ง parent ไม่ใช่ fresh เอง
+    // (fresh มี data-bb-weekstrip อยู่ที่ตัวมันเอง ไม่ใช่ลูก) ไม่งั้น initWeekStrip ไม่ถูกเรียก
+    window.bbComponents?.init(fresh.parentElement);
+    initIcons();
 }
 
-/* ── Date picker popover ─────────────────────────── */
-function _alignWeekStartTo(date) {
-    // Monday-based: weekStart = date - ((dow + 6) % 7)
-    const d = new Date(date);
-    d.setDate(d.getDate() - (d.getDay() + 6) % 7);
-    weekStart = d;
-}
-
-/* ปฏิทินเดือน — กดวันเดียวเลือกได้เลย (ไม่ต้องเปิด native date input ซ้ำ) */
-function renderCalendar() {
-    const dowWrap  = document.getElementById('calDow');
-    const daysWrap = document.getElementById('calDays');
-    const titleEl  = document.getElementById('calTitle');
-    if (!daysWrap) return;
-
-    const y = calCursor.getFullYear();
-    const m = calCursor.getMonth();
-    if (titleEl) titleEl.textContent = `${TH_MON_F[m + 1]} ${y + 543}`;
-
-    // หัวตาราง (Su..Sa) — render ครั้งเดียว
-    if (dowWrap && !dowWrap.childElementCount) {
-        dowWrap.innerHTML = TH_DAYS_S.map((d, i) => {
-            const c = i === 0 ? ' va-cal-dow-cell--sun' : i === 6 ? ' va-cal-dow-cell--sat' : '';
-            return `<span class="va-cal-dow-cell${c}">${d}</span>`;
-        }).join('');
-    }
-
-    const startPad     = new Date(y, m, 1).getDay();        // Sunday-first
-    const daysInMonth  = new Date(y, m + 1, 0).getDate();
-
-    let cells = '';
-    for (let i = 0; i < startPad; i++) {
-        cells += `<span class="va-cal-cell va-cal-cell--empty"></span>`;
-    }
-    for (let dnum = 1; dnum <= daysInMonth; dnum++) {
-        const d     = new Date(y, m, dnum);
-        const ds    = toDateStr(d);
-        const cnt   = bookings.filter(b => b.startIso.startsWith(ds)).length;
-        const dow   = d.getDay();
-        const isSel = d.toDateString() === selDate.toDateString();
-
-        let cls = 'va-cal-cell';
-        if (isSel)        cls += ' va-cal-cell--active';
-        if (isToday(d))   cls += ' va-cal-cell--today';
-        if (dow === 0)    cls += ' va-cal-cell--sun';
-        else if (dow === 6) cls += ' va-cal-cell--sat';
-
-        const dot = cnt > 0 ? `<span class="va-cal-dot pt-1" title="${cnt} รายการ"></span>` : '';
-        cells += `<button type="button" class="${cls}" data-date="${ds}">${dnum}${dot}</button>`;
-    }
-    daysWrap.innerHTML = cells;
-}
-
-function shiftCalMonth(dir) {
-    calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + dir, 1);
-    renderCalendar();
-}
-
-function openWeekPicker() {
-    const pop = document.getElementById('weekPickerPop');
-    const btn = document.getElementById('weekPickerBtn');
-    if (!pop || !btn) return;
-    calCursor = new Date(selDate.getFullYear(), selDate.getMonth(), 1);
-    renderCalendar();
-    pop.hidden = false;
-    btn.setAttribute('aria-expanded', 'true');
-}
-function closeWeekPicker() {
-    const pop = document.getElementById('weekPickerPop');
-    const btn = document.getElementById('weekPickerBtn');
-    if (!pop || !btn) return;
-    pop.hidden = true;
-    btn.setAttribute('aria-expanded', 'false');
-}
-function bindWeekControls() {
-    const todayBtn  = document.getElementById('weekTodayBtn');
-    const pickerBtn = document.getElementById('weekPickerBtn');
-    const pickerPop = document.getElementById('weekPickerPop');
-    const prevBtn   = document.getElementById('calPrevBtn');
-    const nextBtn   = document.getElementById('calNextBtn');
-    const daysWrap  = document.getElementById('calDays');
-
-    if (todayBtn) {
-        todayBtn.addEventListener('click', () => {
-            selDate = new Date(today);
-            _alignWeekStartTo(today);
-            closeWeekPicker();
-            renderAll();
-        });
-    }
-    if (pickerBtn) {
-        pickerBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const expanded = pickerBtn.getAttribute('aria-expanded') === 'true';
-            if (expanded) closeWeekPicker(); else openWeekPicker();
-        });
-    }
-    if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftCalMonth(-1); });
-    if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); shiftCalMonth(1); });
-
-    if (daysWrap) {
-        daysWrap.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-date]');
-            if (!btn) return;
-            const [yy, mm, dd] = btn.dataset.date.split('-').map(Number);
-            selDate = new Date(yy, mm - 1, dd);
-            _alignWeekStartTo(selDate);
-            closeWeekPicker();
-            renderAll();
-        });
-    }
-    // click outside
-    document.addEventListener('click', (e) => {
-        if (pickerPop && !pickerPop.hidden) {
-            if (!pickerPop.contains(e.target) && !pickerBtn.contains(e.target)) {
-                closeWeekPicker();
-            }
-        }
+function bindDateControls() {
+    document.addEventListener('bb-weekstrip:change', (e) => {
+        selDate = fromDateStr(e.detail.date);
+        renderWeekMeta();
+        renderBefore();
+        renderDuring();
+        initIcons();
     });
-    // Esc
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && pickerPop && !pickerPop.hidden) {
-            closeWeekPicker();
-            pickerBtn?.focus();
-        }
-    });
+
+    const jumpDp = document.getElementById('weekJumpDp');
+    if (jumpDp) {
+        jumpDp.addEventListener('bb-datepicker:change', (e) => {
+            const iso = e.detail.date || toDateStr(today);
+            selDate = fromDateStr(iso);
+            jumpWeekStrip(iso);
+            renderWeekMeta();
+            renderBefore();
+            renderDuring();
+            initIcons();
+        });
+    }
 }
 
 /* ══════════════════════════════════════════════════
@@ -374,11 +199,11 @@ function renderBefore() {
         rejected:         allDay.filter(b => b.status==='rejected').length,
     };
 
-    document.getElementById('cnt-all').textContent      = cnt.all;
-    document.getElementById('cnt-pending').textContent  = cnt.pending;
-    document.getElementById('cnt-approver').textContent = cnt.waiting_approver;
-    document.getElementById('cnt-approved').textContent = cnt.approved;
-    document.getElementById('cnt-rejected').textContent = cnt.rejected;
+    setTabCount('all',              cnt.all);
+    setTabCount('pending',          cnt.pending);
+    setTabCount('waiting_approver', cnt.waiting_approver);
+    setTabCount('approved',         cnt.approved);
+    setTabCount('rejected',         cnt.rejected);
 
     const headerCountEl = document.getElementById('beforeCount');
     if (headerCountEl) {
@@ -400,9 +225,9 @@ function renderBefore() {
     const list = document.getElementById('bookingList');
 
     if (!filtered.length) {
-        list.innerHTML = `<div class="vc-empty">
-            <div class="vc-empty-icon"><i data-lucide="car" style="width:20px;height:20px;"></i></div>
-            <p class="vc-empty-title">ไม่มีรายการจองรถ</p>
+        list.innerHTML = `<div class="bb-empty">
+            <div class="bb-empty-icon"><i data-lucide="car"></i></div>
+            <div class="bb-empty-title">ไม่มีรายการจองรถ</div>
         </div>`;
         initIcons();
         return;
@@ -449,63 +274,68 @@ function renderSingleRow(b, idx = 0) {
     const defaultClick = !groupMode && !notifyMode
         ? `onclick="openAdminBookingDetail(${b.id})"` : '';
 
-    /* Phase 14 (2026-06-07): 3-line layout —
-       head(ชื่อผู้จอง | status) + trip(purpose → dest) + foot(badges scroll-x | actions) */
+    /* 3-line layout — head(ชื่อผู้จอง | status) + trip(purpose → dest) + foot(badges | actions) */
     const bookerName  = esc(b.booker || '—');
     const purposeText = esc(b.purpose || '—');
     const destText    = esc(b.dest || '—');
 
-    const statusBadge = `<span class="bl-status vc-badge ${sb.cls}">${sb.label}</span>`;
+    const statusBadge = `<span class="bb-status ${sb.cls}"><span class="bb-dot"></span>${sb.label}</span>`;
 
     /* badge 1 — ช่วงเวลาเดินทาง */
     const timeText  = b.start ? `${esc(b.start)}${b.end ? `–${esc(b.end)}` : ''}` : '';
     const timeBadge = timeText
-        ? `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="clock" class="vc-icon-sm"></i>${timeText}</span>` : '';
+        ? `<span class="bb-badge is-neutral"><i data-lucide="clock"></i>${timeText}</span>` : '';
 
     /* badge 2 — ผู้โดยสาร */
-    const paxBadge = `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="users" class="vc-icon-sm"></i>${b.pax || 0}</span>`;
+    const paxBadge = `<span class="bb-badge is-neutral"><i data-lucide="users"></i>${b.pax || 0}</span>`;
 
-    /* badge 2 — งบที่อนุมัติ (ยังไม่จัดสรร → amber เตือน) */
+    /* badge 3 — งบที่อนุมัติ (ยังไม่จัดสรร → amber เตือน ผ่าน token ตรง) */
     const budget = budgetLabel(b);
     const budgetBadge = budget
-        ? `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="wallet" class="vc-icon-sm"></i>${esc(budget)}</span>`
-        : `<span class="vc-badge vc-badge-warning bl-badge"><i data-lucide="wallet" class="vc-icon-sm"></i>ยังไม่ได้จัดสรรงบ</span>`;
+        ? `<span class="bb-badge is-neutral"><i data-lucide="wallet"></i>${esc(budget)}</span>`
+        : `<span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)"><i data-lucide="wallet"></i>ยังไม่ได้จัดสรรงบ</span>`;
 
-    /* badge 3 — งานนอกระบบ (driver เพิ่มเอง) → ม่วง subtle */
+    /* badge 4 — งานนอกระบบ (driver เพิ่มเอง) */
     const adhocBadge = b.isAdHoc
-        ? `<span class="vc-badge bl-badge bl-badge-adhoc"><i data-lucide="user-plus" class="vc-icon-sm"></i>งานนอกระบบ</span>`
+        ? `<span class="bb-badge is-accent"><i data-lucide="user-plus"></i>งานนอกระบบ</span>`
         : '';
 
     const actionsZone = actions
-        ? `<div class="bl-actions" onclick="event.stopPropagation()">${actions}</div>` : '';
+        ? `<div class="d-flex gap-2 flex-wrap" onclick="event.stopPropagation()">${actions}</div>` : '';
 
-    /* Phase B — checkbox slot (visible only on selectable rows; placeholder keeps grid aligned) */
+    /* checkbox slot — visible only on selectable rows */
     const checkboxSlot = isSelectable
-        ? `<input type="checkbox" class="bl-sel-check form-check-input" ${isSel?'checked':''} onclick="event.stopPropagation();toggleGroupSel(${b.id})" aria-label="เลือกเพื่อรวมงาน">`
+        ? `<input type="checkbox" class="form-check-input mt-1 flex-shrink-0" ${isSel?'checked':''} onclick="event.stopPropagation();toggleGroupSel(${b.id})" aria-label="เลือกเพื่อรวมงาน">`
         : isNotifySelectable
-        ? `<input type="checkbox" class="bl-sel-check bl-sel-check--notify form-check-input" ${isNotifySel?'checked':''} onclick="event.stopPropagation();toggleNotifySel(${b.id})" aria-label="เลือกเพื่อแจ้ง">`
-        : (groupMode || notifyMode)
-        ? `<span class="bl-sel-slot" aria-hidden="true"></span>`
+        ? `<input type="checkbox" class="form-check-input mt-1 flex-shrink-0" ${isNotifySel?'checked':''} onclick="event.stopPropagation();toggleNotifySel(${b.id})" aria-label="เลือกเพื่อแจ้ง">`
         : '';
 
+    /* selected/notify-selected highlight — inline style ผูก token ตรง (ไม่มี bb-card variant สำหรับ state นี้) */
+    const highlightStyle = isSel
+        ? 'border-color:var(--bb-accent-i);background:var(--bb-accent-bg);'
+        : isNotifySel
+        ? 'border-color:var(--bb-info);background:var(--bb-info-bg);'
+        : '';
+    const cursorStyle = (isSelectable || isNotifySelectable) ? 'cursor:pointer;' : '';
+
     return `
-    <div class="bl-card${b.status==='approved'?' bl-card--done':''}${isSel?' bl-selected':''}${isNotifySel?' bl-notify-selected':''}${isSelectable?' bl-group-mode':''}${isNotifySelectable?' bl-notify-mode':''}"
+    <div class="bb-card p-3 mb-2 d-flex gap-2 align-items-start"
          id="blrow-${b.id}"
-         style="--va-i:${idx}"
+         style="${highlightStyle}${cursorStyle}"
          ${isSelectable ? `onclick="toggleGroupSel(${b.id})"` : isNotifySelectable ? `onclick="toggleNotifySel(${b.id})"` : defaultClick}>
         ${checkboxSlot}
-        <div class="bl-body">
-            <div class="bl-head">
-                <span class="bl-title">${bookerName}</span>
+        <div class="flex-grow-1" style="min-width:0">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <span class="fw-semibold" style="color:var(--bb-str)">${bookerName}</span>
                 ${statusBadge}
             </div>
-            <div class="bl-trip">
-                <span class="bl-trip-purpose">${purposeText}</span>
-                <i data-lucide="arrow-right" class="vc-icon-sm bl-trip-arrow"></i>
-                <span class="bl-trip-dest">${destText}</span>
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap" style="font-size:.875rem;color:var(--bb-mut)">
+                <span>${purposeText}</span>
+                <i data-lucide="arrow-right" style="width:.875rem;height:.875rem;flex-shrink:0"></i>
+                <span>${destText}</span>
             </div>
-            <div class="bl-foot">
-                <div class="bl-badges">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="d-flex flex-wrap gap-2">
                     ${timeBadge}
                     ${paxBadge}
                     ${budgetBadge}
@@ -522,29 +352,29 @@ function buildRowActions(b) {
     const stop = 'event.stopPropagation();';
     switch (b.status) {
         case 'pending':
-            /* Desktop: approve (pencil icon) + reject pair; mobile: reject hidden via .bl-action-secondary */
+            /* Desktop: approve + reject pair; mobile: reject hidden (d-none d-md-inline-flex) */
             return `
-                <button type="button" class="vc-btn vc-btn-primary vc-btn-sm" title="อนุมัติ" onclick="${stop}openAssignModal(${b.id},'approve')">
-                    <i data-lucide="pencil" class="vc-icon-sm"></i>
+                <button type="button" class="bb-btn is-pri is-sm" title="อนุมัติ" onclick="${stop}openAssignModal(${b.id},'approve')">
+                    <i data-lucide="pencil"></i>
                     อนุมัติ
                 </button>
-                <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon vc-btn-sm bl-action-secondary" title="ปฏิเสธ" onclick="${stop}openAssignModal(${b.id},'reject')">
-                    <i data-lucide="circle-x" class="vc-icon-sm"></i>
+                <button type="button" class="bb-btn is-sec is-icon is-sm d-none d-md-inline-flex" title="ปฏิเสธ" onclick="${stop}openAssignModal(${b.id},'reject')">
+                    <i data-lucide="circle-x"></i>
                 </button>`;
         case 'waiting_approver':
         case 'forwarded':
             /* Admin can edit assignment at any status — even after forwarding to approver */
             return `
-                <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="แก้ไข" onclick="${stop}openAssignModal(${b.id},'edit')">
-                    <i data-lucide="pencil" class="vc-icon-sm"></i>
+                <button type="button" class="bb-btn is-ghost is-icon is-sm" title="แก้ไข" onclick="${stop}openAssignModal(${b.id},'edit')">
+                    <i data-lucide="pencil"></i>
                 </button>`;
         case 'approved':
             return `
-                <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="แก้ไข" onclick="${stop}openAssignModal(${b.id},'edit')">
-                    <i data-lucide="pencil" class="vc-icon-sm"></i>
+                <button type="button" class="bb-btn is-ghost is-icon is-sm" title="แก้ไข" onclick="${stop}openAssignModal(${b.id},'edit')">
+                    <i data-lucide="pencil"></i>
                 </button>
-                <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm bl-action-secondary" title="ย้อนสถานะ" onclick="${stop}openRevertModal(${b.id})">
-                    <i data-lucide="rotate-cw" class="vc-icon-sm"></i>
+                <button type="button" class="bb-btn is-ghost is-icon is-sm d-none d-md-inline-flex" title="ย้อนสถานะ" onclick="${stop}openRevertModal(${b.id})">
+                    <i data-lucide="rotate-cw"></i>
                 </button>`;
         case 'rejected':
             return '';
@@ -564,82 +394,90 @@ function renderGroupRow(grpName, members, idx = 0) {
     const isGrpNotifySelectable = notifyMode && approvedMembers.length > 0;
     const isGrpNotifySel        = isGrpNotifySelectable && approvedMembers.every(b => notifySel.has(b.id));
 
-    /* Phase B — group title badge คงเดิม ("N งานรวม"); checkbox ย้ายไปเป็น leftmost slot */
-    const titleBadge = `<span class="bl-status vc-badge vc-badge-success vc-badge-dot">${members.length} งานรวม</span>`;
+    const titleBadge = `<span class="bb-status is-ok"><span class="bb-dot"></span>${members.length} งานรวม</span>`;
     const grpCheckboxSlot = isGrpNotifySelectable
-        ? `<input type="checkbox" class="bl-sel-check bl-sel-check--notify form-check-input" ${isGrpNotifySel?'checked':''} onclick="event.stopPropagation();toggleGroupNotifySel('${grpName}')" aria-label="เลือกกลุ่มเพื่อแจ้ง">`
-        : (groupMode || notifyMode)
-        ? `<span class="bl-sel-slot" aria-hidden="true"></span>`
+        ? `<input type="checkbox" class="form-check-input mt-1 flex-shrink-0" ${isGrpNotifySel?'checked':''} onclick="event.stopPropagation();toggleGroupNotifySel('${grpName}')" aria-label="เลือกกลุ่มเพื่อแจ้ง">`
         : '';
 
-    /* Phase A: sub-rows = destination title + meta (pax · time · booker), no per-row ungroup (header only) */
+    /* sub-rows = destination title + meta (pax · time · booker), no per-row ungroup (header only) */
     const subItems = members.map(b => `
-        <div class="bl-group-sub">
-            <div class="bl-group-sub-info">
-                <div class="bl-group-sub-head">
-                    <span class="bl-group-sub-name">${esc(b.dest || b.booker)}</span>
-                </div>
-                <div class="bl-group-sub-meta">
-                    <span><i data-lucide="users" class="vc-icon-sm bl-meta-ico"></i>${b.pax}</span>
-                    <span class="bl-meta-dot">·</span>
+        <div class="d-flex align-items-center gap-2 py-2" style="border-top:1px solid var(--bb-n200)">
+            <div class="flex-grow-1" style="min-width:0">
+                <div class="fw-semibold text-truncate" style="font-size:.8125rem;color:var(--bb-str)">${esc(b.dest || b.booker)}</div>
+                <div class="d-flex align-items-center flex-wrap gap-1" style="font-size:.75rem;color:var(--bb-mut)">
+                    <span class="d-inline-flex align-items-center gap-1"><i data-lucide="users" style="width:.75rem;height:.75rem"></i>${b.pax}</span>
+                    <span>·</span>
                     <span>${esc(b.start)}</span>
-                    <span class="bl-meta-dot">·</span>
-                    <span class="bl-group-sub-dest">${esc(b.booker)}</span>
+                    <span>·</span>
+                    <span class="text-truncate">${esc(b.booker)}</span>
                 </div>
             </div>
         </div>`).join('');
 
-    /* Phase 14.1 (2026-06-07): group row โครง 3-line คล้าย single —
-       head(รถ | "N งานรวม") + trip(สรุป) + foot(badges เวลา/คน | actions) */
     const grpTimeBadge = times
-        ? `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="clock" class="vc-icon-sm"></i>${esc(times)}</span>` : '';
-    const grpPaxBadge = `<span class="vc-badge vc-badge-neutral bl-badge"><i data-lucide="users" class="vc-icon-sm"></i>${totalPax}</span>`;
+        ? `<span class="bb-badge is-neutral"><i data-lucide="clock"></i>${esc(times)}</span>` : '';
+    const grpPaxBadge = `<span class="bb-badge is-neutral"><i data-lucide="users"></i>${totalPax}</span>`;
+
+    const grpHighlightStyle = isGrpNotifySel ? 'border-color:var(--bb-info);background:var(--bb-info-bg);' : '';
 
     return `
-    <div class="bl-card bl-card--group${isGrpNotifySel?' bl-notify-selected':''}${isGrpNotifySelectable?' bl-notify-mode':''}"
+    <div class="bb-card p-3 mb-2 d-flex gap-2 align-items-start"
          id="blgrp-${grpName}"
-         style="--va-i:${idx}"
+         style="${grpHighlightStyle}${isGrpNotifySelectable?'cursor:pointer;':''}"
          ${isGrpNotifySelectable ? `onclick="toggleGroupNotifySel('${grpName}')"` : ''}>
         ${grpCheckboxSlot}
-        <div class="bl-body">
-            <div class="bl-head">
-                <span class="bl-title">${esc(vLabel)}</span>
+        <div class="flex-grow-1" style="min-width:0">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <span class="fw-semibold" style="color:var(--bb-str)">${esc(vLabel)}</span>
                 ${titleBadge}
             </div>
-            <div class="bl-foot">
-                <div class="bl-badges">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="d-flex flex-wrap gap-2">
                     ${grpTimeBadge}
                     ${grpPaxBadge}
                 </div>
-                <div class="bl-actions" onclick="event.stopPropagation()">
-                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" onclick="ungroupAll('${grpName}')" title="แยกงานทั้งหมด">
-                        <i data-lucide="shuffle" class="vc-icon-sm"></i>
+                <div class="d-flex gap-2" onclick="event.stopPropagation()">
+                    <button type="button" class="bb-btn is-ghost is-icon is-sm" onclick="ungroupAll('${grpName}')" title="แยกงานทั้งหมด">
+                        <i data-lucide="shuffle"></i>
                     </button>
-                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" onclick="openAssignModal(null,'group','${grpName}')" title="แก้ไขกลุ่ม">
-                        <i data-lucide="pencil" class="vc-icon-sm"></i>
+                    <button type="button" class="bb-btn is-ghost is-icon is-sm" onclick="openAssignModal(null,'group','${grpName}')" title="แก้ไขกลุ่ม">
+                        <i data-lucide="pencil"></i>
                     </button>
-                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm bl-grp-chev"
+                    <button type="button" class="bb-btn is-ghost is-icon is-sm"
                             data-bs-toggle="collapse"
                             data-bs-target="#${colId}"
                             aria-expanded="false"
                             onclick="event.stopPropagation()"
                             title="ขยาย/ย่อ">
-                        <i data-lucide="chevron-down" class="vc-icon-sm"></i>
+                        <i data-lucide="chevron-down"></i>
                     </button>
                 </div>
             </div>
-            <div class="collapse bl-grp-collapse" id="${colId}">
-                ${subItems}
+            <div class="collapse" id="${colId}">
+                <div class="mt-2 pt-2" style="border-top:1px solid var(--bb-n200)">
+                    ${subItems}
+                </div>
             </div>
         </div>
     </div>`;
 }
 
-function setFilter(f, el) {
-    curFilter = f;
-    document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
-    if (el) el.classList.add('active');
-    renderBefore();
+/* Filter tabs — bb-* component (Tabs) ไม่มี auto-init JS ของตัวเอง
+   macro ออก data-tab (ไม่ใช่ data-filter) — bind เองแบบเดียวกับ vehicle_mileage.js */
+function setTabCount(value, n) {
+    const el = document.querySelector(`#adminTabsWrap .bb-tab[data-tab="${value}"] .bb-tab-count`);
+    if (el) el.textContent = n;
+}
+
+function bindFilterTabs() {
+    document.querySelectorAll('#adminTabsWrap .bb-tab').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            curFilter = btn.dataset.tab || 'all';
+            document.querySelectorAll('#adminTabsWrap .bb-tab').forEach(c => c.classList.toggle('is-on', c === btn));
+            renderBefore();
+        });
+    });
 }
 
 /* ── Group Mode ───────────────────────────────── */
@@ -649,7 +487,6 @@ function toggleGroupMode() {
     document.getElementById('btnNotify').style.display       = 'none';
     document.getElementById('btnMergeCancel').style.display  = 'inline-flex';
     document.getElementById('btnMergeConfirm').style.display = 'inline-flex';
-    document.getElementById('bookingList')?.classList.add('va-list--selecting');
     updateMergeBtn();
     renderBefore();
 }
@@ -660,7 +497,6 @@ function cancelGroupMode() {
     document.getElementById('btnNotify').style.display       = '';
     document.getElementById('btnMergeCancel').style.display  = 'none';
     document.getElementById('btnMergeConfirm').style.display = 'none';
-    document.getElementById('bookingList')?.classList.remove('va-list--selecting');
     renderBefore();
 }
 
@@ -690,7 +526,6 @@ function toggleNotifyMode() {
     document.getElementById('btnNotify').style.display        = 'none';
     document.getElementById('btnNotifyCancel').style.display  = 'inline-flex';
     document.getElementById('btnNotifyConfirm').style.display = 'inline-flex';
-    document.getElementById('bookingList')?.classList.add('va-list--selecting');
     updateNotifyBtn();
     renderBefore();
 }
@@ -701,7 +536,6 @@ function cancelNotifyMode() {
     document.getElementById('btnNotify').style.display        = '';
     document.getElementById('btnNotifyCancel').style.display  = 'none';
     document.getElementById('btnNotifyConfirm').style.display = 'none';
-    document.getElementById('bookingList')?.classList.remove('va-list--selecting');
     renderBefore();
 }
 
@@ -741,7 +575,9 @@ async function confirmNotify() {
 }
 
 /* ══════════════════════════════════════════════════
-   SECTION ขณะ — VEHICLE STATUS
+   SECTION ขณะ — VEHICLE STATUS + TRIP DETAIL (รวมจาก
+   เดิม SECTION หลัง/tripList — ลบการ์ดแยกแล้ว 2026-07,
+   ย้าย mileage/cost/OT/payment มารวมในนี้แทน)
 ══════════════════════════════════════════════════ */
 function renderDuring() {
     const ds     = toDateStr(selDate);
@@ -751,107 +587,6 @@ function renderDuring() {
     list.innerHTML = vehicles.map(v => renderVehicleRow(v, allDay)).join('');
 }
 
-function getVehicleStatus(v, approvedToday) {
-    if (v.dbStatus === 'maintenance') return 'maintenance';
-    const bk = approvedToday.find(b => b.vehicleId === v.id || b.vehicleId === v.id);
-    if (!bk) return 'available';
-    if (isToday(selDate)) {
-        const now = serverNow;
-        const start = new Date(bk.startIso);
-        const end   = new Date(bk.endIso);
-        if (now >= start && now <= end) return 'inuse';
-    }
-    return 'reserved';
-}
-
-function renderVehicleRow(v, approvedToday) {
-    const status = getVehicleStatus(v, approvedToday);
-    const bk = approvedToday.find(b => b.vehicleId === v.id);
-
-    const iconName = status === 'maintenance' ? 'wrench' : 'car';
-    const iconCls  = (status === 'inuse' || status === 'reserved') ? 'vs-icon-active'
-                   : status === 'maintenance' ? 'vs-icon-maintenance' : '';
-
-    const xs = 'width:11px;height:11px;';
-    let detail = '';
-    if (bk && (status === 'inuse' || status === 'reserved')) {
-        const driver = bk.driverLabel ? `${esc(bk.driverLabel)} · ` : '';
-        detail = `<div class="vs-detail"><span>${driver}${esc(bk.dest)}</span></div>`;
-    } else if (status === 'available') {
-        detail = `<div class="vs-detail vs-detail-available">
-            <i data-lucide="circle-check" style="${xs}"></i><span>ว่าง</span>
-        </div>`;
-    } else if (status === 'maintenance') {
-        const note = v.repairNote ? esc(v.repairNote) : 'ส่งซ่อม';
-        detail = `<div class="vs-detail vs-detail-maintenance">
-            <i data-lucide="wrench" style="${xs}"></i><span>${note}</span>
-        </div>`;
-    }
-
-    let actions = '';
-    if ((status === 'reserved' || status === 'inuse') && bk) {
-        actions = `<button class="vs-btn" onclick="openSwapModal(${bk.id})">
-            <i data-lucide="shuffle" style="${xs}"></i> Swap
-        </button>`;
-    } else if (status === 'maintenance') {
-        actions = `<button class="vs-btn vs-btn-fix" onclick="fixDone(${v.id})">
-            <i data-lucide="circle-check" style="${xs}"></i> เสร็จซ่อม
-        </button>`;
-    } else if (status === 'available') {
-        actions = `<button class="vs-btn vs-btn-repair" title="ส่งซ่อม" onclick="openRepairModal(${v.id})">
-            <i data-lucide="wrench" style="width:12px;height:12px;"></i>
-        </button>`;
-    }
-
-    return `
-    <div class="vs-row">
-        <div class="vs-icon ${iconCls}">
-            <i data-lucide="${iconName}" style="width:16px;height:16px;"></i>
-        </div>
-        <div class="vs-info">
-            <div class="vs-name">${esc(v.plate)}</div>
-            <div class="vs-brand">${esc(v.brand)} ${esc(v.model)}</div>
-            ${detail}
-        </div>
-        <div class="vs-actions">${actions}</div>
-    </div>`;
-}
-
-/* ══════════════════════════════════════════════════
-   SECTION หลัง — POST-TRIP SUMMARY
-══════════════════════════════════════════════════ */
-function renderAfter() {
-    const ds   = toDateStr(selDate);
-    const done = bookings.filter(b =>
-        b.startIso.startsWith(ds) && b.status==='approved'
-    );
-
-    document.getElementById('afterCount').textContent = `${done.length} รายการ`;
-    const list = document.getElementById('tripList');
-
-    if (!done.length) {
-        list.innerHTML = `<div class="vc-empty">
-            <div class="vc-empty-icon"><i data-lucide="route" style="width:20px;height:20px;"></i></div>
-            <p class="vc-empty-title">ไม่มีทริปที่เสร็จแล้ว</p>
-        </div>`;
-        initIcons();
-        return;
-    }
-
-    const groups = [];
-    const seen = new Set();
-    for (const b of done) {
-        if (!b.tripGroup) {
-            groups.push([b]);
-        } else if (!seen.has(b.tripGroup)) {
-            seen.add(b.tripGroup);
-            groups.push(done.filter(x => x.tripGroup === b.tripGroup));
-        }
-    }
-
-    list.innerHTML = groups.map(g => renderTripRow(g)).join('');
-}
-
 /* tag งบ สำหรับ fuel/OT badge (personal = เรียกเก็บ) */
 function tripBudgetTag(expType) {
     if (expType === 'central')    return 'หักงบส่วนกลาง';
@@ -859,90 +594,134 @@ function tripBudgetTag(expType) {
     return 'เรียกเก็บ';
 }
 
-function renderTripRow(group) {
-    const b       = group[0];
-    const isGroup = group.length > 1;
+/* กรุ๊ป booking ของรถคันเดียวในวันเดียว → ตาม tripGroup (merge ยุบเป็น 1 งาน) */
+function groupVehicleJobs(v, approvedToday) {
+    const mine   = approvedToday.filter(b => b.vehicleId === v.id);
+    const groups = [];
+    const seen   = new Set();
+    for (const b of mine) {
+        if (!b.tripGroup) {
+            groups.push([b]);
+        } else if (!seen.has(b.tripGroup)) {
+            seen.add(b.tripGroup);
+            groups.push(mine.filter(x => x.tripGroup === b.tripGroup));
+        }
+    }
+    return groups;
+}
+
+function renderVehicleRow(v, approvedToday) {
+    if (v.dbStatus === 'maintenance') {
+        const note = v.repairNote ? esc(v.repairNote) : 'ไม่ระบุอาการ';
+        return `
+        <div class="d-flex gap-3 bb-buy-item">
+            <div class="bb-buy-thumb is-wr flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="wrench"></i></div>
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-bold">${esc(v.plate)}</div>
+                <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                    <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)">กำลังซ่อม</span>
+                </div>
+                <div class="text-muted small mt-1">ดำเนินการ : ${note}</div>
+            </div>
+        </div>`;
+    }
+
+    const jobs = groupVehicleJobs(v, approvedToday);
+
+    if (!jobs.length) {
+        return `
+        <div class="d-flex gap-3 bb-buy-item">
+            <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+            <div class="flex-grow-1 min-w-0">
+                <div class="fw-bold">${esc(v.plate)}</div>
+                <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                    <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-ok-bg);color:var(--bb-ok-tx)">ว่าง</span>
+                </div>
+                <div class="text-muted small mt-1">เลขไมล์ : -</div>
+            </div>
+        </div>`;
+    }
+
+    const isMulti  = jobs.length > 1;
+    const plateRow = isMulti ? `<div class="fw-bold mb-2">${esc(v.plate)}</div>` : '';
+    const body     = jobs.map((g, i) => renderVehicleJobBlock(v, g, i, jobs.length, isMulti)).join('');
+
+    return `
+    <div class="d-flex gap-3 bb-buy-item">
+        <div class="bb-buy-thumb is-ok flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+        <div class="flex-grow-1 min-w-0">
+            ${plateRow}${body}
+        </div>
+    </div>`;
+}
+
+/* งานของรถคันนี้ในวันที่เลือก — 1 คันมี 0-N งาน (merge/tripGroup ยุบเป็น 1 งาน) */
+function renderVehicleJobBlock(v, group, idx, total, isMulti) {
+    const b = group[0];
 
     const bm      = group.find(x => x.odoStart !== null && x.odoEnd !== null) || b;
-    const started = bm.odoStart !== null;                          // ออกเลขเริ่มแล้ว
-    const hasOdo  = bm.odoStart !== null && bm.odoEnd !== null;    // ปิดงานแล้ว
+    const started = bm.odoStart !== null;                       // ออกเลขเริ่มแล้ว
+    const hasOdo  = bm.odoStart !== null && bm.odoEnd !== null;  // ปิดงานแล้ว
     const dist    = hasOdo ? (bm.odoEnd - bm.odoStart) : 0;
 
-    const veh      = vehicles.find(v => v.id === bm.vehicleId);
-    const fuelRate = veh ? Number(veh.fuelRate) : 0;
+    const fuelRate = Number(v.fuelRate) || 0;
     const override = Number(bm.fuelCost) || 0;
     const autoCost = (hasOdo && fuelRate > 0)
                      ? Math.round((dist / fuelRate) * fuelPrice * 100) / 100
                      : 0;
-    const total    = hasOdo ? (override > 0 ? override : autoCost) : 0;
-
-    const plate    = b.vehicleLabel ? b.vehicleLabel.split(' · ').pop() : '—';
-    const destText = isGroup ? `งานร่วม ${group.length} รายการ` : esc(b.dest || b.booker || '—');
+    const cost     = hasOdo ? (override > 0 ? override : autoCost) : 0;
+    const otA      = Number(bm.otAmount) || 0;
 
     const budgetTag = tripBudgetTag(b.expType);
     const isCharge  = b.expType === 'personal';
 
-    /* บรรทัด 1 มุมขวา — payment (ว่างถ้ายังไม่ปิดงาน) */
-    let payHtml = '';
+    /* สี badge: สิ้นสุดการเดินทาง/ออกเดินทางแล้ว = ฟ้า (ตั้งใจให้เหมือนกัน), อนุมัติแล้ว = เหลือง */
+    let badgeVar, stLabel;
+    if (hasOdo)       { badgeVar = 'info'; stLabel = 'สิ้นสุดการเดินทาง'; }
+    else if (started) { badgeVar = 'info'; stLabel = 'ออกเดินทางแล้ว'; }
+    else              { badgeVar = 'wr';   stLabel = 'อนุมัติแล้ว'; }
+
+    /* มุมขวา header — จบงานแล้ว = payment, ยังไม่จบ = เวลาเดินทาง */
+    let actionHtml;
     if (hasOdo) {
         if (isCharge) {
-            payHtml = bm.personalStatus === 1
-                ? `<span class="va-trip-pay va-trip-pay--done"><i data-lucide="circle-check" class="vc-icon-sm"></i>จ่ายแล้ว · ${esc(bm.personalPaidAt)}</span>`
-                : `<button type="button" class="va-trip-pay-btn" onclick="event.stopPropagation();markPaid(${bm.mileageId}, ${bm.id})" title="ยืนยันการชำระเงินจากผู้จอง"><i data-lucide="wallet" class="vc-icon-sm"></i>ยืนยันการชำระเงิน</button>`;
+            actionHtml = bm.personalStatus === 1
+                ? `<span class="text-muted small flex-shrink-0">จ่ายแล้ว${bm.personalPaidAt ? ` · ${esc(bm.personalPaidAt)}` : ''}</span>`
+                : `<button type="button" class="bb-btn is-sec is-sm flex-shrink-0" onclick="event.stopPropagation();markPaid(${bm.mileageId}, ${bm.id})" title="ยืนยันการชำระเงินจากผู้จอง"><i data-lucide="wallet"></i>เรียกเก็บ</button>`;
         } else {
-            payHtml = `<span class="va-trip-pay va-trip-pay--done"><i data-lucide="circle-check" class="vc-icon-sm"></i>จ่ายแล้ว${bm.actualEnd ? ` · ${esc(bm.actualEnd)}` : ''}</span>`;
+            actionHtml = `<span class="text-muted small flex-shrink-0">${esc(budgetTag)}</span>`;
         }
+    } else {
+        actionHtml = `<span class="text-muted small flex-shrink-0">${esc(b.start)}–${esc(b.end)}</span>`;
     }
 
-    /* บรรทัด 2 — mileage (icon car) */
-    const mileageHtml = hasOdo
-        ? `<div class="va-trip-mileage">
-               <i data-lucide="car" class="vc-icon-sm va-trip-mileage-ico"></i>
-               <span class="vc-mono">${fmtNum(bm.odoStart)} → ${fmtNum(bm.odoEnd)}</span>
-               <span class="va-trip-mileage-dot">·</span>
-               <span class="vc-mono">${fmtNum(dist)} กม.</span>
-               ${fuelRate > 0 ? `<span class="va-trip-mileage-dot">·</span><span class="vc-mono">${fmtNum(fuelRate)} กม./ลิตร</span>` : ''}
-           </div>`
-        : `<div class="va-trip-mileage va-trip-mileage--empty">ยังไม่บันทึกเลขไมล์</div>`;
+    const mileageLine = hasOdo
+        ? `<div class="text-muted small mt-1">เลขไมล์ : <span class="bb-num">${fmtNum(bm.odoStart)} → ${fmtNum(bm.odoEnd)}</span> · <span class="bb-num">${fmtNum(dist)}</span> กม.</div>`
+        : started
+        ? `<div class="text-muted small mt-1">เลขไมล์ : <span class="bb-num">${fmtNum(bm.odoStart)}</span> → (ยังไม่สิ้นสุดการเดินทาง)</div>`
+        : `<div class="text-muted small mt-1">เลขไมล์ : -</div>`;
 
-    /* บรรทัด 3 — badges: คนขับ · สถานะ · อัตราน้ำมัน · ค่าน้ำมัน · OT */
-    const driverBadge = b.driverLabel
-        ? `<span class="vc-badge vc-badge-neutral va-trip-badge"><i data-lucide="user" class="vc-icon-sm"></i>${esc(b.driverLabel)}</span>`
+    const costLine = hasOdo
+        ? `<div class="text-muted small">รวมค่าใช้จ่าย : ${fmtNum(cost)} บาท${otA > 0 ? ` <span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)">OT: ${fmtNum(otA)} บาท</span>` : ''}</div>`
         : '';
 
-    const otH = Number(bm.otHours)  || 0;
-    const otA = Number(bm.otAmount) || 0;
-
-    const isPast = new Date(b.endIso) < serverNow;
-    let stCls, stIcon, stLabel;
-    if (hasOdo)       { stCls = 'vc-badge-success'; stIcon = 'clock';       stLabel = `เสร็จสิ้น : ${fmtBaht(total + otA)}`; }
-    else if (started) { stCls = 'vc-badge-blue';    stIcon = 'navigation'; stLabel = 'เริ่มเดินทาง'; }
-    else if (isPast)  { stCls = 'vc-badge-neutral'; stIcon = 'circle-x';   stLabel = 'ยกเลิก (ไม่บันทึกไมล์)'; }
-    else              { stCls = 'vc-badge-warning'; stIcon = 'clock';      stLabel = 'รอเดินทาง'; }
-    const statusBadge = `<span class="vc-badge ${stCls} va-trip-badge">${stLabel}</span>`;
-
-    const fuelBadge = hasOdo
-        ? `<span class="vc-badge va-trip-badge ${isCharge ? 'vc-badge-warning' : 'vc-badge-neutral'}"><i data-lucide="fuel" class="vc-icon-sm"></i>${fmtBaht(total)} (${budgetTag}) | ${fmtNum(fuelPrice)}฿/ลิตร </span>`
-        : '';
-    const otBadge = otA > 0
-        ? `<span class="vc-badge va-trip-badge ${isCharge ? 'vc-badge-warning' : 'va-trip-badge--ot'}"><i data-lucide="clock" class="vc-icon-sm"></i>OT +${fmtNum(otH)} ชม. · ${fmtBaht(otA)} (${budgetTag})</span>`
-        : '';
+    const headerLeft = isMulti
+        ? `<div class="text-muted small">งานที่ ${idx + 1}</div>`
+        : `<div class="fw-bold">${esc(v.plate)}</div>`;
+    const alignCls = isMulti ? 'align-items-center' : 'align-items-start';
+    const wrapCls  = isMulti && idx < total - 1 ? 'mb-3' : '';
 
     return `
-    <div class="va-trip${!hasOdo ? ' va-trip--no-mileage' : ''}">
-        <div class="va-trip-head">
-            <span class="va-trip-plate">${esc(plate)}</span>
-            <i data-lucide="arrow-right" class="vc-icon-sm va-trip-arrow"></i>
-            <span class="va-trip-dest">${destText}</span>
-            ${payHtml}
+    <div class="${wrapCls}">
+        <div class="d-flex justify-content-between ${alignCls} gap-2">
+            ${headerLeft}
+            ${actionHtml}
         </div>
-        ${mileageHtml}
-        <div class="va-trip-badges">
-            ${driverBadge}
-            ${statusBadge}
-            ${fuelBadge}
-            ${otBadge}
+        <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+            <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-${badgeVar}-bg);color:var(--bb-${badgeVar}-tx)">${stLabel}</span>
         </div>
+        ${mileageLine}
+        ${costLine}
     </div>`;
 }
 
@@ -990,8 +769,8 @@ function openAssignModal(bookingId, action, groupName) {
         }).join('');
 
     modalExpType = (b?.expType) || 'central';
-    document.querySelectorAll('.adm-exp-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.type === modalExpType);
+    document.querySelectorAll('#modalExpTabs .bb-seg-btn').forEach(t => {
+        t.classList.toggle('is-on', t.dataset.type === modalExpType);
     });
     updateExpSubDropdown(b);
 
@@ -1004,8 +783,8 @@ function openAssignModal(bookingId, action, groupName) {
 
 function setModalExpType(type, el) {
     modalExpType = type;
-    document.querySelectorAll('.adm-exp-tab').forEach(t=>t.classList.remove('active'));
-    if (el) el.classList.add('active');
+    document.querySelectorAll('#modalExpTabs .bb-seg-btn').forEach(t=>t.classList.remove('is-on'));
+    if (el) el.classList.add('is-on');
     updateExpSubDropdown(null);
     updateModalBudget();
     checkAssignReady();
@@ -1031,7 +810,7 @@ function updateExpSubDropdown(b) {
     if (modalExpType === 'department' && selKey) {
         const entry = list.find(x => x.key === selKey);
         approverName.textContent  = entry?.approver ? ` ${entry.approver}` : ' ยังไม่ได้ตั้งผู้อนุมัติ';
-        approverName.style.color  = entry?.approver ? '' : 'var(--vc-warning)';
+        approverName.style.color  = entry?.approver ? '' : 'var(--bb-wr)';
         approverEl.style.display  = 'flex';
     } else {
         approverEl.style.display = 'none';
@@ -1044,6 +823,7 @@ function updateModalBudget() {
     const sub  = document.getElementById('modalExpSubSel');
     const bar  = document.getElementById('modalBudgetBar');
     const warn = document.getElementById('modalBudgetWarn');
+    const fill = document.getElementById('modalBudgetFill');
     if (!sub.value || modalExpType==='personal') { bar.style.display='none'; return; }
     const list = budgets[modalExpType]||[];
     const entry= list.find(x=>x.key===sub.value);
@@ -1053,22 +833,23 @@ function updateModalBudget() {
     const remPct = entry.total>0 ? (Math.max(rem,0)/entry.total)*100 : 0;
 
     let tone = 'ok';
-    if (rem <= 0)        tone = 'danger';
+    if (rem <= 0)         tone = 'danger';
     else if (remPct < 10) tone = 'danger';
     else if (remPct < 20) tone = 'warn';
 
-    bar.classList.remove('va-budget--ok','va-budget--warn','va-budget--danger');
-    bar.classList.add(`va-budget--${tone}`);
+    const toneColor = { ok:'var(--bb-ok)', warn:'var(--bb-wr)', danger:'var(--bb-dg)' }[tone];
+    fill.style.background = toneColor;
 
     document.getElementById('modalBudgetLabel').textContent = 'งบคงเหลือ';
     document.getElementById('modalBudgetValue').textContent = `${fmtNum(rem)} / ${fmtNum(entry.total)} บ.`;
-    document.getElementById('modalBudgetFill').style.width = `${usedPct}%`;
+    fill.style.width = `${usedPct}%`;
 
     if (warn) {
         if (tone === 'ok') {
             warn.hidden = true;
         } else {
             warn.hidden = false;
+            warn.style.color = toneColor;
             warn.textContent = rem <= 0
                 ? `งบหมดแล้ว (${fmtNum(rem)} บ.) — อาจติดลบหลังบันทึก`
                 : `งบเหลือน้อย (${remPct.toFixed(0)}% · ${fmtNum(rem)} บ.)`;
@@ -1201,7 +982,7 @@ async function submitAssign() {
         showToast(e.message && e.message !== 'server error' ? e.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         isSaving = false;
         btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="check" class="vc-icon-sm"></i> ยืนยันการอนุมัติ';
+        btn.innerHTML = '<i data-lucide="check"></i> ยืนยันการอนุมัติ';
         initIcons(btn);
     }
 }
@@ -1274,22 +1055,22 @@ function openSwapModal(bookingId) {
     );
 
     if (!swappable.length) {
-        listEl.innerHTML = `<div class="vc-empty">
-            <div class="vc-empty-icon"><i data-lucide="car-off" style="width:20px;height:20px;"></i></div>
-            <p class="vc-empty-title">ไม่มีรถที่สามารถ Swap ได้</p>
+        listEl.innerHTML = `<div class="bb-empty">
+            <div class="bb-empty-icon"><i data-lucide="car-off"></i></div>
+            <div class="bb-empty-title">ไม่มีรถที่สามารถ Swap ได้</div>
         </div>`;
     } else {
         listEl.innerHTML = swappable.map(v => {
             const isCurrent = v.id === b?.vehicleId;
-            const statusLabel = isCurrent ? '<span class="swap-veh-status vc-badge vc-badge-blue vc-badge-dot">ปัจจุบัน</span>'
-                              : usedIds.has(v.id) ? '<span class="swap-veh-status vc-badge vc-badge-neutral vc-badge-dot">จองแล้ว</span>'
-                              : '<span class="swap-veh-status vc-badge vc-badge-success vc-badge-dot">ว่าง</span>';
-            return `<div class="swap-veh-item${isCurrent?' swap-veh-item--current':''}" onclick="selectSwapVehicle(${v.id},this)">
-                <span class="swap-veh-radio"></span>
-                <span class="swap-veh-ico"><i data-lucide="car" class="vc-icon-sm"></i></span>
-                <div class="swap-veh-info">
-                    <div class="swap-veh-label">${esc(v.brand+' '+v.model)}</div>
-                    <div class="swap-veh-plate">${esc(v.plate)}</div>
+            const statusLabel = isCurrent ? '<span class="bb-status is-info"><span class="bb-dot"></span>ปัจจุบัน</span>'
+                              : usedIds.has(v.id) ? '<span class="bb-status is-neutral"><span class="bb-dot"></span>จองแล้ว</span>'
+                              : '<span class="bb-status is-ok"><span class="bb-dot"></span>ว่าง</span>';
+            const style = isCurrent ? 'border-color:var(--bb-accent-i);background:var(--bb-accent-bg);' : 'border-color:var(--bb-n200);';
+            return `<div data-swap-item class="d-flex align-items-center gap-2 p-2 mb-2" style="border:1px solid;${style}border-radius:var(--bb-r-md);cursor:pointer" onclick="selectSwapVehicle(${v.id},this)">
+                <span class="bb-avatar flex-shrink-0" style="width:2rem;height:2rem;background:var(--bb-n100)"><i data-lucide="car" style="width:.875rem;height:.875rem;color:var(--bb-mut)"></i></span>
+                <div class="flex-grow-1" style="min-width:0">
+                    <div class="fw-semibold text-truncate" style="font-size:.8125rem;color:var(--bb-str)">${esc(v.brand+' '+v.model)}</div>
+                    <div class="text-truncate" style="font-size:.75rem;color:var(--bb-mut)">${esc(v.plate)}</div>
                 </div>
                 ${statusLabel}
             </div>`;
@@ -1304,8 +1085,12 @@ function openSwapModal(bookingId) {
 
 function selectSwapVehicle(id, el) {
     swapVehicleId = id;
-    document.querySelectorAll('.swap-veh-item').forEach(x=>x.classList.remove('selected'));
-    el.classList.add('selected');
+    document.querySelectorAll('[data-swap-item]').forEach(x=>{
+        x.style.borderColor = 'var(--bb-n200)';
+        x.style.background  = '';
+    });
+    el.style.borderColor = 'var(--bb-accent-i)';
+    el.style.background  = 'var(--bb-accent-bg)';
     document.getElementById('swapConfirmBtn').disabled = false;
 }
 
@@ -1362,45 +1147,119 @@ async function fixDone(vehicleId) {
 
 /* ── Booking Detail Modal ─────────────────────── */
 let adminDetailModal = null;
+let _adminEditId     = null;
+
+const STATUS_CSS_KEY = {
+    pending:          'pending',
+    waiting_approver: 'approver',
+    forwarded:        'approver',
+    approved:         'approved',
+    in_progress:      'approved',
+    completed:        'approved',
+    rejected:         'rejected',
+    cancelled:        'rejected',
+};
 
 function openAdminBookingDetail(id) {
     const b = bookings.find(x => x.id === id);
     if (!b) return;
 
-    const sb   = STATUS_BADGE[b.status] || STATUS_BADGE.pending;
-    const si   = STATUS_ICON[b.status]  || STATUS_ICON.pending;
-    const badge = document.getElementById('singleStatusBadge');
-    badge.className = `rounded-2 ${sb.cls} px-3 py-2 fw-bold d-inline-flex align-items-center`;
-    document.getElementById('singleStatusIcon').className  = `${si.fa} pe-2`;
-    document.getElementById('singleStatusLabel').textContent = sb.label;
+    const sb       = STATUS_BADGE[b.status]  || STATUS_BADGE.pending;
+    const si       = STATUS_ICON[b.status]   || STATUS_ICON.pending;
+    const cssKey   = STATUS_CSS_KEY[b.status] || 'pending';
+
+    const pill = document.getElementById('detailStatusPill');
+    pill.className = `bk-detail-status bk-detail-status--${cssKey}`;
+    document.getElementById('detailStatusIcon').outerHTML =
+        `<i id="detailStatusIcon" data-lucide="${si.icon}"></i>`;
+    document.getElementById('detailStatusText').textContent = sb.label;
 
     const [y, m, d] = b.startIso.split('T')[0].split('-').map(Number);
     const dow = new Date(y, m - 1, d).getDay();
-    document.getElementById('singleDateLine').textContent =
+    document.getElementById('detailDateLine').textContent =
         `วัน${TH_DAYS_F[dow]} ที่ ${d} ${TH_MON_F[m]}`;
 
-    document.getElementById('singleTime').textContent  = `${b.start} – ${b.end}`;
-    document.getElementById('singlePlate').textContent = b.vehicleLabel || 'รอ Admin กำหนด';
+    document.getElementById('detailTime').textContent  = `${b.start} – ${b.end}`;
+    document.getElementById('detailPlate').innerHTML   = esc(b.vehicleLabel || 'รอ Admin กำหนด');
 
-    const driverLine = document.getElementById('singleDriverLine');
+    const driverLine = document.getElementById('detailDriverLine');
     if (b.needDriver) {
-        document.getElementById('singleDriver').textContent = b.driverLabel || 'รอ Admin มอบหมาย';
+        document.getElementById('detailDriver').textContent = b.driverLabel || 'รอ Admin มอบหมาย';
         driverLine.style.display = '';
     } else {
         driverLine.style.display = 'none';
     }
 
-    document.getElementById('singleBooker').textContent  = b.booker || '–';
-    document.getElementById('singlePurpose').textContent = b.purpose || '–';
-    document.getElementById('singleDest').textContent    = b.dest    || '–';
-    document.getElementById('singlePax').textContent     = b.pax     || '–';
+    document.getElementById('detailMemberCount').textContent = `${b.pax || 1} คน`;
+    document.getElementById('detailMembersList').innerHTML = `
+        <div class="bk-detail-member" style="flex-direction:column;align-items:flex-start;gap:4px;padding:8px 0;">
+            <div><span style="color:var(--vc-fg-subtle);font-size:.78rem;">ผู้จอง</span> ${esc(b.booker)}</div>
+            <div><span style="color:var(--vc-fg-subtle);font-size:.78rem;">วัตถุประสงค์</span> ${esc(b.purpose)}</div>
+            <div><span style="color:var(--vc-fg-subtle);font-size:.78rem;">ปลายทาง</span> ${esc(b.dest)}</div>
+            ${b.pickup ? `<div><span style="color:var(--vc-fg-subtle);font-size:.78rem;">จุดรับ</span> ${esc(b.pickup)}</div>` : ''}
+        </div>`;
 
-    document.getElementById('singlePickupLine').setAttribute('hidden', '');
+    const canEdit = !['in_progress','completed','cancelled'].includes(b.status);
+    const actDiv  = document.getElementById('detailActions');
+    actDiv.innerHTML = canEdit
+        ? `<button class="btn btn-sm btn-outline-primary" onclick="openAdminEdit(${b.id})">แก้ไข</button>`
+        : '';
 
-    document.getElementById('singleActions').innerHTML = '';
+    document.getElementById('detailEditSection').classList.add('d-none');
 
     adminDetailModal = adminDetailModal || new bootstrap.Modal(document.getElementById('eventDetailModal'));
     adminDetailModal.show();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function openAdminEdit(id) {
+    const b = bookings.find(x => x.id === id);
+    if (!b) return;
+    _adminEditId = id;
+    document.getElementById('editStart').value   = b.startIso ? b.startIso.slice(0,16) : '';
+    document.getElementById('editEnd').value     = b.endIso   ? b.endIso.slice(0,16)   : '';
+    document.getElementById('editDest').value    = b.dest    || '';
+    document.getElementById('editPurpose').value = b.purpose || '';
+    document.getElementById('editPax').value     = b.pax     || 1;
+    document.getElementById('editPickup').value  = b.pickup  || '';
+    document.getElementById('detailEditSection').classList.remove('d-none');
+    document.getElementById('detailActions').innerHTML = '';
+}
+
+function cancelAdminEdit() {
+    document.getElementById('detailEditSection').classList.add('d-none');
+    if (_adminEditId) openAdminBookingDetail(_adminEditId);
+}
+
+async function saveAdminEdit() {
+    const b = bookings.find(x => x.id === _adminEditId);
+    if (!b) return;
+    const fd = new FormData();
+    fd.append('start_datetime',   document.getElementById('editStart').value);
+    fd.append('end_datetime',     document.getElementById('editEnd').value);
+    fd.append('destination',      document.getElementById('editDest').value);
+    fd.append('purpose',          document.getElementById('editPurpose').value);
+    fd.append('passenger_count',  document.getElementById('editPax').value);
+    fd.append('pickup_location',  document.getElementById('editPickup').value);
+    try {
+        const res  = await fetch(b.editUrl, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok || !data.ok) { showToast(data.msg || 'เกิดข้อผิดพลาด'); return; }
+        patchBooking(b.id, {
+            startIso: document.getElementById('editStart').value + ':00',
+            endIso:   document.getElementById('editEnd').value   + ':00',
+            dest:     document.getElementById('editDest').value,
+            purpose:  document.getElementById('editPurpose').value,
+            pax:      parseInt(document.getElementById('editPax').value) || b.pax,
+            pickup:   document.getElementById('editPickup').value,
+        });
+        renderAll();
+        showToast(data.msg || 'บันทึกแล้ว');
+        document.getElementById('detailEditSection').classList.add('d-none');
+        openAdminBookingDetail(b.id);
+    } catch {
+        showToast('เชื่อมต่อไม่ได้ กรุณาลองใหม่');
+    }
 }
 
 /* ── Post-trip actions ────────────────────────── */
@@ -1422,10 +1281,7 @@ function notifyDept(bookingId) {
 
 /* ── Toast ────────────────────────────────────── */
 function showToast(msg) {
-    const t = document.getElementById('admToast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
+    window.bbToast({ msg });
 }
 
 /* ── Escape ───────────────────────────────────── */
@@ -1438,19 +1294,16 @@ function esc(s) {
    INIT
 ══════════════════════════════════════════════════ */
 function renderAll() {
-    renderWeekNav();
     renderWeekMeta();
     renderBefore();
     renderDuring();
-    renderAfter();
     initIcons();
 }
 
 /* ── Expose to window for legacy onclick handlers ── */
 Object.assign(window, {
-    shiftWeek, toggleGroupMode, cancelGroupMode, confirmMerge,
+    toggleGroupMode, cancelGroupMode, confirmMerge,
     toggleNotifyMode, cancelNotifyMode, confirmNotify,
-    setFilter,
     toggleGroupSel, toggleNotifySel, toggleGroupNotifySel,
     openAssignModal, openRevertModal, openAdminBookingDetail,
     openSwapModal, openRepairModal,
@@ -1458,7 +1311,9 @@ Object.assign(window, {
     setModalExpType, updateExpSubDropdown, checkAssignReady,
     submitAssign, submitRevert, submitSwap, submitRepair,
     selectSwapVehicle, markPaid, notifyDept,
+    openAdminEdit, cancelAdminEdit, saveAdminEdit,
 });
 
-bindWeekControls();
+bindDateControls();
+bindFilterTabs();
 renderAll();

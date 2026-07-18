@@ -1,0 +1,27 @@
+{#
+  bb_modal — Component Library .bb-modal
+  spec: components-gallery.html §13 · markup ตรง gallery เป๊ะ
+
+  head = title + sub (optional) + ปุ่ม x
+  body = HTML/component (render มาแล้วเป็น string)
+  foot = ปุ่ม actions (render มาแล้ว) — เว้น = ไม่มี foot
+  overlay=True → ห่อ .bb-modal-overlay (canonical) · False → เฉพาะกล่อง (สำหรับ demo/embed)
+
+  JS เปิด/ปิดอยู่ในไฟล์ .js — ห้าม inline <script> (CLAUDE.md)
+
+  Usage:
+    {% from '_components/bb/modal.html' import bb_modal %}
+    {{ bb_modal('ยืนยันการลบ', body_html, foot_html, sub='...', mid='delModal') }}
+#}
+{% macro bb_modal(title, body, foot='', sub='', mid='', on_close='', overlay=true) -%}
+{%- if overlay %}<div class="bb-modal-overlay"{% if mid %} id="{{ mid }}"{% endif %} hidden>{% endif %}
+<div class="bb-modal"{% if not overlay and mid %} id="{{ mid }}"{% endif %}>
+  <div class="bb-modal-head">
+    <div><div class="bb-modal-title">{{ title }}</div>{% if sub %}<div class="bb-modal-sub">{{ sub }}</div>{% endif %}</div>
+    <button type="button" class="bb-modal-x"{% if on_close %} data-action="{{ on_close }}"{% endif %}><i data-lucide="x"></i></button>
+  </div>
+  <div class="bb-modal-body">{{ body }}</div>
+  {%- if foot %}<div class="bb-modal-foot">{{ foot }}</div>{% endif %}
+</div>
+{%- if overlay %}</div>{% endif %}
+{%- endmacro %}

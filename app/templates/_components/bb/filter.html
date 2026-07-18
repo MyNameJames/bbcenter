@@ -1,0 +1,62 @@
+{#
+  bb_filter — filter button (dropdown ที่ filter ข้างใน) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-filter)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-filter])
+
+  shell macro (template-only · เหมือน bb_table shell — ไม่มี Python class):
+  เปิด slot ใส่ filter controls เองอิสระ → JS auto-track ค่าที่เปลี่ยนจาก default
+
+  พฤติกรรม:
+  - คลิก trigger → popover · เปลี่ยนค่าข้างใน = filter ทันที (ไม่มีปุ่มยืนยัน)
+  - ออกจากค่า default = active → button ขึ้น border + badge dot แดง
+  - มีแค่ปุ่ม "ล้างการเลือก" (คืน default) · dispatch 'bb-filter:change' {detail: state}
+
+  control ข้างในที่ JS track (ใส่ใน slot):
+  - กลุ่มปุ่ม:  <div data-filter-group="status" data-multi> + ปุ่มที่มี data-value (active = .is-on)   ← multi-select
+                <div data-filter-group="type"> ...                                                    ← single-select (เลือกได้อันเดียว)
+  - native:    <select name="dept"> / <input name="...">   (ค่า default = ค่าเริ่มต้น/option ที่ selected)
+
+  Usage:
+    {% from '_components/bb/filter.html' import bb_filter %}
+    {% call bb_filter(label='ตัวกรอง') %}
+      <div class="bb-filter-sec">
+        <div class="bb-filter-sec-label">สถานะ</div>
+        <div class="bb-filter-chips" data-filter-group="status" data-multi>
+          <button type="button" class="bb-chip" data-value="pending">รออนุมัติ</button>
+          <button type="button" class="bb-chip" data-value="approved">อนุมัติแล้ว</button>
+        </div>
+      </div>
+      <div class="bb-filter-sec">
+        <div class="bb-filter-sec-label">แผนก</div>
+        <select class="bb-filter-select" name="dept">
+          <option value="">ทุกแผนก</option><option value="transport">ขนส่ง</option>
+        </select>
+      </div>
+    {% endcall %}
+
+  params:
+    label        ข้อความบนปุ่ม (default 'ตัวกรอง')
+    icon         Lucide icon บนปุ่ม (default 'sliders-horizontal')
+    title        หัวข้อใน popover (default 'ตัวกรอง')
+    clear_label  ข้อความปุ่มล้าง (default 'ล้างการเลือก')
+    align        ทิศที่ popover กาง: 'left' (default) | 'right'
+    id           id บน root
+#}
+{% macro bb_filter(label='ตัวกรอง', icon='sliders-horizontal', title='ตัวกรอง', clear_label='ล้างการเลือก', align='left', id='') -%}
+<div class="bb-filter{% if align == 'right' %} is-align-right{% endif %}" data-bb-filter{% if id %} id="{{ id }}"{% endif %}>
+  <button type="button" class="bb-filter-btn" data-bb-filter-btn aria-haspopup="dialog" aria-expanded="false">
+    <i data-lucide="{{ icon }}"></i>
+    <span>{{ label }}</span>
+    <span class="bb-filter-badge" data-bb-filter-badge aria-hidden="true"></span>
+  </button>
+  <div class="bb-filter-pop" data-bb-filter-pop role="dialog" aria-label="{{ title }}" hidden>
+    <div class="bb-filter-head">
+      <span class="bb-filter-title">{{ title }}</span>
+      <button type="button" class="bb-filter-clear" data-bb-filter-clear><i data-lucide="x"></i> {{ clear_label }}</button>
+    </div>
+    <div class="bb-filter-body" data-bb-filter-body>
+      {{ caller() }}
+    </div>
+  </div>
+</div>
+{%- endmacro %}

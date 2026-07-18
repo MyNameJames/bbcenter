@@ -1,0 +1,27 @@
+{#
+  bb_dropdown — Component Library .bb-select + .bb-menu
+  spec: components-gallery.html §6 · markup ตรง gallery เป๊ะ
+
+  trigger = .bb-select (hint + label + caret)
+  panel   = .bb-menu — items เป็น list ของ dict มี key 'kind':
+    {kind:'label',   text}
+    {kind:'item',    label, active, value, on_click}
+    {kind:'divider'}
+    {kind:'rich',    title, desc, checked, value, on_click}
+
+  Usage:
+    {% from '_components/bb/dropdown.html' import bb_dropdown %}
+    {{ bb_dropdown('ขนส่ง', items, hint='แผนก:', width=220) }}
+#}
+{% macro bb_dropdown(label, items, hint='', width=0, on_toggle='') -%}
+<span class="bb-select"{% if on_toggle %} data-action="{{ on_toggle }}"{% endif %}>{% if hint %}<span class="bb-select-hint">{{ hint }}</span> {% endif %}{{ label }} <i data-lucide="chevron-down"></i></span>
+<div class="bb-menu"{% if width %} style="width:{{ width }}px"{% endif %}>
+{%- for it in items %}
+{%- if it.kind == 'label' %}<div class="bb-menu-label">{{ it.text }}</div>
+{%- elif it.kind == 'divider' %}<div class="bb-menu-divider"></div>
+{%- elif it.kind == 'rich' %}<div class="bb-menu-rich"{% if it.on_click %} data-action="{{ it.on_click }}"{% endif %}{% if it.value %} data-value="{{ it.value }}"{% endif %}><div class="bb-check{% if it.checked %} is-on{% endif %}"><i data-lucide="check"></i></div><div><div class="bb-menu-rich-title">{{ it.title }}</div><div class="bb-menu-rich-desc">{{ it.desc }}</div></div></div>
+{%- else %}<div class="bb-menu-item{% if it.active %} is-on{% endif %}"{% if it.on_click %} data-action="{{ it.on_click }}"{% endif %}{% if it.value %} data-value="{{ it.value }}"{% endif %}>{{ it.label }}{% if it.active %} <i data-lucide="check"></i>{% endif %}</div>
+{%- endif %}
+{%- endfor %}
+</div>
+{%- endmacro %}

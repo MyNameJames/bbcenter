@@ -1,0 +1,27 @@
+{#
+  bb_badge / bb_status / bb_status_inline — Component Library .bb-*
+  spec: docs/notes/design_guideline.md §13 + components-gallery.html §10-11
+  markup ต้องตรง gallery เป๊ะ (gallery = visual contract)
+
+  Usage:
+    {% from '_components/bb/badge.html' import bb_badge, bb_status, bb_status_inline %}
+    {{ bb_badge('ใหม่', 'accent', icon='zap') }}
+    {{ bb_status('เสร็จสิ้น', 'ok') }}
+    {{ bb_status_inline('รออนุมัติ', 'wr', icon='clock') }}
+
+  bb_badge        variant: neutral | accent          (tag/count สี่เหลี่ยม)
+  bb_status       tone: ok | wr | dg | info | neutral (pill วงรี มีพื้น + dot)
+  bb_status_inline tone เดียวกัน                       (icon + text ไม่มีพื้น — ใช้ในตาราง)
+#}
+
+{% macro bb_badge(text, variant='neutral', icon=none) -%}
+<span class="bb-badge is-{{ variant }}">{% if icon %}<i data-lucide="{{ icon }}"></i> {% endif %}{{ text }}</span>
+{%- endmacro %}
+
+{% macro bb_status(text, tone='neutral') -%}
+<span class="bb-status is-{{ tone }}"><span class="bb-dot"></span> {{ text }}</span>
+{%- endmacro %}
+
+{% macro bb_status_inline(text, tone='neutral', icon=none) -%}
+<span class="bb-status-inline is-{{ tone }}">{% if icon %}<i data-lucide="{{ icon }}"></i> {% endif %}{{ text }}</span>
+{%- endmacro %}

@@ -1,0 +1,17 @@
+{#
+  bb_spinner / bb_skeleton — Component Library .bb-spinner · .bb-skeleton
+  spec: components-gallery.html §+ · markup ตรง gallery เป๊ะ
+
+  bb_spinner — วงหมุน. size='sm' → .is-sm · text → inline (.bb-loading-inline)
+  bb_skeleton — แถบ placeholder. lines = list ของ dict {height, width}
+#}
+{% macro bb_spinner(size='', text='') -%}
+{%- if text %}<span class="bb-loading-inline"><span class="bb-spinner{% if size %} is-{{ size }}{% endif %}"></span> {{ text }}</span>
+{%- else %}<div class="bb-spinner{% if size %} is-{{ size }}{% endif %}"></div>{% endif %}
+{%- endmacro %}
+
+{% macro bb_skeleton(lines) -%}
+<div class="bb-skeleton-group" style="display:flex;flex-direction:column;gap:.5rem">
+{%- for ln in lines %}<div class="bb-skeleton" style="height:{{ ln.height }};width:{{ ln.width }}"></div>{% endfor %}
+</div>
+{%- endmacro %}

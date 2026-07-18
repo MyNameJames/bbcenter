@@ -1,0 +1,21 @@
+{#
+  bb_kpi — Component Library .bb-kpi
+  spec: components-gallery.html §8 · markup ตรง gallery เป๊ะ
+
+  variant: card (มีกรอบ) | ghost (ลอย) · value=bb-num · den=หน่วยท้ายเลข
+  delta_dir: 'up' | 'down' → is-up/is-down + icon trending-up/down (เว้นว่าง = ไม่มี delta)
+
+  Usage:
+    {% from '_components/bb/kpi.html' import bb_kpi %}
+    {{ bb_kpi('ระยะทางรวม', '12,480', icon='route', den='กม.', delta='8.2%', delta_dir='up') }}
+#}
+{% macro bb_kpi(label, value, icon=none, variant='card', den='', delta='', delta_dir='') -%}
+<div class="bb-kpi is-{{ variant }}">
+{%- if icon %}<div class="bb-kpi-tile"><i data-lucide="{{ icon }}"></i></div>{% endif %}
+<div>
+<div class="bb-kpi-label">{{ label }}</div>
+<div class="bb-kpi-value bb-num">{{ value }}{% if den %} <span class="bb-kpi-den">{{ den }}</span>{% endif %}</div>
+{%- if delta %}<div class="bb-kpi-delta is-{{ delta_dir }}"><i data-lucide="trending-{{ delta_dir }}"></i> {{ delta }}</div>{% endif %}
+</div>
+</div>
+{%- endmacro %}

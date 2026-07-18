@@ -159,6 +159,41 @@ def edit_booking(booking_id):
 
 
 # ─────────────────────────────────────────────
+# Admin แก้ไขการจอง (AJAX)
+# ─────────────────────────────────────────────
+
+@vehicle_bp.route('/vehicle/admin/edit/<int:booking_id>', methods=['POST'])
+@login_required
+def admin_edit_booking(booking_id):
+    if not is_vehicle_admin():
+        return jsonify({'ok': False, 'msg': 'ไม่มีสิทธิ์'}), 403
+    booking = VehicleBooking.query.get_or_404(booking_id)
+    if booking.status in ('in_progress', 'completed', 'cancelled'):
+        return jsonify({'ok': False, 'msg': f'ไม่สามารถแก้ไขได้ (สถานะ: {booking.status})'}), 400
+    try:
+        start_str = request.form.get('start_datetime', '').strip()
+        end_str   = request.form.get('end_datetime',   '').strip()
+        if start_str:
+            booking.start_datetime = datetime.strptime(start_str, '%Y-%m-%dT%H:%M')
+        if end_str:
+            booking.end_datetime = datetime.strptime(end_str, '%Y-%m-%dT%H:%M')
+        if booking.start_datetime >= booking.end_datetime:
+            return jsonify({'ok': False, 'msg': 'วันเริ่มต้นต้องก่อนวันสิ้นสุด'}), 400
+        booking.destination     = request.form.get('destination', booking.destination)
+        booking.purpose         = request.form.get('purpose',     booking.purpose)
+        pax = request.form.get('passenger_count', '').strip()
+        if pax:
+            booking.passenger_count = int(pax)
+        booking.pickup_location = request.form.get('pickup_location', '').strip() or None
+        db.session.commit()
+        return jsonify({'ok': True, 'msg': 'อัปเดตข้อมูลการจองแล้ว'})
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('admin_edit_booking failed')
+        return jsonify({'ok': False, 'msg': 'เกิดข้อผิดพลาด กรุณาลองใหม่'}), 500
+
+
+# ─────────────────────────────────────────────
 # ลบการจอง
 # ─────────────────────────────────────────────
 
@@ -273,14 +308,17 @@ def cancel_booking(booking_id):
     if not (is_owner or is_admin):
         flash('คุณไม่มีสิทธิ์ยกเลิกการจองนี้', 'danger')
         return redirect(url_for('vehicle.index'))
-    if not is_admin and booking.status not in ('pending', 'waiting_approver'):
-        flash(f'ยกเลิกไม่ได้ — สถานะปัจจุบันคือ {booking.status}', 'warning')
+    if not is_admin and booking.status != 'pending':
+        flash('ยกเลิกได้เฉพาะก่อนที่ Admin จะจัดรถ — ติดต่อ Admin หากต้องการยกเลิก', 'warning')
         return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
     if booking.status not in ('pending', 'waiting_approver', 'approved'):
         flash(f'ยกเลิกไม่ได้ — สถานะปัจจุบันคือ {booking.status}', 'warning')
         return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
-    if get_bkk_time() >= booking.start_datetime:
+    if not is_admin and get_bkk_time() >= booking.start_datetime:
         flash('ทริปเริ่มแล้ว ไม่สามารถยกเลิกได้ — ติดต่อ Admin หากจำเป็น', 'warning')
+        return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
+    if any(m.budget_deducted_at for m in booking.mileage):
+        flash('ทริปนี้หักงบแล้ว ไม่สามารถยกเลิกได้ — ติดต่อผู้ดูแลระบบ', 'warning')
         return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
 
     try:
@@ -290,6 +328,26 @@ def cancel_booking(booking_id):
         booking.status     = 'cancelled'
         booking.updated_by = current_user.id
         tg_notify_cancelled(booking, current_user)
+
+        # reset สมาชิกทริปร่วม → pending (un-merge) หลัง notify ที่ยังอ่าน trip_group ได้
+        if booking.trip_group:
+            mates = VehicleBooking.query.filter(
+                VehicleBooking.trip_group == booking.trip_group,
+                VehicleBooking.id != booking.id,
+            ).all()
+            skipped = 0
+            for mb in mates:
+                if any(m.budget_deducted_at for m in mb.mileage):
+                    skipped += 1
+                    continue
+                mb.status              = 'pending'
+                mb.assigned_vehicle_id = None
+                mb.driver_id           = None
+                mb.trip_group          = None
+            if skipped:
+                flash(f'⚠️ {skipped} รายการในกลุ่มทริปหักงบแล้ว — ไม่สามารถ reset ได้ โปรดตรวจสอบ', 'warning')
+            booking.trip_group = None
+
         db.session.commit()
         flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย', 'success')
     except Exception:

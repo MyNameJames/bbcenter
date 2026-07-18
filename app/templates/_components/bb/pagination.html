@@ -1,0 +1,29 @@
+{#
+  bb_pagination — Component Library .bb-pag (windowed)
+  spec: components-gallery.html §12 · markup ตรง gallery เป๊ะ
+
+  info   = ข้อความซ้าย (เช่น "แสดง 1–20 จาก 128")
+  pages  = list ของ token ที่ Python คำนวณมาแล้ว:
+           {kind:'gap'} | {kind:'page', n, active}
+  page / total_pages  สำหรับปุ่ม prev/next (is-disabled ที่ขอบ)
+
+  หมายเหตุ: bb_table_v2 มี pagination ในตัว (ไม่มี gap) — ตัวนี้คือ standalone แบบ windowed
+
+  Usage:
+    {% from '_components/bb/pagination.html' import bb_pagination %}
+    {{ bb_pagination(info, pages, page, total_pages) }}
+#}
+{% macro bb_pagination(info, pages, page, total_pages, on_click='') -%}
+<div class="bb-pag">
+  <span class="bb-pag-info">{{ info }}</span>
+  <div class="bb-pag-nav">
+    <button type="button" class="bb-pg{% if page <= 1 %} is-disabled{% endif %}"{% if on_click %} data-action="{{ on_click }}"{% endif %} data-page="{{ page - 1 }}"><i data-lucide="chevron-left"></i></button>
+{%- for p in pages %}
+{%- if p.kind == 'gap' %}<button type="button" class="bb-pg is-gap">…</button>
+{%- else %}<button type="button" class="bb-pg{% if p.active %} is-on{% endif %}"{% if on_click %} data-action="{{ on_click }}"{% endif %} data-page="{{ p.n }}">{{ p.n }}</button>
+{%- endif %}
+{%- endfor %}
+    <button type="button" class="bb-pg{% if page >= total_pages %} is-disabled{% endif %}"{% if on_click %} data-action="{{ on_click }}"{% endif %} data-page="{{ page + 1 }}"><i data-lucide="chevron-right"></i></button>
+  </div>
+</div>
+{%- endmacro %}

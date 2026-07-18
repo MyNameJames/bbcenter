@@ -1,0 +1,52 @@
+{#
+  bb_slider — range slider (single | dual) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-slider)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-slider])
+
+  - single = 1 handle (ค่าเดียว) · dual = 2 handle (เลือกช่วง min–max)
+  - ลาก/คีย์บอร์ด (←→↑↓ ±step · PageUp/Down ±step×10 · Home/End)/คลิกราง
+  - bubble โชว์ค่าปัจจุบันตลอด · scale บอก min–max
+  - เซ็ต hidden input (single: name · dual: name_min/name_max) → post ได้
+  - event 'bb-slider:change' {detail: dual ? {min,max} : {value}}
+
+  Usage:
+    {% from '_components/bb/slider.html' import bb_slider %}
+    {{ bb_slider(name='distance', min=0, max=500, step=10, value=120, unit='กม.') }}
+    {{ bb_slider(name='budget', min=0, max=100000, step=1000, start=20000, end=80000, unit='฿', dual=True) }}
+
+  params:
+    min/max/step  ขอบเขต + ก้าว (default 0/100/1)
+    unit          หน่วยต่อท้าย bubble/scale ('')
+    dual          True = เลือกช่วง (2 handle) · False = ค่าเดียว
+    scale         แสดง label min–max ใต้ราง (default True)
+    name          single: ชื่อ hidden input (default 'value')
+    value         single: ค่าเริ่มต้น (default = min)
+    name_min/name_max  dual: ชื่อ hidden input (default = name+'_min'/'_max')
+    start/end     dual: ค่าเริ่มต้น (default = min/max)
+    id            id บน root
+#}
+{% macro bb_slider(min=0, max=100, step=1, unit='', dual=False, scale=True, name='value', value=None, name_min='', name_max='', start=None, end=None, id='') -%}
+{% set v0 = (start if start is not none else min) if dual else (value if value is not none else min) %}
+{% set v1 = (end if end is not none else max) %}
+{% set nmin = name_min or (name ~ '_min') %}
+{% set nmax = name_max or (name ~ '_max') %}
+<div class="bb-slider{% if dual %} is-dual{% endif %}" data-bb-slider data-min="{{ min }}" data-max="{{ max }}" data-step="{{ step }}" data-unit="{{ unit }}"{% if dual %} data-dual{% endif %}{% if id %} id="{{ id }}"{% endif %}>
+  <div class="bb-slider-rail" data-bb-slider-rail>
+    <div class="bb-slider-track"></div>
+    <div class="bb-slider-fill" data-bb-slider-fill></div>
+    <button type="button" class="bb-slider-thumb" data-bb-slider-thumb="0" role="slider" tabindex="0" aria-label="{{ 'ค่าต่ำสุด' if dual else 'ค่า' }}"><span class="bb-slider-bubble bb-num" data-bb-slider-bubble></span></button>
+    {%- if dual %}
+    <button type="button" class="bb-slider-thumb" data-bb-slider-thumb="1" role="slider" tabindex="0" aria-label="ค่าสูงสุด"><span class="bb-slider-bubble bb-num" data-bb-slider-bubble></span></button>
+    {%- endif %}
+  </div>
+  {%- if scale %}
+  <div class="bb-slider-scale"><span class="bb-num">{{ min }}{{ unit }}</span><span class="bb-num">{{ max }}{{ unit }}</span></div>
+  {%- endif %}
+  {%- if dual %}
+  <input type="hidden" name="{{ nmin }}" value="{{ v0 }}" data-bb-slider-input="0" autocomplete="off">
+  <input type="hidden" name="{{ nmax }}" value="{{ v1 }}" data-bb-slider-input="1" autocomplete="off">
+  {%- else %}
+  <input type="hidden" name="{{ name }}" value="{{ v0 }}" data-bb-slider-input="0" autocomplete="off">
+  {%- endif %}
+</div>
+{%- endmacro %}

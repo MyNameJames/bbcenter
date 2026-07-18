@@ -1,0 +1,136 @@
+{#
+  bb_table — data-table v2 shell (.bb-table) ของ Component Library .bb-*
+  spec: docs/notes/design_guideline.md §12 (Table)
+
+  thead มาจาก column spec · tbody ส่งผ่าน {% call %} (row เขียนเองในหน้า — เก็บ data-* / JS hook ได้ครบ)
+
+  Usage:
+    {% from '_components/bb/table.html' import bb_table %}
+    {% call bb_table([
+        {'cls':'col-check', 'raw':'<input type="checkbox" id="checkAll">'},
+        {'label':'Booking', 'sort':'booking'},
+        {'label':'งบ'},
+        {'label':'ค่าน้ำมัน', 'sort':'cost', 'align':'end'},
+        {'cls':'col-actions'},
+    ], wrap_cls='mt-2') %}
+        <tr>...</tr>   (tbody rows — เขียนเองในหน้า)
+    {% endcall %}
+
+  column dict:
+    label  ข้อความหัวคอลัมน์ ('' / ไม่ใส่ = ว่าง)
+    sort   sort key → ทำเป็น .bb-th.sortable + icon chevrons-up-down + data-sort (ไม่ใส่ = กรองไม่ได้)
+    align  'end' | 'center'   → เพิ่ม text-end / text-center
+    cls    extra class บน <th>
+    raw    raw HTML แทน label (เช่น checkbox select-all) — ใช้ |safe
+  wrap_cls   extra class บน .table-responsive (default '')
+  responsive ห่อ .table-responsive ไหม (default True)
+  table_cls  extra class บน <table>
+#}
+
+{%- macro bb_th(col) -%}
+{%- set _cls = [] -%}
+{%- if col.sort %}{% set _ = _cls.append('bb-th') %}{% set _ = _cls.append('sortable') %}{% endif -%}
+{%- if col.align == 'end' %}{% set _ = _cls.append('text-end') %}{% endif -%}
+{%- if col.align == 'center' %}{% set _ = _cls.append('text-center') %}{% endif -%}
+{%- if col.cls %}{% set _ = _cls.append(col.cls) %}{% endif -%}
+<th{% if _cls %} class="{{ _cls|join(' ') }}"{% endif %}{% if col.sort %} data-sort="{{ col.sort }}"{% endif %}>{% if col.raw %}{{ col.raw|safe }}{% elif col.label %}{{ col.label }}{% endif %}{% if col.sort %} <span class="bb-sort-icon"><i data-lucide="chevrons-up-down"></i></span>{% endif %}</th>
+{%- endmacro -%}
+
+{% macro bb_table(columns, wrap_cls='', responsive=True, table_cls='') -%}
+{%- if responsive %}<div class="table-responsive{% if wrap_cls %} {{ wrap_cls }}{% endif %}">{% endif %}
+<table class="bb-table{% if table_cls %} {{ table_cls }}{% endif %}">
+<thead>
+<tr>
+{% for col in columns %}{{ bb_th(col) }}
+{% endfor %}</tr>
+</thead>
+<tbody>
+{{ caller() }}
+</tbody>
+</table>
+{%- if responsive %}</div>{% endif %}
+{%- endmacro %}
+
+
+{#
+  bb_table_v2 — config-driven full table (เทียบ PHP getTableV2)
+  รับ config dict → render thead + tbody(loop data) + info + pagination + empty ครบในตัว
+  เหมาะตารางข้อมูลธรรมดา (cell เป็น text/เลข/เงิน + custom ผ่าน render macro)
+  ตารางที่ row ซับซ้อนมาก (data-* บน <tr>, group row) → ใช้ shell bb_table + {% raw %}{% call %}{% endraw %} แทน
+
+  config:
+    id          id ของ wrapper
+    columns     [ {key,label,sort,align,cls,fmt,render}, … ]
+                  key    = ดึง row[key]
+                  fmt    = 'money' (฿ 1,234) | 'num' (1,234) | custom format string เช่น '{:,.1f}' / '฿{:,.0f}' | default text
+                  render = macro รับ (row) → คืน cell HTML (สำหรับ pill/avatar/ปุ่ม)
+                  sort/align/cls = เหมือน bb_table
+    data        list of dict/obj
+    total       จำนวนรวม (default = len(data))
+    limit,page  สำหรับ pagination
+    pagination  True → แสดง .bb-pag (ต้องมี limit)
+    info        True → แถบ "ทั้งหมด N รายการ"
+    empty       ข้อความตอนไม่มีข้อมูล (default 'ไม่พบรายการ')
+    class/wrap_cls/table_cls  extra class
+
+  Usage:
+    {% raw %}{% from '_components/bb/table.html' import bb_table_v2 %}
+    {% macro render_status(row) %}<span class="bb-status is-ok"><span class="bb-dot"></span>{{ row.status }}</span>{% endmacro %}
+    {{ bb_table_v2({'columns':[…], 'data':rows, 'total':total, 'limit':20, 'page':page, 'pagination':True}) }}{% endraw %}
+#}
+
+{%- macro _bb_fmt(val, fmt) -%}
+{%- if val is none or val == '' -%}—
+{%- elif fmt == 'money' -%}฿ {{ '{:,.0f}'.format(val|float) }}
+{%- elif fmt == 'num' -%}{{ '{:,}'.format(val|int) }}
+{%- elif fmt and '{' in fmt -%}{{ fmt.format(val|float) }}
+{%- else -%}{{ val }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro _bb_cell(col, row) -%}
+{%- set _cls = [] -%}
+{%- if col.fmt in ['money','num'] or col.align == 'end' %}{% set _ = _cls.append('bb-cell-num') %}{% endif -%}
+{%- if col.align == 'center' %}{% set _ = _cls.append('text-center') %}{% endif -%}
+{%- if col.cls %}{% set _ = _cls.append(col.cls) %}{% endif -%}
+<td{% if _cls %} class="{{ _cls|join(' ') }}"{% endif %}>{% if col.render %}{{ col.render(row) }}{% elif col.key %}{{ _bb_fmt(row[col.key], col.fmt) }}{% endif %}</td>
+{%- endmacro -%}
+
+{%- macro _bb_pagination(total, limit, page) -%}
+{%- set total = total|int %}{%- set limit = limit|int %}{%- set page = (page|int) if page else 1 -%}
+{%- set pages = (total // limit) + (1 if total % limit else 0) -%}
+{%- if pages > 1 -%}
+<div class="bb-pag">
+<span class="bb-pag-info">แสดง <span class="bb-num">{{ (page-1)*limit + 1 }}–{{ [page*limit, total]|min }}</span> จาก <span class="bb-num">{{ '{:,}'.format(total) }}</span></span>
+<div class="bb-pag-nav">
+<button type="button" class="bb-pg{% if page <= 1 %} is-disabled{% endif %}" data-page="{{ page-1 }}"><i data-lucide="chevron-left"></i></button>
+{% for p in range(1, pages+1) %}<button type="button" class="bb-pg{% if p == page %} is-on{% endif %}" data-page="{{ p }}">{{ p }}</button>
+{% endfor %}<button type="button" class="bb-pg{% if page >= pages %} is-disabled{% endif %}" data-page="{{ page+1 }}"><i data-lucide="chevron-right"></i></button>
+</div>
+</div>
+{%- endif -%}
+{%- endmacro -%}
+
+{% macro bb_table_v2(cfg) -%}
+{%- set cols = cfg.columns or [] -%}
+{%- set data = cfg.data or [] -%}
+{%- set total = cfg.get('total') -%}
+{%- if total is none %}{% set total = data|length %}{% endif -%}
+<div class="bb-table-v2{% if cfg.class %} {{ cfg.class }}{% endif %}"{% if cfg.id %} id="{{ cfg.id }}"{% endif %}>
+{%- if cfg.info %}<div class="bb-table-info">ทั้งหมด <span class="bb-num">{{ '{:,}'.format(total|int) }}</span> รายการ</div>{% endif %}
+<div class="table-responsive{% if cfg.wrap_cls %} {{ cfg.wrap_cls }}{% endif %}">
+<table class="bb-table{% if cfg.table_cls %} {{ cfg.table_cls }}{% endif %}">
+<thead>
+<tr>
+{% for col in cols %}{{ bb_th(col) }}
+{% endfor %}</tr>
+</thead>
+<tbody>
+{% if data %}{% for row in data %}<tr>{% for col in cols %}{{ _bb_cell(col, row) }}{% endfor %}</tr>
+{% endfor %}{% else %}<tr><td colspan="{{ cols|length }}"><div class="bb-empty"><div class="bb-empty-icon"><i data-lucide="inbox"></i></div><div class="bb-empty-title">{{ cfg.empty or 'ไม่พบรายการ' }}</div></div></td></tr>
+{% endif %}</tbody>
+</table>
+</div>
+{%- if cfg.pagination and cfg.limit %}{{ _bb_pagination(total, cfg.limit, cfg.get('page')) }}{% endif %}
+</div>
+{%- endmacro %}

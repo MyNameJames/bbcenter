@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BBCenter · Bootstrap Layout Cases</title>
+<!--
+  ════════════════════════════════════════════════════════════════
+  BBCenter Bootstrap Layout Cases — คลัง case จัด layout ด้วย Bootstrap utility
+  driver : .claude/skills/bootstrap-guide/SKILL.md (case index อยู่ที่นั่น)
+  spec   : docs/notes/design_guideline.md §4 (spacing) · §8 (bootstrap) · §9 (responsive) · §13 (layout pattern)
+  css    : ./css/components.css (.bb-* tokens) + ./css/gallery.css (.bb-g-* chrome)
+
+  วิธีเพิ่ม case (ผู้ใช้สั่งผ่าน skill bootstrap-guide):
+    • ผู้ใช้บอก "บรรทัด X–Y เพิ่ม case <ชื่อ/desc>"
+    • เพิ่ม <section> case ใหม่ที่นี่ + เพิ่มแถวใน SKILL.md case index
+    • ตอบกลับว่าเป็น case #N
+  ทุก case มี id="caseN" เรียงเลข · nav ซ้ายลิงก์ตาม id
+  ════════════════════════════════════════════════════════════════
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="./css/components.css">
+<link rel="stylesheet" href="./css/gallery.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* demo-only helper — โชว์ขอบเขตโซนให้เห็น ไม่ใช่ส่วน design system */
+  .dbz { outline: 1px dashed var(--bb-n300); background: var(--bb-n50); border-radius: var(--bb-r-sm); }
+  .dbz > .dbz-tag { font-family: var(--bb-num-font); font-size: .6875rem; color: var(--bb-mut); padding: .25rem .5rem; }
+  /* case10 demo-only — thumbnail placeholder + dashed divider ระหว่างแถว */
+  .bb-buy-thumb { width: 3rem; height: 3rem; background: var(--bb-n100); color: var(--bb-mut); }
+  .bb-buy-thumb [data-lucide] { width: 1.375rem; height: 1.375rem; }
+  .bb-buy-item + .bb-buy-item { border-top: 1px dashed var(--bb-n300); margin-top: 1rem; padding-top: 1rem; }
+  /* case16 demo-only — thumb สื่อสภาพรถ (พร้อมใช้/ซ่อมอยู่) */
+  .bb-buy-thumb.is-ok { background: var(--bb-ok-bg); color: var(--bb-ok-tx); }
+  .bb-buy-thumb.is-wr { background: var(--bb-wr-bg); color: var(--bb-wr-tx); }
+</style>
+</head>
+<body>
+<div class="bb-g-wrap">
+
+  <!-- ───────────── SIDEBAR NAV ───────────── -->
+  <nav class="bb-g-nav">
+    <div class="bb-g-brand"><i data-lucide="layout-grid"></i> Layout Cases</div>
+    <div class="bb-g-brand-sub">BBCenter V2 · Bootstrap utility</div>
+    <div class="bb-g-nav-label">Spacing / Zone</div>
+    <a href="#case1" class="bb-g-link">Case 1 · Section spacing</a>
+    <div class="bb-g-nav-label">Toolbar / Flex</div>
+    <a href="#case2" class="bb-g-link">Case 2 · Toolbar (P1)</a>
+    <a href="#case4" class="bb-g-link">Case 4 · Grow + fixed</a>
+    <div class="bb-g-nav-label">Summary</div>
+    <a href="#case3" class="bb-g-link">Case 3 · KPI strip</a>
+    <div class="bb-g-nav-label">Responsive</div>
+    <a href="#case5" class="bb-g-link">Case 5 · Table→Card (mobile)</a>
+    <div class="bb-g-nav-label">Form</div>
+    <a href="#case6" class="bb-g-link">Case 6 · Focus column</a>
+    <div class="bb-g-nav-label">Card</div>
+    <a href="#case7" class="bb-g-link">Case 7 · Shipment tracking</a>
+    <a href="#case8" class="bb-g-link">Case 8 · Trip/mileage card</a>
+    <a href="#case9" class="bb-g-link">Case 9 · Trip card → mileage form</a>
+    <a href="#case10" class="bb-g-link">Case 10 · Buying history list card</a>
+    <a href="#case11" class="bb-g-link">Case 11 · Booking list (header+tabs+card) redesign</a>
+    <a href="#case12" class="bb-g-link">Case 12 · Booking trip card (Case 7 layout + mileage/fuel)</a>
+    <a href="#case13" class="bb-g-link">Case 13 · Booking trip card — group (desktop)</a>
+    <a href="#case14" class="bb-g-link">Case 14 · Booking trip card — group (มือถือ)</a>
+    <a href="#case16" class="bb-g-link">Case 16 · Vehicle usage list (synced)</a>
+    <div class="bb-g-nav-label">Calendar</div>
+    <a href="#case15" class="bb-g-link">Case 15 · Week strip — day name top</a>
+  </nav>
+
+  <!-- ───────────── MAIN ───────────── -->
+  <main class="bb-g-main">
+    <div class="bb-g-head">
+      <h1>Bootstrap Layout Cases</h1>
+      <p>คลัง case จัด layout ด้วย Bootstrap utility ตาม <code>design_guideline.md §4 · §8 · §9 · §13</code>.
+         แต่ละ case = "เมื่อไหร่ใช้" + demo + markup copy ได้. เรียกใช้/เพิ่ม case ผ่าน skill <code>bootstrap-guide</code>.</p>
+    </div>
+
+    <!-- ========== CASE 1 ========== -->
+    <section id="case1" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 1 · Section spacing (แบ่งโซน)</h2><span class="bb-g-cls">.py-4 / .mb-4</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: มีหลายโซนในหน้าเดียว (summary → toolbar → content) อยากเว้นให้อ่านเป็นก้อน.
+         กฎ §4: section gap 16–24 = <code>py-4</code> (1rem) หรือ <code>mb-4</code> · internal ≤ external (padding ในการ์ด ≤ ช่องว่างนอก).</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="dbz mb-4"><div class="dbz-tag">โซน A — summary · py-4</div><div class="p-3"></div></div>
+          <div class="dbz mb-4"><div class="dbz-tag">โซน B — toolbar · py-4</div><div class="p-3"></div></div>
+          <div class="dbz"><div class="dbz-tag">โซน C — content · py-4</div><div class="p-3"></div></div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="container-xxl px-4 pt-3 pb-5"&gt;
+  &lt;section class="mb-4"&gt; ... summary ... &lt;/section&gt;
+  &lt;section class="mb-4"&gt; ... toolbar ... &lt;/section&gt;
+  &lt;section&gt;           ... content ... &lt;/section&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> ใช้ margin (<code>mb-4</code>) คั่น section · ใช้ padding (<code>py-*</code>) เมื่ออยาก "หายใจ" ภายในโซนที่มีพื้นหลัง. ❌ อย่าใช้ทั้งคู่ซ้อนจนช่องว่างบวม.</div>
+    </section>
+
+    <!-- ========== CASE 2 ========== -->
+    <section id="case2" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 2 · Toolbar P1 (tabs ซ้าย · action ขวา)</h2><span class="bb-g-cls">.d-flex .justify-content-between .align-items-center</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: หน้า list/ledger (§13 P1) — แถบเครื่องมือ: tabs/filter ชิดซ้าย, search+primary ชิดขวา, บรรทัดเดียว.
+         sticky ตอน scroll. mobile = พับลงเป็นสองแถว (<code>flex-wrap</code>).</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="bb-tabs"><button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">12</span></button><button class="bb-tab">รออนุมัติ <span class="bb-tab-count">3</span></button></div>
+            <div class="d-flex align-items-center gap-2">
+              <div class="bb-search" style="min-width:180px"><i data-lucide="search"></i><input placeholder="ค้นหา…"></div>
+              <button class="bb-btn is-pri"><i data-lucide="plus"></i> เพิ่ม</button>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="d-flex justify-content-between align-items-center flex-wrap gap-3"&gt;
+  &lt;div class="bb-tabs"&gt; ...tabs... &lt;/div&gt;          {# ซ้าย #}
+  &lt;div class="d-flex align-items-center gap-2"&gt;    {# ขวา #}
+    ...search... ...primary button...
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> sticky: ครอบ toolbar ด้วย <code>class="position-sticky top-0"</code> + <code>style="z-index:10"</code> (guideline §13 กฎรวม).</div>
+    </section>
+
+    <!-- ========== CASE 3 ========== -->
+    <section id="case3" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 3 · KPI summary strip (ghost · ≤⅕ จอ)</h2><span class="bb-g-cls">.row .g-3 / .col</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: หัวหน้า list อยากสรุปตัวเลขเหลือบก่อนตาราง (§13 P1 summary strip).
+         KPI ghost เรียงแนวนอน เท่ากัน · content ครองจอ summary ไม่บวม.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="row g-3">
+            <div class="col-6 col-md-3"><div class="bb-kpi is-ghost"><div class="bb-kpi-tile"><i data-lucide="fuel"></i></div><div><div class="bb-kpi-label">ค่าน้ำมัน</div><div class="bb-kpi-value bb-num">฿12,400</div></div></div></div>
+            <div class="col-6 col-md-3"><div class="bb-kpi is-ghost"><div class="bb-kpi-tile"><i data-lucide="route"></i></div><div><div class="bb-kpi-label">ทริป</div><div class="bb-kpi-value bb-num">37</div></div></div></div>
+            <div class="col-6 col-md-3"><div class="bb-kpi is-ghost"><div class="bb-kpi-tile"><i data-lucide="wallet"></i></div><div><div class="bb-kpi-label">งบคงเหลือ</div><div class="bb-kpi-value bb-num">฿45,200</div></div></div></div>
+            <div class="col-6 col-md-3"><div class="bb-kpi is-ghost"><div class="bb-kpi-tile"><i data-lucide="users"></i></div><div><div class="bb-kpi-label">คนขับ</div><div class="bb-kpi-value bb-num">8</div></div></div></div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="row g-3"&gt;
+  &lt;div class="col-6 col-md-3"&gt;&lt;div class="bb-kpi is-ghost"&gt; ...KPI... &lt;/div&gt;&lt;/div&gt;
+  ... (3–4 ตัว) ...
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> mobile <code>col-6</code> (2 คอลัมน์) → desktop <code>col-md-3</code> (4 คอลัมน์). ใช้ <code>is-ghost</code> ไม่มีกรอบ กัน summary หนักตา.</div>
+    </section>
+
+    <!-- ========== CASE 4 ========== -->
+    <section id="case4" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 4 · Content ยืด + ด้านคงที่</h2><span class="bb-g-cls">.flex-grow-1 / .flex-shrink-0</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: 2-pane / master-detail (§13 P2) — ฝั่งนึงยืดเต็มที่เหลือ, อีกฝั่งกว้างคงที่ (queue, filter rail, action panel).</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="d-flex gap-3" style="min-height:120px">
+            <div class="dbz flex-shrink-0" style="width:200px"><div class="dbz-tag">คงที่ 200px · flex-shrink-0</div></div>
+            <div class="dbz flex-grow-1"><div class="dbz-tag">ยืดเต็มที่เหลือ · flex-grow-1</div></div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="d-flex gap-3"&gt;
+  &lt;aside class="flex-shrink-0" style="width:360px"&gt; ...queue... &lt;/aside&gt;
+  &lt;main  class="flex-grow-1"&gt;                       ...detail... &lt;/main&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> §9: จอ ≥1440 ใช้ master-detail ไม่ stretch คอลัมน์เดียว. queue 36–40% (min320/max420).</div>
+    </section>
+
+    <!-- ========== CASE 5 ========== -->
+    <section id="case5" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 5 · Table → Card stack (mobile)</h2><span class="bb-g-cls">.d-none .d-md-block / .d-md-none</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: ตารางกว้างอ่านยากบนมือถือ (§9 กลยุทธ์ card stack) — desktop โชว์ table, mobile สลับเป็น card ต่อแถว.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="dbz d-none d-md-block"><div class="dbz-tag">≥md — &lt;table class="bb-table"&gt; (แถวนอน)</div><div class="p-3"></div></div>
+          <div class="dbz d-md-none"><div class="dbz-tag">&lt;md — card ต่อแถว (label:value ในการ์ด)</div><div class="p-3"></div></div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;table class="bb-table d-none d-md-table"&gt; ...rows... &lt;/table&gt;   {# desktop #}
+
+&lt;div class="d-md-none d-flex flex-column gap-2"&gt;                {# mobile #}
+  {% for r in rows %}
+  &lt;div class="bb-card"&gt;&lt;div class="bb-card-body"&gt;
+     &lt;div class="d-flex justify-content-between"&gt;&lt;span&gt;ทะเบียน&lt;/span&gt;&lt;b&gt;{{ r.plate }}&lt;/b&gt;&lt;/div&gt;
+     ... label:value รายบรรทัด ...
+  &lt;/div&gt;&lt;/div&gt;
+  {% endfor %}
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="alert-triangle"></i> ทางเลือกอื่นตาม §9: horizontal scroll (<code>overflow-x:auto</code>) หรือ ซ่อนคอลัมน์รอง + expandable row — เลือกตามจำนวนคอลัมน์.</div>
+    </section>
+
+    <!-- ========== CASE 6 ========== -->
+    <section id="case6" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 6 · Focus form column (แคบ กลาง)</h2><span class="bb-g-cls">.mx-auto + max-width</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: หน้า form/อ่าน (§13 P5) — จำกัดความกว้าง 65–75 ตัวอักษร/บรรทัด (~600px) จัดกลาง กันบรรทัดยาวอ่านล้า.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="mx-auto dbz" style="max-width:600px"><div class="dbz-tag">form body · mx-auto · max-width 600px</div><div class="p-3"></div></div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="mx-auto" style="max-width:600px"&gt;
+  &lt;div class="bb-field"&gt; ...label + input... &lt;/div&gt;
+  ... section + field ...
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> action bar (primary+secondary) sticky ล่าง §13 P5. ฟอร์มยาว → group เป็น section ด้วย Case 1 spacing.</div>
+    </section>
+
+    <!-- ========== CASE 7 ========== -->
+    <section id="case7" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 7 · Shipment tracking card (origin → destination)</h2><span class="bb-g-cls">.d-flex / .bb-timeline / .bg-light .rounded-3</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: การ์ดติดตามพัสดุ/ทริป — เลขที่อ้างอิง + วันเวลา + badge สถานะด้านบน, ไอคอนสรุปมุมขวา, timeline 2 จุด (ต้นทาง→ปลายทาง) แต่ละจุดมีที่อยู่ + contact + การ์ดพัสดุย่อย.
+         ใช้ <code>bb-timeline</code>/<code>bb-tl-item</code> เดิม (มีอยู่แล้วใน components.css) ผสม Bootstrap utility ล้วนสำหรับ layout ภายใน.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="bb-card mx-auto" style="max-width:26.25rem">
+            <div class="bb-card-body">
+              <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                  <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)">Shipment number</div>
+                  <div class="bb-num" style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">PD-202411200146</div>
+                  <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
+                    <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)">19-11-2024 02:45 PM</span>
+                    <span class="bb-badge is-accent">On the way to deliver</span>
+                  </div>
+                </div>
+                <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-accent-bg)">
+                  <i data-lucide="bike" style="width:1.75rem;height:1.75rem;color:var(--bb-accent-i)"></i>
+                </div>
+              </div>
+              <div class="bb-timeline">
+                <div class="bb-tl-item done">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">Raju Textile</div>
+                  <div class="bb-tl-desc">15, Nerhu Street, Pallipalayam, Namakkal - 652396</div>
+                  <div class="bb-tl-desc">Contact on <b>Raju | +919874563210</b></div>
+                  <div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2">
+                    <div>
+                      <div class="fw-semibold" style="font-size:.8125rem">Package 1</div>
+                      <div class="text-muted" style="font-size:.8125rem">Notebooks&nbsp;|&nbsp;₹200</div>
+                    </div>
+                    <a href="#" class="bb-card-link">Pickup package</a>
+                  </div>
+                </div>
+                <div class="bb-tl-item cur">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">Home</div>
+                  <div class="bb-tl-desc">145, Kovil Street, Pallipalayam, Namakkal - 652396</div>
+                  <div class="bb-tl-desc">Contact on <b>Raju | +919874563210</b></div>
+                  <div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2">
+                    <div>
+                      <div class="fw-semibold" style="font-size:.8125rem">Package 1</div>
+                      <div class="text-muted" style="font-size:.8125rem">Notebooks&nbsp;|&nbsp;₹200</div>
+                    </div>
+                    <a href="#" class="bb-card-link">Delivery package</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="bb-card mx-auto" style="max-width:26.25rem"&gt;
+  &lt;div class="bb-card-body"&gt;
+    &lt;div class="d-flex justify-content-between align-items-start gap-3 mb-3"&gt;
+      &lt;div&gt;
+        &lt;div style="font-size:.75rem;color:var(--bb-mut)"&gt;Shipment number&lt;/div&gt;
+        &lt;div class="bb-num" style="font-size:1.25rem;font-weight:700"&gt;PD-202411200146&lt;/div&gt;
+        &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1"&gt;
+          &lt;span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)"&gt;19-11-2024 02:45 PM&lt;/span&gt;
+          &lt;span class="bb-badge is-accent"&gt;On the way to deliver&lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-accent-bg)"&gt;
+        &lt;i data-lucide="bike" style="color:var(--bb-accent-i)"&gt;&lt;/i&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class="bb-timeline"&gt;
+      {% for stop in shipment.stops %}
+      &lt;div class="bb-tl-item {{ 'done' if stop.is_done else 'cur' }}"&gt;
+        &lt;span class="bb-tl-dot"&gt;&lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;{{ stop.name }}&lt;/div&gt;
+        &lt;div class="bb-tl-desc"&gt;{{ stop.address }}&lt;/div&gt;
+        &lt;div class="bb-tl-desc"&gt;Contact on &lt;b&gt;{{ stop.contact }}&lt;/b&gt;&lt;/div&gt;
+        &lt;div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2"&gt;
+          &lt;div&gt;
+            &lt;div class="fw-semibold" style="font-size:.8125rem"&gt;{{ stop.package_name }}&lt;/div&gt;
+            &lt;div class="text-muted" style="font-size:.8125rem"&gt;{{ stop.item }} | {{ stop.price }}&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;a href="#" class="bb-card-link"&gt;{{ stop.action_label }}&lt;/a&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      {% endfor %}
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <code>bb-tl-item.done</code> = จุดผ่านแล้ว (เขียว) · <code>.cur</code> = จุดปัจจุบัน/ปลายทาง (accent) · <code>.todo</code> = ยังไม่ถึง (เทา, มีอยู่แล้วใน components.css).
+         ห้ามใช้ <code>table-*</code> class เก่าแทน timeline — ใช้ <code>bb-timeline</code> ตาม design rule.</div>
+    </section>
+
+    <!-- ========== CASE 8 ========== -->
+    <section id="case8" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 8 · Trip card (layout Case 7 + ข้อมูล mileage data-*)</h2><span class="bb-g-cls">Case 7 layout · 1 timeline stop</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: การ์ดสรุปทริป 1 booking — โครงเดียวกับ Case 7 (header 2 บรรทัด + date/time + badge + icon มุมขวา, ตามด้วย timeline)
+         แต่ map ข้อมูลจาก <code>&lt;tr data-booking … data-plate …&gt;</code> (mileage log) และเหลือ timeline แค่จุดเดียว (ไม่มีต้นทาง-ปลายทางแยก).</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="bb-card mx-auto" style="max-width:26.25rem">
+            <div class="bb-card-body">
+              <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                  <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)">BK-12 · กองสนับสนุนและบริการ</div>
+                  <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">พระมหาวิทยา ธมฺมวโร</div>
+                  <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
+                    <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)">07:30 – 18:00</span>
+                    <span class="bb-badge" style="background:var(--bb-ok-bg);color:var(--bb-ok-tx)">กรอกเลขไมล์ครบ</span>
+                  </div>
+                </div>
+                <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg)">
+                  <i data-lucide="bike" style="width:1.75rem;height:1.75rem;color:var(--bb-ok)"></i>
+                </div>
+              </div>
+              <div class="bb-timeline py-2">
+                <div class="bb-tl-item done" style="padding-left:2rem">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">วรกฤต</div>
+                  <div class="bb-tl-desc">ศม 139 → สำเพ็ง</div>
+                  <div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2">
+                    <div>
+                      <div class="fw-semibold" style="font-size:.8125rem">ไมล์เดินทาง</div>
+                      <div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem">
+                        <span class="bb-num">1,234 → 1,235</span>
+                        <span class="text-body-tertiary">|</span>
+                        <i data-lucide="plane-landing" style="width:.875rem;height:.875rem"></i>&nbsp;1 กม.
+                        <i data-lucide="dot" style="width:.875rem;height:.875rem"></i>
+                        <i data-lucide="fuel" style="width:.875rem;height:.875rem"></i>&nbsp;฿4
+                      </div>
+                    </div>
+                    <button type="button" class="bb-btn is-sec is-icon"><i data-lucide="pencil"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+{# ต้นทาง: &lt;tr class="bb-ml-row" data-booking="12" data-distance="1" data-cost="4.0"
+     data-status="complete" data-odo-start="1234" data-odo-end="1235" data-destination="สำเพ็ง"
+     data-user="พระมหาวิทยา ธมฺมวโร" data-time="07:30 – 18:00" data-vehicle="ISUZU D-MAX (รถกระบะ) (ศม 139)"
+     data-fuel-rate="10.00" data-manual-fuel="" data-plate="ศม 139" data-driver="วรกฤต"
+     data-budget-sub="กองสนับสนุนและบริการ" data-refuel-odo=""&gt; #}
+
+&lt;div class="bb-card" style="max-width:26.25rem"&gt;
+  &lt;div class="bb-card-body"&gt;
+    &lt;div class="d-flex justify-content-between align-items-start gap-3 mb-3"&gt;
+      &lt;div&gt;
+        &lt;div style="font-size:.75rem;color:var(--bb-mut)"&gt;BK-{{ b.id }} · {{ r.budget_sub }}&lt;/div&gt;
+        &lt;div style="font-size:1.25rem;font-weight:700"&gt;{{ b.user.full_name }}&lt;/div&gt;
+        &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1"&gt;
+          &lt;span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)"&gt;{{ b.start_datetime|time }} – {{ b.end_datetime|time }}&lt;/span&gt;
+          &lt;span class="bb-badge" style="background:var(--bb-ok-bg);color:var(--bb-ok-tx)"&gt;กรอกเลขไมล์ครบ&lt;/span&gt;   {# status_key == complete #}
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg)"&gt;
+        &lt;i data-lucide="bike" style="color:var(--bb-ok)"&gt;&lt;/i&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class="bb-timeline"&gt;              {# stop เดียว — last-child ไม่มีเส้นเชื่อมอัตโนมัติ #}
+      &lt;div class="bb-tl-item done" style="padding-left:2rem"&gt;
+        &lt;span class="bb-avatar" style="position:absolute;left:0;top:-2px;width:1.5rem;height:1.5rem;background:var(--bb-ok-bg)"&gt;
+          &lt;i data-lucide="user" style="color:var(--bb-ok)"&gt;&lt;/i&gt;
+        &lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;{{ driver_first }}&lt;/div&gt;
+        &lt;div class="bb-tl-desc"&gt;{{ b.assigned_vehicle.license_plate }} → {{ b.destination }}&lt;/div&gt;
+        &lt;div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2"&gt;
+          &lt;div&gt;
+            &lt;div class="fw-semibold" style="font-size:.8125rem"&gt;ไมล์เดินทาง&lt;/div&gt;
+            &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem"&gt;
+              &lt;span class="bb-num"&gt;{{ m.odometer_start }} → {{ m.odometer_end }}&lt;/span&gt;
+              &lt;span&gt;|&lt;/span&gt;
+              &lt;i data-lucide="plane-landing"&gt;&lt;/i&gt; {{ r.distance }} กม.
+              &lt;i data-lucide="dot"&gt;&lt;/i&gt;
+              &lt;i data-lucide="fuel"&gt;&lt;/i&gt; ฿{{ r.fuel_cost }}
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;button type="button" class="bb-btn is-sec is-icon" onclick="openMileage(this)"&gt;&lt;i data-lucide="pencil"&gt;&lt;/i&gt;&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> ต่างจาก Case 7 ตรง: (1) headline บรรทัดใหญ่ = ชื่อคน ไม่ใช่ code เลยไม่ใส่ <code>bb-num</code> (2) marker ของ timeline เปลี่ยนจาก <code>bb-tl-dot</code> ธรรมดา → icon ใน <code>bb-avatar</code> เล็ก (3) เหลือ stop เดียว ปุ่มขวาเปลี่ยนจาก text link → icon-only <code>bb-btn is-icon</code>.
+         ก่อนแก้ vehicle mileage จริง อ่าน <code>docs/notes/vehicle_product_spec.md</code> ก่อนเสมอ.</div>
+    </section>
+
+    <!-- ========== CASE 9 ========== -->
+    <section id="case9" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 9 · Trip card → mileage entry form (modal body)</h2><span class="bb-g-cls">.bb-field / .row .g-2 / .d-flex .justify-content-end</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: copy การ์ด Case 8 มาทำเป็น modal กรอกเลขไมล์ — เอาปุ่ม edit ไอคอนออก, sub-card เปลี่ยนจากตัวเลข "1,234 → 1,235" เป็น input เลขไมล์ออก/กลับ 2 ช่อง,
+         เก็บแถบ meta (ระยะทาง/ค่าน้ำมัน) ไว้แบบ placeholder "-" เพราะยังไม่คำนวณ, ปิดท้ายด้วยปุ่ม ยกเลิก/บันทึก ชิดขวา.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="bb-card mx-auto" style="max-width:26.25rem">
+            <div class="bb-card-body">
+              <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                  <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)">BK-12 · กองสนับสนุนและบริการ</div>
+                  <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">พระมหาวิทยา ธมฺมวโร</div>
+                  <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
+                    <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)">07:30 – 18:00</span>
+                    <span class="bb-badge" style="background:var(--bb-n200);color:var(--bb-mut)">กำลังอัปเดตเลขไมล์</span>
+                  </div>
+                </div>
+                <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-n200)">
+                  <i data-lucide="bike" style="width:1.75rem;height:1.75rem;color:var(--bb-mut)"></i>
+                </div>
+              </div>
+              <div class="bb-timeline">
+                <div class="bb-tl-item done" style="padding-left:2rem">
+                  <span class="bb-avatar" style="position:absolute;left:0;top:-2px;width:1.5rem;height:1.5rem;background:var(--bb-n200)">
+                    <i data-lucide="user" style="width:.8125rem;height:.8125rem;color:var(--bb-mut)"></i>
+                  </span>
+                  <div class="bb-tl-title">วรกฤต</div>
+                  <div class="bb-tl-desc">ศม 139 → สำเพ็ง</div>
+                  <div class="bg-light rounded-3 p-3 mt-2">
+                    <div class="row g-2">
+                      <div class="col-6">
+                        <div class="bb-field mb-0">
+                          <label class="bb-label">เลขไมล์ออก</label>
+                          <div class="bb-input-wrap">
+                            <i data-lucide="gauge"></i>
+                            <input class="bb-input" placeholder="0">
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div class="bb-field mb-0">
+                          <label class="bb-label">เลขไมล์กลับ</label>
+                          <div class="bb-input-wrap">
+                            <i data-lucide="gauge"></i>
+                            <input class="bb-input" placeholder="0">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-2" style="font-size:.8125rem">
+                      <i data-lucide="plane-landing" style="width:.875rem;height:.875rem"></i>&nbsp;- กม.
+                      <i data-lucide="dot" style="width:.875rem;height:.875rem"></i>
+                      <i data-lucide="fuel" style="width:.875rem;height:.875rem"></i>&nbsp;฿-
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="d-flex justify-content-end gap-2 mt-4">
+                <button type="button" class="bb-btn is-sec">ยกเลิก</button>
+                <button type="button" class="bb-btn is-pri">บันทึก</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="bb-card" style="max-width:26.25rem"&gt;
+  &lt;div class="bb-card-body"&gt;
+    {# ── header เหมือน Case 8 เป๊ะ (BK-id · budget_sub / ชื่อคน / เวลา+badge / icon) ── #}
+    ...
+
+    &lt;div class="bb-timeline"&gt;
+      &lt;div class="bb-tl-item done" style="padding-left:2rem"&gt;
+        &lt;span class="bb-avatar" style="position:absolute;left:0;top:-2px;width:1.5rem;height:1.5rem;background:var(--bb-ok-bg)"&gt;
+          &lt;i data-lucide="user" style="color:var(--bb-ok)"&gt;&lt;/i&gt;
+        &lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;{{ driver_first }}&lt;/div&gt;
+        &lt;div class="bb-tl-desc"&gt;{{ b.assigned_vehicle.license_plate }} → {{ b.destination }}&lt;/div&gt;
+
+        &lt;div class="bg-light rounded-3 p-3 mt-2"&gt;
+          &lt;div class="row g-2"&gt;
+            &lt;div class="col-6"&gt;
+              &lt;div class="bb-field mb-0"&gt;
+                &lt;label class="bb-label"&gt;เลขไมล์ออก&lt;/label&gt;
+                &lt;div class="bb-input-wrap"&gt;&lt;i data-lucide="gauge"&gt;&lt;/i&gt;&lt;input class="bb-input" name="odometer_start" placeholder="0"&gt;&lt;/div&gt;
+                &lt;div class="bb-hint"&gt;หน่วยกิโลเมตร&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class="col-6"&gt;
+              &lt;div class="bb-field mb-0"&gt;
+                &lt;label class="bb-label"&gt;เลขไมล์กลับ&lt;/label&gt;
+                &lt;div class="bb-input-wrap"&gt;&lt;i data-lucide="gauge"&gt;&lt;/i&gt;&lt;input class="bb-input" name="odometer_end" placeholder="0"&gt;&lt;/div&gt;
+                &lt;div class="bb-hint"&gt;หน่วยกิโลเมตร&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-2" style="font-size:.8125rem"&gt;
+            &lt;span&gt;|&lt;/span&gt;
+            &lt;i data-lucide="plane-landing"&gt;&lt;/i&gt; - กม.   {# คำนวณจาก odo หลังกรอกครบ #}
+            &lt;i data-lucide="dot"&gt;&lt;/i&gt;
+            &lt;i data-lucide="fuel"&gt;&lt;/i&gt; ฿-
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class="d-flex justify-content-end gap-2 mt-2"&gt;
+      &lt;button type="button" class="bb-btn is-sec"&gt;ยกเลิก&lt;/button&gt;
+      &lt;button type="submit" class="bb-btn is-pri"&gt;บันทึก&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> ต่างจาก Case 8: (1) ตัด <code>bb-btn is-icon</code> pencil ออก (2) เลขไมล์ static → 2 <code>bb-field</code> input (ตั้งชื่อ "ออก"/"กลับ" ให้ชัด — ถ้าอยากใช้ label อื่นบอกได้) (3) meta ระยะ/ค่าน้ำมัน เหลือ placeholder "-" รอคำนวณหลังบันทึก (4) เพิ่ม action bar ยกเลิก/บันทึก ชิดขวา (<code>justify-content-end</code>).</div>
+    </section>
+
+    <!-- ========== CASE 10 ========== -->
+    <section id="case10" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 10 · Buying history list card</h2><span class="bb-g-cls">.card / .dropdown / .d-flex</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: การ์ดสรุปประวัติ/รายการล่าสุด (order, transaction, log) — header มี title + dropdown ช่วงเวลาขวา, list รายการคั่นด้วยเส้นประ แต่ละแถวมี thumbnail + ชื่อ + เวลามุมขวา + badge สถานะ + meta 2 บรรทัด (Order ID / Delivery Date).
+         สถานะใช้ <code>bb-status</code> เดิม (is-ok/is-wr/is-dg) — ห้ามสร้าง badge สีใหม่ซ้ำ. dropdown เป็น Bootstrap native (<code>data-bs-toggle="dropdown"</code>) ต้องมี bootstrap bundle JS โหลดในหน้าจริงถึงจะกดเปิดได้.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="card border-0 shadow-sm rounded-4 mx-auto" style="max-width:26rem">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="h6 fw-bold mb-0">Buying History</h3>
+                <div class="dropdown">
+                  <button class="btn btn-light btn-sm rounded-pill dropdown-toggle d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown">Today</button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">Today</a></li>
+                    <li><a class="dropdown-item" href="#">This week</a></li>
+                    <li><a class="dropdown-item" href="#">This month</a></li>
+                  </ul>
+                </div>
+              </div>
+              <hr class="mt-0 mb-3">
+              <div class="bb-buy-list">
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="package"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-bold">Concrete Blocks – 1100pcs</div>
+                      <div class="text-muted small flex-shrink-0">10.10 AM</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>Status :</span><span class="bb-status is-ok">On Progress</span>
+                    </div>
+                    <div class="text-muted small mt-1">Order ID : #PV_2431</div>
+                    <div class="text-muted small">Delivery Date : Sep 18, 2025</div>
+                  </div>
+                </div>
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="package-open"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-bold">Cement Bags – 30pcs</div>
+                      <div class="text-muted small flex-shrink-0">11.40 AM</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>Status :</span><span class="bb-status is-wr">On Hold</span>
+                    </div>
+                    <div class="text-muted small mt-1">Order ID : #PV_2431</div>
+                    <div class="text-muted small">Delivery Date : Sep 12, 2025</div>
+                  </div>
+                </div>
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="package"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-bold">Concrete Blocks – 1200pcs</div>
+                      <div class="text-muted small flex-shrink-0">09.40 AM</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>Status :</span><span class="bb-status is-dg">Cancelled</span>
+                    </div>
+                    <div class="text-muted small mt-1">Order ID : #PV_2431</div>
+                    <div class="text-muted small">Delivery Date : Sep 16, 2025</div>
+                  </div>
+                </div>
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="layers"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-bold">Wooden Planks – 100pcs</div>
+                      <div class="text-muted small flex-shrink-0">07.40 PM</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>Status :</span><span class="bb-status is-ok">On Progress</span>
+                    </div>
+                    <div class="text-muted small mt-1">Order ID : #PV_2431</div>
+                    <div class="text-muted small">Delivery Date : Sep 15, 2025</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="card border-0 shadow-sm rounded-4" style="max-width:26rem"&gt;
+  &lt;div class="card-body p-4"&gt;
+    &lt;div class="d-flex justify-content-between align-items-center mb-3"&gt;
+      &lt;h3 class="h6 fw-bold mb-0"&gt;Buying History&lt;/h3&gt;
+      &lt;div class="dropdown"&gt;
+        &lt;button class="btn btn-light btn-sm rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown"&gt;{{ range_label }}&lt;/button&gt;
+        &lt;ul class="dropdown-menu dropdown-menu-end"&gt;
+          &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;Today&lt;/a&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;This week&lt;/a&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;a class="dropdown-item" href="#"&gt;This month&lt;/a&gt;&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;hr class="mt-0 mb-3"&gt;
+    &lt;div class="bb-buy-list"&gt;
+      {% for h in buying_history %}
+      &lt;div class="d-flex gap-3 bb-buy-item"&gt;
+        &lt;div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"&gt;&lt;i data-lucide="{{ h.icon }}"&gt;&lt;/i&gt;&lt;/div&gt;
+        &lt;div class="flex-grow-1 min-w-0"&gt;
+          &lt;div class="d-flex justify-content-between align-items-start gap-2"&gt;
+            &lt;div class="fw-bold"&gt;{{ h.item_name }} – {{ h.qty }}pcs&lt;/div&gt;
+            &lt;div class="text-muted small flex-shrink-0"&gt;{{ h.time }}&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class="d-flex align-items-center gap-2 small text-muted mt-1"&gt;
+            &lt;span&gt;Status :&lt;/span&gt;&lt;span class="bb-status is-{{ h.status_variant }}"&gt;{{ h.status_label }}&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class="text-muted small mt-1"&gt;Order ID : {{ h.order_id }}&lt;/div&gt;
+          &lt;div class="text-muted small"&gt;Delivery Date : {{ h.delivery_date }}&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      {% endfor %}
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <code>bb-buy-thumb</code>/<code>.bb-buy-item + .bb-buy-item</code> (dashed divider) เป็น demo-only CSS ในไฟล์นี้ (ยังไม่ย้ายเข้า <code>components.css</code>) — ถ้านำไปใช้จริงหลายหน้าค่อย extract. <code>status_variant</code> map: On Progress→<code>ok</code>, On Hold→<code>wr</code>, Cancelled→<code>dg</code>.</div>
+    </section>
+
+    <!-- ========== CASE 11 ========== -->
+    <section id="case11" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 11 · Booking trip card — responsive (mobile stack ↔ desktop col-8/col+col-4)</h2><span class="bb-g-cls">.bb-card / .bb-avatar (status-color) / row col-12→col-lg</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: การ์ดสรุป booking 1 ใบ ใช้ markup ชุดเดียวทั้งมือถือ+desktop — วางในพื้นที่กว้าง <code>col-lg-8</code> ของหน้า desktop (เช่น 2-pane list ซ้าย+detail ขวา) และ full-width บนมือถือ. เดิม case นี้เป็น full-page redesign (header+tabs+การ์ด compact) แต่ตัด header/tabs/ปุ่มออกตามที่ตกลง เหลือแค่โครงการ์ด. เนื้อหาการ์ดดึงมาจาก Case 12 (คนขับ/รถ/งบ ฝั่งต้นทาง · เลขไมล์/น้ำมัน/OT ฝั่งเริ่มเดินทาง) แต่จัดเป็น 2 คอลัมน์ <code>col</code>+<code>col-4</code> บน desktop แทน timeline แนวตั้งของ Case 12 เพราะพื้นที่กว้างพอไม่ต้อง stack.
+         <b>ปรับรอบ 2 (2026-07):</b> header เปลี่ยนเป็น avatar(bike, สีตาม status)+เวลา→ชื่อใหญ่ขึ้น→meta วางซ้าย ตัด <code>bb-status</code> pill ออก (avatar สื่อสถานะแทนแล้ว) แล้วย้ายปุ่ม แก้ไข/ย้อนกลับ ขึ้นมาแทนที่มุมขวาบนแทน icon-only ท้ายการ์ด · เพิ่มเส้นประคั่นก่อน <code>row g-3</code> · บล็อกต้นทางแยกชื่อคนขับ/รถ+โทรเป็นคนละบรรทัด มีเส้นประคั่นก่อนบรรทัดงบ + เพิ่ม label "ส่วนกอง" หน้า value · บล็อกเริ่มเดินทางดึง breakdown เต็มจาก Case 12 (coins/reserve → fuel/OT → deduct label) แทนเวอร์ชันย่อเดิม.
+         <b>ปรับรอบ 3 (2026-07 — responsive merge):</b> รวม mobile+desktop เข้า markup เดียวด้วย utility breakpoint <code>lg</code> ตัวเดียวทั้งการ์ด — header <code>flex-column flex-lg-row</code> (มือถือ stack ปุ่มไว้ใต้ชื่อชิดขวาด้วย <code>align-self-end align-self-lg-auto</code>, desktop กลับแถวเดียวชิดขวาบน) · เนื้อหา 2 บล็อก <code>col-12 col-lg</code>/<code>col-12 col-lg-4</code> (มือถือ stack เต็มความกว้างทีละบล็อก, desktop แบ่ง col+col-4 เหมือนเดิม) — ไม่ต้องเขียน CSS เพิ่ม ใช้ utility responsive ล้วน (§8).</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="row">
+          <div class="col-12 col-lg-8">
+            <div class="bb-card">
+              <div class="bb-card-body">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-3">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg)">
+                      <i data-lucide="bike" style="width:1.75rem;height:1.75rem;color:var(--bb-ok-tx)"></i>
+                    </div>
+                    <div>
+                      <div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"><i data-lucide="clock" style="width:.75rem;height:.75rem"></i>17:00–18:59</div>
+                      <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">ธิกรณ์ หงษ์โสภา</div>
+                      <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                        <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.875rem;height:.875rem"></i>1</span>
+                        <span>|</span>
+                        <span>เรียนหนังสือ <i data-lucide="arrow-right" style="width:.75rem;height:.75rem"></i> <b style="color:var(--bb-str)">วัดพระธรรมกาย</b></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 align-self-end align-self-lg-auto">
+                    <span style="font-size:.8125rem;color:var(--bb-mut)">หักงบส่วนกลาง |</span>
+                    <button class="bb-btn is-sec is-sm"><i data-lucide="pencil"></i> แก้ไข</button>
+                  </div>
+                </div>
+                <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-3">
+                <div class="row g-3">
+                  <div class="col-12 col-lg">
+                    <div class="bg-light rounded-3 p-2 h-100">
+                      <div class="fw-semibold pb-2" style="font-size:.8125rem">วรกฤต</div>
+                      <div class="text-muted" style="font-size:.8125rem">ISUZU D-MAX (ศม 139) | โทร <b style="color:var(--bb-mut)">089-123-4567</b></div>
+                      <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-2">
+                      <div class="text-muted d-flex align-items-center gap-1" style="font-size:.8125rem"><i data-lucide="tag-plus" style="width:.8125rem;height:.8125rem"></i>ส่วนกอง | กองสนับสนุนและบริการ</div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-4">
+                    <div class="bg-light rounded-3 p-2 h-100">
+                      <div class="fw-semibold" style="font-size:.8125rem">เริ่มเดินทาง</div>
+                      <div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem">
+                        <span class="bb-num">1,234 → 1,235</span>
+                        <span>|</span>
+                        <i data-lucide="plane-landing" style="width:.8125rem;height:.8125rem"></i>&nbsp;1 กม.
+                      </div>
+                      <div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-3" style="font-size:.8125rem">
+                        <span class="bb-avatar" style="width:1.25rem;height:1.25rem;background:var(--bb-accent-bg)"><i data-lucide="coins" style="width:.75rem;height:.75rem;color:var(--bb-accent-i)"></i></span>
+                        <span class="bb-num">200 บาท</span>
+                      </div>
+                      <div class="d-flex flex-column gap-1 mt-1 ms-4">
+                        <div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem">
+                          <i data-lucide="arrow-right-to-line" style="width:.8125rem;height:.8125rem"></i>
+                          <i data-lucide="fuel" style="width:.8125rem;height:.8125rem"></i>&nbsp;฿200 | 40฿/ล
+                        </div>
+                        <div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem">
+                          <i data-lucide="arrow-right-to-line" style="width:.8125rem;height:.8125rem"></i>
+                          <i data-lucide="clock" style="width:.8125rem;height:.8125rem"></i>&nbsp;OT +0.03 ชม. · ฿1
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+{% for b in bookings %}
+  &lt;div class="bb-card"&gt;
+    &lt;div class="bb-card-body"&gt;
+      &lt;div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-3"&gt;
+        &lt;div class="d-flex align-items-start gap-3"&gt;
+          &lt;div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-{{ b.status_variant }}-bg)"&gt;
+            &lt;i data-lucide="bike" style="color:var(--bb-{{ b.status_variant }}-tx)"&gt;&lt;/i&gt;
+          &lt;/div&gt;
+          &lt;div&gt;
+            &lt;div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"&gt;&lt;i data-lucide="clock"&gt;&lt;/i&gt;{{ b.time_range }}&lt;/div&gt;
+            &lt;div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)"&gt;{{ b.requester_name }}&lt;/div&gt;
+            &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)"&gt;
+              &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="users"&gt;&lt;/i&gt;{{ b.people_count }}&lt;/span&gt;
+              &lt;span&gt;|&lt;/span&gt;
+              &lt;span&gt;{{ b.purpose }} &lt;i data-lucide="arrow-right"&gt;&lt;/i&gt; &lt;b style="color:var(--bb-str)"&gt;{{ b.location }}&lt;/b&gt;&lt;/span&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        {% if b.is_off_system %}
+        &lt;span class="bb-chip is-on align-self-end align-self-lg-auto"&gt;&lt;i data-lucide="user-plus"&gt;&lt;/i&gt;งานนอกระบบ&lt;/span&gt;
+        {% else %}
+        &lt;div class="d-flex align-items-center gap-2 align-self-end align-self-lg-auto"&gt;
+          {% if m %}&lt;span style="font-size:.8125rem;color:var(--bb-mut)"&gt;{{ r.deduct_label }}&lt;/span&gt;{% endif %}
+          &lt;button class="bb-btn is-sec is-sm"&gt;&lt;i data-lucide="pencil"&gt;&lt;/i&gt; แก้ไข&lt;/button&gt;
+        &lt;/div&gt;
+        {% endif %}
+      &lt;/div&gt;
+      &lt;hr style="border-top:1px dashed var(--bb-n300)" class="my-3"&gt;
+
+      &lt;div class="row g-3"&gt;
+        &lt;div class="col-12 col-lg"&gt;   {# ต้นทาง — คนขับ/รถ/งบ (ย้ายมาจาก Case 12) #}
+          &lt;div class="bg-light rounded-3 p-2 h-100"&gt;
+            &lt;div class="fw-semibold" style="font-size:.8125rem"&gt;ต้นทาง&lt;/div&gt;
+            &lt;div class="text-muted" style="font-size:.8125rem"&gt;
+              {% if b.driver %}{{ b.driver.name }}
+              {% elif b.self_drive %}&lt;span style="color:var(--bb-mut)"&gt;ยังไม่ได้เลือก (ต้องการเดินทางด้วยตนเอง)&lt;/span&gt;
+              {% else %}&lt;span style="color:var(--bb-mut)"&gt;ยังไม่ได้เลือก&lt;/span&gt;{% endif %}
+            &lt;/div&gt;
+            {% if b.vehicle_approved or b.driver_approved %}
+            &lt;div class="text-muted" style="font-size:.8125rem"&gt;
+              {% if b.vehicle_approved %}{{ b.vehicle.name }} ({{ b.vehicle.plate }}){% endif %}
+              {% if b.vehicle_approved and b.driver_approved %} | {% endif %}
+              {% if b.driver_approved %}โทร &lt;b style="color:var(--bb-mut)"&gt;{{ b.driver.phone }}&lt;/b&gt;{% endif %}
+            &lt;/div&gt;
+            {% endif %}
+            &lt;hr style="border-top:1px dashed var(--bb-n300)" class="my-2"&gt;
+            &lt;div class="text-muted d-flex align-items-center gap-1" style="font-size:.8125rem"&gt;
+              {% if not b.budget_approved %}-
+              {% elif b.is_off_system %}&lt;i data-lucide="circle-fading-plus"&gt;&lt;/i&gt;งานนอกระบบ &lt;i data-lucide="dot"&gt;&lt;/i&gt;&lt;i data-lucide="tag-plus"&gt;&lt;/i&gt;ส่วนกอง | {{ b.budget_sub }}
+              {% else %}&lt;i data-lucide="tag-plus"&gt;&lt;/i&gt;ส่วนกอง | {{ b.budget_sub }}{% endif %}
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="col-12 col-lg-4"&gt;   {# เริ่มเดินทาง — เลขไมล์/น้ำมัน/OT (เหมือน Case 12 ทุกประการ) #}
+          {% if m %}
+          &lt;div class="bg-light rounded-3 p-2 h-100"&gt;
+            &lt;div class="fw-semibold" style="font-size:.8125rem"&gt;เริ่มเดินทาง&lt;/div&gt;
+            &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem"&gt;
+              &lt;span class="bb-num"&gt;{{ m.odometer_start }} → {{ m.odometer_end }}&lt;/span&gt;
+              &lt;span&gt;|&lt;/span&gt;
+              &lt;i data-lucide="plane-landing"&gt;&lt;/i&gt; {{ r.distance }} กม.
+            &lt;/div&gt;
+            &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-3"&gt;
+              &lt;span class="bb-avatar" style="width:1.25rem;height:1.25rem;background:var(--bb-accent-bg)"&gt;&lt;i data-lucide="coins" style="color:var(--bb-accent-i)"&gt;&lt;/i&gt;&lt;/span&gt;
+              &lt;span class="bb-num"&gt;{{ r.reserve_before }} บาท&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class="d-flex flex-column gap-1 mt-1 ms-4"&gt;
+              &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem"&gt;
+                &lt;i data-lucide="arrow-right-to-line"&gt;&lt;/i&gt;
+                &lt;i data-lucide="fuel"&gt;&lt;/i&gt;&amp;nbsp;฿{{ r.fuel_cost }} | {{ r.fuel_price }}฿/ล
+              &lt;/div&gt;
+              {% if r.ot_hours %}
+              &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem"&gt;
+                &lt;i data-lucide="arrow-right-to-line"&gt;&lt;/i&gt;
+                &lt;i data-lucide="clock"&gt;&lt;/i&gt;&amp;nbsp;OT +{{ r.ot_hours }} ชม. · ฿{{ r.ot_cost }}
+              &lt;/div&gt;
+              {% endif %}
+            &lt;/div&gt;
+          &lt;/div&gt;
+          {% else %}
+          &lt;div class="bg-light rounded-3 p-2 h-100 d-flex align-items-center justify-content-center"&gt;
+            &lt;span style="font-size:.8125rem;color:var(--bb-mut)"&gt;—&lt;/span&gt;
+          &lt;/div&gt;
+          {% endif %}
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+{% endfor %}</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <b>ปรับรอบ 2 (2026-07):</b> header ย้าย <code>bb-avatar</code>(bike) จาก Case 12 มาไว้ซ้ายสุด สีตาม <code>--bb-{status}-bg/-tx</code> (demo นี้ status ok = เขียว) แทน <code>bb-status</code> pill ที่ตัดออก · เวลาย้ายขึ้นเป็นบรรทัดเล็กเหนือชื่อ (users icon ในบรรทัด meta ยังขนาดเท่าเดิม ไม่ได้ขยายตามชื่อ) · ชื่อขยายเป็น 1.25rem/700 (จากเดิม 1rem/600) · ปุ่ม แก้ไข/ย้อนกลับ (icon+label) ย้ายจากท้ายการ์ดขึ้นมาแทนมุมขวาบน — booking งานนอกระบบใช้ <code>bb-chip.is-on</code> แทนปุ่มเหมือนเดิม · เพิ่มเส้นประ (<code>&lt;hr&gt;</code> dashed) คั่นก่อน <code>row g-3</code>.
+         บล็อกต้นทาง: แยกชื่อคนขับ/รถ+โทร เป็นคนละบรรทัด (เดิมรวมกัน) มีเส้นประคั่นก่อนบรรทัดงบ + เพิ่ม label "ส่วนกอง" หน้าค่า <code>{{ b.budget_sub }}</code> (คั่นด้วย "|" — เดิมขาด label นี้ไป). บล็อกเริ่มเดินทาง: รวมเลขไมล์+ระยะทางเป็นบรรทัดเดียว แล้วดึง breakdown เต็มจาก Case 12 (coins/reserve → fuel/OT แบบ <code>flex-column gap-1</code> → <code>{{ r.deduct_label }}</code>) แทนเวอร์ชันย่อเดิมที่มีแค่บรรทัดน้ำมันบรรทัดเดียว.
+         คอลัมน์เปลี่ยนจาก <code>col-lg-5</code>/<code>col-lg-3</code> → <code>col</code>/<code>col-4</code> ให้ตรงกับ live demo ที่ปรับไว้ก่อนหน้า (sync ให้ตรงกัน ไม่ใช่ของใหม่รอบนี้).
+         <b>ปรับรอบ 3 (2026-07):</b> ทำ mobile compact แล้ว — เพิ่ม <code>col-12</code> นำหน้าทุกคอลัมน์ (outer <code>col-lg-8</code>, inner <code>col</code>/<code>col-4</code>) ให้ stack เต็มความกว้างต่ำกว่า <code>lg</code> · header เปลี่ยน <code>d-flex justify-content-between</code> เป็น <code>d-flex flex-column flex-lg-row justify-content-between</code> ให้กลุ่มปุ่มตกลงมาอยู่ใต้ชื่อบนมือถือ (ใช้ <code>align-self-end align-self-lg-auto</code> ให้ชิดขวาทั้ง 2 breakpoint โดยไม่ต้องเขียน CSS) · แก้ debris ที่ค้างจากรอบก่อน: ลบ div "หักงบส่วนกลาง |" ซ้ำในหัวการ์ด, แก้หัวข้อ "ข้อมูลการอนุมัติรถ" → "ต้นทาง" ให้ตรง spec, แก้ <code>col-5</code> → <code>col-4</code>, เติมบรรทัด <code>{{ r.deduct_label }}</code> ที่ขาดหายในบล็อกเริ่มเดินทางของ live demo ให้ตรงกับ pre-code.
+         <b>ปรับรอบ 4 (2026-07):</b> ปุ่ม "ย้อนกลับ" (rotate-cw) ตัดออก เหลือปุ่ม "แก้ไข" ปุ่มเดียวในหัวการ์ด · <code>{{ r.deduct_label }}</code> ย้ายจากท้ายบล็อกเริ่มเดินทาง (fst-italic) ขึ้นมาอยู่ก่อนปุ่มแก้ไขในหัวการ์ดแทน — เอา <code>fst-italic</code> ออกให้เป็น text ปกติสี <code>--bb-mut</code> (ครอบด้วย <code>{% if m %}</code> เดิม เพราะ deduct_label ผูกกับ mileage record).</div>
+    </section>
+
+    <!-- ========== CASE 12 ========== -->
+    <section id="case12" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 12 · Booking trip card (layout Case 7 + ข้อมูล booking/mileage/fuel)</h2><span class="bb-g-cls">Case 7 layout · 2 timeline stop</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: การ์ดสรุป booking 1 ใบแบบเต็ม — เอาโครง Case 7 (header 2 บรรทัด + meta + badge + avatar, timeline 2 จุดต้นทาง→ปลายทาง) มาแทนที่ข้อมูล shipment ด้วยข้อมูล booking/คนขับ/รถ/งบ (ต้นทาง) + เลขไมล์/น้ำมัน/OT (ปลายทาง). ต่างจาก Case 8 ตรงที่ Case 8 เหลือ stop เดียว ส่วนนี้ยังมี 2 stop เหมือน Case 7 เดิม.
+         demo นี้โชว์สถานะ "assign ครบแล้ว" (มีคนขับ+รถ+งบอนุมัติ) — เงื่อนไข "ยังไม่ assign" อยู่ใน copy-code (comment) ให้ตรงหน้างานจริง.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="bb-card mx-auto" style="max-width:26.25rem">
+            <div class="bb-card-body">
+              <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                  <div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)">
+                    <span class="bb-num">#BK-24</span>
+                    <i data-lucide="dot" style="width:.75rem;height:.75rem"></i>
+                    <i data-lucide="clock" style="width:.75rem;height:.75rem"></i>
+                    <span class="bb-num">08:00 - 10:00 (2 ชม.)</span>
+                  </div>
+                  <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">ธิกรณ์ หงษ์โสภา</div>
+                  <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                    <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.875rem;height:.875rem"></i>1</span>
+                    <span>|</span>
+                    <span>เรียนหนังสือ <i data-lucide="arrow-right" style="width:.75rem;height:.75rem"></i> <b style="color:var(--bb-str)">วัดพระธรรมกาย</b></span>
+                  </div>
+                </div>
+                <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-wr-bg)">
+                  <i data-lucide="bike" style="width:1.75rem;height:1.75rem;color:var(--bb-wr-tx)"></i>
+                </div>
+              </div>
+              <div class="bb-timeline">
+                <div class="bb-tl-item done">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">วรกฤต </div>
+                  <div class="bb-tl-desc">ISUZU D-MAX (ศม 139) | โทร <b style="color:var(--bb-mut)">089-123-4567</b></div>
+                  <div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2">
+                    <div>
+                      <div class="fw-semibold" style="font-size:.8125rem">ประเภทงบ</div>
+                      <div class="text-muted d-flex align-items-center gap-1" style="font-size:.8125rem"><i data-lucide="tag-plus" style="width:.8125rem;height:.8125rem"></i>กองสนับสนุนและบริการ</div>
+                    </div>
+                    <button type="button" class="bb-btn is-sec is-icon"><i data-lucide="pencil"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="bb-card" style="max-width:26.25rem"&gt;
+  &lt;div class="bb-card-body"&gt;
+    &lt;div class="d-flex justify-content-between align-items-start gap-3 mb-3"&gt;
+      &lt;div&gt;
+        &lt;div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"&gt;
+          &lt;span class="bb-num"&gt;#BK-{{ b.id }}&lt;/span&gt;
+          &lt;i data-lucide="dot"&gt;&lt;/i&gt;
+          &lt;i data-lucide="clock"&gt;&lt;/i&gt;
+          &lt;span class="bb-num"&gt;{{ b.time_start }} - {{ b.time_end }} ({{ b.duration_hours }} ชม.)&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)"&gt;{{ b.requester_name }}&lt;/div&gt;
+        &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)"&gt;
+          &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="users"&gt;&lt;/i&gt;{{ b.people_count }}&lt;/span&gt;
+          &lt;span&gt;|&lt;/span&gt;
+          &lt;span&gt;{{ b.purpose }} &lt;i data-lucide="arrow-right"&gt;&lt;/i&gt; &lt;b style="color:var(--bb-str)"&gt;{{ b.location }}&lt;/b&gt;&lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      {# avatar สีตาม status แทน badge แยก — bb-{{ status }}-bg/-tx มีครบ 4 ตัวใน components.css #}
+      &lt;div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-{{ b.status_variant }}-bg)"&gt;
+        &lt;i data-lucide="bike" style="color:var(--bb-{{ b.status_variant }}-tx)"&gt;&lt;/i&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class="bb-timeline"&gt;
+      &lt;div class="bb-tl-item done"&gt;   {# ต้นทาง — คนขับ/รถ/งบ #}
+        &lt;span class="bb-tl-dot"&gt;&lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;
+          {% if b.driver %}{{ b.driver.name }}
+          {% elif b.self_drive %}&lt;span style="color:var(--bb-mut)"&gt;ยังไม่ได้เลือก (ต้องการเดินทางด้วยตนเอง)&lt;/span&gt;
+          {% else %}&lt;span style="color:var(--bb-mut)"&gt;ยังไม่ได้เลือก&lt;/span&gt;{% endif %}
+        &lt;/div&gt;
+        {% if b.vehicle_approved %}
+        &lt;div class="bb-tl-desc"&gt;{{ b.vehicle.name }} ({{ b.vehicle.plate }})&lt;/div&gt;
+        {% endif %}
+        {% if b.driver_approved %}
+        &lt;div class="bb-tl-desc"&gt;โทร &lt;b style="color:var(--bb-mut)"&gt;{{ b.driver.phone }}&lt;/b&gt;&lt;/div&gt;
+        {% endif %}
+        &lt;div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2"&gt;
+          &lt;div&gt;
+            &lt;div class="fw-semibold" style="font-size:.8125rem"&gt;ประเภทงบ&lt;/div&gt;
+            &lt;div class="text-muted d-flex align-items-center gap-1" style="font-size:.8125rem"&gt;
+              {% if not b.budget_approved %}-
+              {% elif b.is_off_system %}&lt;i data-lucide="circle-fading-plus"&gt;&lt;/i&gt;งานนอกระบบ &lt;i data-lucide="dot"&gt;&lt;/i&gt;&lt;i data-lucide="tag-plus"&gt;&lt;/i&gt;{{ b.budget_sub }}
+              {% else %}&lt;i data-lucide="tag-plus"&gt;&lt;/i&gt;{{ b.budget_sub }}{% endif %}
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;button type="button" class="bb-btn is-sec is-icon"&gt;&lt;i data-lucide="pencil"&gt;&lt;/i&gt;&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <b>อนุมัติงานเดี่ยว (2026-07):</b> ตัด <code>bb-tl-item.cur</code> ("เริ่มเดินทาง" + breakdown มัยเลจ/น้ำมัน/OT) ออกทั้งก้อน — ขั้นอนุมัติเดี่ยวโชว์แค่ต้นทาง (คนขับ/รถ/งบ) พอ ข้อมูลเดินทางมาทีหลังตอนเริ่มทริปจริง. เหลือ <code>bb-tl-item</code> เดียวเป็น <code>:last-child</code> โดยอัตโนมัติ → เส้น connector (<code>::before</code> ใน components.css:309) หายไปเองไม่ต้องแก้ CSS เพิ่ม (มี rule <code>.bb-tl-item:last-child::before{display:none}</code> อยู่แล้ว).
+         status ไม่ใช้ <code>bb-status</code> badge แยกแล้ว — สื่อผ่านสี avatar แทน (<code>var(--bb-{{ b.status_variant }}-bg/-tx)</code> มีครบ 4 ตัวใน components.css: ok/wr/dg/info) · avatar icon คง <code>bike</code> ตามเดิม (ยังไม่ผูก vehicle type จริง) · เวลาเดินทางเปลี่ยนจากโชว์แค่ duration เป็นช่วงเวลาเต็ม <code>{{ b.time_start }} - {{ b.time_end }} ({{ b.duration_hours }} ชม.)</code>.
+         เงื่อนไข driver/vehicle/budget ไม่ approve = ซ่อนบรรทัด อยู่ใน comment ของโค้ด ไม่ได้ demo สถานะนั้นในภาพ (เลือก "assign ครบแล้ว" ตามที่ confirm).</div>
+    </section>
+
+    <!-- ========== CASE 13 ========== -->
+    <section id="case13" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 13 · Booking trip card — group (desktop, ต่อยอดจาก Case 11)</h2><span class="bb-g-cls">.bb-card / .bb-avatar(merge, is-ok) / row col-12→col-lg</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: การ์ดสรุป "งานรวม" (booking หลายใบ merge เป็นทริปเดียว — ทำได้เฉพาะที่อนุมัติแล้วเท่านั้น) เวอร์ชัน desktop ใช้โครง <code>row col-12 col-lg-8</code> เดียวกับ Case 11 แต่ปรับ header/เนื้อหาต้นทางให้ต่างจากเดี่ยว.
+         <b>Header:</b> avatar <code>merge</code> สีเขียวคงที่ (<code>--bb-ok-bg/-tx</code>) ไม่ไล่ตาม status_variant เหมือนเดี่ยว (เพราะงานรวมมีได้เฉพาะสถานะอนุมัติแล้วเท่านั้น) · เวลาเป็นช่วงรวมทั้งกลุ่ม (เริ่มต้นสุด–สิ้นสุดสุด) · ชื่อรถใหญ่ + <code>bb-badge</code> สีเขียว icon <code>layers</code> "N งานรวม" ติดข้าง · บรรทัด meta เปลี่ยนเป็นคนขับ(ชื่อต้นเท่านั้น)+ผู้โดยสารรวม+งบ แทน purpose→dest (เพราะมีหลายปลายทาง) · ปุ่มขวาบนเหลือปุ่มเดียวคือแก้ไข (ตัด shuffle แยกงานทั้งหมดออก เพราะแต่ละรายการมีปุ่มแยกงานเดี่ยวของตัวเองอยู่แล้ว) ตัด chevron ยุบ/ขยายออก เนื้อหาโชว์ตลอด.
+         <b>เนื้อหา:</b> คอลัมน์ "ต้นทาง" เปลี่ยนจากข้อมูลคนขับ/รถ/งบเดี่ยว → เป็นรายการต่อคน 2 บรรทัด (บรรทัด 1 = ชื่อใหญ่, บรรทัด 2 = clock+ช่วงเวลา | users+pax | purpose→ปลายทาง) คั่นเส้นประ แต่ละคนมีปุ่ม shuffle ไอคอนเดี่ยว (แยกแค่ booking นั้น) · คอลัมน์ "เริ่มเดินทาง" เหมือน Case 11 ทุกประการ (breakdown มัยเลจ/น้ำมัน/OT รวมของกลุ่ม หรือ <code>bb-empty</code> ถ้ายังไม่เริ่ม).</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="row">
+          <div class="col-12 col-lg-8">
+            <div class="bb-card">
+              <div class="bb-card-body">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-3">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg)">
+                      <i data-lucide="merge" style="width:1.75rem;height:1.75rem;color:var(--bb-ok-tx)"></i>
+                    </div>
+                    <div>
+                      <div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"><i data-lucide="clock" style="width:.75rem;height:.75rem"></i>08:00–09:30</div>
+                      <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
+                        <span style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">ISUZU D-MAX (ศม 139)</span>
+                        <span class="bb-badge" style="background:var(--bb-ok-bg);color:var(--bb-ok-tx)"><i data-lucide="layers" style="width:.75rem;height:.75rem"></i>3 งานรวม</span>
+                      </div>
+                      <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                        <span class="d-flex align-items-center gap-1"><i data-lucide="arrow-right-to-line" style="width:.8125rem;height:.8125rem"></i>วรกฤต</span>
+                        <span>|</span>
+                        <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.8125rem;height:.8125rem"></i>5</span>
+                        <span>|</span>
+                        <span class="d-flex align-items-center gap-1"><i data-lucide="tag-plus" style="width:.8125rem;height:.8125rem"></i>ส่วนกอง<i data-lucide="dot" style="width:.8125rem;height:.8125rem"></i>กองสนับสนุนและบริการ</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 align-self-end align-self-lg-auto">
+                    <button class="bb-btn is-sec is-sm"><i data-lucide="pencil"></i> แก้ไข</button>
+                  </div>
+                </div>
+                <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-3">
+                <div class="row g-3">
+                  <div class="col-12 col-lg">
+                    <div class="bg-light rounded-3 p-2 h-100">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">ธิกรณ์ หงษ์โสภา</div>
+                          <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                            <span class="d-flex align-items-center gap-1"><i data-lucide="clock" style="width:.8125rem;height:.8125rem"></i>08:00–08:45</span>
+                            <span>|</span>
+                            <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.8125rem;height:.8125rem"></i>1</span>
+                            <span>|</span>
+                            <span>เรียนหนังสือ <i data-lucide="arrow-right" style="width:.75rem;height:.75rem"></i> <b style="color:var(--bb-str)">วัดพระธรรมกาย</b></span>
+                          </div>
+                        </div>
+                        <button class="bb-btn is-sec is-icon" title="แยกงาน"><i data-lucide="shuffle"></i></button>
+                      </div>
+                      <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-2">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">สมชาย เก่งกล้า</div>
+                          <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                            <span class="d-flex align-items-center gap-1"><i data-lucide="clock" style="width:.8125rem;height:.8125rem"></i>08:00–08:50</span>
+                            <span>|</span>
+                            <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.8125rem;height:.8125rem"></i>3</span>
+                            <span>|</span>
+                            <span>ประชุม <i data-lucide="arrow-right" style="width:.75rem;height:.75rem"></i> <b style="color:var(--bb-str)">สภาธรรมกายสากล</b></span>
+                          </div>
+                        </div>
+                        <button class="bb-btn is-sec is-icon" title="แยกงาน"><i data-lucide="shuffle"></i></button>
+                      </div>
+                      <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-2">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">ปิยะดา แสงทอง</div>
+                          <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                            <span class="d-flex align-items-center gap-1"><i data-lucide="clock" style="width:.8125rem;height:.8125rem"></i>09:00–09:30</span>
+                            <span>|</span>
+                            <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.8125rem;height:.8125rem"></i>1</span>
+                            <span>|</span>
+                            <span>รับรองแขก <i data-lucide="arrow-right" style="width:.75rem;height:.75rem"></i> <b style="color:var(--bb-str)">อาคารรับรองสาธุชน</b></span>
+                          </div>
+                        </div>
+                        <button class="bb-btn is-sec is-icon" title="แยกงาน"><i data-lucide="shuffle"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-4">
+                    <div class="bg-light rounded-3 p-2 h-100">
+                      <div class="fw-semibold" style="font-size:.8125rem">เริ่มเดินทาง</div>
+                      <div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem">
+                        <span class="bb-num">4,120 → 4,165</span>
+                        <span>|</span>
+                        <i data-lucide="plane-landing" style="width:.8125rem;height:.8125rem"></i>&nbsp;45 กม.
+                      </div>
+                      <div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-3" style="font-size:.8125rem">
+                        <span class="bb-avatar" style="width:1.25rem;height:1.25rem;background:var(--bb-accent-bg)"><i data-lucide="coins" style="width:.75rem;height:.75rem;color:var(--bb-accent-i)"></i></span>
+                        <span class="bb-num">1,800 บาท</span>
+                      </div>
+                      <div class="d-flex flex-column gap-1 mt-1 ms-4">
+                        <div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem">
+                          <i data-lucide="arrow-right-to-line" style="width:.8125rem;height:.8125rem"></i>
+                          <i data-lucide="fuel" style="width:.8125rem;height:.8125rem"></i>&nbsp;฿360 | 40฿/ล
+                        </div>
+                        <div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem">
+                          <i data-lucide="arrow-right-to-line" style="width:.8125rem;height:.8125rem"></i>
+                          <i data-lucide="clock" style="width:.8125rem;height:.8125rem"></i>&nbsp;OT +1.5 ชม. · ฿150
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+{% for grp in booking_groups %}
+  &lt;div class="bb-card"&gt;
+    &lt;div class="bb-card-body"&gt;
+      &lt;div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-3"&gt;
+        &lt;div class="d-flex align-items-start gap-3"&gt;
+          &lt;div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg)"&gt;
+            &lt;i data-lucide="merge" style="color:var(--bb-ok-tx)"&gt;&lt;/i&gt;
+          &lt;/div&gt;
+          &lt;div&gt;
+            &lt;div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"&gt;&lt;i data-lucide="clock"&gt;&lt;/i&gt;{{ grp.time_start }}–{{ grp.time_end }}&lt;/div&gt;
+            &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1"&gt;
+              &lt;span style="font-size:1.25rem;font-weight:700;color:var(--bb-str)"&gt;{{ grp.vehicle.name }} ({{ grp.vehicle.plate }})&lt;/span&gt;
+              &lt;span class="bb-badge" style="background:var(--bb-ok-bg);color:var(--bb-ok-tx)"&gt;&lt;i data-lucide="layers"&gt;&lt;/i&gt;{{ grp.members|length }} งานรวม&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)"&gt;
+              &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="arrow-right-to-line"&gt;&lt;/i&gt;{{ grp.driver.first_name }}&lt;/span&gt;
+              &lt;span&gt;|&lt;/span&gt;
+              &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="users"&gt;&lt;/i&gt;{{ grp.total_pax }}&lt;/span&gt;
+              &lt;span&gt;|&lt;/span&gt;
+              &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="tag-plus"&gt;&lt;/i&gt;ส่วนกอง&lt;i data-lucide="dot"&gt;&lt;/i&gt;{{ grp.budget_sub }}&lt;/span&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="d-flex align-items-center gap-2 align-self-end align-self-lg-auto"&gt;
+          &lt;button class="bb-btn is-sec is-sm"&gt;&lt;i data-lucide="pencil"&gt;&lt;/i&gt; แก้ไข&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;hr style="border-top:1px dashed var(--bb-n300)" class="my-3"&gt;
+
+      &lt;div class="row g-3"&gt;
+        &lt;div class="col-12 col-lg"&gt;   {# ต้นทาง — รายการต่อคน (ต่างจาก Case 11 เดี่ยวที่เป็นคนขับ/รถ/งบ) #}
+          &lt;div class="bg-light rounded-3 p-2 h-100"&gt;
+            {% for gm in grp.members %}
+            &lt;div class="d-flex justify-content-between align-items-start"&gt;
+              &lt;div&gt;
+                &lt;div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)"&gt;{{ gm.requester_name }}&lt;/div&gt;
+                &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)"&gt;
+                  &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="clock"&gt;&lt;/i&gt;{{ gm.time_range }}&lt;/span&gt;
+                  &lt;span&gt;|&lt;/span&gt;
+                  &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="users"&gt;&lt;/i&gt;{{ gm.people_count }}&lt;/span&gt;
+                  &lt;span&gt;|&lt;/span&gt;
+                  &lt;span&gt;{{ gm.purpose }} &lt;i data-lucide="arrow-right"&gt;&lt;/i&gt; &lt;b style="color:var(--bb-str)"&gt;{{ gm.location }}&lt;/b&gt;&lt;/span&gt;
+                &lt;/div&gt;
+              &lt;/div&gt;
+              &lt;button class="bb-btn is-sec is-icon" title="แยกงาน" data-booking-id="{{ gm.id }}"&gt;&lt;i data-lucide="shuffle"&gt;&lt;/i&gt;&lt;/button&gt;
+            &lt;/div&gt;
+            {% if not loop.last %}&lt;hr style="border-top:1px dashed var(--bb-n300)" class="my-2"&gt;{% endif %}
+            {% endfor %}
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="col-12 col-lg-4"&gt;   {# เริ่มเดินทาง — เหมือน Case 11 เดี่ยวทุกประการ (มัยเลจ/น้ำมัน/OT รวมของกลุ่ม) #}
+          {% if m %}
+          &lt;div class="bg-light rounded-3 p-2 h-100"&gt;
+            &lt;div class="fw-semibold" style="font-size:.8125rem"&gt;เริ่มเดินทาง&lt;/div&gt;
+            &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem"&gt;
+              &lt;span class="bb-num"&gt;{{ m.odometer_start }} → {{ m.odometer_end }}&lt;/span&gt;
+              &lt;span&gt;|&lt;/span&gt;
+              &lt;i data-lucide="plane-landing"&gt;&lt;/i&gt; {{ r.distance }} กม.
+            &lt;/div&gt;
+            &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-3"&gt;
+              &lt;span class="bb-avatar" style="width:1.25rem;height:1.25rem;background:var(--bb-accent-bg)"&gt;&lt;i data-lucide="coins" style="color:var(--bb-accent-i)"&gt;&lt;/i&gt;&lt;/span&gt;
+              &lt;span class="bb-num"&gt;{{ r.reserve_before }} บาท&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class="d-flex flex-column gap-1 mt-1 ms-4"&gt;
+              &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem"&gt;
+                &lt;i data-lucide="arrow-right-to-line"&gt;&lt;/i&gt;
+                &lt;i data-lucide="fuel"&gt;&lt;/i&gt;&amp;nbsp;฿{{ r.fuel_cost }} | {{ r.fuel_price }}฿/ล
+              &lt;/div&gt;
+              {% if r.ot_hours %}
+              &lt;div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem"&gt;
+                &lt;i data-lucide="arrow-right-to-line"&gt;&lt;/i&gt;
+                &lt;i data-lucide="clock"&gt;&lt;/i&gt;&amp;nbsp;OT +{{ r.ot_hours }} ชม. · ฿{{ r.ot_cost }}
+              &lt;/div&gt;
+              {% endif %}
+            &lt;/div&gt;
+          &lt;/div&gt;
+          {% else %}
+          &lt;div class="bb-empty bg-light rounded-3 h-100 d-flex flex-column align-items-center justify-content-center"&gt;
+            &lt;div class="bb-empty-icon"&gt;&lt;i data-lucide="plane-takeoff"&gt;&lt;/i&gt;&lt;/div&gt;
+            &lt;p class="bb-empty-title"&gt;ยังไม่เริ่มเดินทาง&lt;/p&gt;
+          &lt;/div&gt;
+          {% endif %}
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+{% endfor %}</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <b>Case 13 (2026-07):</b> variant ของ Case 11 สำหรับ "งานรวม" (merge หลาย booking เป็นทริปเดียว — ทำได้เฉพาะ booking ที่อนุมัติแล้วเท่านั้น จึง avatar ใช้สีเขียว <code>--bb-ok-bg/-tx</code> คงที่ ไม่ไล่ตาม status_variant เหมือนเดี่ยว) · icon avatar เปลี่ยนจาก <code>bike</code> → <code>merge</code> สื่อว่าเป็นงานรวม.
+         ต้องเพิ่ม modifier <code>.bb-badge.is-ok</code> ใน <code>components.css</code> ตอน implement จริง (ตอนนี้ demo ใช้ inline style ไปก่อน เพราะ <code>bb-badge</code> มีแค่ is-neutral/is-accent).
+         ปุ่มขวาบนเหลือปุ่มเดียว (แก้ไขกลุ่ม) — ตัด shuffle แยกงานทั้งหมดที่ header ออก (2026-07: ซ้ำกับปุ่มแยกงานเดี่ยวต่อรายการที่มีอยู่แล้ว จึงเหลือแยกงานแค่ระดับรายการ) · ตัด chevron ยุบ/ขยายออก เพราะเนื้อหาโชว์ตลอดแล้ว · คอลัมน์ต้นทางแต่ละคนมีปุ่ม shuffle ไอคอนเดี่ยว (<code>data-booking-id</code> ผูก action แยกเฉพาะ booking นั้น) และย่อจาก 3 บรรทัดเหลือ 2 บรรทัดต่อรายการ (ชื่อใหญ่ + บรรทัด clock ช่วงเวลา|users pax|purpose→ปลายทาง รวมกัน).</div>
+    </section>
+
+    <!-- ========== CASE 14 ========== -->
+    <section id="case14" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 14 · Booking trip card — group (มือถือ, ต่อยอดจาก Case 12)</h2><span class="bb-g-cls">.bb-card / .bb-timeline / .bb-avatar(merge, is-ok)</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: การ์ด "งานรวม" เวอร์ชันมือถือ — ใช้โครง Case 12 เดิม (header 2 บรรทัด + avatar มุมขวา + <code>bb-timeline</code> 2 stop) เพราะ Case 12 เป็นโครง mobile-native ตั้งต้นอยู่แล้ว (ต่างจาก Case 13 ที่ต่อยอด Case 11 responsive) — เปลี่ยน header เป็นสรุปกลุ่ม แล้วย้ายรายการต่อคนเข้าไปแทน stop "เริ่มเดินทาง" ของ timeline.
+         <b>Header:</b> บรรทัด 1 ตัด <code>#BK-24</code> ออก เหลือ <code>clock</code> + ช่วงเวลารวมทั้งกลุ่ม (เริ่มต้นสุด–สิ้นสุดสุด) · บรรทัด 2 (เดิมชื่อผู้จอง) → เปลี่ยนเป็น "งานรวม" · บรรทัด 3 (เดิม pax|purpose→dest) ตัดออก (ซ้ำกับรายการต่อคนใน timeline) · avatar เปลี่ยนจาก <code>bike</code>(สีตาม status) → <code>merge</code> สีเขียวคงที่เหมือน Case 13 · ไม่มีปุ่มที่ header เลย.
+         <b>เนื้อหา:</b> <code>bb-timeline</code> stop ต้นทาง (คนขับ/รถ/งบ) เหมือน Case 12 ทุกประการ ไม่เปลี่ยน · stop ปลายทางเปลี่ยนชื่อจาก "เริ่มเดินทาง" → "ผู้โดยสารร่วม" และเปลี่ยน block เนื้อหาจาก breakdown มัยเลจ/น้ำมัน/OT → รายชื่อผู้โดยสารต่อคน 3 บรรทัด (เหมือน header: clock+เวลา / ชื่อ / users+pax|purpose→ปลายทาง) font เล็กกว่า header คั่นด้วยเส้นประระหว่างรายการ แต่ละคนมีปุ่ม shuffle แยกงานเดี่ยว.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="bb-card mx-auto" style="max-width:26.25rem">
+            <div class="bb-card-body">
+              <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                  <div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)">
+                    <i data-lucide="clock" style="width:.75rem;height:.75rem"></i>
+                    <span class="bb-num">08:00–09:30</span>
+                  </div>
+                  <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">งานรวม</div>
+                </div>
+                <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg)">
+                  <i data-lucide="merge" style="width:1.75rem;height:1.75rem;color:var(--bb-ok-tx)"></i>
+                </div>
+              </div>
+
+              <div class="bb-timeline">
+                <div class="bb-tl-item done">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">วรกฤต</div>
+                  <div class="bb-tl-desc">ISUZU D-MAX (ศม 139) | โทร <b style="color:var(--bb-mut)">089-123-4567</b></div>
+                  <div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2">
+                    <div>
+                      <div class="fw-semibold" style="font-size:.8125rem">ประเภทงบ</div>
+                      <div class="text-muted d-flex align-items-center gap-1" style="font-size:.8125rem"><i data-lucide="tag-plus" style="width:.8125rem;height:.8125rem"></i>กองสนับสนุนและบริการ</div>
+                    </div>
+                    <button type="button" class="bb-btn is-sec is-icon"><i data-lucide="pencil"></i></button>
+                  </div>
+                </div>
+                <div class="bb-tl-item cur">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">ผู้โดยสารร่วม</div>
+                  <div class="bg-light rounded-3 p-2 mt-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"><i data-lucide="clock" style="width:.75rem;height:.75rem"></i><span class="bb-num">08:00–08:45</span></div>
+                        <div style="font-size:1rem;font-weight:700;color:var(--bb-str)">ธิกรณ์ หงษ์โสภา</div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.75rem;color:var(--bb-mut)">
+                          <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.75rem;height:.75rem"></i>1</span>
+                          <span>|</span>
+                          <span>เรียนหนังสือ <i data-lucide="arrow-right" style="width:.6875rem;height:.6875rem"></i> <b style="color:var(--bb-str)">วัดพระธรรมกาย</b></span>
+                        </div>
+                      </div>
+                      <button class="bb-btn is-sec is-icon" title="แยกงาน"><i data-lucide="shuffle"></i></button>
+                    </div>
+                    <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"><i data-lucide="clock" style="width:.75rem;height:.75rem"></i><span class="bb-num">08:00–08:50</span></div>
+                        <div style="font-size:1rem;font-weight:700;color:var(--bb-str)">สมชาย เก่งกล้า</div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.75rem;color:var(--bb-mut)">
+                          <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.75rem;height:.75rem"></i>3</span>
+                          <span>|</span>
+                          <span>ประชุม <i data-lucide="arrow-right" style="width:.6875rem;height:.6875rem"></i> <b style="color:var(--bb-str)">สภาธรรมกายสากล</b></span>
+                        </div>
+                      </div>
+                      <button class="bb-btn is-sec is-icon" title="แยกงาน"><i data-lucide="shuffle"></i></button>
+                    </div>
+                    <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"><i data-lucide="clock" style="width:.75rem;height:.75rem"></i><span class="bb-num">09:00–09:30</span></div>
+                        <div style="font-size:1rem;font-weight:700;color:var(--bb-str)">ปิยะดา แสงทอง</div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.75rem;color:var(--bb-mut)">
+                          <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.75rem;height:.75rem"></i>1</span>
+                          <span>|</span>
+                          <span>รับรองแขก <i data-lucide="arrow-right" style="width:.6875rem;height:.6875rem"></i> <b style="color:var(--bb-str)">อาคารรับรองสาธุชน</b></span>
+                        </div>
+                      </div>
+                      <button class="bb-btn is-sec is-icon" title="แยกงาน"><i data-lucide="shuffle"></i></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="bb-card" style="max-width:26.25rem"&gt;
+  &lt;div class="bb-card-body"&gt;
+    &lt;div class="d-flex justify-content-between align-items-start gap-3 mb-3"&gt;
+      &lt;div&gt;
+        &lt;div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"&gt;
+          &lt;i data-lucide="clock"&gt;&lt;/i&gt;
+          &lt;span class="bb-num"&gt;{{ grp.time_start }}–{{ grp.time_end }}&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)"&gt;งานรวม&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg)"&gt;
+        &lt;i data-lucide="merge" style="color:var(--bb-ok-tx)"&gt;&lt;/i&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class="bb-timeline"&gt;
+      &lt;div class="bb-tl-item done"&gt;   {# ต้นทาง — คนขับ/รถ/งบ เหมือน Case 12 ทุกประการ #}
+        &lt;span class="bb-tl-dot"&gt;&lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;
+          {% if grp.driver %}{{ grp.driver.name }}
+          {% else %}&lt;span style="color:var(--bb-mut)"&gt;ยังไม่ได้เลือก&lt;/span&gt;{% endif %}
+        &lt;/div&gt;
+        {% if grp.vehicle_approved %}&lt;div class="bb-tl-desc"&gt;{{ grp.vehicle.name }} ({{ grp.vehicle.plate }})&lt;/div&gt;{% endif %}
+        {% if grp.driver_approved %}&lt;div class="bb-tl-desc"&gt;โทร &lt;b style="color:var(--bb-mut)"&gt;{{ grp.driver.phone }}&lt;/b&gt;&lt;/div&gt;{% endif %}
+        &lt;div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-2 mt-2"&gt;
+          &lt;div&gt;
+            &lt;div class="fw-semibold" style="font-size:.8125rem"&gt;ประเภทงบ&lt;/div&gt;
+            &lt;div class="text-muted d-flex align-items-center gap-1" style="font-size:.8125rem"&gt;&lt;i data-lucide="tag-plus"&gt;&lt;/i&gt;{{ grp.budget_sub }}&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;button type="button" class="bb-btn is-sec is-icon"&gt;&lt;i data-lucide="pencil"&gt;&lt;/i&gt;&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="bb-tl-item cur"&gt;   {# ปลายทาง — รายชื่อผู้โดยสารร่วม แทนที่ breakdown มัยเลจ/น้ำมัน/OT เดิม #}
+        &lt;span class="bb-tl-dot"&gt;&lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;ผู้โดยสารร่วม&lt;/div&gt;
+        &lt;div class="bg-light rounded-3 p-2 mt-2"&gt;
+          {% for gm in grp.members %}
+          &lt;div class="d-flex justify-content-between align-items-start"&gt;
+            &lt;div&gt;
+              &lt;div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"&gt;&lt;i data-lucide="clock"&gt;&lt;/i&gt;&lt;span class="bb-num"&gt;{{ gm.time_range }}&lt;/span&gt;&lt;/div&gt;
+              &lt;div style="font-size:1rem;font-weight:700;color:var(--bb-str)"&gt;{{ gm.requester_name }}&lt;/div&gt;
+              &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.75rem;color:var(--bb-mut)"&gt;
+                &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="users"&gt;&lt;/i&gt;{{ gm.people_count }}&lt;/span&gt;
+                &lt;span&gt;|&lt;/span&gt;
+                &lt;span&gt;{{ gm.purpose }} &lt;i data-lucide="arrow-right"&gt;&lt;/i&gt; &lt;b style="color:var(--bb-str)"&gt;{{ gm.location }}&lt;/b&gt;&lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;button class="bb-btn is-sec is-icon" title="แยกงาน" data-booking-id="{{ gm.id }}"&gt;&lt;i data-lucide="shuffle"&gt;&lt;/i&gt;&lt;/button&gt;
+          &lt;/div&gt;
+          {% if not loop.last %}&lt;hr style="border-top:1px dashed var(--bb-n300)" class="my-2"&gt;{% endif %}
+          {% endfor %}
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <b>Case 14 (2026-07 rev.2):</b> คู่มือถือของ Case 13 — ต่อยอด Case 12.
+         header เหลือ 2 บรรทัด: <code>clock</code>+ช่วงเวลารวมทั้งกลุ่ม กับ "งานรวม" (แทนชื่อผู้จองเดิม) — ตัด <code>#BK-24</code> และบรรทัด pax|purpose→dest ออก · avatar เปลี่ยนเป็น <code>merge</code>/เขียวคงที่เหมือน Case 13 · ไม่มีปุ่มที่ header เลย.
+         <b>เปลี่ยนจาก rev.1:</b> section รายชื่อผู้โดยสารที่เคยแยกไว้เหนือ <code>bb-timeline</code> (2 บรรทัด/คน คั่นด้วย gap) ถูกย้ายเข้าไปแทนที่ stop ปลายทางของ timeline แทน — เปลี่ยนชื่อ stop จาก "เริ่มเดินทาง" → "ผู้โดยสารร่วม" และ block เนื้อหาเปลี่ยนจาก breakdown มัยเลจ/น้ำมัน/OT → รายชื่อผู้โดยสารต่อคน 3 บรรทัด (เหมือน header: clock+เวลา / ชื่อ / users+pax|purpose→ปลายทาง) font เล็กกว่า header (1rem แทน 1.25rem) คั่นด้วยเส้นประระหว่างรายการ (<code>loop.last</code> เว้น hr ท้ายสุด) พร้อมปุ่ม shuffle แยกงานต่อคนเดิม — ผลคือ breakdown ทริปของกลุ่มไม่แสดงในการ์ดนี้แล้ว (ตกลง 2026-07: อนุมัติงานรวมไม่จำเป็นต้องโชว์ breakdown) · <code>bb-empty</code> fallback เดิม (กรณี <code>m</code> ยังไม่มี) ตัดออกไปพร้อมกันเพราะไม่มีมัยเลจให้ fallback แล้ว.
+         stop ต้นทาง (คนขับ/รถ/งบ) เหมือน Case 12 ทุกประการ ไม่เปลี่ยน.</div>
+    </section>
+
+    <!-- ========== CASE 15 ========== -->
+    <section id="case15" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 15 · Week strip — day name top, date row-aligned</h2><span class="bb-g-cls">.bb-card / .bb-avatar</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: header (title+dropdown เดือน) + week strip compact บน dashboard — ลูกศรซ้าย/ขวา + วันที่ 7 วัน 3 บรรทัด/วัน: ชื่อวันบน → เลขวันกลาง (active = วงกลม <code>.bb-avatar</code> สี <code>--bb-accent-i</code>) → indicator ล่าง (mockup).
+         <b>แนวนอนของเลขวันตรงกัน (2026-07 v3):</b> ห่อเลขวันทุกวัน (ทั้ง plain text และวันที่ active ที่เป็น <code>.bb-avatar</code>) ด้วยกล่องสูงเท่ากัน <code>height:2rem</code> + <code>d-flex align-items-center justify-content-center</code> — เพื่อให้เลขทุกวันอยู่กึ่งกลางแนวนอนเดียวกัน ไม่เอียงขึ้น/ลงตามวันที่ active มีวงกลมครอบ.
+         ชื่อวัน/เลขวัน ใช้ font-size <code>.8125rem</code> เท่ากันทั้งคู่ ให้บรรทัดตรงกันเป็นคอลัมน์เดียว — ต่างกันแค่สี/น้ำหนัก (active = accent+600, ปกติ = mut+400).
+         <b>Indicator (mockup, reuse threshold เดิมจาก task-count):</b> 0 = ว่าง · 1 = จุดกลมเทา <code>--bb-n300</code> · 2–5 = แท่งสั้น <code>--bb-wr</code> · 6+ = แท่งยาว <code>--bb-dg</code>.
+         <b>ตัด "Daily Stress Trends" + วงแหวน progress + สถิติ peak/lowest ออกทั้งหมด</b> (2026-07 v3) — card นี้เหลือแค่ header + week strip.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="bb-card" style="max-width:26.25rem">
+            <div class="bb-card-body">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span class="bb-card-title">Stress Patterns Overview</span>
+                <button style="background:var(--bb-n50);border:none;border-radius:var(--bb-r-md);padding:.25rem .625rem;display:flex;align-items:center;gap:.25rem;font-size:.8125rem;color:var(--bb-mut)">April, 2026<i data-lucide="chevron-down" style="width:.875rem;height:.875rem"></i></button>
+              </div>
+              <div class="d-flex align-items-center">
+                <button aria-label="Previous week" style="background:none;border:none;padding:.25rem;color:var(--bb-mut);display:flex"><i data-lucide="chevron-left" style="width:1rem;height:1rem"></i></button>
+                <div class="d-flex justify-content-between flex-grow-1">
+                  <div class="d-flex flex-column align-items-center gap-1" style="flex:1">
+                    <div style="font-size:.8125rem;color:var(--bb-mut)">Sat</div>
+                    <div class="d-flex align-items-center justify-content-center" style="height:2rem">
+                      <div style="font-family:var(--bb-num-font);font-size:.8125rem;font-weight:600;color:var(--bb-str)">09</div>
+                    </div>
+                    <div style="height:.375rem"></div>
+                  </div>
+                  <div class="d-flex flex-column align-items-center gap-1" style="flex:1">
+                    <div style="font-size:.8125rem;color:var(--bb-mut)">Sun</div>
+                    <div class="d-flex align-items-center justify-content-center" style="height:2rem">
+                      <div style="font-family:var(--bb-num-font);font-size:.8125rem;font-weight:600;color:var(--bb-str)">10</div>
+                    </div>
+                    <div style="height:.375rem;display:flex;align-items:center;justify-content:center"><span style="width:.375rem;height:.375rem;border-radius:50%;background:var(--bb-n300)"></span></div>
+                  </div>
+                  <div class="d-flex flex-column align-items-center gap-1" style="flex:1">
+                    <div style="font-size:.8125rem;color:var(--bb-mut)">Mon</div>
+                    <div class="d-flex align-items-center justify-content-center" style="height:2rem">
+                      <div style="font-family:var(--bb-num-font);font-size:.8125rem;font-weight:600;color:var(--bb-str)">11</div>
+                    </div>
+                    <div style="height:.375rem;display:flex;align-items:center;justify-content:center"><span style="width:1.25rem;height:.375rem;border-radius:999px;background:var(--bb-wr)"></span></div>
+                  </div>
+                  <div class="d-flex flex-column align-items-center gap-1" style="flex:1">
+                    <div style="font-size:.8125rem;color:var(--bb-mut)">Tue</div>
+                    <div class="d-flex align-items-center justify-content-center" style="height:2rem">
+                      <div style="font-family:var(--bb-num-font);font-size:.8125rem;font-weight:600;color:var(--bb-str)">12</div>
+                    </div>
+                    <div style="height:.375rem;display:flex;align-items:center;justify-content:center"><span style="width:2rem;height:.375rem;border-radius:999px;background:var(--bb-dg)"></span></div>
+                  </div>
+                  <div class="d-flex flex-column align-items-center gap-1" style="flex:1">
+                    <div style="font-size:.8125rem;font-weight:600;color:var(--bb-accent-i)">Wed</div>
+                    <div class="d-flex align-items-center justify-content-center" style="height:2rem">
+                      <div class="bb-avatar" style="width:2rem;height:2rem;background:var(--bb-accent-i);color:#fff;font-size:.8125rem">13</div>
+                    </div>
+                    <div style="height:.375rem;display:flex;align-items:center;justify-content:center"><span style="width:1.25rem;height:.375rem;border-radius:999px;background:var(--bb-wr)"></span></div>
+                  </div>
+                  <div class="d-flex flex-column align-items-center gap-1" style="flex:1">
+                    <div style="font-size:.8125rem;color:var(--bb-mut)">Thu</div>
+                    <div class="d-flex align-items-center justify-content-center" style="height:2rem">
+                      <div style="font-family:var(--bb-num-font);font-size:.8125rem;font-weight:600;color:var(--bb-str)">14</div>
+                    </div>
+                    <div style="height:.375rem;display:flex;align-items:center;justify-content:center"><span style="width:1.25rem;height:.375rem;border-radius:999px;background:var(--bb-wr)"></span></div>
+                  </div>
+                  <div class="d-flex flex-column align-items-center gap-1" style="flex:1">
+                    <div style="font-size:.8125rem;color:var(--bb-mut)">Fri</div>
+                    <div class="d-flex align-items-center justify-content-center" style="height:2rem">
+                      <div style="font-family:var(--bb-num-font);font-size:.8125rem;font-weight:600;color:var(--bb-str)">15</div>
+                    </div>
+                    <div style="height:.375rem;display:flex;align-items:center;justify-content:center"><span style="width:.375rem;height:.375rem;border-radius:50%;background:var(--bb-n300)"></span></div>
+                  </div>
+                </div>
+                <button aria-label="Next week" style="background:none;border:none;padding:.25rem;color:var(--bb-mut);display:flex"><i data-lucide="chevron-right" style="width:1rem;height:1rem"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="bb-card" style="max-width:26.25rem"&gt;
+  &lt;div class="bb-card-body"&gt;
+    &lt;div class="d-flex align-items-center justify-content-between mb-3"&gt;
+      &lt;span class="bb-card-title"&gt;{{ stress.title }}&lt;/span&gt;
+      &lt;button style="background:var(--bb-n50);border:none;border-radius:var(--bb-r-md);padding:.25rem .625rem;display:flex;align-items:center;gap:.25rem;font-size:.8125rem;color:var(--bb-mut)"&gt;
+        {{ stress.month_label }}&lt;i data-lucide="chevron-down" style="width:.875rem;height:.875rem"&gt;&lt;/i&gt;
+      &lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class="d-flex align-items-center"&gt;
+      &lt;button aria-label="Previous week" style="background:none;border:none;padding:.25rem;color:var(--bb-mut);display:flex"&gt;&lt;i data-lucide="chevron-left" style="width:1rem;height:1rem"&gt;&lt;/i&gt;&lt;/button&gt;
+      &lt;div class="d-flex justify-content-between flex-grow-1"&gt;
+        {% for d in stress.days %}
+        &lt;div class="d-flex flex-column align-items-center gap-1" style="flex:1"&gt;
+          &lt;div style="font-size:.8125rem;font-weight:{{ '600' if d.is_active else '400' }};
+               color:{{ 'var(--bb-accent-i)' if d.is_active else 'var(--bb-mut)' }}"&gt;{{ d.dow }}&lt;/div&gt;
+          &lt;div class="d-flex align-items-center justify-content-center" style="height:2rem"&gt;
+            {% if d.is_active %}
+            &lt;div class="bb-avatar" style="width:2rem;height:2rem;background:var(--bb-accent-i);color:#fff;font-size:.8125rem"&gt;{{ d.date }}&lt;/div&gt;
+            {% else %}
+            &lt;div style="font-family:var(--bb-num-font);font-size:.8125rem;font-weight:600;color:var(--bb-str)"&gt;{{ d.date }}&lt;/div&gt;
+            {% endif %}
+          &lt;/div&gt;
+          &lt;div style="height:.375rem;display:flex;align-items:center;justify-content:center"&gt;
+            {% if d.level == 1 %}
+              &lt;span style="width:.375rem;height:.375rem;border-radius:50%;background:var(--bb-n300)"&gt;&lt;/span&gt;
+            {% elif 2 &lt;= d.level &lt;= 5 %}
+              &lt;span style="width:1.25rem;height:.375rem;border-radius:999px;background:var(--bb-wr)"&gt;&lt;/span&gt;
+            {% elif d.level &gt;= 6 %}
+              &lt;span style="width:2rem;height:.375rem;border-radius:999px;background:var(--bb-dg)"&gt;&lt;/span&gt;
+            {% endif %}
+          &lt;/div&gt;
+        &lt;/div&gt;
+        {% endfor %}
+      &lt;/div&gt;
+      &lt;button aria-label="Next week" style="background:none;border:none;padding:.25rem;color:var(--bb-mut);display:flex"&gt;&lt;i data-lucide="chevron-right" style="width:1rem;height:1rem"&gt;&lt;/i&gt;&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <b>Case 15 (2026-07 v3):</b> ตัด "Daily Stress Trends" + วงแหวน progress + สถิติ peak/lowest ออกทั้งหมด — เหลือแค่ header (title+dropdown เดือน) + week strip เท่านั้น.
+         <b>เลขวันแนวนอนตรงกัน:</b> ห่อเลขวันด้วยกล่อง <code>height:2rem</code> centered ทุกวัน (ทั้ง plain text + <code>.bb-avatar</code> ของวัน active) กัน active day เอียงเพราะวงกลมสูงกว่า text ธรรมดา.
+         โครงเดิม (ชื่อวันบน → เลขวันกลาง → indicator ล่าง) คงเดิมจาก v2.</div>
+    </section>
+
+    <!-- ========== CASE 16 ========== -->
+    <section id="case16" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 16 · Vehicle usage list (โครง Case 10 + ข้อมูลจริง)</h2><span class="bb-g-cls">.card / .bb-buy-thumb / .bb-badge (ต่อยอด Case 10)</span></div>
+      <p class="bb-g-sec-desc">โครง/class เอามาจาก <b>Case 10 ทั้งหมด</b> — การ์ด <code>card border-0 shadow-sm rounded-4</code>, <code>card-body p-4</code>, title <code>h3.h6.fw-bold.mb-3</code> + <code>hr</code>, list <code>bb-buy-list</code>/<code>bb-buy-item</code>/<code>bb-buy-thumb</code>(3rem) — <b>ไม่ใช่</b> <code>.bb-avatar</code>/<code>.bb-card-head</code> ของ container จริงในหน้า vehicle_admin (ของจริงยังไม่ได้แก้ตาม, ทำแค่ gallery ก่อน). Title "Buying History" → "การใช้รถ", ตัด dropdown ช่วงเวลาออก. รถ 1 คัน = 1 <code>bb-buy-item</code>, มี 0-N "งาน" ต่อคัน (multi-job = ซ้อนบล็อก, ไม่ merge):</p>
+      <ul class="bb-g-sec-desc" style="margin-top:-.5rem">
+        <li><b>1. ยังไม่อนุมัติ</b> — thumb เทา (ไม่มี modifier) · badge "ว่าง" เขียว · ไม่มี header-row ขวา · เลขไมล์ "-" · ไม่มีแถวค่าใช้จ่าย</li>
+        <li><b>2. อนุมัติแล้ว</b> — thumb เขียว (<code>is-ok</code>) · badge เหลือง (<code>is-wr</code>) "อนุมัติแล้ว" · มุมขวา header = เวลาเดินทางของรถคันนั้น · เลขไมล์ "-" · ไม่มีแถวค่าใช้จ่าย</li>
+        <li><b>3. ออกเดินทางแล้ว</b> — thumb เขียว · badge ฟ้า (<code>is-info</code>) "ออกเดินทางแล้ว" · มุมขวา header = เวลาเดินทาง · เลขไมล์ "เริ่ม → (ยังไม่สิ้นสุดการเดินทาง)" · ไม่มีแถวค่าใช้จ่าย</li>
+        <li><b>4. เดินทางเสร็จสิ้น</b> — thumb เขียว · badge ฟ้า "สิ้นสุดการเดินทาง" · <b>มุมขวา header (เดิม=เวลา) เปลี่ยนเป็น</b> ข้อความ "หักงบกลาง"/"หักงบกอง" (static) หรือปุ่ม "เรียกเก็บ" → คลิก → "จ่ายแล้ว" · เลขไมล์เต็มช่วง · แถวค่าใช้จ่าย (ค่าน้ำมัน+OT) แบบ "N บาท" ไม่ใช่ ฿N + <code>bb-badge</code> "OT: N บาท" เฉพาะมี OT — ไม่มี OT ไม่แสดง badge</li>
+        <li><b>5. รถซ่อมอยู่</b> — thumb ส้ม <code>wrench</code> (<code>is-wr</code>) · badge "กำลังซ่อม" ส้ม · ไม่มี header-row ขวาเลย · แถวเลขไมล์แทนที่ด้วย "ดำเนินการ : เทอร์โบเสีย"</li>
+        <li><b>รถคันเดียวมี 2 งานในวันเดียว</b> (ตัวอย่าง 4งจ-5567) — ทะเบียนแสดงครั้งเดียว ด้านล่างซ้อน 2 บล็อกต่องาน (แต่ละบล็อกมี header row ของตัวเอง: "งานที่ N" ซ้าย ตำแหน่ง <code>align-items-center</code>, เวลา/action ขวา ตามสถานะของงานนั้น) คั่นด้วย <code>mb-3</code></li>
+      </ul>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="card border-0 shadow-sm rounded-4 mx-auto" style="max-width:26rem">
+            <div class="card-body p-4">
+              <h3 class="h6 fw-bold mb-3">การใช้รถ</h3>
+              <hr class="mt-0 mb-3">
+              <div class="bb-buy-list">
+
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-bold">1กข-4521</div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-ok-bg);color:var(--bb-ok-tx)">ว่าง</span>
+                    </div>
+                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb is-ok flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-bold">2ขค-7789</div>
+                      <div class="text-muted small flex-shrink-0">13.00–15.00</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)">อนุมัติแล้ว</span>
+                    </div>
+                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb is-ok flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-bold">3คง-1023</div>
+                      <div class="text-muted small flex-shrink-0">09.00–11.00</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-info-bg);color:var(--bb-info-tx)">เริ่มเดินทาง</span>
+                    </div>
+                    <div class="text-muted small mt-1">เลขไมล์ : 12345 → (ยังไม่สิ้นสุดการเดินทาง)</div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb is-ok flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-bold mb-2">4งจ-5567</div>
+                    <div class="mb-3">
+                      <div class="d-flex justify-content-between align-items-center gap-2">
+                        <div class="text-muted small">งานที่ 1</div>
+                        <button type="button" class="bb-btn is-sec is-sm flex-shrink-0" title="ยืนยันการชำระเงินจากผู้จอง"><i data-lucide="wallet"></i>เรียกเก็บ</button>
+                      </div>
+                      <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                        <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-info-bg);color:var(--bb-info-tx)">สิ้นสุดการเดินทาง</span>
+                      </div>
+                      <div class="text-muted small mt-1">เลขไมล์ : 15900 → 16100 · 200 กม.</div>
+                      <div class="text-muted small">รวมค่าใช้จ่าย : 480 บาท <span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)">OT: 10 บาท</span></div>
+                    </div>
+                    <div>
+                      <div class="d-flex justify-content-between align-items-center gap-2">
+                        <div class="text-muted small">งานที่ 2</div>
+                        <div class="text-muted small flex-shrink-0">13.30–15.30</div>
+                      </div>
+                      <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                        <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)">อนุมัติแล้ว</span>
+                      </div>
+                      <div class="text-muted small mt-1">เลขไมล์ : -</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb is-ok flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="fw-bold">6ฉช-3344</div>
+                      <div class="text-muted small flex-shrink-0">หักงบส่วนกลาง</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-info-bg);color:var(--bb-info-tx)">สิ้นสุดการเดินทาง</span>
+                    </div>
+                    <div class="text-muted small mt-1">เลขไมล์ : 5210 → 5310 · 100 กม.</div>
+                    <div class="text-muted small">รวมค่าใช้จ่าย : 180 บาท</div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-3 bb-buy-item">
+                  <div class="bb-buy-thumb is-wr flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="wrench"></i></div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-bold">5จฉ-9012</div>
+                    <div class="d-flex align-items-center gap-2 small text-muted mt-1">
+                      <span>สถานะ :</span><span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)">กำลังซ่อม</span>
+                    </div>
+                    <div class="text-muted small mt-1">ดำเนินการ : เทอร์โบเสีย</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+&lt;div class="card border-0 shadow-sm rounded-4" style="max-width:26rem"&gt;
+  &lt;div class="card-body p-4"&gt;
+    &lt;h3 class="h6 fw-bold mb-3"&gt;การใช้รถ&lt;/h3&gt;
+    &lt;hr class="mt-0 mb-3"&gt;
+    &lt;div class="bb-buy-list"&gt;
+      {% for v in vehicle_usage %}
+      &lt;div class="d-flex gap-3 bb-buy-item"&gt;
+        &lt;div class="bb-buy-thumb {{ 'is-wr' if v.status == 'repair' else ('is-ok' if v.status != 'available' else '') }} flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"&gt;
+          &lt;i data-lucide="{{ 'wrench' if v.status == 'repair' else 'car' }}"&gt;&lt;/i&gt;
+        &lt;/div&gt;
+        &lt;div class="flex-grow-1 min-w-0"&gt;
+          {% if v.status in ['available', 'repair'] %}
+          &lt;div class="fw-bold"&gt;{{ v.plate }}&lt;/div&gt;
+          &lt;div class="d-flex align-items-center gap-2 small text-muted mt-1"&gt;
+            &lt;span&gt;สถานะ :&lt;/span&gt;
+            &lt;span class="bb-badge" style="background:var(--bb-{{ 'ok' if v.status == 'available' else 'wr' }}-bg);color:var(--bb-{{ 'ok' if v.status == 'available' else 'wr' }}-tx)"&gt;{{ v.status_label }}&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class="text-muted small mt-1"&gt;{{ 'เลขไมล์ : -' if v.status == 'available' else 'ดำเนินการ : ' ~ v.repair_note }}&lt;/div&gt;
+          {% else %}
+          &lt;div class="fw-bold {{ 'mb-2' if v.jobs|length &gt; 1 else '' }}"&gt;{{ v.plate }}&lt;/div&gt;
+          {% for job in v.jobs %}
+          &lt;div class="{{ '' if loop.last else 'mb-3' }}"&gt;
+            &lt;div class="d-flex justify-content-between align-items-center gap-2"&gt;
+              &lt;div class="text-muted small"&gt;{{ 'งานที่ ' ~ loop.index if v.jobs|length &gt; 1 else '' }}&lt;/div&gt;
+              {% if job.status == 'completed' %}
+                {% if job.paid %}
+                  &lt;span class="text-muted small flex-shrink-0"&gt;จ่ายแล้ว&lt;/span&gt;
+                {% elif job.bill_method %}
+                  &lt;span class="text-muted small flex-shrink-0"&gt;{{ job.bill_method_label }}&lt;/span&gt;
+                {% else %}
+                  &lt;button type="button" class="bb-btn is-sec is-sm flex-shrink-0" onclick="event.stopPropagation();markPaid({{ job.mileage_id }},{{ job.booking_id }})"&gt;&lt;i data-lucide="wallet"&gt;&lt;/i&gt;เรียกเก็บ&lt;/button&gt;
+                {% endif %}
+              {% else %}
+                &lt;div class="text-muted small flex-shrink-0"&gt;{{ job.time }}&lt;/div&gt;
+              {% endif %}
+            &lt;/div&gt;
+            &lt;div class="d-flex align-items-center gap-2 small text-muted mt-1"&gt;
+              &lt;span&gt;สถานะ :&lt;/span&gt;
+              &lt;span class="bb-badge" style="background:var(--bb-{{ job.badge_variant }}-bg);color:var(--bb-{{ job.badge_variant }}-tx)"&gt;{{ job.status_label }}&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class="text-muted small mt-1"&gt;เลขไมล์ : {{ job.mileage_start or '-' }}{% if job.status == 'departed' %} → (ยังไม่สิ้นสุดการเดินทาง){% endif %}{% if job.status == 'completed' %} → {{ job.mileage_end }} · {{ job.distance }} กม.{% endif %}&lt;/div&gt;
+            {% if job.status == 'completed' %}
+            &lt;div class="text-muted small"&gt;รวมค่าใช้จ่าย : {{ job.cost }} {% if job.ot %}&lt;span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)"&gt;OT: {{ job.ot }}&lt;/span&gt;{% endif %}&lt;/div&gt;
+            {% endif %}
+          &lt;/div&gt;
+          {% endfor %}
+          {% endif %}
+        &lt;/div&gt;
+      &lt;/div&gt;
+      {% endfor %}
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <b>Case 16 (2026-07) — กลับไปโครง Case 10 เต็มรูปแบบ</b>: การ์ด <code>card border-0 shadow-sm rounded-4</code> + <code>card-body p-4</code> + <code>h3.h6.fw-bold.mb-3</code>+<code>hr</code> + <code>bb-buy-list</code>/<code>bb-buy-item</code>/<code>bb-buy-thumb</code>(3rem) — เหมือน Case 10 ทุกจุด (demo-only CSS ของ thumb ยังอยู่ใน &lt;style&gt; ต้นไฟล์). <b>ต่างจาก Case 10:</b> ตัด dropdown header ออก (เหลือ title เดี่ยว) · แต่ละแถวมีปุ่ม/เวลา/badge อยู่ในบรรทัด header เดียวกับชื่อ (ทะเบียนหรือชื่องาน) แทนที่ order id/delivery date เดิม.
+         <b>ยังไม่ได้เอาไปใช้จริง</b> — หน้า <code>vehicle_admin.html</code> ตอนนี้ยังใช้ <code>.bb-avatar</code>/<code>.bb-card-head</code> ของ container เดิมอยู่ (ทำแค่ gallery ก่อนตามที่ตกลง) ถ้าจะเอาไปใช้จริงต้องตัดสินใจเรื่อง header ซ้อนกับ template เดิมก่อน (คุยไว้รอบก่อน).
+         <b>5 สถานะ</b> (ไม่มีสถานะที่ 6 "ยกเลิก" แล้ว — ตัดออกตามที่ตกลง): ว่าง `is-ok`(badge)/thumb เทา → อนุมัติแล้ว `is-wr` → ออกเดินทางแล้ว `is-info` → สิ้นสุดการเดินทาง `is-info` (สีเดียวกับออกเดินทางแล้ว ตั้งใจ) → กำลังซ่อม `is-wr`(thumb+badge). มุมขวา header เปลี่ยนความหมายตามสถานะ: ว่าง/ซ่อม = ไม่มีเลย, อนุมัติแล้ว/ออกเดินทางแล้ว = เวลาเดินทาง, สิ้นสุดการเดินทาง = หักงบกลาง/หักงบกอง(static) หรือปุ่มเรียกเก็บ→จ่ายแล้ว. <b>ตัดปุ่มคลิกทะเบียน=Swap ออกแล้ว</b> (ไม่ได้อยู่ใน spec ที่ขอ) — ทะเบียนเป็น text ธรรมดา. multi-job (4งจ-5567) คั่น <code>mb-3</code>. ใช้ Bootstrap utility ล้วน (d-flex/justify-content-between/gap/text-muted/small) ไม่มี custom CSS เพิ่มนอกจาก <code>.bb-buy-thumb.is-ok/.is-wr</code> เดิมที่มีอยู่แล้ว.
+         <b>(2026-07 rev.2):</b> ตัดแถว "รายละเอียดงาน" (คนขับ · ปลายทาง เช่น "วิชัย มั่นคง · ส่งเอกสารกระทรวง") ออกทุกแถว รวมทั้งใน multi-job (เหลือแค่ "งานที่ N" เฉยๆ) · ตัดปุ่ม "ส่งซ่อม" ออกจากแถวว่าง และปุ่ม "เสร็จซ่อม" ออกจากแถวกำลังซ่อม (ทั้งสองแถวไม่มี header-row ขวาแล้ว เหลือแค่ทะเบียนบรรทัดเดียว).
+         <b>(2026-07 rev.3):</b> เปลี่ยน label badge "รอเดินทาง"→"อนุมัติแล้ว" และ "เสร็จสิ้น"→"สิ้นสุดการเดินทาง" (ให้ตรงกับ desc list ที่เขียนไว้แต่แรก) · เงินทั้งหมดเปลี่ยนจาก "฿N" เป็น "N บาท" (รวม OT badge) · header row ของแต่ละ "งานที่ N" ใน multi-job เปลี่ยนเป็น <code>align-items-center</code> (เดิม <code>align-items-start</code> ทำให้ label เอียงขึ้นบนเทียบกับปุ่ม "เรียกเก็บ" ที่สูงกว่า) · ระยะห่างระหว่างงานที่ 1–2 เปลี่ยนจาก <code>mb-2</code> เป็น <code>mb-3</code>.</div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  lucide.createIcons();
+  // copy markup
+  document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const code = btn.parentElement.querySelector('pre').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add('is-done');
+        btn.innerHTML = '<i data-lucide="check"></i> คัดลอกแล้ว';
+        lucide.createIcons();
+        setTimeout(() => { btn.classList.remove('is-done'); btn.innerHTML = '<i data-lucide="copy"></i> copy'; lucide.createIcons(); }, 1600);
+      });
+    });
+  });
+  // case16 demo — ปุ่ม "เรียกเก็บ" → "จ่ายแล้ว" (toggle เฉยๆ ไม่ persist)
+  document.querySelectorAll('[data-collect-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.textContent = 'จ่ายแล้ว';
+      btn.disabled = true;
+    });
+  });
+  // nav active on scroll
+  const links = document.querySelectorAll('.bb-g-link');
+  const secs = [...links].map(a => document.querySelector(a.getAttribute('href')));
+  const spy = () => {
+    let i = secs.findIndex(s => s && s.getBoundingClientRect().top > 80);
+    if (i === -1) i = secs.length; i = Math.max(0, i - 1);
+    links.forEach((a, j) => a.classList.toggle('is-on', j === i));
+  };
+  document.addEventListener('scroll', spy, { passive: true }); spy();
+</script>
+</body>
+</html>

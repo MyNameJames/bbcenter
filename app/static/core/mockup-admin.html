@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup · อนุมัติรถ (Admin) — .bb-* redesign</title>
+<!--
+  ════════════════════════════════════════════════════════════════
+  MOCKUP — vehicle_admin.html (อนุมัติการจองรถ) redesign · Component Library .bb-*
+  design source: components-gallery.html  ·  css: ./css/components.css
+  *** ไฟล์ proposal เท่านั้น — ไม่กระทบ template จริง ***
+  desktop (app shell) + mobile (phone) + modal (responsive) + notes
+  ════════════════════════════════════════════════════════════════
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/components.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Sarabun', system-ui, sans-serif; color: var(--bb-str); background: var(--bb-n100); padding: 2rem 1.5rem 5rem; }
+  .mk-wrap { max-width: 1280px; margin: 0 auto; }
+  .mk-head h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 .375rem; letter-spacing: -.01em; }
+  .mk-head p { color: var(--bb-mut); margin: 0; font-size: .9375rem; line-height: 1.6; }
+  .mk-head code { font-family: var(--bb-num-font); background: var(--bb-n0); border: 1px solid var(--bb-n200); padding: 1px .375rem; border-radius: var(--bb-r-xs); font-size: .8125rem; }
+  .mk-section-label { display: flex; align-items: center; gap: .5rem; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--bb-mut); margin: 2.75rem 0 1rem; }
+  .mk-section-label::after { content: ''; flex: 1; height: 1px; background: var(--bb-n200); }
+  .mk-section-label [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-accent-i); }
+  .mk-sub { font-size: .78125rem; color: var(--bb-mut); }
+
+  /* ───────── desktop app shell ───────── */
+  .mk-app { display: grid; grid-template-columns: 236px 1fr; background: var(--bb-n50); border: 1px solid var(--bb-n200);
+            border-radius: var(--bb-r-xl); overflow: hidden; box-shadow: var(--bb-shadow-lg); min-height: 760px; }
+  .mk-sidebar { background: #fff; border-right: 1px solid var(--bb-n200); padding: 1.25rem 1rem; display: flex; flex-direction: column; }
+  .mk-logo { display: flex; align-items: center; gap: .625rem; font-weight: 700; font-size: 1.0625rem; margin-bottom: 1.5rem; padding: 0 .5rem; }
+  .mk-logo-mark { width: 2rem; height: 2rem; border-radius: var(--bb-r-md); background: var(--bb-accent-i); color: #fff; display: flex; align-items: center; justify-content: center; }
+  .mk-logo-mark [data-lucide] { width: 1.125rem; height: 1.125rem; }
+  .mk-nav-label { font-size: .6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--bb-ph); padding: .625rem .625rem .25rem; }
+  .mk-nav a { display: flex; align-items: center; gap: .6875rem; font-size: .875rem; color: var(--bb-mut); text-decoration: none; padding: .5625rem .625rem; border-radius: var(--bb-r-md); margin-bottom: 2px; font-weight: 500; }
+  .mk-nav a [data-lucide] { width: 1.0625rem; height: 1.0625rem; }
+  .mk-nav a:hover { background: var(--bb-n50); color: var(--bb-str); }
+  .mk-nav a.is-on { background: var(--bb-accent-bg); color: var(--bb-accent-h); font-weight: 600; }
+  .mk-nav a .mk-nav-pill { margin-left: auto; font-family: var(--bb-num-font); font-size: .6875rem; font-weight: 700; background: var(--bb-wr-bg); color: var(--bb-wr-tx); border-radius: 999px; padding: 1px .4375rem; }
+  .mk-side-user { margin-top: auto; display: flex; align-items: center; gap: .625rem; padding: .75rem .5rem 0; border-top: 1px solid var(--bb-n100); }
+  .mk-su-name { font-size: .8125rem; font-weight: 600; line-height: 1.3; }
+  .mk-su-role { font-size: .75rem; color: var(--bb-mut); }
+
+  .mk-main { display: flex; flex-direction: column; min-width: 0; }
+  .mk-topbar { height: 60px; background: #fff; border-bottom: 1px solid var(--bb-n200); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; flex-shrink: 0; }
+  .mk-tb-crumb { font-size: .75rem; color: var(--bb-mut); margin-bottom: 1px; }
+  .mk-tb-title { font-size: 1.0625rem; font-weight: 600; line-height: 1; }
+  .mk-tb-actions { display: flex; align-items: center; gap: .75rem; }
+  .mk-page { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+
+  /* ───────── week navigator hero ───────── */
+  .mk-week-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--bb-n100); }
+  .mk-week-date { font-size: 1.125rem; font-weight: 700; letter-spacing: -.01em; }
+  .mk-week-date span { color: var(--bb-mut); font-weight: 500; font-size: .9375rem; margin-left: .5rem; }
+  .mk-week-tools { display: flex; align-items: center; gap: .625rem; }
+  .mk-week-strip { display: flex; align-items: stretch; gap: .5rem; padding: .875rem 1rem 1rem; }
+  .mk-week-nav { width: 2.25rem; flex-shrink: 0; border: 1px solid var(--bb-n200); background: #fff; border-radius: var(--bb-r-md); color: var(--bb-mut); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .mk-week-nav:hover { background: var(--bb-n50); color: var(--bb-str); }
+  .mk-week-nav [data-lucide] { width: 1.0625rem; height: 1.0625rem; }
+  .mk-days { display: flex; gap: .5rem; flex: 1; }
+  .mk-day { flex: 1; position: relative; border: 1px solid var(--bb-n200); background: #fff; border-radius: var(--bb-r-md); padding: .5rem .25rem .5625rem; text-align: center; cursor: pointer; transition: .12s; }
+  .mk-day:hover { border-color: var(--bb-n300); }
+  .mk-day-dow { font-size: .6875rem; color: var(--bb-mut); }
+  .mk-day-num { font-family: var(--bb-num-font); font-size: 1.1875rem; font-weight: 500; line-height: 1.3; }
+  .mk-day-cnt { display: inline-block; min-width: 1.125rem; font-family: var(--bb-num-font); font-size: .625rem; font-weight: 700; line-height: 1.125rem; height: 1.125rem; padding: 0 .25rem; border-radius: 999px; background: var(--bb-wr-bg); color: var(--bb-wr-tx); margin-top: .125rem; }
+  .mk-day.is-today { border-color: var(--bb-accent); }
+  .mk-day.is-today .mk-day-dow { color: var(--bb-accent-h); font-weight: 600; }
+  .mk-day.is-on { background: var(--bb-accent-i); border-color: var(--bb-accent-i); }
+  .mk-day.is-on .mk-day-dow { color: rgba(255,255,255,.82); }
+  .mk-day.is-on .mk-day-num { color: #fff; }
+  .mk-day.is-on .mk-day-cnt { background: rgba(255,255,255,.22); color: #fff; }
+
+  /* ───────── KPI strip ───────── */
+  .mk-kpi-strip { display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; }
+  .mk-kpi-div { width: 1px; align-self: stretch; min-height: 2.5rem; background: var(--bb-n200); }
+
+  /* ───────── split ───────── */
+  .mk-split { display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; align-items: start; }
+  .mk-col { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+  .mk-card-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--bb-n100); }
+  .mk-card-title { font-size: 1rem; font-weight: 600; display: inline-flex; align-items: center; gap: .5rem; }
+  .mk-card-title [data-lucide] { width: 1.125rem; height: 1.125rem; color: var(--bb-mut); }
+  .mk-card-title .mk-count { font-family: var(--bb-num-font); font-size: .8125rem; font-weight: 500; color: var(--bb-mut); }
+  .mk-head-actions { display: flex; align-items: center; gap: .5rem; }
+  .mk-tabs-wrap { overflow-x: auto; padding: .75rem 1.25rem 0; }
+  .mk-tabs-wrap::-webkit-scrollbar { height: 0; }
+  .mk-tabs-wrap .bb-tabs { flex-wrap: nowrap; min-width: max-content; }
+  .bb-tab { flex-shrink: 0; }
+
+  /* booking list item */
+  .mk-list { padding: .5rem .625rem .75rem; display: flex; flex-direction: column; }
+  .mk-bk { display: flex; align-items: stretch; gap: .875rem; padding: .8125rem .625rem; border-radius: var(--bb-r-md); }
+  .mk-bk + .mk-bk { border-top: 1px solid var(--bb-n100); }
+  .mk-bk:hover { background: var(--bb-n50); }
+  .mk-bk-time { flex-shrink: 0; width: 3.25rem; text-align: center; border-right: 1px solid var(--bb-n200); padding-right: .875rem; }
+  .mk-bk-time b { font-family: var(--bb-num-font); font-size: .9375rem; font-weight: 600; display: block; }
+  .mk-bk-time span { font-family: var(--bb-num-font); font-size: .75rem; color: var(--bb-mut); }
+  .mk-bk-main { flex: 1; min-width: 0; }
+  .mk-bk-top { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .mk-bk-name { font-weight: 600; font-size: .9375rem; }
+  .mk-bk-route { font-size: .84375rem; color: var(--bb-str); margin-top: .25rem; display: flex; align-items: center; gap: .375rem; }
+  .mk-bk-route [data-lucide] { width: .875rem; height: .875rem; color: var(--bb-ph); flex-shrink: 0; }
+  .mk-bk-meta { font-size: .78125rem; color: var(--bb-mut); margin-top: .25rem; display: flex; align-items: center; gap: .875rem; flex-wrap: wrap; }
+  .mk-bk-meta span { display: inline-flex; align-items: center; gap: .3125rem; }
+  .mk-bk-meta [data-lucide] { width: .8125rem; height: .8125rem; }
+  .mk-bk-side { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: .5rem; justify-content: space-between; }
+
+  /* assigned trip row */
+  .mk-trip { display: flex; align-items: center; gap: .875rem; padding: .8125rem .625rem; border-radius: var(--bb-r-md); }
+  .mk-trip + .mk-trip { border-top: 1px solid var(--bb-n100); }
+  .mk-trip:hover { background: var(--bb-n50); }
+  .mk-trip-veh { flex-shrink: 0; width: 5rem; }
+  .mk-trip-plate { font-family: var(--bb-num-font); font-weight: 700; font-size: .9375rem; }
+  .mk-trip-drv { font-size: .78125rem; color: var(--bb-mut); margin-top: 1px; }
+  .mk-trip-main { flex: 1; min-width: 0; }
+  .mk-trip-route { font-size: .875rem; display: flex; align-items: center; gap: .375rem; }
+  .mk-trip-route [data-lucide] { width: .875rem; height: .875rem; color: var(--bb-ph); }
+  .mk-trip-sub { font-size: .78125rem; color: var(--bb-mut); margin-top: .25rem; display: flex; align-items: center; gap: .625rem; flex-wrap: wrap; }
+  .mk-trip-acts { flex-shrink: 0; display: flex; gap: .25rem; }
+
+  /* vehicle status grid (right rail) */
+  .mk-veh-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .625rem; padding: 1rem 1.25rem 1.25rem; }
+  .mk-veh { border: 1px solid var(--bb-n200); border-radius: var(--bb-r-md); padding: .6875rem .75rem; position: relative; }
+  .mk-veh-plate { font-family: var(--bb-num-font); font-weight: 700; font-size: .875rem; }
+  .mk-veh-name { font-size: .75rem; color: var(--bb-mut); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mk-veh-foot { display: flex; align-items: center; justify-content: space-between; margin-top: .5rem; }
+  .mk-veh-cap { font-size: .6875rem; color: var(--bb-ph); display: inline-flex; align-items: center; gap: .25rem; }
+  .mk-veh-cap [data-lucide] { width: .8125rem; height: .8125rem; }
+  .mk-veh.is-busy { background: var(--bb-wr-bg); border-color: transparent; }
+  .mk-veh.is-repair { background: var(--bb-n50); }
+
+  .mk-sticky { position: sticky; top: 1rem; }
+
+  /* ───────── phone mock ───────── */
+  .mk-phones { display: flex; gap: 2.5rem; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .mk-phone { width: 380px; background: #fff; border-radius: 38px; border: 12px solid #0F1A2E; box-shadow: var(--bb-shadow-lg); overflow: hidden; position: relative; }
+  .mk-phone-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 138px; height: 26px; background: #0F1A2E; border-radius: 0 0 16px 16px; z-index: 6; }
+  .mk-screen { height: 820px; overflow-y: auto; background: var(--bb-n50); }
+  .mk-screen::-webkit-scrollbar { width: 0; }
+  .mk-ph-topbar { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--bb-n200); padding: 2.25rem 1rem .75rem; display: flex; align-items: center; justify-content: space-between; }
+  .mk-ph-icon { width: 2.25rem; height: 2.25rem; border-radius: var(--bb-r-md); display: flex; align-items: center; justify-content: center; color: var(--bb-mut); }
+  .mk-ph-icon:hover { background: var(--bb-n100); }
+  .mk-ph-icon [data-lucide] { width: 1.25rem; height: 1.25rem; }
+  .mk-ph-title { font-size: 1rem; font-weight: 600; }
+  .mk-ph-body { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+  .mk-ph-days { display: flex; gap: .4375rem; overflow-x: auto; padding-bottom: .25rem; }
+  .mk-ph-days::-webkit-scrollbar { height: 0; }
+  .mk-ph-days .mk-day { flex: 0 0 3rem; }
+  .mk-ph-tabs { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 1px solid var(--bb-n200); }
+  .mk-ph-tabs::-webkit-scrollbar { height: 0; }
+  .mk-ph-group { font-size: .75rem; font-weight: 700; color: var(--bb-mut); padding: .25rem .125rem; display: flex; align-items: center; justify-content: space-between; }
+  .mk-fab { position: absolute; bottom: 1.25rem; right: 1.25rem; width: 3.25rem; height: 3.25rem; border-radius: 50%; background: var(--bb-accent-i); color: #fff; border: none; box-shadow: 0 8px 20px rgba(30,64,175,.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; }
+  .mk-pcard-head { display: flex; align-items: center; justify-content: space-between; padding: .75rem .875rem .25rem; }
+  .mk-pcard-time { font-family: var(--bb-num-font); font-weight: 700; font-size: .875rem; }
+  .mk-pcard-body { padding: 0 .875rem .75rem; }
+  .mk-pcard-foot { padding: .625rem .875rem; border-top: 1px solid var(--bb-n100); display: flex; gap: .5rem; }
+
+  /* ───────── budget bar (modal) ───────── */
+  .mk-budget { background: var(--bb-n50); border-radius: var(--bb-r-md); padding: .75rem .875rem; }
+  .mk-budget-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .5rem; }
+  .mk-budget-row span { font-size: .8125rem; color: var(--bb-mut); }
+  .mk-budget-val { font-family: var(--bb-num-font); font-weight: 600; font-size: .9375rem; color: var(--bb-str) !important; }
+  .mk-budget-track { height: 6px; background: var(--bb-n200); border-radius: 999px; overflow: hidden; }
+  .mk-budget-fill { height: 100%; background: var(--bb-accent-i); border-radius: 999px; }
+  .mk-approver { display: flex; align-items: center; gap: .4375rem; font-size: .8125rem; color: var(--bb-mut); margin-top: .625rem; }
+  .mk-approver [data-lucide] { width: .9375rem; height: .9375rem; color: var(--bb-accent-i); }
+  .mk-approver b { color: var(--bb-str); font-weight: 600; }
+  .mk-warn { display: flex; align-items: center; gap: .4375rem; font-size: .8125rem; color: var(--bb-wr-tx); background: var(--bb-wr-bg); border-radius: var(--bb-r-md); padding: .5rem .75rem; }
+  .mk-warn [data-lucide] { width: .9375rem; height: .9375rem; }
+
+  .mk-modal-demo { background: rgba(10,37,64,.4); border-radius: var(--bb-r-xl); padding: 2.5rem; display: flex; justify-content: center; }
+
+  /* ───────── notes ───────── */
+  .mk-notes { background: #fff; border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); padding: 1.25rem 1.5rem; margin-top: 1.25rem; }
+  .mk-notes h3 { font-size: .9375rem; margin: 0 0 .75rem; display: flex; align-items: center; gap: .5rem; }
+  .mk-notes h3:not(:first-child) { margin-top: 1rem; }
+  .mk-notes h3 [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-accent-i); }
+  .mk-notes ul { margin: 0; padding-left: 1.125rem; }
+  .mk-notes li { font-size: .84375rem; color: var(--bb-str); line-height: 1.7; }
+  .mk-notes b { color: var(--bb-accent-h); }
+  .mk-notes code { font-family: var(--bb-num-font); background: var(--bb-n50); padding: 1px .3125rem; border-radius: var(--bb-r-xs); font-size: .78125rem; color: var(--bb-accent-h); }
+
+  @media (max-width: 1080px) { .mk-split { grid-template-columns: 1fr; } }
+  @media (max-width: 980px) { .mk-app { grid-template-columns: 1fr; } .mk-sidebar { display: none; } }
+</style>
+</head>
+<body>
+<div class="mk-wrap">
+
+  <div class="mk-head">
+    <h1>Mockup · อนุมัติรถ (Admin)</h1>
+    <p>Redesign <code>vehicle_admin.html</code> ด้วย Component Library <code>.bb-*</code> — desktop + มือถือ + modal responsive<br>
+       ไฟล์ proposal เท่านั้น ไม่กระทบ template จริง · ใช้ <code>components.css</code> ตัวเดียวกับ gallery</p>
+  </div>
+
+  <!-- ════════════════ DESKTOP ════════════════ -->
+  <div class="mk-section-label"><i data-lucide="monitor"></i> Desktop · 1240px</div>
+
+  <div class="mk-app">
+    <aside class="mk-sidebar">
+      <div class="mk-logo"><span class="mk-logo-mark"><i data-lucide="car-front"></i></span> BBCenter</div>
+      <div class="mk-nav-label">ภาพรวม</div>
+      <nav class="mk-nav">
+        <a href="#"><i data-lucide="layout-dashboard"></i> แดชบอร์ด</a>
+        <a href="#"><i data-lucide="calendar-check"></i> จองรถ</a>
+      </nav>
+      <div class="mk-nav-label">ยานพาหนะ</div>
+      <nav class="mk-nav">
+        <a href="#" class="is-on"><i data-lucide="circle-check-big"></i> อนุมัติรถ <span class="mk-nav-pill">5</span></a>
+        <a href="#"><i data-lucide="gauge"></i> เลขไมล์</a>
+        <a href="#"><i data-lucide="wallet"></i> งบประมาณ</a>
+        <a href="#"><i data-lucide="fuel"></i> เติมน้ำมัน</a>
+      </nav>
+      <div class="mk-nav-label">ระบบ</div>
+      <nav class="mk-nav"><a href="#"><i data-lucide="settings"></i> ตั้งค่า</a></nav>
+      <div class="mk-side-user">
+        <span class="bb-avatar">ปจ</span>
+        <div><div class="mk-su-name">ป. จตุพร</div><div class="mk-su-role">ผู้ดูแลระบบ</div></div>
+      </div>
+    </aside>
+
+    <div class="mk-main">
+      <header class="mk-topbar">
+        <div>
+          <div class="mk-tb-crumb">ผู้ดูแลระบบ · ยานพาหนะ</div>
+          <div class="mk-tb-title">อนุมัติรถ</div>
+        </div>
+        <div class="mk-tb-actions">
+          <button class="bb-btn is-sec is-icon"><i data-lucide="bell"></i></button>
+          <span class="bb-avatar">ปจ</span>
+        </div>
+      </header>
+
+      <div class="mk-page">
+
+        <!-- Zone 1: Week navigator hero -->
+        <div class="bb-card">
+          <div class="mk-week-top">
+            <div class="mk-week-date">29 มิถุนายน 2569 <span>วันจันทร์</span></div>
+            <div class="mk-week-tools">
+              <button class="bb-btn is-ghost is-sm">วันนี้</button>
+              <button class="bb-select" style="gap:.5rem">
+                <i data-lucide="calendar"></i><span>เลือกวันที่</span><i data-lucide="chevron-down" style="margin-left:.125rem"></i>
+              </button>
+            </div>
+          </div>
+          <div class="mk-week-strip">
+            <button class="mk-week-nav"><i data-lucide="chevron-left"></i></button>
+            <div class="mk-days">
+              <div class="mk-day"><div class="mk-day-dow">อา</div><div class="mk-day-num">28</div><span class="mk-day-cnt">2</span></div>
+              <div class="mk-day is-on"><div class="mk-day-dow">จ</div><div class="mk-day-num">29</div><span class="mk-day-cnt">5</span></div>
+              <div class="mk-day is-today"><div class="mk-day-dow">อ</div><div class="mk-day-num">30</div><span class="mk-day-cnt">3</span></div>
+              <div class="mk-day"><div class="mk-day-dow">พ</div><div class="mk-day-num">1</div><span class="mk-day-cnt">4</span></div>
+              <div class="mk-day"><div class="mk-day-dow">พฤ</div><div class="mk-day-num">2</div></div>
+              <div class="mk-day"><div class="mk-day-dow">ศ</div><div class="mk-day-num">3</div><span class="mk-day-cnt">1</span></div>
+              <div class="mk-day"><div class="mk-day-dow">ส</div><div class="mk-day-num">4</div></div>
+            </div>
+            <button class="mk-week-nav"><i data-lucide="chevron-right"></i></button>
+          </div>
+        </div>
+
+        <!-- Zone 2: KPI strip (วันที่เลือก) -->
+        <div class="mk-kpi-strip">
+          <div class="bb-kpi is-ghost">
+            <div class="bb-kpi-tile"><i data-lucide="inbox"></i></div>
+            <div><div class="bb-kpi-label">รอจัดรถ</div><div class="bb-kpi-value bb-num">3</div></div>
+          </div>
+          <div class="mk-kpi-div"></div>
+          <div class="bb-kpi is-ghost">
+            <div class="bb-kpi-tile"><i data-lucide="circle-check"></i></div>
+            <div><div class="bb-kpi-label">อนุมัติแล้ว</div><div class="bb-kpi-value bb-num">2</div></div>
+          </div>
+          <div class="mk-kpi-div"></div>
+          <div class="bb-kpi is-ghost">
+            <div class="bb-kpi-tile"><i data-lucide="car"></i></div>
+            <div><div class="bb-kpi-label">รถใช้งานวันนี้</div><div class="bb-kpi-value bb-num">4 <span class="bb-kpi-den">/ 8</span></div></div>
+          </div>
+          <div class="mk-kpi-div"></div>
+          <div class="bb-kpi is-ghost">
+            <div class="bb-kpi-tile"><i data-lucide="circle-parking"></i></div>
+            <div><div class="bb-kpi-label">รถว่าง</div><div class="bb-kpi-value bb-num">3</div></div>
+          </div>
+          <div style="margin-left:auto"><span class="bb-badge is-accent"><i data-lucide="bell-ring"></i> ค้างแจ้งเตือน 2</span></div>
+        </div>
+
+        <!-- Zone 3: split -->
+        <div class="mk-split">
+
+          <!-- LEFT: booking + trip -->
+          <div class="mk-col">
+
+            <!-- booking section -->
+            <div class="bb-card">
+              <div class="mk-card-head">
+                <div class="mk-card-title"><i data-lucide="clipboard-list"></i> รายการจอง <span class="mk-count">5 รายการ</span></div>
+                <div class="mk-head-actions">
+                  <button class="bb-btn is-sec is-sm"><i data-lucide="merge"></i> รวมงาน</button>
+                  <button class="bb-btn is-sec is-sm"><i data-lucide="send"></i> แจ้งเตือน</button>
+                </div>
+              </div>
+              <div class="mk-tabs-wrap">
+                <div class="bb-tabs">
+                  <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">5</span></button>
+                  <button class="bb-tab">รออนุมัติ <span class="bb-tab-count">3</span></button>
+                  <button class="bb-tab">ส่ง Approver <span class="bb-tab-count">1</span></button>
+                  <button class="bb-tab">อนุมัติแล้ว <span class="bb-tab-count">1</span></button>
+                  <button class="bb-tab">ปฏิเสธ <span class="bb-tab-count">0</span></button>
+                </div>
+              </div>
+
+              <div class="mk-list">
+
+                <!-- pending → approve -->
+                <div class="mk-bk">
+                  <div class="mk-bk-time"><b>09:00</b><span>12:00</span></div>
+                  <div class="mk-bk-main">
+                    <div class="mk-bk-top">
+                      <span class="mk-bk-name">สมชาย ใจดี</span>
+                      <span class="bb-badge is-neutral">กองสนับสนุนฯ</span>
+                    </div>
+                    <div class="mk-bk-route"><i data-lucide="map-pin"></i> โรงพยาบาลศิริราช</div>
+                    <div class="mk-bk-meta">
+                      <span><i data-lucide="users"></i> 3 คน</span>
+                      <span><i data-lucide="steering-wheel"></i> ต้องการคนขับ</span>
+                      <span><i data-lucide="file-text"></i> ประชุมเครือข่าย</span>
+                    </div>
+                  </div>
+                  <div class="mk-bk-side">
+                    <span class="bb-status is-neutral"><span class="bb-dot"></span>รออนุมัติ</span>
+                    <button class="bb-btn is-pri is-sm"><i data-lucide="circle-check"></i> อนุมัติ</button>
+                  </div>
+                </div>
+
+                <!-- pending group -->
+                <div class="mk-bk">
+                  <div class="mk-bk-time"><b>10:30</b><span>15:00</span></div>
+                  <div class="mk-bk-main">
+                    <div class="mk-bk-top">
+                      <span class="mk-bk-name">งานร่วม 2 รายการ</span>
+                      <span class="bb-badge is-accent"><i data-lucide="merge"></i> รวมเที่ยว</span>
+                      <span class="bb-badge is-neutral">งานโภชนาการ</span>
+                    </div>
+                    <div class="mk-bk-route"><i data-lucide="map-pin"></i> ศาลากลางจังหวัด</div>
+                    <div class="mk-bk-meta">
+                      <span><i data-lucide="users"></i> 6 คน</span>
+                      <span><i data-lucide="steering-wheel"></i> ต้องการคนขับ</span>
+                    </div>
+                  </div>
+                  <div class="mk-bk-side">
+                    <span class="bb-status is-neutral"><span class="bb-dot"></span>รออนุมัติ</span>
+                    <button class="bb-btn is-pri is-sm"><i data-lucide="circle-check"></i> อนุมัติ</button>
+                  </div>
+                </div>
+
+                <!-- waiting approver -->
+                <div class="mk-bk">
+                  <div class="mk-bk-time"><b>13:00</b><span>16:30</span></div>
+                  <div class="mk-bk-main">
+                    <div class="mk-bk-top">
+                      <span class="mk-bk-name">สุดา รักงาน</span>
+                      <span class="bb-badge is-neutral">งานการเงิน</span>
+                    </div>
+                    <div class="mk-bk-route"><i data-lucide="map-pin"></i> สนามบินดอนเมือง</div>
+                    <div class="mk-bk-meta">
+                      <span><i data-lucide="users"></i> 2 คน</span>
+                      <span><i data-lucide="user-check"></i> รอ คุณวิรัตน์ อนุมัติงบ</span>
+                    </div>
+                  </div>
+                  <div class="mk-bk-side">
+                    <span class="bb-status is-info"><span class="bb-dot"></span>ส่ง Approver</span>
+                    <button class="bb-btn is-ghost is-sm"><i data-lucide="rotate-ccw"></i> ย้อนสถานะ</button>
+                  </div>
+                </div>
+
+                <!-- approved -->
+                <div class="mk-bk">
+                  <div class="mk-bk-time"><b>08:00</b><span>11:00</span></div>
+                  <div class="mk-bk-main">
+                    <div class="mk-bk-top">
+                      <span class="mk-bk-name">อนันต์ พงษ์</span>
+                      <span class="bb-badge is-neutral">ส่วนกลาง</span>
+                    </div>
+                    <div class="mk-bk-route"><i data-lucide="map-pin"></i> คลังสินค้าบางนา</div>
+                    <div class="mk-bk-meta">
+                      <span><i data-lucide="car"></i> ขค-9012</span>
+                      <span><i data-lucide="user"></i> ธนา</span>
+                    </div>
+                  </div>
+                  <div class="mk-bk-side">
+                    <span class="bb-status is-ok"><span class="bb-dot"></span>อนุมัติแล้ว</span>
+                    <button class="bb-btn is-ghost is-sm"><i data-lucide="pencil"></i> แก้ไข</button>
+                  </div>
+                </div>
+
+                <!-- ad-hoc -->
+                <div class="mk-bk">
+                  <div class="mk-bk-time"><b>14:00</b><span>17:00</span></div>
+                  <div class="mk-bk-main">
+                    <div class="mk-bk-top">
+                      <span class="mk-bk-name">วิภา สุขใจ</span>
+                      <span class="bb-badge is-accent"><i data-lucide="zap"></i> งานด่วน</span>
+                      <span class="bb-badge is-neutral">กองยุทธศาสตร์</span>
+                    </div>
+                    <div class="mk-bk-route"><i data-lucide="map-pin"></i> ศูนย์ราชการแจ้งวัฒนะ</div>
+                    <div class="mk-bk-meta"><span><i data-lucide="users"></i> 1 คน</span></div>
+                  </div>
+                  <div class="mk-bk-side">
+                    <span class="bb-status is-neutral"><span class="bb-dot"></span>รออนุมัติ</span>
+                    <button class="bb-btn is-pri is-sm"><i data-lucide="circle-check"></i> อนุมัติ</button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- trip section (assigned) -->
+            <div class="bb-card">
+              <div class="mk-card-head">
+                <div class="mk-card-title"><i data-lucide="route"></i> รายละเอียดการเดินทาง <span class="mk-count">2 เที่ยว</span></div>
+              </div>
+              <div class="mk-list">
+                <div class="mk-trip">
+                  <div class="mk-trip-veh"><div class="mk-trip-plate">ขค-9012</div><div class="mk-trip-drv">ธนา</div></div>
+                  <div class="mk-trip-main">
+                    <div class="mk-trip-route">อนันต์ พงษ์ <i data-lucide="arrow-right"></i> คลังสินค้าบางนา</div>
+                    <div class="mk-trip-sub">
+                      <span class="bb-badge is-neutral">ส่วนกลาง</span>
+                      <span><i data-lucide="clock" style="width:.8125rem;height:.8125rem;vertical-align:-2px"></i> 08:00–11:00</span>
+                    </div>
+                  </div>
+                  <div class="mk-trip-acts">
+                    <button class="bb-icon-btn" title="เปลี่ยนรถ"><i data-lucide="shuffle"></i></button>
+                    <button class="bb-icon-btn" title="แก้ไข"><i data-lucide="pencil"></i></button>
+                  </div>
+                </div>
+                <div class="mk-trip">
+                  <div class="mk-trip-veh"><div class="mk-trip-plate">กท-4456</div><div class="mk-trip-drv">มานพ</div></div>
+                  <div class="mk-trip-main">
+                    <div class="mk-trip-route">ปราณี วงศ์ <i data-lucide="arrow-right"></i> โรงเรียนเทศบาล 3</div>
+                    <div class="mk-trip-sub">
+                      <span class="bb-badge is-neutral">งานบริหาร</span>
+                      <span><i data-lucide="clock" style="width:.8125rem;height:.8125rem;vertical-align:-2px"></i> 09:30–12:00</span>
+                      <span class="bb-status is-wr"><span class="bb-dot"></span>OT 1.5 ชม.</span>
+                    </div>
+                  </div>
+                  <div class="mk-trip-acts">
+                    <button class="bb-icon-btn" title="เปลี่ยนรถ"><i data-lucide="shuffle"></i></button>
+                    <button class="bb-icon-btn" title="แก้ไข"><i data-lucide="pencil"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT: vehicle status -->
+          <div class="mk-sticky">
+            <div class="bb-card">
+              <div class="mk-card-head">
+                <div class="mk-card-title"><i data-lucide="car"></i> การใช้รถ</div>
+                <span class="bb-badge is-neutral">8 คัน</span>
+              </div>
+              <div class="mk-veh-grid">
+                <div class="mk-veh is-busy">
+                  <div class="mk-veh-plate">ขค-9012</div>
+                  <div class="mk-veh-name">Toyota Hiace</div>
+                  <div class="mk-veh-foot">
+                    <span class="mk-veh-cap"><i data-lucide="users"></i> 12</span>
+                    <span class="bb-status is-wr"><span class="bb-dot"></span>ใช้งาน</span>
+                  </div>
+                </div>
+                <div class="mk-veh is-busy">
+                  <div class="mk-veh-plate">กท-4456</div>
+                  <div class="mk-veh-name">Isuzu D-Max</div>
+                  <div class="mk-veh-foot">
+                    <span class="mk-veh-cap"><i data-lucide="users"></i> 4</span>
+                    <span class="bb-status is-wr"><span class="bb-dot"></span>ใช้งาน</span>
+                  </div>
+                </div>
+                <div class="mk-veh">
+                  <div class="mk-veh-plate">กข-1234</div>
+                  <div class="mk-veh-name">Toyota Camry</div>
+                  <div class="mk-veh-foot">
+                    <span class="mk-veh-cap"><i data-lucide="users"></i> 4</span>
+                    <span class="bb-status is-ok"><span class="bb-dot"></span>ว่าง</span>
+                  </div>
+                </div>
+                <div class="mk-veh">
+                  <div class="mk-veh-plate">งจ-5678</div>
+                  <div class="mk-veh-name">Honda CR-V</div>
+                  <div class="mk-veh-foot">
+                    <span class="mk-veh-cap"><i data-lucide="users"></i> 5</span>
+                    <span class="bb-status is-ok"><span class="bb-dot"></span>ว่าง</span>
+                  </div>
+                </div>
+                <div class="mk-veh">
+                  <div class="mk-veh-plate">บค-7788</div>
+                  <div class="mk-veh-name">Toyota Vios</div>
+                  <div class="mk-veh-foot">
+                    <span class="mk-veh-cap"><i data-lucide="users"></i> 4</span>
+                    <span class="bb-status is-ok"><span class="bb-dot"></span>ว่าง</span>
+                  </div>
+                </div>
+                <div class="mk-veh is-repair">
+                  <div class="mk-veh-plate">ฉช-3322</div>
+                  <div class="mk-veh-name">Nissan Almera</div>
+                  <div class="mk-veh-foot">
+                    <span class="mk-veh-cap"><i data-lucide="wrench"></i> ซ่อม</span>
+                    <span class="bb-status is-neutral"><span class="bb-dot"></span>ส่งซ่อม</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ MOBILE ════════════════ -->
+  <div class="mk-section-label"><i data-lucide="smartphone"></i> Mobile · 380px — week strip เลื่อน + booking cards</div>
+
+  <div class="mk-phones">
+    <div class="mk-phone">
+      <div class="mk-phone-notch"></div>
+      <div class="mk-screen">
+        <div class="mk-ph-topbar">
+          <div class="mk-ph-icon"><i data-lucide="menu"></i></div>
+          <div class="mk-ph-title">อนุมัติรถ</div>
+          <span class="bb-avatar">ปจ</span>
+        </div>
+
+        <div class="mk-ph-body">
+
+          <!-- week strip (scroll) -->
+          <div class="mk-ph-days">
+            <div class="mk-day"><div class="mk-day-dow">อา</div><div class="mk-day-num">28</div><span class="mk-day-cnt">2</span></div>
+            <div class="mk-day is-on"><div class="mk-day-dow">จ</div><div class="mk-day-num">29</div><span class="mk-day-cnt">5</span></div>
+            <div class="mk-day is-today"><div class="mk-day-dow">อ</div><div class="mk-day-num">30</div><span class="mk-day-cnt">3</span></div>
+            <div class="mk-day"><div class="mk-day-dow">พ</div><div class="mk-day-num">1</div><span class="mk-day-cnt">4</span></div>
+            <div class="mk-day"><div class="mk-day-dow">พฤ</div><div class="mk-day-num">2</div></div>
+            <div class="mk-day"><div class="mk-day-dow">ศ</div><div class="mk-day-num">3</div><span class="mk-day-cnt">1</span></div>
+            <div class="mk-day"><div class="mk-day-dow">ส</div><div class="mk-day-num">4</div></div>
+          </div>
+
+          <!-- KPI statbar -->
+          <div class="bb-statbar">
+            <div class="bb-statbar-item"><div class="bb-statbar-label">รอจัดรถ</div><div class="bb-statbar-val">3</div></div>
+            <div class="bb-statbar-item"><div class="bb-statbar-label">อนุมัติแล้ว</div><div class="bb-statbar-val">2</div></div>
+            <div class="bb-statbar-item"><div class="bb-statbar-label">รถว่าง</div><div class="bb-statbar-val">3<small> /8</small></div></div>
+          </div>
+
+          <!-- tabs -->
+          <div class="mk-ph-tabs">
+            <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">5</span></button>
+            <button class="bb-tab">รออนุมัติ <span class="bb-tab-count">3</span></button>
+            <button class="bb-tab">Approver <span class="bb-tab-count">1</span></button>
+            <button class="bb-tab">อนุมัติ <span class="bb-tab-count">1</span></button>
+          </div>
+
+          <div class="mk-ph-group"><span>รายการจอง</span></div>
+
+          <!-- booking card: pending -->
+          <div class="bb-card">
+            <div class="mk-pcard-head">
+              <span class="mk-pcard-time"><i data-lucide="clock" style="width:.875rem;height:.875rem;vertical-align:-2px;color:var(--bb-mut)"></i> 09:00–12:00</span>
+              <span class="bb-status is-neutral"><span class="bb-dot"></span>รออนุมัติ</span>
+            </div>
+            <div class="mk-pcard-body">
+              <div class="bb-summary">
+                <div class="bb-summary-top"><span class="bb-summary-name">สมชาย ใจดี</span><span class="bb-summary-meta">กองสนับสนุนฯ</span></div>
+                <div class="bb-summary-line"><i data-lucide="map-pin"></i> โรงพยาบาลศิริราช · <b>3 คน</b> · ต้องการคนขับ</div>
+              </div>
+            </div>
+            <div class="mk-pcard-foot">
+              <button class="bb-btn is-ghost is-sm" style="flex:1"><i data-lucide="eye"></i> รายละเอียด</button>
+              <button class="bb-btn is-pri is-sm" style="flex:1"><i data-lucide="circle-check"></i> อนุมัติ</button>
+            </div>
+          </div>
+
+          <!-- booking card: group -->
+          <div class="bb-card">
+            <div class="mk-pcard-head">
+              <span class="mk-pcard-time"><i data-lucide="clock" style="width:.875rem;height:.875rem;vertical-align:-2px;color:var(--bb-mut)"></i> 10:30–15:00</span>
+              <span class="bb-status is-neutral"><span class="bb-dot"></span>รออนุมัติ</span>
+            </div>
+            <div class="mk-pcard-body">
+              <div class="bb-summary">
+                <div class="bb-summary-top"><span class="bb-summary-name">งานร่วม 2 รายการ</span><span class="bb-summary-meta">งานโภชนาการ</span></div>
+                <div class="bb-summary-line"><i data-lucide="map-pin"></i> ศาลากลางจังหวัด · <b>6 คน</b></div>
+              </div>
+            </div>
+            <div class="mk-pcard-foot">
+              <button class="bb-btn is-ghost is-sm" style="flex:1"><i data-lucide="eye"></i> รายละเอียด</button>
+              <button class="bb-btn is-pri is-sm" style="flex:1"><i data-lucide="circle-check"></i> อนุมัติ</button>
+            </div>
+          </div>
+
+          <!-- booking card: approved -->
+          <div class="bb-card">
+            <div class="mk-pcard-head">
+              <span class="mk-pcard-time"><i data-lucide="clock" style="width:.875rem;height:.875rem;vertical-align:-2px;color:var(--bb-mut)"></i> 08:00–11:00</span>
+              <span class="bb-status is-ok"><span class="bb-dot"></span>อนุมัติแล้ว</span>
+            </div>
+            <div class="mk-pcard-body">
+              <div class="bb-summary">
+                <div class="bb-summary-top"><span class="bb-summary-name">อนันต์ พงษ์</span><span class="bb-summary-meta">ส่วนกลาง</span></div>
+                <div class="bb-summary-line"><b>ขค-9012</b> (ธนา) <i data-lucide="arrow-right"></i> คลังสินค้าบางนา</div>
+              </div>
+            </div>
+            <div class="mk-pcard-foot">
+              <button class="bb-btn is-ghost is-sm" style="flex:1"><i data-lucide="shuffle"></i> เปลี่ยนรถ</button>
+              <button class="bb-btn is-sec is-sm" style="flex:1"><i data-lucide="pencil"></i> แก้ไข</button>
+            </div>
+          </div>
+
+          <div style="height:1rem"></div>
+        </div>
+        <button class="mk-fab"><i data-lucide="bell-ring"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ MODAL ════════════════ -->
+  <div class="mk-section-label"><i data-lucide="square-pen"></i> Modal · อนุมัติ + เลือกคนขับ (1 component .bb-modal) — desktop กลางจอ · mobile bottom sheet</div>
+
+  <p class="mk-sub" style="margin:-.25rem 0 1rem; max-width:780px">
+    markup <b>เดียวกัน</b> ทั้ง 2 — media query สลับ container (กลางจอ ↔ ชิดล่างเต็มกว้าง) · ส่วน swap / ส่งซ่อม / ย้อนสถานะ ใช้ <code>.bb-modal</code> shell เดียวกัน (เปลี่ยนแค่ body)
+  </p>
+
+  <div class="mk-phones">
+
+    <!-- desktop centered -->
+    <div style="flex:1; min-width:460px">
+      <div class="mk-sub" style="margin-bottom:.5rem; text-align:center">Desktop — กลางจอ · 500px</div>
+      <div class="mk-modal-demo">
+        <div class="bb-modal">
+          <div class="bb-modal-sheet-handle"></div>
+          <div class="bb-modal-head">
+            <div>
+              <div class="bb-modal-title">อนุมัติรถและเลือกคนขับ</div>
+              <div class="bb-modal-sub bb-num">BK-1042 · 09:00 – 12:00</div>
+            </div>
+            <button class="bb-modal-x"><i data-lucide="x"></i></button>
+          </div>
+          <div class="bb-modal-body" style="color:var(--bb-str)">
+            <div class="bb-summary">
+              <div class="bb-summary-top"><span class="bb-summary-name">สมชาย ใจดี</span><span class="bb-summary-meta">3 คน · ต้องการคนขับ</span></div>
+              <div class="bb-summary-line"><i data-lucide="map-pin"></i> โรงพยาบาลศิริราช</div>
+            </div>
+
+            <div class="bb-field" style="margin-top:1rem">
+              <label class="bb-label">เลือกรถ</label>
+              <button class="bb-select" style="width:100%"><span>กข-1234 · Toyota Camry</span><i data-lucide="chevron-down"></i></button>
+            </div>
+            <div class="bb-field">
+              <label class="bb-label">เลือกคนขับ</label>
+              <button class="bb-select" style="width:100%"><span>— เลือกคนขับ —</span><i data-lucide="chevron-down"></i></button>
+            </div>
+
+            <div class="bb-section-head" style="margin-bottom:.5rem">
+              <span class="bb-section-title"><i data-lucide="wallet"></i> ประเภทค่าใช้จ่าย</span>
+            </div>
+            <div class="bb-seg" style="display:flex; width:100%">
+              <button class="bb-seg-btn is-on" style="flex:1"><i data-lucide="building" style="width:.875rem;height:.875rem;vertical-align:-2px"></i> ส่วนกลาง</button>
+              <button class="bb-seg-btn" style="flex:1"><i data-lucide="users" style="width:.875rem;height:.875rem;vertical-align:-2px"></i> ส่วนกอง</button>
+              <button class="bb-seg-btn" style="flex:1"><i data-lucide="user" style="width:.875rem;height:.875rem;vertical-align:-2px"></i> ส่วนตัว</button>
+            </div>
+
+            <div class="mk-budget" style="margin-top:1rem">
+              <div class="mk-budget-row"><span>งบส่วนกลาง คงเหลือ</span><span class="mk-budget-val">฿ 42,500</span></div>
+              <div class="mk-budget-track"><div class="mk-budget-fill" style="width:62%"></div></div>
+              <div class="mk-approver"><i data-lucide="user-check"></i> ผู้อนุมัติ: <b>คุณวิรัตน์ ศรีสุข</b></div>
+            </div>
+          </div>
+          <div class="bb-modal-foot">
+            <button class="bb-btn is-ghost">ยกเลิก</button>
+            <button class="bb-btn is-pri"><i data-lucide="circle-check"></i> ยืนยันการอนุมัติ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- mobile bottom sheet -->
+    <div>
+      <div class="mk-sub" style="margin-bottom:.5rem; text-align:center">Mobile — bottom sheet</div>
+      <div class="mk-phone">
+        <div class="mk-phone-notch"></div>
+        <div class="mk-screen" style="background:rgba(10,37,64,.4); display:flex; flex-direction:column; justify-content:flex-end">
+          <div class="bb-modal" style="width:100%; max-width:100%; border-radius:var(--bb-r-xl) var(--bb-r-xl) 0 0; max-height:92vh; overflow-y:auto">
+            <div class="bb-modal-sheet-handle" style="display:block"></div>
+            <div class="bb-modal-head">
+              <div>
+                <div class="bb-modal-title">อนุมัติรถและเลือกคนขับ</div>
+                <div class="bb-modal-sub bb-num">BK-1042 · 09:00 – 12:00</div>
+              </div>
+              <button class="bb-modal-x"><i data-lucide="x"></i></button>
+            </div>
+            <div class="bb-modal-body" style="color:var(--bb-str)">
+              <div class="bb-summary">
+                <div class="bb-summary-top"><span class="bb-summary-name">สมชาย ใจดี</span><span class="bb-summary-meta">3 คน</span></div>
+                <div class="bb-summary-line"><i data-lucide="map-pin"></i> โรงพยาบาลศิริราช</div>
+              </div>
+              <div class="bb-field" style="margin-top:1rem">
+                <label class="bb-label">เลือกรถ</label>
+                <button class="bb-select" style="width:100%"><span>กข-1234 · Camry</span><i data-lucide="chevron-down"></i></button>
+              </div>
+              <div class="bb-field">
+                <label class="bb-label">เลือกคนขับ</label>
+                <button class="bb-select" style="width:100%"><span>— เลือกคนขับ —</span><i data-lucide="chevron-down"></i></button>
+              </div>
+              <div class="bb-section-head" style="margin-bottom:.5rem">
+                <span class="bb-section-title"><i data-lucide="wallet"></i> ประเภทค่าใช้จ่าย</span>
+              </div>
+              <div class="bb-seg" style="display:flex; width:100%">
+                <button class="bb-seg-btn is-on" style="flex:1">ส่วนกลาง</button>
+                <button class="bb-seg-btn" style="flex:1">ส่วนกอง</button>
+                <button class="bb-seg-btn" style="flex:1">ส่วนตัว</button>
+              </div>
+              <div class="mk-budget" style="margin-top:1rem">
+                <div class="mk-budget-row"><span>งบส่วนกลาง คงเหลือ</span><span class="mk-budget-val">฿ 42,500</span></div>
+                <div class="mk-budget-track"><div class="mk-budget-fill" style="width:62%"></div></div>
+                <div class="mk-approver"><i data-lucide="user-check"></i> ผู้อนุมัติ: <b>คุณวิรัตน์</b></div>
+              </div>
+            </div>
+            <div class="bb-modal-foot">
+              <button class="bb-btn is-ghost">ยกเลิก</button>
+              <button class="bb-btn is-pri"><i data-lucide="circle-check"></i> ยืนยัน</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ NOTES ════════════════ -->
+  <div class="mk-section-label"><i data-lucide="lightbulb"></i> Design decisions</div>
+  <div class="mk-notes">
+    <h3><i data-lucide="calendar-days"></i> Week navigator = hero</h3>
+    <ul>
+      <li>หัวการ์ด = วันที่เลือก + ปุ่ม <b>วันนี้</b> + <code>bb-select</code> เปิดปฏิทิน (ใช้ <code>bb_daterange</code> calendar ได้)</li>
+      <li>แถบ 7 วัน = pill เลือกได้ · วันนี้ขอบ accent · วันเลือก = พื้น accent · <b>badge นับจำนวนจอง</b> ต่อวัน (มือถือเลื่อนแนวนอน)</li>
+    </ul>
+    <h3><i data-lucide="layout-panel-left"></i> Layout = day-driven workspace</h3>
+    <ul>
+      <li>KPI strip (<code>.bb-kpi.is-ghost</code>) สรุปวันที่เลือก: รอจัดรถ · อนุมัติแล้ว · รถใช้งาน · รถว่าง</li>
+      <li>ซ้าย = <b>รายการจอง</b> (filter tabs + booking item) เหนือ <b>การเดินทาง</b> (เที่ยวที่จัดรถแล้ว) · ขวา = <b>การใช้รถ</b> sticky grid</li>
+      <li>booking item: เวลา-rail · ชื่อ+subbudget+badge งานด่วน/รวมเที่ยว · ปลายทาง · meta (คน/คนขับ) · ปุ่มเปลี่ยนตามสถานะ (อนุมัติ / ย้อนสถานะ / แก้ไข)</li>
+    </ul>
+    <h3><i data-lucide="square-pen"></i> Modal — responsive + reuse</h3>
+    <ul>
+      <li>1 component <code>.bb-modal</code> — desktop กลางจอ 500px · mobile bottom sheet · body = <code>bb-summary</code> + select รถ/คนขับ + <code>bb-seg</code> (ส่วนกลาง/กอง/ตัว) + budget bar</li>
+      <li>swap / ส่งซ่อม / ย้อนสถานะ = <b>shell เดียวกัน</b> เปลี่ยนแค่ body</li>
+    </ul>
+    <h3><i data-lucide="recycle"></i> Component reuse</h3>
+    <ul>
+      <li>ของกลางที่ใช้: <code>bb-card</code> · <code>bb-kpi</code> · <code>bb-tabs</code> · <code>bb-btn</code> · <code>bb-badge</code> · <code>bb-status</code> · <code>bb-summary</code> · <code>bb-seg</code> · <code>bb-statbar</code> · <code>bb-modal</code> · <code>bb-select</code> · <code>bb-field</code> · <code>bb-avatar</code> · <code>bb-icon-btn</code></li>
+      <li>ใหม่เฉพาะหน้านี้ (<code>mk-*</code> → จริงเป็น <code>va-*</code>): week strip · booking item · trip row · vehicle tile · budget bar</li>
+    </ul>
+  </div>
+
+</div>
+
+<script> lucide.createIcons(); </script>
+</body>
+</html>

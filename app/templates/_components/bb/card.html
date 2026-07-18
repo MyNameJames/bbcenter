@@ -1,0 +1,16 @@
+{#
+  bb_card — Component Library .bb-card
+  spec: components-gallery.html §7 · markup ตรง gallery เป๊ะ
+
+  head แสดงเมื่อมี title หรือ link · body = HTML/Markup (component อื่นใส่ได้ผ่าน Python Card)
+
+  Usage:
+    {% from '_components/bb/card.html' import bb_card %}
+    {{ bb_card('สรุปการใช้รถ', 'ดูทั้งหมด', body_html) }}
+#}
+{% macro bb_card(title='', link='', body='') -%}
+<div class="bb-card">
+{%- if title or link %}<div class="bb-card-head"><span class="bb-card-title">{{ title }}</span>{% if link %}<span class="bb-card-link">{{ link }}</span>{% endif %}</div>{% endif %}
+<div class="bb-card-body">{{ body }}</div>
+</div>
+{%- endmacro %}

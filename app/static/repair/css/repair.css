@@ -3,7 +3,7 @@
    Scope: vc-scope on <main>. Uses --vc-* tokens only.
    ============================================================ */
 
-/* ── Page Header (budget-aligned: utility-class h1/h6, 2026-06-16) ── */
+/* ── Action bar (หัวเรื่องย้ายไป topbar page-title, DNA 2026-06-17) ── */
 .repair-header {
     margin-bottom: var(--vc-space-5);
 }
@@ -12,40 +12,19 @@
     gap: var(--vc-space-2);
 }
 
-/* ── KPI 5-column override ───────────────────────────── */
-.vc-kpi-group.repair-kpi-5 {
-    grid-template-columns: repeat(5, 1fr);
-}
-@media (max-width: 991px) {
-    .vc-kpi-group.repair-kpi-5 { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 575px) {
-    .vc-kpi-group.repair-kpi-5 { grid-template-columns: repeat(2, 1fr); }
-}
+/* KPI ใช้ .fuel-kpi strip (vehicle_fuel.css) แล้ว — .repair-kpi-5 grid retired 2026-06-17 */
 
-/* ── Modal icon boxes ────────────────────────────────── */
+/* ── Modal icon tile (DNA mono — icon-bg + icon, 2026-06-17) ── */
 .repair-modal-icon {
     width: 40px;
     height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--vc-radius-xs);
-    border: 1px solid var(--vc-border);
-    background: var(--vc-bg-subtle);
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-icon-bg);
+    color: var(--vc-icon);
     flex-shrink: 0;
-}
-.repair-modal-icon--warning {
-    background: var(--vc-amber-bg);
-    border-color: var(--vc-amber-border);
-}
-.repair-modal-icon--blue {
-    background: var(--vc-blue-bg);
-    border-color: var(--vc-blue-border);
-}
-.repair-modal-icon--success {
-    background: var(--vc-green-bg);
-    border-color: var(--vc-green-border);
 }
 
 /* ── Modal typography ────────────────────────────────── */

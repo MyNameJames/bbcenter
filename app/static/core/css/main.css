@@ -1,424 +1,436 @@
+/* ============================================================
+   main.css — Zendenta design layer (2026-06-19)
+   ────────────────────────────────────────────────────────────
+   โหลด "หลัง" design-system.css ผ่าน _shared/header.html → override
+   ของเก่า ("อันไหนทับใช้อันใหม่"). ใช้ token --vc-* จาก tokens.css
 
+   กฎกลาง (บังคับทุก redesign):
+   1. Bootstrap เป็นหลัก (d-flex/gap/p-/grid/table/utilities)
+   2. custom CSS เฉพาะ: สี · badge tint · radius · active-state · collapse
+   3. icon = lucide (data-lucide) · เทา mono (--vc-icon)
+   4. สี accent เฉพาะ avatar/badge/ปุ่ม/active
+   5. class กลางๆ: .sidebar .sidebar-* (.header .kpi .data-table ฯลฯ
+      เติมเมื่อ migrate หน้านั้น — ดู docs/notes/zendenta_migration.md)
 
+   SECTIONS: App layout · Sidebar
+   ============================================================ */
 
+:root { --sidebar-w: 256px; }
 
-/*//////////////////////////////////////////////////////////////////
-[ FONT ]*/
-
-/* Sarabun เท่านั้น — โหลดผ่าน Google Fonts ใน login.html. ห้ามใส่ font อื่น. */
-
-/*//////////////////////////////////////////////////////////////////
-[ RESTYLE TAG ]*/
-
-* {
-	margin: 0px; 
-	padding: 0px; 
-	box-sizing: border-box;
+/* ── App layout (sidebar fixed + content offset) ─────────── */
+.main-content {
+    margin-left: var(--sidebar-w);
+    width: calc(100% - var(--sidebar-w));
+}
+@media (max-width: 1199.98px) {
+    .main-content { margin-left: 0; width: 100%; }
 }
 
-body, html {
-	height: 100%;
-	font-family: 'Sarabun', sans-serif;
+/* ══ SIDEBAR ════════════════════════════════════════════════ */
+.sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-w);
+    height: 100vh; height: 100dvh;
+    background: #ffffff;
+    border-right: 1px solid var(--vc-border);
+    z-index: 1040;
+    transition: transform .25s ease;
+}
+@media (max-width: 1199.98px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.show { transform: none; }
 }
 
-/*---------------------------------------------*/
-a {
-	font-family: 'Sarabun', sans-serif;
-	font-size: 14px;
-	line-height: 1.7;
-	color: #666666;
-	margin: 0px;
-	transition: all 0.4s;
-	-webkit-transition: all 0.4s;
-  -o-transition: all 0.4s;
-  -moz-transition: all 0.4s;
+/* brand */
+.sidebar-brand { height: 60px; }
+.sidebar-logo { color: var(--vc-fg); text-decoration: none; }
+.sidebar-logo-mark { color: var(--vc-accent); }
+
+/* group label */
+.sidebar-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--vc-fg-subtle);
 }
 
-a:focus {
-	outline: none !important;
+/* nav link */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    color: var(--vc-fg-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
+    transition: background .15s, color .15s;
+}
+.sidebar-link:hover { background: #f1f3f7; color: var(--vc-fg); }
+.sidebar-link.active { background: var(--vc-accent-light); color: var(--vc-accent); font-weight: 600; }
+
+/* icon — mono เทา, active = accent */
+.sidebar-icon { width: 20px; flex: none; display: inline-flex; align-items: center; color: var(--vc-icon); }
+.sidebar-icon svg { width: 18px; height: 18px; }
+.sidebar-link.active .sidebar-icon { color: var(--vc-accent); }
+
+/* badge pill */
+.sidebar-badge {
+    margin-left: auto;
+    background: var(--vc-red);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 99px;
+    min-width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    line-height: 1;
 }
 
-a:hover {
-	text-decoration: none;
-  color: #57b846;
+/* collapsible group (จัดการรถ) */
+.sidebar-group-toggle { width: 100%; border: 0; background: none; cursor: pointer; }
+.sidebar-chevron { margin-left: auto; color: var(--vc-icon); transition: transform .25s ease; }
+.sidebar-chevron svg { width: 16px; height: 16px; }
+.sidebar-group.is-open .sidebar-chevron { transform: rotate(180deg); }
+.sidebar-group-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
+.sidebar-group.is-open .sidebar-group-body { grid-template-rows: 1fr; }
+.sidebar-group-body > div { overflow: hidden; }
+
+/* sub-item (indent + dot) */
+.sidebar-sub { padding-left: 18px; }
+.sidebar-link.sub { font-size: 13px; padding: 8px 12px; }
+.sidebar-dot { width: 5px; height: 5px; border-radius: 99px; background: var(--vc-fg-disabled); flex: none; margin-left: 6px; }
+.sidebar-link.sub.active .sidebar-dot { background: var(--vc-accent); }
+
+/* footer / logout */
+.sidebar-footer { border-top: 1px solid var(--vc-border); }
+.sidebar-logout { color: var(--vc-red); }
+.sidebar-logout:hover { background: var(--vc-red-bg); color: var(--vc-red); }
+.sidebar-logout .sidebar-icon { color: var(--vc-red); }
+
+/* ══ CONTENT CARD ════════════════════════════════════════════
+   lightweight card wrapper (border + radius + white bg)
+   ห้ามชน .vc-card เดิม → ใช้ .zen-card
+   ============================================================ */
+.zen-card {
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md, 8px);
+    background: #fff;
 }
 
-/*---------------------------------------------*/
-h1,h2,h3,h4,h5,h6 {
-	margin: 0px;
+/* ══ KPI TILE ════════════════════════════════════════════════
+   Used by: mileage admin, dashboard
+   .kpi-tile = icon tile (gray bg) | .kpi-num = big number (Manrope)
+   ============================================================ */
+.kpi-tile {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: #f3f4f7;
+    color: var(--vc-icon);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.kpi-tile svg { width: 20px; height: 20px; }
+.kpi-num {
+    font-size: 35px;
+    font-weight: 800;
+    font-family: var(--vc-font-mono);
+    letter-spacing: -.02em;
+    color: var(--vc-fg);
+    line-height: 1.1;
 }
 
-p {
-	font-family: 'Sarabun', sans-serif;
-	font-size: 14px;
-	line-height: 1.7;
-	color: #666666;
-	margin: 0px;
+/* ══ DATA TABLE (Zendenta) ═══════════════════════════════════
+   Bootstrap .table + .data-table = Zendenta table look
+   ============================================================ */
+.data-table thead th {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    color: var(--vc-fg-subtle);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--vc-border);
+    padding: 12px 12px;
+    white-space: nowrap;
+    background: #fff;
+    vertical-align: middle;
+}
+.data-table tbody td {
+    padding: 15px 12px;
+    border-bottom: 1px solid #f4f4f6;
+    vertical-align: middle;
+    white-space: nowrap;   /* mobile = overflow-x scroll, col ไม่บีบ (user req) */
+}
+.data-table tbody tr:hover td { background: #fafbfd; }
+
+/* ══ HEADER / TOPBAR ════════════════════════════════════════════
+   Bootstrap-first; custom เฉพาะ สี · radius · user panel
+   Zendenta layer (2026-06-19) — ตาม docs/notes/zendenta_migration.md
+   ============================================================ */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 66px;
+    border-bottom: 1px solid var(--vc-border);
+    background: #fff;
+    flex-shrink: 0;
+}
+.header-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--vc-fg);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* icon button — bell / hamburger / user avatar */
+.zen-iconbtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--vc-border);
+    background: #fff;
+    color: var(--vc-icon);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s;
+    flex-shrink: 0;
+}
+.zen-iconbtn:hover { background: #f6f7f9; }
+.zen-iconbtn svg { width: 18px; height: 18px; }
+/* borderless variant — hamburger บน mobile */
+.zen-iconbtn.border-0 { border-color: transparent; }
+/* user button (avatar + name + dept + chevron) */
+.header-user-btn {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+.header-user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vc-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+.header-user-dept {
+    font-size: 11px;
+    color: var(--vc-fg-subtle);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    line-height: 1.3;
+}
+.header-user-chevron { color: var(--vc-fg-subtle); width: 14px; height: 14px; }
+/* flag badge — งานสัปดาห์นี้ (future feature #11, ค่าจาก weekly_done/weekly_total) */
+.header-flag {
+    background: #e6f7ef;
+    color: #15a06b;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    white-space: nowrap;
+}
+.header-flag svg { width: 13px; height: 13px; }
+/* greeting block — dashboard mobile only (d-xl-none) */
+.header-greeting { min-width: 0; flex: 1; overflow: hidden; }
+.header-greeting-name {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--vc-fg);
+    line-height: 1.3;
+    white-space: nowrap;
+    /* overflow: hidden; */
+    text-overflow: ellipsis;
+}
+.header-greeting-sub {
+    font-size: .72rem;
+    color: var(--vc-fg-subtle);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* mobile (<md) — header เต็มจอ (px-0 ที่ include) + label กลางจอเป๊ะ
+   absolute center อิง #topHeader (sticky = positioned context) · flag ซ่อนที่ include */
+@media (max-width: 767.98px) {
+    #topHeader .header-greeting,
+    #topHeader .header-title {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: calc(100% - 10rem);
+        text-align: center;
+    }
+    #topHeader .header-greeting { flex: none; }
+    #topHeader .header-greeting-name { overflow: hidden; }
 }
 
-ul, li {
-	margin: 0px;
-	list-style-type: none;
+/* ══ BADGE PILL (Zendenta tint) ════════════════════════════════
+   ห้ามชน .badge Bootstrap → .badge-pill
+   tint: .b-full=เขียว .b-partial=ม่วง .b-neutral=เทา .b-accent=น้ำเงิน .b-warning=ส้ม
+   ============================================================ */
+.badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 99px;
+    white-space: nowrap;
+    line-height: 1.4;
+    vertical-align: middle;
 }
+.b-full    { background: #e6f7ef; color: #15a06b; }
+.b-partial { background: #ede9fe; color: #7c5ce0; }
+.b-neutral { background: #f4f4f6; color: #6b7280; }
+.b-accent  { background: #e6f0ff; color: #4059e6; }
+.b-warning { background: var(--vc-amber-bg); color: var(--vc-amber); }
+.b-unpaid  { background: #fde8ec; color: #e0436c; }
 
-
-/*---------------------------------------------*/
-input {
-	outline: none;
-	border: none;
+/* ══ TABS (Zendenta underline) ═══════════════════════════════
+   status filter tabs — active = accent underline (อ้าง mockup .zen-tab)
+   ห้ามชน Bootstrap → ใช้ .zen-tabs / .zen-tab
+   ============================================================ */
+.zen-tabs {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    border-bottom: 1px solid var(--vc-border);
 }
-
-textarea {
-  outline: none;
-  border: none;
+.zen-tab {
+    appearance: none;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vc-fg-subtle);
+    padding: 10px 2px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;          /* ทับเส้น border-bottom ของ .zen-tabs */
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: color .15s, border-color .15s;
 }
-
-textarea:focus, input:focus {
-  border-color: transparent !important;
+.zen-tab:hover { color: var(--vc-fg); }
+.zen-tab.active { color: var(--vc-accent); border-bottom-color: var(--vc-accent); font-weight: 600; }
+/* count badge ใน tab */
+.zen-tab-count {
+    background: #f4f4f6;
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 99px;
+    line-height: 1.5;
 }
+.zen-tab.active .zen-tab-count { background: var(--vc-accent-light); color: var(--vc-accent); }
 
-input:focus::-webkit-input-placeholder { color:transparent; }
-input:focus:-moz-placeholder { color:transparent; }
-input:focus::-moz-placeholder { color:transparent; }
-input:focus:-ms-input-placeholder { color:transparent; }
-
-textarea:focus::-webkit-input-placeholder { color:transparent; }
-textarea:focus:-moz-placeholder { color:transparent; }
-textarea:focus::-moz-placeholder { color:transparent; }
-textarea:focus:-ms-input-placeholder { color:transparent; }
-
-input::-webkit-input-placeholder { color: #999999; }
-input:-moz-placeholder { color: #999999; }
-input::-moz-placeholder { color: #999999; }
-input:-ms-input-placeholder { color: #999999; }
-
-textarea::-webkit-input-placeholder { color: #999999; }
-textarea:-moz-placeholder { color: #999999; }
-textarea::-moz-placeholder { color: #999999; }
-textarea:-ms-input-placeholder { color: #999999; }
-
-/*---------------------------------------------*/
-button {
-	outline: none !important;
-	border: none;
-	background: transparent;
+/* ══ SEARCH INPUT (Zendenta) ═════════════════════════════════
+   bg เทาอ่อน + มน 10px + icon search (อ้าง mockup .zen-input)
+   ============================================================ */
+.zen-search { position: relative; flex: 1; max-width: 320px; }
+@media (max-width: 767.98px) { .zen-search { max-width: 100%; } }
+.zen-search svg {
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    color: var(--vc-fg-subtle);
+    pointer-events: none;
 }
-
-button:hover {
-	cursor: pointer;
-}
-
-iframe {
-	border: none !important;
-}
-
-
-/*//////////////////////////////////////////////////////////////////
-[ Utility ]*/
-.txt1 {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #999999;
-}
-
-.txt2 {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #666666;
-}
-
-
-/*//////////////////////////////////////////////////////////////////
-[ login ]*/
-
-.limiter {
-  width: 100%;
-  margin: 0 auto;
-}
-
-.container-login100 {
-  width: 100%;  
-  min-height: 100vh;
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  padding: 15px;
-  background: #9053c7;
-  background: -webkit-linear-gradient(-135deg, #c850c0, #4158d0);
-  background: -o-linear-gradient(-135deg, #c850c0, #4158d0);
-  background: -moz-linear-gradient(-135deg, #c850c0, #4158d0);
-  background: linear-gradient(-135deg, #c850c0, #4158d0);
-}
-
-.wrap-login100 {
-  width: 960px;
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  padding: 177px 130px 33px 95px;
-}
-
-/*------------------------------------------------------------------
-[  ]*/
-.login100-pic {
-  width: 316px;
-}
-
-.login100-pic img {
-  max-width: 100%;
-}
-
-
-/*------------------------------------------------------------------
-[  ]*/
-.login100-form {
-  width: 290px;
-}
-
-.login100-form-title {
-  font-family: 'Sarabun', sans-serif; font-weight: 700;
-  font-size: 24px;
-  color: #333333;
-  line-height: 1.2;
-  text-align: center;
-
-  width: 100%;
-  display: block;
-  padding-bottom: 54px;
-}
-
-
-/*---------------------------------------------*/
-.wrap-input100 {
-  position: relative;
-  width: 100%;
-  z-index: 1;
-  margin-bottom: 10px;
-}
-
-.input100 {
-  font-family: 'Sarabun', sans-serif; font-weight: 500;
-  font-size: 15px;
-  line-height: 1.5;
-  color: #666666;
-
-  display: block;
-  width: 100%;
-  background: #e6e6e6;
-  height: 50px;
-  border-radius: 25px;
-  padding: 0 30px 0 68px;
-}
-
-
-/*------------------------------------------------------------------
-[ Focus ]*/
-.focus-input100 {
-  display: block;
-  position: absolute;
-  border-radius: 25px;
-  bottom: 0;
-  left: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  color: rgba(87,184,70, 0.8);
-}
-
-.symbol-input100 {
-  font-size: 15px;
-
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  align-items: center;
-  position: absolute;
-  border-radius: 25px;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding-left: 35px;
-  pointer-events: none;
-  color: #666666;
-
-  -webkit-transition: all 0.4s;
-  -o-transition: all 0.4s;
-  -moz-transition: all 0.4s;
-  transition: all 0.4s;
-}
-
-.input100:focus + .focus-input100 + .symbol-input100 {
-  color: #57b846;
-  padding-left: 28px;
-}
-
-/*------------------------------------------------------------------
-[ Button ]*/
-.container-login100-form-btn {
-  width: 100%;
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding-top: 20px;
-}
-
-.login100-form-btn {
-  font-family: 'Sarabun', sans-serif; font-weight: 700;
-  font-size: 15px;
-  line-height: 1.5;
-  color: #fff;
-  text-transform: uppercase;
-
-  width: 100%;
-  height: 50px;
-  border-radius: 25px;
-  background: #57b846;
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0 25px;
-
-  -webkit-transition: all 0.4s;
-  -o-transition: all 0.4s;
-  -moz-transition: all 0.4s;
-  transition: all 0.4s;
-}
-
-.login100-form-btn:hover {
-  background: #333333;
-}
-
-
-
-/*------------------------------------------------------------------
-[ Responsive ]*/
-
-
-
-@media (max-width: 992px) {
-  .wrap-login100 {
-    padding: 177px 90px 33px 85px;
-  }
-
-  .login100-pic {
-    width: 35%;
-  }
-
-  .login100-form {
-    width: 50%;
-  }
-}
-
-@media (max-width: 768px) {
-  .wrap-login100 {
-    padding: 100px 80px 33px 80px;
-  }
-
-  .login100-pic {
-    display: none;
-  }
-
-  .login100-form {
+.zen-search input {
     width: 100%;
-  }
+    height: 38px;
+    background: #f6f7f9;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 0 12px 0 36px;
+    font-size: 14px;
+    color: var(--vc-fg);
+}
+.zen-search input::placeholder { color: var(--vc-fg-subtle); }
+.zen-search input:focus {
+    background: #fff;
+    border-color: #dfe3ea;
+    outline: 0;
+    box-shadow: none;
 }
 
-@media (max-width: 576px) {
-  .wrap-login100 {
-    padding: 100px 15px 33px 15px;
-  }
+/* search highlight (.bb-ml-search-hl) → ย้ายไป components.css (MILEAGE PAGE section) */
+
+/* ══ BUTTON — Zendenta primary (.btn-zen) ═══════════════════
+   Accent bg · white text · radius 10px · 600 weight
+   ห้ามชน Bootstrap → .btn-zen (ไม่ใช่ .btn-primary)
+   ============================================================ */
+.btn-zen {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--vc-accent);
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s;
+    line-height: 1.4;
+    text-decoration: none;
+}
+.btn-zen:hover,
+.btn-zen:focus { background: #3247c4; color: #fff; outline: 0; }
+.btn-zen svg { width: 16px; height: 16px; }
+
+/* ══ AVATAR (initials circle) ═══════════════════════════════
+   Zendenta row identity — driver column etc.
+   ============================================================ */
+.vc-avatar {
+    width: 30px; height: 30px; flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--vc-accent-light); color: var(--vc-accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--vc-font-mono); font-weight: 700; font-size: 12px;
 }
 
-
-/*------------------------------------------------------------------
-[ Alert validate ]*/
-
-.validate-input {
-  position: relative;
+/* ══ BUTTON — Zendenta outline (secondary) ══════════════════
+   .btn-zen-outline — white bg, hairline border, muted text, radius 10
+   ============================================================ */
+.btn-zen-outline {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #fff; color: var(--vc-fg-muted);
+    border: 1px solid var(--vc-border); border-radius: 10px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    padding: 8px 14px; cursor: pointer; text-decoration: none;
+    white-space: nowrap; transition: background .15s;
+    line-height: 1.4;
 }
-
-.alert-validate::before {
-  content: attr(data-validate);
-  position: absolute;
-  max-width: 70%;
-  background-color: white;
-  border: 1px solid #c80000;
-  border-radius: 13px;
-  padding: 4px 25px 4px 10px;
-  top: 50%;
-  -webkit-transform: translateY(-50%);
-  -moz-transform: translateY(-50%);
-  -ms-transform: translateY(-50%);
-  -o-transform: translateY(-50%);
-  transform: translateY(-50%);
-  right: 8px;
-  pointer-events: none;
-
-  font-family: 'Sarabun', sans-serif; font-weight: 500;
-  color: #c80000;
-  font-size: 13px;
-  line-height: 1.4;
-  text-align: left;
-
-  visibility: hidden;
-  opacity: 0;
-
-  -webkit-transition: opacity 0.4s;
-  -o-transition: opacity 0.4s;
-  -moz-transition: opacity 0.4s;
-  transition: opacity 0.4s;
-}
-
-.alert-validate::after {
-  content: "\f06a";
-  font-family: FontAwesome;
-  display: block;
-  position: absolute;
-  color: #c80000;
-  font-size: 15px;
-  top: 50%;
-  -webkit-transform: translateY(-50%);
-  -moz-transform: translateY(-50%);
-  -ms-transform: translateY(-50%);
-  -o-transform: translateY(-50%);
-  transform: translateY(-50%);
-  right: 13px;
-}
-
-.alert-validate:hover:before {
-  visibility: visible;
-  opacity: 1;
-}
-
-@media (max-width: 992px) {
-  .alert-validate::before {
-    visibility: visible;
-    opacity: 1;
-  }
-}
+.btn-zen-outline:hover { background: #f6f7f9; color: var(--vc-fg); }
+.btn-zen-outline svg { width: 16px; height: 16px; }

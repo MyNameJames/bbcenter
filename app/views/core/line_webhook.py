@@ -82,6 +82,93 @@ def _handle_message_event(ev):
     )
 
 
+def _handle_postback_event(ev):
+    """approver กดปุ่ม postback ใน flex card — รองรับ action=approve เท่านั้น"""
+    source   = ev.get('source', {})
+    line_uid = source.get('userId')
+    reply_token = ev.get('replyToken')
+    data     = ev.get('postback', {}).get('data', '')
+
+    if not line_uid or not data:
+        return
+
+    params     = dict(p.split('=', 1) for p in data.split('&') if '=' in p)
+    action     = params.get('action')
+    booking_id = params.get('booking_id')
+
+    if action == 'approve' and booking_id:
+        _approve_via_line(line_uid, reply_token, int(booking_id))
+
+
+def _approve_via_line(line_uid: str, reply_token: str, booking_id: int):
+    """ตรวจสอบสิทธิ์ + deadline + budget แล้ว approve booking ผ่าน LINE postback"""
+    from datetime import timedelta
+    from models import db, User, VehicleBooking, DeptApprover, get_bkk_time
+    from views.vehicle.vehicle_common import _lookup_budget_for_booking
+    from views.core import broadcast
+    from views.core.notification_service import notify_approver_approved as _n_approved
+    from views.core.line_service import build_approve_result_card
+
+    def _reply_text(msg):
+        line_service.reply(reply_token, msg)
+
+    try:
+        approver = User.query.filter_by(line_user_id=line_uid).first()
+        if not approver:
+            _reply_text("❌ ไม่พบบัญชีที่ผูกไว้ กรุณาผูกบัญชีที่ /line/link ก่อน")
+            return
+
+        my_dept_ids = {r.dept_id for r in DeptApprover.query.filter_by(user_id=approver.id).all()}
+        if not my_dept_ids:
+            _reply_text("❌ ท่านไม่มีสิทธิ์อนุมัติ")
+            return
+
+        booking = VehicleBooking.query.get(booking_id)
+        if not booking:
+            _reply_text(f"❌ ไม่พบคำขอ #{booking_id}")
+            return
+
+        if booking.status != 'waiting_approver':
+            status_th = {'approved': 'อนุมัติแล้ว', 'rejected': 'ปฏิเสธแล้ว',
+                         'cancelled': 'ยกเลิกแล้ว', 'pending': 'รอ Admin'}.get(booking.status, booking.status)
+            _reply_text(f"ℹ️ คำขอ #{booking_id} ไม่ได้รอผู้ประสานงาน — สถานะปัจจุบัน: {status_th}")
+            return
+
+        if booking.trip_department_id not in my_dept_ids:
+            _reply_text("❌ ท่านไม่มีสิทธิ์อนุมัติคำขอของแผนกนี้")
+            return
+
+        # Deadline: ต้องอนุมัติก่อน 1 วันก่อนเดินทาง
+        now = get_bkk_time()
+        if booking.start_datetime - now <= timedelta(days=1):
+            _reply_text(f"⏰ เลยกำหนดอนุมัติแล้ว\n"
+                        f"ต้องอนุมัติก่อน 1 วัน กรุณาติดต่อ Admin โดยตรง")
+            return
+
+        # Budget guard (เหมือน approver path ใน vehicle_booking.py)
+        _bgt, _kl = _lookup_budget_for_booking(booking)
+        if _bgt is None:
+            _reply_text('❌ อนุมัติไม่ได้ — ไม่มีงบที่เปิดใช้ครอบวันเดินทางนี้'
+                        + (f' (หมวด {_kl})' if _kl else ''))
+            return
+
+        booking.status     = 'approved'
+        booking.updated_by = approver.id
+        db.session.flush()
+
+        broadcast.notify_approver_approved(booking, approver)   # TG + LINE group
+        _n_approved(booking, approver)                          # In-app
+
+        db.session.commit()
+
+        result_card = build_approve_result_card(booking, approver)
+        line_service.reply_flex(reply_token, f"อนุมัติสำเร็จ — คำขอ #{booking_id}", result_card)
+
+    except Exception:
+        current_app.logger.exception("_approve_via_line failed booking_id=%s", booking_id)
+        _reply_text("❌ เกิดข้อผิดพลาด กรุณาลองใหม่หรือติดต่อ Admin")
+
+
 @core_bp.route('/line/webhook', methods=['POST'])
 def line_webhook():
     body = request.get_data()
@@ -95,6 +182,8 @@ def line_webhook():
             etype = ev.get('type')
             if etype == 'message' and ev.get('message', {}).get('type') == 'text':
                 _handle_message_event(ev)
+            elif etype == 'postback':
+                _handle_postback_event(ev)
             elif etype in ('join', 'follow'):
                 src = ev.get('source', {})
                 gid = src.get('groupId') or src.get('roomId') or src.get('userId')

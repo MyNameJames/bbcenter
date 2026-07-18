@@ -1,7 +1,7 @@
 # INDEX — Routes
 
 > Part ของ INDEX.md แยก เพื่อ token budget — [กลับ hub](INDEX.md)
-> **อัปเดตล่าสุด:** 2026-06-14
+> **อัปเดตล่าสุด:** 2026-06-29
 
 ---
 
@@ -12,6 +12,8 @@
 |--------|------|-----------|----------|
 | GET/POST | `/login` | [auth_view.py:12](../../app/views/auth_view.py#L12) | `login()` |
 | GET | `/dev/login/<username>` | [auth_view.py:58](../../app/views/auth_view.py#L58) | `dev_login()` — **dev bypass** |
+| GET | `/dev/components` | [app.py:52](../../app/app.py#L52) | `dev_components()` — **Living Gallery** (2026-06-29): render Python component จริง (`Table`/`Badge`/`Status`) ผ่าน `{{ component(obj) }}` → `dev/components.html`. drift ไม่ได้ (ต่างจาก static `components-gallery.html`). โตทีละ component |
+| GET | `/finance` | [app.py:56](../../app/app.py#L56) | `finance()` — **prototype/mockup** (2026-07-05): bare route ไม่มี blueprint/controller, `render_template('layout.html')` ตรงๆ ไม่มี model/data จริง (mock ใน template). หน้าทดลอง design token/bb-* component (accent สีน้ำเงิน, sidebar width, KPI) — ยังไม่ใช่ feature จริง |
 | GET | `/logout` | [auth_view.py:74](../../app/views/auth_view.py#L74) | `logout()` |
 | GET | `/dashboard` | [auth_view.py:172](../../app/views/auth_view.py#L172) | `dashboard()` — **Action Hub** (2026-06-16): ทุก role เห็นหน้าเดียวกัน = Quick Actions (สร้างใหม่) + คำขอของฉัน (รวมทุก service + ปุ่มทำซ้ำ) + วันนี้ของฉัน. ไม่มี admin KPI strip แล้ว. helper `_build_my_requests()` / `_build_today_items()` |
 | GET | `/manage_users` | [auth_view.py:195](../../app/views/auth_view.py#L195) | `manage_users()` — superadmin |
@@ -41,7 +43,7 @@
 | POST | `/vehicle/book` | [vehicle_view.py:81](../../app/views/vehicle_view.py#L81) |
 | GET/POST | `/vehicle/edit/<id>` | [vehicle_view.py:136](../../app/views/vehicle_view.py#L136) |
 | POST | `/vehicle/delete/<id>` | [vehicle_booking.py:174](../../app/views/vehicle/vehicle_booking.py#L174) — ลบ booking (hard delete). owner: pending/rejected เท่านั้น; admin: ทุกสถานะ ยกเว้นถ้ามี `mileage.budget_deducted_at` → blocked (กัน ledger orphan) **2026-06-12** |
-| POST | `/vehicle/cancel/<id>` | [vehicle_booking.py:268](../../app/views/vehicle/vehicle_booking.py#L268) — soft cancel. owner: status ∈ {pending, waiting_approver} เท่านั้น; admin: +approved; time guard `now < start_datetime`; notify (owner/admin/approver/driver/mate) + Telegram + flip `status='cancelled'`. **ไม่มี refund งบ** — งบหักเฉพาะตอนปิดทริป **2026-06-12** |
+| POST | `/vehicle/cancel/<id>` | [vehicle_booking.py:268](../../app/views/vehicle/vehicle_booking.py#L268) — soft cancel. **2026-06-20:** user ยกเลิกได้เฉพาะ `status=='pending'` (ก่อน admin จัดรถ); admin ยกเลิกทุก status cancellable + **ข้าม time guard**; **block ถ้าหักงบแล้ว** (`budget_deducted_at`); **trip-group cancel → reset mates เป็น pending + un-merge** (skip+เตือนถ้า mate หักงบ). notify (owner/admin/approver/driver/mate) + Telegram + flip `status='cancelled'`. **ไม่มี refund งบ** — งบหักเฉพาะตอนปิดทริป **2026-06-12** |
 | GET | `/vehicle/detail/<id>` | `vehicle_booking.py` — **2026-06-07: redirect → `/vehicle?detail=<id>`** (detail page ลบ, แสดงผ่าน modal `vehicle/modals/vehicle_detail.html` + JS deeplink); เก็บ permission check |
 | GET | `/api/vehicle/bookings` | `vehicle_booking.py` |
 | GET | `/api/custom-bookings` | `vehicle_booking.py` |
@@ -58,9 +60,10 @@
 | POST | `/vehicle/admin/booking/<id>/revert` | [vehicle_admin.py:299](../../app/views/vehicle/vehicle_admin.py#L299) — revert → pending. Guard: ห้ามถ้ามี `mileage.budget_deducted_at`; source ∈ {approved, waiting_approver, rejected} เท่านั้น; เคลียร์ reject_reason + set updated_by; คืน JSON `{ok, msg}` **2026-06-12** |
 | POST | `/vehicle/admin/vehicle/<id>/repair` | [vehicle_view.py:709](../../app/views/vehicle_view.py#L709) |
 | POST | `/vehicle/admin/vehicle/<id>/fix-done` | [vehicle_view.py:722](../../app/views/vehicle_view.py#L722) |
-| POST | `/vehicle/admin/booking/<id>/swap` | [vehicle_view.py:738](../../app/views/vehicle_view.py#L738) |
-| POST | `/vehicle/admin/merge` | [vehicle_view.py:757](../../app/views/vehicle_view.py#L757) |
-| POST | `/vehicle/admin/assign/<id>` | [vehicle_view.py:832](../../app/views/vehicle_view.py#L832) |
+| POST | `/vehicle/admin/booking/<id>/swap` | [vehicle_admin.py:360](../../app/views/vehicle/vehicle_admin.py#L360) — swap รถ. **2026-06-20:** เพิ่ม `check_vehicle_conflict` guard (block 400 ถ้ารถทับช่วงเวลา) |
+| POST | `/vehicle/admin/merge` | [vehicle_admin.py:380](../../app/views/vehicle/vehicle_admin.py#L380) — รวมทริป. **2026-06-20:** เพิ่ม conflict guard ก่อน commit (`check_vehicle_conflict`/`check_driver_conflict` กับ merged range, exclude booking_ids) |
+| POST | `/vehicle/admin/assign/<id>` | [vehicle_admin.py:449](../../app/views/vehicle/vehicle_admin.py#L449) — assign รถ/คนขับ. **2026-06-20:** เพิ่ม conflict guard เฉพาะทริปอิสระที่ approve; **2026-06-21:** เพิ่ม `check_vehicle_active` guard |
+| POST | `/vehicle/admin/edit/<id>` | [vehicle_booking.py](../../app/views/vehicle/vehicle_booking.py) `admin_edit_booking` — **2026-06-21** AJAX admin แก้ข้อมูลจอง (start/end datetime, destination, purpose, pax, pickup). Block ถ้า status ∈ {in_progress, completed, cancelled}. คืน JSON `{ok, msg}` |
 | GET/POST | `/vehicle/mileage` | [vehicle_mileage.py:312](../../app/views/vehicle/vehicle_mileage.py#L312) |
 | GET | `/vehicle/mileage/export` | [vehicle_mileage.py:420](../../app/views/vehicle/vehicle_mileage.py#L420) — Excel export ตาม filter |
 | GET | `/api/admin/bookings` | [vehicle_view.py:1841](../../app/views/vehicle_view.py#L1841) |
@@ -138,7 +141,7 @@
 ### core (LINE — `core_bp`)
 | Method | Path | File:Line | Function |
 |--------|------|-----------|----------|
-| POST | `/line/webhook` | [line_webhook.py](../../app/views/core/line_webhook.py) | `line_webhook()` — verify signature + ผูกบัญชีผ่านโค้ด + log groupId |
+| POST | `/line/webhook` | [line_webhook.py](../../app/views/core/line_webhook.py) | `line_webhook()` — verify signature → message: ผูกบัญชีโค้ด 6 หลัก · **postback: approve booking ผ่าน LINE** (`_approve_via_line`) |
 | GET | `/line/link` | [line_webhook.py](../../app/views/core/line_webhook.py) | `line_link()` — หน้าโค้ด 6 หลักผูกบัญชี LINE (login required) |
 
 ---

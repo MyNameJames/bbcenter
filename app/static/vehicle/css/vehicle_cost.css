@@ -3,31 +3,7 @@
    Loaded last; depends on: design-system.css, vehicle_admin.css, vehicle.css, fuel_admin.css
 */
 
-/* ── Page header ─────────────────────────────────── */
-.cost-header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--vc-space-4);
-    margin-bottom: var(--vc-space-5);
-    flex-wrap: wrap;
-}
-.cost-title {
-    font-size: var(--vc-text-xl);   
-    font-weight: 700;
-    margin: 0;
-    color: var(--vc-fg);
-}
-.cost-subtitle {
-    font-size: var(--vc-text-sm);
-    color: var(--vc-fg-subtle);
-    margin: 4px 0 0;
-}
-.cost-header-actions {
-    display: flex;
-    gap: var(--vc-space-2);
-    flex-wrap: wrap;
-}
+/* ── Page header — replaced by Bootstrap utility flex (zen 2026-06-21) ── */
 
 /* ── Rate banner (informational card showing OT rates) ───── */
 .cost-rate-banner {
@@ -160,19 +136,19 @@
     border: 1px solid transparent;
 }
 .cost-slot-morning {
-    background: var(--vc-blue-bg);
-    color: var(--vc-blue);
-    border-color: var(--vc-blue-border);
-}
-.cost-slot-evening {
     background: var(--vc-amber-bg);
     color: var(--vc-amber);
-    border-color: var(--vc-amber-border);
+    border-color: transparent;
+}
+.cost-slot-evening {
+    background: #ede9fe;
+    color: #7c5ce0;
+    border-color: transparent;
 }
 .cost-slot-night {
-    background: var(--vc-red-bg);
-    color: var(--vc-red);
-    border-color: var(--vc-red-border);
+    background: #e6f0ff;
+    color: #4059e6;
+    border-color: transparent;
 }
 .cost-slot-rate {
     color: var(--vc-fg-muted);
@@ -580,54 +556,55 @@
    summary / rate-ref / slot-list / portal menu  (AJAX page)
    ════════════════════════════════════════════════ */
 
-/* ── Toolbar: chips (เลื่อน x) + filter button (ชิดขวา) แถวเดียว ── */
-.cost-toolbar { margin-bottom: var(--vc-space-4); }
+/* ── Toolbar: chips (underline) + filter button แถวเดียว ── */
+.cost-toolbar { margin-bottom: 28px; }
 .cost-toolbar-row {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: var(--vc-space-3);
+    border-bottom: 1px solid var(--vc-border);
 }
 
-/* status chips — segmented control เลื่อนแนวนอน */
+/* status chips — underline tab (zen redesign 2026-06-21) */
 .cost-tabs {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px;
-    border: 1px solid var(--vc-border);
-    border-radius: 8px;
-    background: var(--vc-bg);
-    overflow-x: auto;
-    scrollbar-width: none;
     flex: 1 1 auto;
     min-width: 0;
 }
-.cost-tabs::-webkit-scrollbar { display: none; }
 .cost-chip {
     appearance: none;
     border: 0;
     background: transparent;
-    color: var(--vc-fg-muted);
     font-family: inherit;
-    font-size: var(--vc-text-sm);
-    font-weight: 500;
-    padding: 5px 12px;
-    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vc-fg-subtle);
+    padding: 10px 2px;
+    margin-right: 18px;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
     cursor: pointer;
     white-space: nowrap;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: background-color .15s, color .15s;
+    transition: color .15s, border-color .15s;
 }
-.cost-chip:hover { background: var(--vc-bg-subtle); color: var(--vc-fg); }
-.cost-chip.is-active { background: var(--vc-fg); color: var(--vc-bg); }
-.cost-chip.is-active:hover { background: var(--vc-fg); }
-.cost-chip-cnt { font-size: 11px; font-weight: 600; opacity: .6; }
-.cost-chip.is-active .cost-chip-cnt { opacity: .85; }
+.cost-chip:hover { color: var(--vc-fg); }
+.cost-chip.is-active { color: var(--vc-accent); border-bottom-color: var(--vc-accent); }
+.cost-chip-cnt {
+    font-size: 11px;
+    background: #f1f3f7;
+    color: var(--vc-fg-muted);
+    border-radius: 99px;
+    padding: 1px 7px;
+    margin-left: 4px;
+    font-weight: 600;
+}
+.cost-chip.is-active .cost-chip-cnt { background: var(--vc-accent-light); color: var(--vc-accent); }
 
 /* ── Filter button → popover (4 บรรทัด: คนขับ / จาก / ↓ / ถึง) ── */
-.cost-filter { position: relative; flex: 0 0 auto; }
+.cost-filter { position: relative; flex: 0 0 auto; padding-bottom: 8px; }
 .cost-filter-btn { position: relative; }
 .cost-filter-btn.is-active { border-color: var(--vc-accent); color: var(--vc-accent); }
 .cost-filter-dot {
@@ -710,39 +687,18 @@
     border-top: 1px solid var(--vc-border);
 }
 
-/* ── Summary: ยังไม่จ่าย / จ่ายแล้ว (แทน KPI 3 ใบ) ── */
-.cost-summary {
+/* ── KPI strip (inline summary — 2 metrics ยังไม่จ่าย / จ่ายแล้ว) ── */
+.cost-kpi-strip {
     display: flex;
     align-items: center;
-    gap: var(--vc-space-5);
-    padding: var(--vc-space-3) var(--vc-space-5);
-    margin-bottom: var(--vc-space-3);
+    gap: 2.5rem;
     flex-wrap: wrap;
+    padding: 20px 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--vc-border);
 }
-.cost-summary-item { display: flex; align-items: baseline; gap: var(--vc-space-2); }
-.cost-summary-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex: 0 0 auto;
-    align-self: center;
-}
-.cost-summary-dot--unpaid { background: var(--vc-blue); }
-.cost-summary-dot--paid   { background: var(--vc-green); }
-.cost-summary-label { font-size: var(--vc-text-sm); color: var(--vc-fg-muted); }
-.cost-summary-value {
-    font-size: var(--vc-text-lg);
-    font-weight: 700;
-    color: var(--vc-blue);
-    font-variant-numeric: tabular-nums;
-}
-.cost-summary-value--paid { color: var(--vc-green); }
-.cost-summary-value.is-zero { color: var(--vc-fg-subtle); }
-.cost-summary-meta { font-size: var(--vc-text-xs); color: var(--vc-fg-subtle); }
-.cost-summary-sep {
-    width: 1px;
-    align-self: stretch;
-    background: var(--vc-border);
-}
+/* scale kpi-num ลงสำหรับ inline context (35px = standalone เท่านั้น) */
+.cost-kpi-strip .kpi-num { font-size: 26px; line-height: 1.2; }
 
 /* ── Rate reference — quiet inline strip (แทน banner สีๆ) ── */
 .cost-rate-ref {
@@ -750,8 +706,8 @@
     align-items: center;
     gap: var(--vc-space-3);
     flex-wrap: wrap;
-    padding: 0 var(--vc-space-1) var(--vc-space-1);
-    margin-bottom: var(--vc-space-3);
+    padding: 12px var(--vc-space-1);
+    margin-bottom: var(--vc-space-4);
 }
 .cost-rate-ref-label {
     display: inline-flex;
@@ -854,6 +810,4 @@
     .cost-filter { flex: 1 1 100%; }
     .cost-filter-btn { width: 100%; justify-content: center; }
     .cost-filter-sheet { width: 100%; left: 0; right: 0; }
-    .cost-summary { gap: var(--vc-space-3) var(--vc-space-4); }
-    .cost-summary-sep { display: none; }
 }

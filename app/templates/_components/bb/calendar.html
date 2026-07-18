@@ -1,0 +1,49 @@
+{#
+  bb_calendar — ปฏิทินรายเดือน + event chips ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-mcal)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-calendar])
+
+  - grid 7×6 · หัววันสไตล์ table (อา=แดง ส=accent) · วันนี้=วงกลมเส้น · วันเลือก=พื้น accent
+  - แต่ละช่องสูงเท่ากันตายตัว · event chip สีตามสถานะ (semantic) · เกิน max_chips → "+N รายการ"
+  - กด "+N รายการ" → popover ลอย โชว์งานทั้งวัน (dot สถานะ + เวลา + ชื่อ) + ปุ่ม "+ จองรถ" (ถ้าตั้ง book_url)
+  - นำทาง prev/next/วันนี้ · เลข พ.ศ. (Inter tnum)
+  - event:
+      'bb-calendar:daychange'  {date}            คลิกช่องวัน
+      'bb-calendar:eventclick' {date, index}     คลิก chip/แถวใน popover (ถ้า item ไม่มี url)
+      'bb-calendar:book'       {date}            กดปุ่ม + จองรถ (ถ้าไม่มี book_url)
+
+  Usage:
+    {% from '_components/bb/calendar.html' import bb_calendar %}
+    {{ bb_calendar(events=cal_events, caption='08:00–17:00 · วันอาทิตย์ไม่ให้บริการ', book_url=url_for('vehicle.vehicle')) }}
+
+  params:
+    events    dict 'YYYY-MM-DD' → list ของ {time, title, status, label, url}
+              status ∈ ok | wr | dg | info | neutral (แมปสี chip/dot) · label = ข้อความสถานะใน popover
+              url = ลิงก์เมื่อคลิก item (ไม่มี → dispatch 'bb-calendar:eventclick')
+    year/month  เดือนที่เปิดครั้งแรก (month=1–12) · ไม่ส่ง = เดือนปัจจุบัน
+    max_chips  จำนวน chip ก่อนยุบเป็น "+N" (default 2)
+    caption    ข้อความมุมขวา toolbar (เวลาให้บริการ ฯลฯ)
+    book_url   ตั้ง = โชว์ปุ่ม "+ จองรถ" ใน popover (นำทางไป url?date=…) · ไม่ตั้ง = dispatch 'bb-calendar:book'
+    id         id บน root
+#}
+{% macro bb_calendar(events={}, year=None, month=None, max_chips=2, caption='', book_url='', id='') -%}
+{% set dows = [('อาทิตย์','is-sun'),('จันทร์',''),('อังคาร',''),('พุธ',''),('พฤหัส',''),('ศุกร์',''),('เสาร์','is-sat')] %}
+<div class="bb-mcal" data-bb-calendar data-max="{{ max_chips }}"
+     {%- if year %} data-year="{{ year }}"{% endif %}{% if month %} data-month="{{ month }}"{% endif %}
+     {%- if book_url %} data-book-url="{{ book_url }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}>
+  <div class="bb-mcal-toolbar">
+    <button type="button" class="bb-mcal-btn" data-bb-cal-today>วันนี้</button>
+    <button type="button" class="bb-mcal-btn bb-mcal-btn-icon" data-bb-cal-prev aria-label="เดือนก่อนหน้า"><i data-lucide="chevron-left"></i></button>
+    <h6 class="bb-mcal-month bb-num" data-bb-cal-month></h6>
+    <button type="button" class="bb-mcal-btn bb-mcal-btn-icon" data-bb-cal-next aria-label="เดือนถัดไป"><i data-lucide="chevron-right"></i></button>
+    {%- if caption %}<span class="bb-mcal-cap">{{ caption }}</span>{% endif %}
+  </div>
+  <div class="bb-mcal-frame">
+    <div class="bb-mcal-grid bb-mcal-head">
+      {%- for label, cls in dows %}<div class="bb-mcal-hc {{ cls }}">{{ label }}</div>{% endfor %}
+    </div>
+    <div class="bb-mcal-grid" data-bb-cal-body></div>
+  </div>
+  <script type="application/json" data-bb-cal-events>{{ events|tojson }}</script>
+</div>
+{%- endmacro %}

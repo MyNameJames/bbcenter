@@ -141,6 +141,77 @@ def _lookup_budget_for_booking(booking, on_date=None):
     return budget, key_label
 
 
+def check_vehicle_conflict(vehicle_id, start_dt, end_dt, exclude_booking_ids=None):
+    """คืน VehicleBooking ที่ใช้รถคันนี้ทับช่วง [start,end) หรือ None ถ้าว่าง.
+    exclude = booking ids ที่ไม่นับ (ตัวเอง + เพื่อนร่วมทริป)."""
+    if not vehicle_id:
+        return None
+    q = VehicleBooking.query.filter(
+        VehicleBooking.assigned_vehicle_id == int(vehicle_id),
+        VehicleBooking.status.in_(['approved', 'waiting_approver']),
+        VehicleBooking.start_datetime < end_dt,
+        VehicleBooking.end_datetime   > start_dt,
+    )
+    if exclude_booking_ids:
+        q = q.filter(VehicleBooking.id.notin_([int(x) for x in exclude_booking_ids]))
+    return q.first()
+
+
+def check_driver_conflict(driver_id, start_dt, end_dt, exclude_booking_ids=None):
+    """เหมือน check_vehicle_conflict แต่เช็คคนขับ"""
+    if not driver_id:
+        return None
+    q = VehicleBooking.query.filter(
+        VehicleBooking.driver_id == int(driver_id),
+        VehicleBooking.status.in_(['approved', 'waiting_approver']),
+        VehicleBooking.start_datetime < end_dt,
+        VehicleBooking.end_datetime   > start_dt,
+    )
+    if exclude_booking_ids:
+        q = q.filter(VehicleBooking.id.notin_([int(x) for x in exclude_booking_ids]))
+    return q.first()
+
+
+def check_vehicle_active(vehicle_id):
+    """คืน True ถ้ารถพร้อมใช้งาน (status='active'). ใช้กด block ก่อน assign/merge/swap."""
+    if not vehicle_id:
+        return True
+    v = Vehicle.query.get(int(vehicle_id))
+    return v is not None and v.status == 'active'
+
+
+def _auto_close_stale_trips(vehicle_id, new_odo_start, before_dt, exclude_booking_id):
+    """ปิดทริปค้าง (มี odo_start ไม่มี odo_end) ของรถคันนี้ที่เริ่มก่อน before_dt
+    โดยใช้ new_odo_start เป็น odo_end หักงบ + gen OT ให้ทริปที่ปิด.
+    ปิดเฉพาะทริปค้างล่าสุด 1 ตัว (odo_start ใหม่ต่อจากทริปก่อนหน้าทันที)."""
+    if not vehicle_id or new_odo_start is None:
+        return
+    stale = (VehicleMileage.query
+             .join(VehicleBooking, VehicleMileage.booking_id == VehicleBooking.id)
+             .filter(VehicleBooking.assigned_vehicle_id == vehicle_id,
+                     VehicleBooking.id != exclude_booking_id,
+                     VehicleBooking.status == 'approved',
+                     VehicleMileage.odometer_start.isnot(None),
+                     VehicleMileage.odometer_end.is_(None),
+                     VehicleMileage.actual_start < before_dt)
+             .order_by(VehicleMileage.actual_start.desc())
+             .first())
+    if not stale:
+        return
+    if new_odo_start <= stale.odometer_start:
+        current_app.logger.warning(
+            '[auto-close skip] mileage #%s: new_odo %s <= start %s',
+            stale.id, new_odo_start, stale.odometer_start)
+        return
+    sb = stale.booking
+    stale.odometer_end = new_odo_start
+    stale.actual_end   = sb.end_datetime
+    db.session.flush()
+    auto_generate_ot(sb, stale)
+    deduct_budget_for_trip(sb, stale, source='auto_close')
+    current_app.logger.info('[auto-close] booking #%s closed by odo %s', sb.id, new_odo_start)
+
+
 def deduct_budget_for_trip(booking, m2, source):
     """หักงบ / แจ้งจ่ายส่วนตัวเมื่อปิดทริป. source = ชื่อ route caller (ใส่ใน note/log)."""
     if not m2:
@@ -160,6 +231,14 @@ def deduct_budget_for_trip(booking, m2, source):
                       'fuel_price': fuel_price},
                 note=f'{source} booking #{booking.id}',
             )
+            if float(budget.remaining) < 0:
+                current_app.logger.warning(
+                    '[budget-over] booking #%s budget #%s remaining=%.2f',
+                    booking.id, budget.id, float(budget.remaining))
+                flash(
+                    f'⚠️ งบ "{_key_label or budget.id}" ใช้เกินเพดานแล้ว '
+                    f'(เกิน {abs(float(budget.remaining)):,.2f} บาท) — โปรดเติมงบหรือตรวจสอบ',
+                    'warning')
         else:
             current_app.logger.warning(
                 '[budget-deduct skip] booking #%s (%s): ไม่พบงบ active ครอบวันปิดทริป '

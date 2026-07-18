@@ -93,6 +93,16 @@
 .budget-card-sep {
     margin: 0 4px;
 }
+.budget-card-warn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    font-size: 0.74rem;
+    color: var(--vc-danger, #c0392b);
+    font-weight: 600;
+}
+.budget-card-warn .vc-icon-sm { color: var(--vc-danger, #c0392b); }
 
 /* ── Tabs (pill style) ────────────────── */
 .inbox-tabs {

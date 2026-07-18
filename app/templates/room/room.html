@@ -41,24 +41,8 @@
                 {% endif %}
             {% endwith %}
 
-            {# Desktop page head — fuel-header pattern #}
-            <div class="d-none d-md-flex align-items-end justify-content-between flex-wrap gap-3">
-                <div>
-                    <h1 class="fw-bold text-accent pt-3">ปฏิทินจองห้องประชุม</h1>
-                    <h6 class="text-muted">ห้องประชุมมีทั้งหมด 2 ห้อง · อยู่ที่อาคารเรียน 1 ชั้น 2</h6>
-                </div>
-                {# Room legend (desktop) #}
-                <div class="d-flex align-items-center gap-2 pb-2 room-legend">
-                    {% for room in room_choices %}
-                    <span class="vc-badge room-badge room-badge--{{ 'small' if 'เล็ก' in room else 'large' }}">
-                        <span class="room-dot"></span>{{ room }}
-                    </span>
-                    {% endfor %}
-                </div>
-            </div>
-
-            {# Calendar toolbar (desktop) #}
-            <div class="cal-toolbar d-none d-md-grid">
+            {# Calendar toolbar (desktop) — nav controls left · room legend right #}
+            <div class="cal-toolbar d-none d-md-grid pt-2">
                 <div class="cal-toolbar-left">
                     <button type="button" class="vc-btn vc-btn-secondary" id="todayBtn">วันนี้</button>
                     <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon" id="prevMonthBtn" title="เดือนก่อนหน้า">
@@ -69,12 +53,18 @@
                         <i data-lucide="chevron-right"></i>
                     </button>
                 </div>
+                <div></div>
+                <div class="d-flex align-items-center justify-content-end gap-2 room-legend">
+                    {% for room in room_choices %}
+                    <span class="vc-badge room-badge room-badge--{{ 'small' if 'เล็ก' in room else 'large' }}">
+                        <span class="room-dot"></span>{{ room }}
+                    </span>
+                    {% endfor %}
+                </div>
             </div>
 
-            {# Mobile hero — title + month picker #}
+            {# Mobile hero — month picker + room legend #}
             <div class="vrc-m-hero d-md-none mb-3">
-                <h2 class="text-header fw-bold text-accent pt-3">ปฏิทินการจองห้องประชุม</h2>
-                <h6 class="text-header p-0 m-0 pb-2">ห้องประชุม 2 ห้อง · <span class="text-danger">อาคารเรียน 1 ชั้น 2</span></h6>
                 <div class="vrc-m-month d-flex align-items-center justify-content-between">
                     <div class="vrc-m-month-label text-header fw-normal fs-6 pt-1" id="currentMonthLabelMobile"></div>
                     <div class="vrc-m-month-controls">
@@ -88,6 +78,13 @@
                             <i data-lucide="chevron-right"></i>
                         </button>
                     </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 pt-2 room-legend">
+                    {% for room in room_choices %}
+                    <span class="vc-badge room-badge room-badge--{{ 'small' if 'เล็ก' in room else 'large' }}">
+                        <span class="room-dot"></span>{{ room }}
+                    </span>
+                    {% endfor %}
                 </div>
             </div>
 

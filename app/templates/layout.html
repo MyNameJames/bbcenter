@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>การเงิน - BBCenter</title>
+    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
+    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/gallery.css') }}">
+    <style>
+        /* ── Page-scoped override (เฉพาะหน้านี้ — accent color/sidebar spacing ย้ายเข้า components.css กลางแล้ว 2026-07-05) ── */
+        body {
+            --bb-r-xs: 2px; --bb-r-sm: 4px; --bb-r-md: 4px; --bb-r-lg: 4px; --bb-r-xl: 4px;
+            background: #fff;
+        }
+        /* ── Tab bar override (page-scoped — ไม่แตะ .bb-tab กลางใน components.css) ── */
+        #financeTabBar .bb-tab { font-size: 1rem; }
+        #financeTabBar .bb-tab.is-on { font-weight: 700; border-bottom: 2px solid var(--bb-accent-i); color: var(--bb-accent-i);}
+        /* ── Mileage table head override (page-scoped) ── */
+        #financeMileageTable thead th { background: var(--bb-n50); color: var(--bb-accent-i); }
+
+        /* ── KPI: ตัวเลข weight 600 + รวม value/delta ไว้บรรทัดเดียวกัน (2 บรรทัดรวมทั้งการ์ด) ── */
+        .bb-kpi-value { font-weight: 600; }
+        .bb-kpi-value, .bb-kpi-delta { display: inline-flex; align-items: baseline; }
+        .bb-kpi-delta { margin-top: 0; margin-left: .2rem; }
+        .bb-kpi-den { margin-top: 0; margin-left: .2rem; }
+    </style>
+</head>
+<body>
+{% set page_section = 'ผู้ดูแลระบบ' %}
+{% set page_title = 'อนุมัติรถ' %}
+
+{# ── Header: mobile/tablet only (xl+ ซ่อน เพราะ sidebar ปรากฏอยู่แล้ว) ── #}
+<div class="d-xl-none">
+    {% include '_shared/header.html' %}
+</div>
+
+<div class="container-fluid">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    {% include '_shared/sidebar.html' %}
+
+    <main class="bb-sidebar-main">
+        <div class="container-xxl px-1 px-md-5">
+            {# ── Page section (desktop) ── #}
+
+            {# ── Desktop page title (xl+ only — แทน header) ── #}
+            <div class="d-none d-xl-block pt-5">
+                <h2 class="m-0 fw-bold pt-3" style="color:var(--bb-accent) ">{{ page_title }}</h2>
+            </div>
+
+        </div>{# /container-xxl #}
+
+        {# ── KPI row (mockup) — bb_kpi macro, การ์ด is-card ── #}
+        {% from '_components/bb/kpi.html' import bb_kpi %}
+        <div class="container-xxl px-1 px-md-5 pt-4">
+            <div class="row g-3">
+                <div class="col-6 col-lg-3">
+                    {{ bb_kpi('ระยะทางรวม', '395', icon='route', den='กม.') }}
+                </div>
+                <div class="col-6 col-lg-3">
+                    {{ bb_kpi('ค่าน้ำมันรวม', '3,160', icon='fuel', den='บาท', delta='+8%', delta_dir='up') }}
+                </div>
+                <div class="col-6 col-lg-3">
+                    {{ bb_kpi('จำนวนทริป', '5', icon='list', den='ทริป') }}
+                </div>
+                <div class="col-6 col-lg-3">
+                    {{ bb_kpi('รออนุมัติ', '2', icon='clock', den='รายการ') }}
+                </div>
+            </div>
+        </div>
+
+        {# ── Tab bar: เส้นล่างเต็มความกว้าง container-fluid · ตัว tab เองอยู่ในกรอบ container-xxl ── #}
+        <div style="border-bottom:2px solid var(--bb-n200)">
+            <div class="container-xxl px-1 px-md-5 pt-4">
+                <nav class="bb-tabs" id="financeTabBar" role="tablist">
+                    <button type="button" class="bb-tab is-on px-3" role="tab">วันนี้</button>
+                    <button type="button" class="bb-tab px-3" role="tab">เดือนนี้</button>
+                    <button type="button" class="bb-tab px-3" role="tab">ปีนี้</button>
+                </nav>
+            </div>
+        </div>
+
+        {# ── Mock table: ข้อมูลเลขไมล์ (mockup — ไม่มี controller จริง) ── #}
+        {% set _tone_map = {'ปิดทริปแล้ว': 'ok', 'รออนุมัติ': 'wr', 'ยกเลิก': 'dg'} %}
+        {% set mock_mileage = [
+            {'date': '12 มิ.ย.', 'plate': 'กข 1234', 'driver': 'สมชาย ใจดี',    'destination': 'สาขาลาดพร้าว', 'start': '45,210', 'end': '45,265', 'distance': '55',  'fuel_cost': '440',   'status': 'ปิดทริปแล้ว'},
+            {'date': '14 มิ.ย.', 'plate': '1กก 5678', 'driver': 'วิชัย พรหมมา',  'destination': 'คลังสินค้าบางนา', 'start': '12,880', 'end': '12,940', 'distance': '60',  'fuel_cost': '480',   'status': 'ปิดทริปแล้ว'},
+            {'date': '16 มิ.ย.', 'plate': 'ผบ 9012', 'driver': 'อรทัย ศรีสุข',   'destination': 'สนามบินสุวรรณภูมิ', 'start': '30,100', 'end': '30,190', 'distance': '90',  'fuel_cost': '720',   'status': 'รออนุมัติ'},
+            {'date': '18 มิ.ย.', 'plate': 'กข 1234', 'driver': 'สมชาย ใจดี',    'destination': 'โรงงานระยอง',   'start': '45,265', 'end': '45,410', 'distance': '145', 'fuel_cost': '1,160', 'status': 'รออนุมัติ'},
+            {'date': '20 มิ.ย.', 'plate': '2กค 3456', 'driver': 'นภา แสงทอง',   'destination': 'สาขาปทุมวัน',   'start': '8,020',  'end': '8,065',  'distance': '45',  'fuel_cost': '360',   'status': 'ยกเลิก'},
+        ] %}
+
+        
+        <div class="container-xxl px-1 px-md-5 pt-4">
+
+            <h4 class="m-0 fw-bold pt-1 pb-3" style="color:var(--bb-str) ">รายการเลขไมล์</h4>
+
+            <div class="bb-card rounded-0 p-3 mb-5">
+                <div class="table-responsive">
+                    <table class="table data-table mb-0 py-5" id="financeMileageTable">
+                        <thead>
+                            <tr>
+                                <th>วันที่</th>
+                                <th>ทะเบียนรถ</th>
+                                <th>ผู้ขับ</th>
+                                <th>ปลายทาง</th>
+                                <th class="text-end">เลขไมล์เริ่ม</th>
+                                <th class="text-end">เลขไมล์จบ</th>
+                                <th class="text-end">ระยะทาง (กม.)</th>
+                                <th class="text-end">ค่าน้ำมัน (฿)</th>
+                                <th >สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in mock_mileage %}
+                            {% set _t = _tone_map.get(r.status, 'neutral') %}
+                            <tr>
+                                <td class="bb-num" style="color:var(--bb-mut)">{{ r.date }}</td>
+                                <td class="bb-num">{{ r.plate }}</td>
+                                <td>{{ r.driver }}</td>
+                                <td style="color:var(--bb-mut)">{{ r.destination }}</td>
+                                <td class="text-end bb-num">{{ r.start }}</td>
+                                <td class="text-end bb-num">{{ r.end }}</td>
+                                <td class="text-end bb-num">{{ r.distance }}</td>
+                                <td class="text-end bb-num">฿{{ r.fuel_cost }}</td>
+                                <td >
+                                    <span class="bb-badge is-neutral" style="background:var(--bb-{{ _t }}-bg);color:var(--bb-{{ _t }}-tx)">{{ r.status }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

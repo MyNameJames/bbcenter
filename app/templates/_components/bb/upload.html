@@ -1,0 +1,30 @@
+{#
+  bb_upload — dropzone อัปโหลดไฟล์ ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-upload)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-upload])
+
+  คลิก/ลากวางไฟล์ → แสดงรายการไฟล์ (ชื่อ · ขนาด · ลบ) · <input type=file> จริง (post ได้)
+  + dispatch 'bb-upload:change' {detail:{files}}
+
+  Usage:
+    {% from '_components/bb/upload.html' import bb_upload %}
+    {{ bb_upload(name='attachment', accept='image/*,.pdf', hint='PNG, JPG, PDF · ไม่เกิน 10MB') }}
+
+  params:
+    name      ชื่อ input file
+    accept    accept attribute ('' = ทุกชนิด)
+    multiple  รับหลายไฟล์ (default False)
+    hint      ข้อความใต้หัวข้อ
+    id        id บน root
+#}
+{% macro bb_upload(name='file', accept='', multiple=False, hint='ลากไฟล์มาวาง หรือคลิกเพื่อเลือก', id='') -%}
+<div class="bb-upload" data-bb-upload{% if id %} id="{{ id }}"{% endif %}>
+  <label class="bb-upload-zone" data-bb-upload-zone>
+    <span class="bb-upload-ic"><i data-lucide="upload-cloud"></i></span>
+    <span class="bb-upload-title"><b>คลิกเพื่ออัปโหลด</b> หรือลากไฟล์มาวาง</span>
+    <span class="bb-upload-hint">{{ hint }}</span>
+    <input type="file" name="{{ name }}{% if multiple %}[]{% endif %}"{% if accept %} accept="{{ accept }}"{% endif %}{% if multiple %} multiple{% endif %} hidden data-bb-upload-input>
+  </label>
+  <div class="bb-upload-list" data-bb-upload-list></div>
+</div>
+{%- endmacro %}

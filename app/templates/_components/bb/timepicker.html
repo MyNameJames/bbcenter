@@ -1,0 +1,34 @@
+{#
+  bb_timepicker — เลือกเวลาแบบ column (ชม./นาที) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-timepicker)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-timepicker])
+
+  คลิก trigger → popover 2 column (ชั่วโมง 00–23 · นาที step) เลือกตรงๆ
+  เลือกนาที = เซ็ต hidden input (name) + dispatch 'bb-timepicker:change' {detail:{value}}
+
+  Usage:
+    {% from '_components/bb/timepicker.html' import bb_timepicker %}
+    {{ bb_timepicker(name='start_time', value='09:00', step=15) }}
+
+  params:
+    name   ชื่อ hidden input (default 'time')
+    value  'HH:MM' ค่าเริ่มต้น (default '09:00')
+    step   step นาที: 1 | 5 | 10 | 15 | 30 (default 1)
+    id     id บน root
+#}
+{% macro bb_timepicker(name='time', value='09:00', step=1, id='') -%}
+<div class="bb-tp" data-bb-timepicker data-value="{{ value }}" data-step="{{ step }}"{% if id %} id="{{ id }}"{% endif %}>
+  <button type="button" class="bb-select bb-tp-trigger" data-bb-tp-btn aria-haspopup="dialog" aria-expanded="false" aria-label="เลือกเวลา">
+    <i data-lucide="clock"></i>
+    <span class="bb-tp-val" data-bb-tp-label>{{ value }}</span>
+    <i data-lucide="chevron-down" class="bb-tp-caret"></i>
+  </button>
+  <input type="hidden" name="{{ name }}" value="{{ value }}" data-bb-tp-input>
+  <div class="bb-timepicker" data-bb-tp-pop role="dialog" aria-label="เลือกเวลา" hidden>
+    <div class="bb-tp-cols">
+      <div class="bb-tp-col"><div class="bb-tp-cap">ชั่วโมง</div><div class="bb-tp-body" data-bb-tp-h></div></div>
+      <div class="bb-tp-col"><div class="bb-tp-cap">นาที</div><div class="bb-tp-body" data-bb-tp-m></div></div>
+    </div>
+  </div>
+</div>
+{%- endmacro %}

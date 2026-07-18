@@ -1,0 +1,82 @@
+{#
+  bb_sidebar — app shell sidebar (Stripe-style) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-sidebar)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-sidebar] — พับ/กาง group)
+
+  layout: position:fixed ซ้าย + เนื้อหาหลักใส่ class .bb-sidebar-main (margin-left)
+  config-driven — ส่ง brand / sections / logout เป็น dict/list
+
+  Usage:
+    {% from '_components/bb/sidebar.html' import bb_sidebar %}
+    {{ bb_sidebar(
+        brand={'mark':'B', 'name':'BBCenter', 'sub':'ผู้ดูแลระบบ', 'on_click':'switch-account'},
+        sections=[
+          {'items': [
+            {'label':'แดชบอร์ด', 'icon':'layout-dashboard', 'href': url_for('dashboard.index'), 'active': True},
+            {'label':'งานของฉัน', 'icon':'inbox', 'badge': 4, 'href': '#'},
+          ]},
+          {'label':'ระบบงาน', 'items': [
+            {'group':'ระบบจองรถ', 'icon':'car', 'open': True, 'children': [
+              {'label':'อนุมัติรถ', 'href': url_for('vehicle.admin')},
+              {'label':'บันทึกเลขไมล์', 'href': '#'},
+            ]},
+            {'label':'ตั้งค่า', 'icon':'settings', 'href': '#'},
+          ]},
+        ],
+        logout={'label':'ออกจากระบบ', 'href': url_for('auth.logout')}) }}
+
+  data model:
+    brand = {mark, name, sub, on_click}
+    section = {label?, items:[...]}
+    item (link)  = {label, icon?, href?, on_click?, active?, badge?}
+    item (group) = {group, icon?, open?, badge?, children:[link...]}
+    logout = {label, icon?, href?, on_click?}
+#}
+{% macro _bb_sb_link(it, sub=False) -%}
+<a class="bb-sidebar-link{% if sub %} sub{% endif %}{% if it.active %} active{% endif %}" href="{{ it.href | default('#') }}"{% if it.on_click %} data-action="{{ it.on_click }}"{% endif %}>
+  {%- if not sub and it.icon %}<span class="bb-sidebar-icon"><i data-lucide="{{ it.icon }}"></i></span>{% endif -%}
+  <span class="bb-sidebar-link-text">{{ it.label }}</span>
+  {%- if it.badge %}<span class="bb-sidebar-badge bb-num">{{ it.badge }}</span>{% endif -%}
+</a>
+{%- endmacro %}
+
+{% macro bb_sidebar(brand={}, sections=[], logout=None, id='') -%}
+<aside class="bb-sidebar" data-bb-sidebar{% if id %} id="{{ id }}"{% endif %}>
+  {%- if brand %}
+  <div class="bb-sidebar-brand">
+    <button type="button" class="bb-sidebar-logo"{% if brand.on_click %} data-action="{{ brand.on_click }}"{% endif %}>
+      <div class="bb-g-brand"><i data-lucide="component"></i> {{ brand.name | default('') }}</div>
+    </button>
+    <button type="button" class="bb-sidebar-close" data-bb-sidebar-close aria-label="ปิดเมนู"><i data-lucide="x"></i></button>
+  </div>
+  {%- endif %}
+  <nav class="bb-sidebar-nav">
+    {%- for sec in sections %}
+      {%- if sec.label %}<div class="bb-sidebar-group-label">{{ sec.label }}</div>{% endif %}
+      {%- for it in sec.get('items', []) %}
+        {%- if it.children is defined %}
+        <div class="bb-sidebar-group{% if it.open %} is-open{% endif %}" data-bb-sidebar-group>
+          <button type="button" class="bb-sidebar-link bb-sidebar-group-toggle" data-bb-sidebar-toggle aria-expanded="{{ 'true' if it.open else 'false' }}">
+            {%- if it.icon %}<span class="bb-sidebar-icon"><i data-lucide="{{ it.icon }}"></i></span>{% endif -%}
+            <span class="bb-sidebar-link-text">{{ it.group }}</span>
+            {%- if it.badge %}<span class="bb-sidebar-badge bb-num">{{ it.badge }}</span>{% endif -%}
+            <span class="bb-sidebar-chevron"><i data-lucide="chevron-down"></i></span>
+          </button>
+          <div class="bb-sidebar-group-body"><div class="bb-sidebar-sub">
+            {%- for c in it.children %}{{ _bb_sb_link(c, sub=True) }}{% endfor %}
+          </div></div>
+        </div>
+        {%- else %}{{ _bb_sb_link(it) }}{% endif %}
+      {%- endfor %}
+    {%- endfor %}
+  </nav>
+  {%- if logout %}
+  <div class="bb-sidebar-footer">
+    <a class="bb-sidebar-logout" href="{{ logout.href | default('#') }}"{% if logout.on_click %} data-action="{{ logout.on_click }}"{% endif %}>
+      <i data-lucide="{{ logout.icon | default('log-out') }}"></i> {{ logout.label | default('ออกจากระบบ') }}
+    </a>
+  </div>
+  {%- endif %}
+</aside>
+<div class="bb-sidebar-overlay" data-bb-sidebar-overlay></div>
+{%- endmacro %}

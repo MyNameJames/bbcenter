@@ -1,0 +1,55 @@
+{#
+  ue_chip — Uber-style filter chip (UE redesign · namespace .ue-chip* กัน collision กับ .bb-chip เดิม)
+  CSS: core/css/ue.css (§ CHIP) · JS: core/js/bb-components.js (auto-init [data-ue-chip-toggle]/[data-ue-chip-dd])
+  icon = Lucide name (บนหน้า UE จะถูก ms-icons.js แปลงเป็น Material Symbols อัตโนมัติ)
+
+  2 แบบ:
+  1) toggle chip — กดติด/ดับ (active = เขียว). ใส่ name → มี hidden input submit ค่าได้
+     {{ ue_chip('ต่ำกว่า ฿10', icon='motorbike', name='max_price', value='10') }}
+
+  2) dropdown chip — เปิด panel (live · เลือก = ใช้ทันที ไม่มีปุ่มใช้ · ล้าง = คืน default อยู่ขวาของ header)
+     {% call ue_chip_dd('ประเภทอาหาร', icon='utensils', id='ddType') %}
+       {{ ue_chip_opt('ไก่ทอด',  name='cat', value='fried') }}
+       {{ ue_chip_opt('ตามสั่ง', name='cat', value='rice') }}
+     {% endcall %}
+     event: dispatch 'ue-chip:change' {detail: state} ที่ .ue-chip-dd · badge = จำนวนที่เลือก
+
+  params ue_chip:      label · icon='' · name='' · value='' · active=False · id=''
+  params ue_chip_dd:   label · icon='' · id='' · align='left'|'right' · clear_label='ล้าง'
+  params ue_chip_opt:  label · name='' · value='' · type='checkbox'|'radio' · checked=False
+#}
+
+{% macro ue_chip(label, icon='', name='', value='', active=false, id='') -%}
+<button type="button" class="ue-chip{% if active %} is-on{% endif %}" data-ue-chip-toggle
+        {% if id %}id="{{ id }}"{% endif %} aria-pressed="{{ 'true' if active else 'false' }}"
+        {% if name %}data-name="{{ name }}" data-value="{{ value }}"{% endif %}>
+  {% if icon %}<i data-lucide="{{ icon }}"></i>{% endif %}{{ label }}
+  {% if name %}<input type="hidden" name="{{ name }}" value="{{ value if active else '' }}">{% endif %}
+</button>
+{%- endmacro %}
+
+{% macro ue_chip_dd(label, icon='', id='', align='left', clear_label='ล้าง') -%}
+<div class="ue-chip-dd{% if align == 'right' %} is-align-right{% endif %}" data-ue-chip-dd{% if id %} id="{{ id }}"{% endif %}>
+  <button type="button" class="ue-chip" data-ue-chip-btn aria-haspopup="dialog" aria-expanded="false">
+    {% if icon %}<i data-lucide="{{ icon }}"></i>{% endif %}<span class="ue-chip-label">{{ label }}</span>
+    <span class="ue-chip-badge" data-ue-chip-badge aria-hidden="true"></span>
+    <i data-lucide="chevron-down" class="ue-chip-chev"></i>
+  </button>
+  <div class="ue-chip-pop" data-ue-chip-pop role="dialog" aria-label="{{ label }}" hidden>
+    <div class="ue-chip-pop-head">
+      <span class="ue-chip-pop-title">{{ label }}</span>
+      <a class="ue-chip-pop-clear" data-ue-chip-clear role="button" tabindex="0">{{ clear_label }}</a>
+    </div>
+    <div class="ue-chip-pop-body" data-ue-chip-body>
+      {{ caller() }}
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro ue_chip_opt(label, name='', value='', type='checkbox', checked=false) -%}
+<label class="ue-chip-opt">
+  <span>{{ label }}</span>
+  <input type="{{ type }}"{% if name %} name="{{ name }}"{% endif %} value="{{ value }}"{% if checked %} checked{% endif %}>
+</label>
+{%- endmacro %}

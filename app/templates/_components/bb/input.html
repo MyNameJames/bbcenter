@@ -1,0 +1,22 @@
+{#
+  bb_input — Component Library .bb-field / .bb-input
+  spec: components-gallery.html §2 · markup ตรง gallery เป๊ะ
+
+  label + input + hint · icon → ห่อ .bb-input-wrap · error → .is-error (input + hint)
+  Server ต้อง validate ซ้ำเสมอ (required/pattern เป็น hint ฝั่ง client)
+
+  Usage:
+    {% from '_components/bb/input.html' import bb_input %}
+    {{ bb_input('driver', label='ชื่อผู้ขับ', placeholder='กรอกชื่อ-นามสกุล') }}
+    {{ bb_input('mile', label='เลขไมล์', icon='gauge', hint='หน่วยกิโลเมตร') }}
+    {{ bb_input('budget', label='งบประมาณ', value='-500', error='ต้องมากกว่า 0') }}
+#}
+{% macro bb_input(name, label='', value='', placeholder='', icon=none, hint='',
+                  error='', type='text', disabled=false, required=false) -%}
+<div class="bb-field">
+{%- if label %}<label class="bb-label" for="{{ name }}">{{ label }}</label>{% endif %}
+{%- set _input %}<input id="{{ name }}" name="{{ name }}" type="{{ type }}" class="bb-input{% if error %} is-error{% endif %}" value="{{ value }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if disabled %} disabled{% endif %}{% if required %} required{% endif %}>{% endset %}
+{%- if icon %}<div class="bb-input-wrap"><i data-lucide="{{ icon }}"></i>{{ _input }}</div>{% else %}{{ _input }}{% endif %}
+{%- if error %}<div class="bb-hint is-error">{{ error }}</div>{% elif hint %}<div class="bb-hint">{{ hint }}</div>{% endif %}
+</div>
+{%- endmacro %}

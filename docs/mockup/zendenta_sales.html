@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zendenta — Sales (mockup)</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --zen:#4059e6; }
+  body { font-family:'Manrope',sans-serif; color:#1a1d29; background:#fff; }
+  .zen-side { width:256px; background:#fafcfc; border-right:1px solid #f0f0f0; }
+  .zen-grp { font-size:11px; font-weight:700; letter-spacing:.06em; color:#aeb4c2; }
+  .zen-nav a { color:#6b7280; text-decoration:none; font-size:14px; font-weight:500; border-radius:9px; padding:9px 12px; }
+  .zen-nav a:hover { background:#f1f3f7; color:#1a1d29; }
+  .zen-nav a.active { background:#eef0fe; color:var(--zen); font-weight:600; }
+  .zen-nav a i { font-size:17px; width:20px; }
+  .clinic-card { border:1px solid #f0f0f0; border-radius:11px; }
+  .zen-topbar { height:66px; border-bottom:1px solid #f0f0f0; }
+  .zen-iconbtn { width:38px; height:38px; border-radius:10px; border:1px solid #f0f0f0; background:#fff; color:#8a92a6; display:flex; align-items:center; justify-content:center; }
+  .zen-iconbtn:hover { background:#f6f7f9; }
+  .btn-zen { background:var(--zen); color:#fff; border-radius:10px; font-weight:600; font-size:14px; }
+  .btn-zen:hover { background:#3247c4; color:#fff; }
+  .fab { width:42px; height:42px; border-radius:50%; background:var(--zen); color:#fff; display:flex; align-items:center; justify-content:center; }
+  .kpi-tile { width:46px; height:46px; border-radius:12px; background:#f3f4f7; color:#9aa1b0; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .kpi-num { font-size:26px; font-weight:800; letter-spacing:-.02em; }
+  .down { color:#e0436c; font-size:13px; font-weight:600; }
+  .zen-tab { font-size:14px; font-weight:600; color:#9aa1b0; border:0; border-bottom:2px solid transparent; background:0; padding:10px 2px; }
+  .zen-tab.active { color:var(--zen); border-bottom-color:var(--zen); }
+  .zen-input { background:#f6f7f9; border:1px solid transparent; border-radius:10px; font-size:14px; color:#1a1d29; }
+  .zen-input::placeholder { color:#aeb4c2; }
+  .zen-input:focus { background:#fff; border-color:#dfe3ea; box-shadow:none; outline:0; }
+  .zen-table { font-size:14px; }
+  .zen-table thead th { font-size:11px; font-weight:600; letter-spacing:.05em; color:#9aa1b0; text-transform:uppercase; border-bottom:1px solid #f0f0f0; padding:14px 12px; white-space:nowrap; }
+  .zen-table tbody td { padding:15px 12px; border-bottom:1px solid #f4f4f6; vertical-align:middle; }
+  .zen-table tbody tr:hover td { background:#fafbfd; }
+  .sub-row td { background:#fafbfd; color:#8a92a6; }
+  .avatar { width:34px; height:34px; border-radius:50%; object-fit:cover; }
+  .pname { color:var(--zen); font-weight:600; text-decoration:none; }
+  .pname:hover { text-decoration:underline; }
+  .badge-pill { font-size:11px; font-weight:600; padding:5px 11px; border-radius:99px; }
+  .b-partial { background:#ede9fe; color:#7c5ce0; }
+  .b-full { background:#e6f7ef; color:#15a06b; }
+  .b-unpaid { background:#fde8ec; color:#e0436c; }
+  .b-new { background:#e6f0ff; color:#4059e6; }
+  .num { font-variant-numeric:tabular-nums; }
+  .sort { color:#cbd0da; font-size:11px; }
+  .muted { color:#9aa1b0; }
+  .flag { background:#e6f7ef; color:#15a06b; border-radius:8px; font-size:12px; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="d-flex" style="min-height:100vh">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="zen-side flex-shrink-0 d-flex flex-column">
+    <div class="d-flex align-items-center justify-content-between px-3" style="height:66px">
+      <span class="d-flex align-items-center gap-2 fw-bold" style="font-size:18px">
+        <i class="bi bi-bandaid-fill" style="color:var(--zen);font-size:20px"></i> Zendenta
+      </span>
+      <button class="btn btn-sm border-0 text-secondary p-1"><i class="bi bi-chevron-left"></i></button>
+    </div>
+
+    <div class="px-3">
+      <div class="clinic-card d-flex align-items-center gap-2 p-2 mb-3">
+        <span class="d-flex align-items-center justify-content-center rounded" style="width:34px;height:34px;background:#f3f4f7;color:#8a92a6"><i class="bi bi-hospital"></i></span>
+        <div style="line-height:1.2">
+          <div class="fw-semibold" style="font-size:13px">Avicena Clinic</div>
+          <div class="muted" style="font-size:11px">845 Euclid Avenue, CA</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="zen-nav d-flex flex-column gap-1 px-3 flex-grow-1" style="overflow-y:auto">
+      <a href="#"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+
+      <div class="zen-grp mt-3 mb-1 px-2">CLINIC</div>
+      <a href="#"><i class="bi bi-calendar2-check"></i> Reservations</a>
+      <a href="#"><i class="bi bi-person"></i> Patients</a>
+      <a href="#"><i class="bi bi-heart-pulse"></i> Treatments</a>
+      <a href="#"><i class="bi bi-people"></i> Staff List</a>
+
+      <div class="zen-grp mt-3 mb-1 px-2">FINANCE</div>
+      <a href="#"><i class="bi bi-wallet2"></i> Accounts</a>
+      <a href="#" class="active"><i class="bi bi-bar-chart"></i> Sales</a>
+      <a href="#"><i class="bi bi-cart3"></i> Purchases</a>
+      <a href="#"><i class="bi bi-credit-card"></i> Payment Method</a>
+
+      <div class="zen-grp mt-3 mb-1 px-2">PHYSICAL ASSET</div>
+      <a href="#"><i class="bi bi-box-seam"></i> Stocks</a>
+      <a href="#"><i class="bi bi-mouse2"></i> Pheriperals</a>
+
+      <div class="mt-auto pt-3">
+        <a href="#"><i class="bi bi-pie-chart"></i> Report</a>
+        <a href="#"><i class="bi bi-headset"></i> Customer Support</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ══ CONTENT ══ -->
+  <main class="flex-grow-1 d-flex flex-column" style="min-width:0">
+
+    <!-- topbar -->
+    <header class="zen-topbar d-flex align-items-center gap-3 px-4 flex-shrink-0">
+      <h1 class="fw-bold m-0" style="font-size:22px">Sales</h1>
+      <div class="position-relative ms-3" style="max-width:340px;flex:1">
+        <i class="bi bi-search position-absolute muted" style="left:14px;top:50%;transform:translateY(-50%);font-size:14px"></i>
+        <input class="zen-input form-control ps-5 py-2" placeholder="Search  for anything here...">
+      </div>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="fab"><i class="bi bi-plus-lg"></i></span>
+        <span class="zen-iconbtn border-0"><i class="bi bi-question-circle"></i></span>
+        <span class="zen-iconbtn border-0"><i class="bi bi-activity"></i></span>
+        <span class="zen-iconbtn border-0"><i class="bi bi-gear"></i></span>
+        <span class="flag d-flex align-items-center gap-1 px-2 py-1"><i class="bi bi-flag-fill"></i> 1/4</span>
+        <div class="d-flex align-items-center gap-2 ps-2">
+          <img class="avatar" src="https://i.pravatar.cc/64?img=11" alt="">
+          <div style="line-height:1.2">
+            <div class="fw-semibold" style="font-size:13px">Darrell Steward</div>
+            <div class="muted" style="font-size:11px">Super admin</div>
+          </div>
+          <i class="bi bi-chevron-down muted" style="font-size:12px"></i>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-4">
+
+      <!-- KPI -->
+      <div class="d-flex align-items-center gap-4 mb-4">
+        <div class="d-flex align-items-center gap-3">
+          <span class="kpi-tile"><i class="bi bi-cash-stack"></i></span>
+          <div>
+            <div class="muted" style="font-size:13px">Revenue this month</div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="kpi-num num">$154.00</span>
+              <span class="down"><i class="bi bi-arrow-down-right"></i> -$43.00</span>
+            </div>
+          </div>
+        </div>
+        <div class="border-start align-self-stretch"></div>
+        <div class="d-flex align-items-center gap-3 ps-2">
+          <span class="kpi-tile"><i class="bi bi-graph-up-arrow"></i></span>
+          <div>
+            <div class="muted" style="font-size:13px">Profit this month</div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="kpi-num num">$154.00</span>
+              <span class="down"><i class="bi bi-arrow-down-right"></i> -$43.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- tabs -->
+      <div class="d-flex gap-4 border-bottom mb-3">
+        <button class="zen-tab active">Bill</button>
+        <button class="zen-tab">Payment Received</button>
+      </div>
+
+      <!-- toolbar -->
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="position-relative" style="max-width:320px;flex:1">
+          <i class="bi bi-search position-absolute muted" style="left:14px;top:50%;transform:translateY(-50%);font-size:14px"></i>
+          <input class="zen-input form-control ps-5 py-2" placeholder="Search  name or reservation ID...">
+        </div>
+        <div class="ms-auto d-flex align-items-center gap-2">
+          <button class="btn d-flex align-items-center gap-2 px-3 py-2" style="border:1px solid #f0f0f0;border-radius:10px;font-size:14px;font-weight:600;color:#5a6373">
+            <i class="bi bi-calendar3"></i> 1 May 2021 - 30 May 2021 <i class="bi bi-chevron-down" style="font-size:11px"></i>
+          </button>
+          <button class="btn btn-zen d-flex align-items-center gap-2 px-3 py-2"><i class="bi bi-box-arrow-up-right"></i> Export</button>
+        </div>
+      </div>
+
+      <!-- table -->
+      <div class="table-responsive">
+        <table class="table zen-table mb-0">
+          <thead>
+            <tr>
+              <th>Reservation ID <i class="bi bi-chevron-expand sort"></i></th>
+              <th>Patient Name <i class="bi bi-chevron-expand sort"></i></th>
+              <th>Number of Bill</th>
+              <th>Reservation Date <i class="bi bi-chevron-expand sort"></i></th>
+              <th>Total Amount <i class="bi bi-chevron-expand sort"></i></th>
+              <th>Payment <i class="bi bi-chevron-expand sort"></i></th>
+              <th style="width:64px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="num fw-semibold">#RSV008</span> <span class="badge-pill b-new ms-1">NEW</span></td>
+              <td><div class="d-flex align-items-center gap-2"><img class="avatar" src="https://i.pravatar.cc/64?img=12"><a class="pname" href="#">Albert Flores</a></div></td>
+              <td class="num">0/2</td>
+              <td class="num muted">24/05/2022</td>
+              <td class="num fw-semibold">$2.311</td>
+              <td><span class="badge-pill b-partial">PARTIALLY PAID</span></td>
+              <td class="text-end muted"><i class="bi bi-three-dots-vertical me-2"></i><i class="bi bi-chevron-down"></i></td>
+            </tr>
+
+            <tr>
+              <td><span class="num fw-semibold">#RSV007</span></td>
+              <td><div class="d-flex align-items-center gap-2"><img class="avatar" src="https://i.pravatar.cc/64?img=5"><a class="pname" href="#">Esther Howard</a></div></td>
+              <td class="num">0/2</td>
+              <td class="num muted">23/05/2022</td>
+              <td class="num fw-semibold">$535</td>
+              <td><span class="badge-pill b-partial">PARTIALLY PAID</span></td>
+              <td class="text-end muted"><i class="bi bi-three-dots-vertical me-2"></i><i class="bi bi-chevron-up"></i></td>
+            </tr>
+            <tr class="sub-row">
+              <td></td>
+              <td>Bill ID <span class="num fw-semibold" style="color:#1a1d29">#1244</span></td>
+              <td>For <span style="color:#1a1d29">Booking Fee</span></td>
+              <td></td>
+              <td>Amount <span class="num fw-semibold" style="color:#1a1d29">$100</span></td>
+              <td><span class="badge-pill b-unpaid">UNPAID</span></td>
+              <td class="text-end"><i class="bi bi-download me-2"></i><i class="bi bi-printer"></i></td>
+            </tr>
+            <tr class="sub-row">
+              <td></td>
+              <td>Bill ID <span class="num fw-semibold" style="color:#1a1d29">#1243</span></td>
+              <td>For <span style="color:#1a1d29">2 Treatment(s)</span></td>
+              <td></td>
+              <td>Amount <span class="num fw-semibold" style="color:#1a1d29">$435</span></td>
+              <td><button class="btn btn-zen px-3 py-1" style="font-size:12px">Set Payment</button></td>
+              <td class="text-end"><i class="bi bi-download me-2"></i><i class="bi bi-printer"></i></td>
+            </tr>
+
+            <tr>
+              <td><span class="num fw-semibold">#RSV006</span></td>
+              <td><div class="d-flex align-items-center gap-2"><img class="avatar" src="https://i.pravatar.cc/64?img=9"><a class="pname" href="#">Kathryn Murphy</a></div></td>
+              <td class="num">2/2</td>
+              <td class="num muted">19/05/2022</td>
+              <td class="num fw-semibold">$645</td>
+              <td><span class="badge-pill b-full">FULLY PAID</span></td>
+              <td class="text-end muted"><i class="bi bi-three-dots-vertical me-2"></i><i class="bi bi-chevron-down"></i></td>
+            </tr>
+            <tr>
+              <td><span class="num fw-semibold">#RSV005</span></td>
+              <td><div class="d-flex align-items-center gap-2"><img class="avatar" src="https://i.pravatar.cc/64?img=20"><a class="pname" href="#">Brooklyn Simmons</a></div></td>
+              <td class="num">2/2</td>
+              <td class="num muted">19/05/2022</td>
+              <td class="num fw-semibold">$667</td>
+              <td><span class="badge-pill b-full">FULLY PAID</span></td>
+              <td class="text-end muted"><i class="bi bi-three-dots-vertical me-2"></i><i class="bi bi-chevron-down"></i></td>
+            </tr>
+            <tr>
+              <td><span class="num fw-semibold">#RSV004</span></td>
+              <td><div class="d-flex align-items-center gap-2"><img class="avatar" src="https://i.pravatar.cc/64?img=32"><a class="pname" href="#">Bessie Cooper</a></div></td>
+              <td class="num">1/2</td>
+              <td class="num muted">18/05/2022</td>
+              <td class="num fw-semibold">$343</td>
+              <td><span class="badge-pill b-full">FULLY PAID</span></td>
+              <td class="text-end muted"><i class="bi bi-three-dots-vertical me-2"></i><i class="bi bi-chevron-down"></i></td>
+            </tr>
+            <tr>
+              <td><span class="num fw-semibold">#RSV003</span></td>
+              <td><div class="d-flex align-items-center gap-2"><img class="avatar" src="https://i.pravatar.cc/64?img=13"><a class="pname" href="#">Arlene McCoy</a></div></td>
+              <td class="num">2/2</td>
+              <td class="num muted">18/05/2022</td>
+              <td class="num fw-semibold">$900</td>
+              <td><span class="badge-pill b-full">FULLY PAID</span></td>
+              <td class="text-end muted"><i class="bi bi-three-dots-vertical me-2"></i><i class="bi bi-chevron-down"></i></td>
+            </tr>
+            <tr>
+              <td><span class="num fw-semibold">#RSV002</span></td>
+              <td><div class="d-flex align-items-center gap-2"><img class="avatar" src="https://i.pravatar.cc/64?img=45"><a class="pname" href="#">Jane Cooper</a></div></td>
+              <td class="num">1/2</td>
+              <td class="num muted">17/05/2022</td>
+              <td class="num fw-semibold">$650</td>
+              <td><span class="badge-pill b-full">FULLY PAID</span></td>
+              <td class="text-end muted"><i class="bi bi-three-dots-vertical me-2"></i><i class="bi bi-chevron-down"></i></td>
+            </tr>
+            <tr>
+              <td><span class="num fw-semibold">#RSV001</span></td>
+              <td><div class="d-flex align-items-center gap-2"><img class="avatar" src="https://i.pravatar.cc/64?img=11"><a class="pname" href="#">Darrell Steward</a></div></td>
+              <td class="num">2/2</td>
+              <td class="num muted">16/05/2022</td>
+              <td class="num fw-semibold">$1.200</td>
+              <td><span class="badge-pill b-full">FULLY PAID</span></td>
+              <td class="text-end muted"><i class="bi bi-three-dots-vertical me-2"></i><i class="bi bi-chevron-down"></i></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Database Schema
 
-> **Snapshot ของ models ณ 2026-06-15** — 26 tables (table list ครบ)
+> **Snapshot ของ models ณ 2026-06-20** — 25 tables (table list ครบ; v2.21 ลบ `trip_passenger`)
 > 🗂️ **2026-06-07: `models.py` แตกเป็น package [`models/`](../../../app/models/) ตาม domain** (base/user/common/repair/maintenance/room/vehicle/vehicle_budget/vehicle_ot/vehicle_fuel). path `models.py` ในหัวข้อ ### ทั้งหมดด้านล่าง **ตายแล้ว** — class ย้ายไปไฟล์ domain (ดู mapping ที่ [INDEX.md §Database Models](../INDEX.md#-database-models)). โครง schema/column **ไม่เปลี่ยน** (refactor ย้าย class ล้วน ไม่แตะ DB)
 > ⚠️ **DRIFT (ตรวจ 2026-06-02):** line-ref `models.py:NNN` ในหัวข้อ ### **ผิด 17/27 tables** ตั้งแต่ก่อน refactor + ตอนนี้ path เปลี่ยนเป็น package ด้วย → **ต้อง full re-sync (db-helper) ก่อนเชื่อ line ในไฟล์นี้** — table names + column + ภาพรวมยังถูก
 > ส่วนบน = ตารางปัจจุบัน · ส่วนล่าง = ประวัติ + เหตุผลทุก version
@@ -163,7 +163,7 @@
 | `snap_driver_name` | String(100) | **snapshot** |
 | `is_ad_hoc` | Boolean NOT NULL default False | True = driver สร้างเองจาก /driver (งานนอกระบบ) — filter ออกจาก /vehicle calendar; ยังแสดงในหน้า admin (v2.11) |
 
-**Relationships:** `passengers` (→ TripPassenger CASCADE), `extra_expenses` (→ TripExpenseItem CASCADE), `mileage` (→ VehicleMileage)
+**Relationships:** `extra_expenses` (→ TripExpenseItem CASCADE), `mileage` (→ VehicleMileage)
 
 ### `vehicle_mileage` — [models.py:230](../../../app/models.py#L230)
 | Field | Type | Note |
@@ -255,19 +255,9 @@
 **Constraint:** `UNIQUE(user_id, dept_id)` — ป้องกัน duplicate
 **Indexes:** `idx_dept_approver_user`, `idx_dept_approver_dept`
 
-### `trip_passenger` — [models.py:357](../../../app/models.py#L357)
-| Field | Type | Note |
-|-------|------|------|
-| `id` | Integer PK | |
-| `booking_id` | FK → vehicle_booking CASCADE | |
-| `user_id` | FK → user | ใครขอ |
-| `status` | String(20) | `pending`/`approved`/`rejected`/`cancelled` |
-| `note` | String(200) | |
-| `admin_note` | Text | |
-| `created_at`, `reviewed_at` | DateTime | |
-| `reviewed_by` | FK → user | |
+### ~~`trip_passenger`~~ — **DROPPED v2.21 (2026-06-20)**
 
-**Constraint:** `UNIQUE(booking_id, user_id)`
+> Feature "ขอติดรถ" ตัดออก — ไม่มี UI/route ใดใช้งานจริง; ทดแทนด้วย trip_group linking (admin จัดผ่าน admin_merge)
 
 ### `trip_expense_item` — [models.py:409](../../../app/models.py#L409)
 | Field | Type | Note |
@@ -475,7 +465,6 @@ user    ──< driver (linked_user)
 user               >──< vehicle_department : dept_approver (many-to-many)
 
 vehicle_booking ──< vehicle_mileage
-vehicle_booking ──< trip_passenger    (CASCADE)
 vehicle_booking ──< trip_expense_item (CASCADE)
 vehicle_booking ──< notification
 vehicle_booking ──< driver_ot
@@ -541,6 +530,7 @@ INSERT INTO budget_type (id, name) VALUES (1, 'central'), (2, 'department');
 | v2.18 | 2026-06-14 | 26 | `vehicle_booking` -3 dead columns (`expense_type_id`, `snap_department_name`, `contact_name`); `expense_type` table dropped |
 | v2.19 | 2026-06-15 | 26 | `notification` + `event_key`/`superseded_at` — supersede กัน notif ชนิดเดียวกันต่อ booking สะสมซ้ำ |
 | v2.20 | 2026-06-16 | 26 | `notification` + `title` — freeze title ตอนสร้าง notif (เดิม compute จาก event_key → แยก case ไม่ได้) |
+| v2.21 | 2026-06-20 | 25 | `trip_passenger` table **DROPPED** — feature "ขอติดรถ" ตัดออก (ไม่มี UI/route ใช้งานจริง); ทดแทนด้วย trip_group linking ที่ admin จัดผ่าน `admin_merge` |
 
 ---
 
@@ -1036,6 +1026,24 @@ App: `vehicle_cost.py` — route `ot_create` (POST `/admin/ot/create`, standalon
 | `title` | บรรทัดแรกของ notif card — freeze ตอนสร้างเพื่อให้ title เฉพาะต่อ notification (ไม่ใช่ generic ต่อ event_key) + รองรับ dynamic title. **nullable** เพราะ notification เก่าไม่มีค่า → serializer fallback ไปใช้ `_notif_title()` เดิมจาก event_key |
 
 **Note:** column nullable → backfill ไม่จำเป็น (notif เก่าทั้งหมด `title=NULL` → serializer ใช้ `_notif_title()` fallback). `db.create_all()` ไม่ ALTER ตารางเดิม → ต้องรัน `.sql` manual
+
+---
+
+## v2.21 — Drop TripPassenger (2026-06-20)
+
+*Migration: [2026-06-20_drop-trip-passenger.sql](../../../app/migrations/2026-06-20_drop-trip-passenger.sql)*
+
+### `trip_passenger` — table DROPPED
+
+**เหตุผลหลัก:** feature "ขอติดรถ" (passenger-request บน booking ของคนอื่น) ถูกตัดออกจาก scope ผลิตภัณฑ์ — ไม่เคยมีหน้า UI หรือ route ใดเรียกใช้จริงตั้งแต่สร้างใน v2.0 (2026-04-06), ยืนยันด้วย `grep -rn "TripPassenger\|trip_passenger"` = 0 reference นอก `models/` + docs ก่อนลบ ทดแทนด้วย `trip_group` linking ที่ admin จัดการเองผ่าน `admin_merge` (รวมหลาย booking เป็นทริปเดียวกัน) ซึ่งครอบคลุม use case จริงที่ใช้งานอยู่
+
+| Change | รายละเอียด |
+|--------|-----------|
+| ลบ class `TripPassenger` | [models/vehicle.py](../../../app/models/vehicle.py) — เดิม `booking_id` FK → vehicle_booking (CASCADE), `user_id` FK → user, `status`/`note`/`admin_note`, `reviewed_at`/`reviewed_by`, `UNIQUE(booking_id, user_id)` |
+| ลบออกจาก `__init__.py` | ตัด import + `__all__` entry |
+| `DROP TABLE trip_passenger` | `passive_deletes=True` + `ondelete='CASCADE'` อยู่ฝั่ง trip_passenger → ไม่กระทบ vehicle_booking |
+
+**Note:** table count 26 → 25. ไม่มี backfill (ไม่มีข้อมูลใช้งานจริงในตาราง)
 
 ---
 

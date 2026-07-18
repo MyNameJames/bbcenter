@@ -16,6 +16,7 @@ from views.vehicle.vehicle_common import (
     is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
     TH_MONTHS, _fmt_date_th, _build_budget_subs,
     get_fuel_price, calc_fuel_cost, deduct_budget_for_trip,
+    _auto_close_stale_trips,
 )
 
 
@@ -56,6 +57,8 @@ def _handle_mileage_start(booking, mileage, upload_folder):
         img.save(os.path.join(upload_folder, fname))
         mileage.odometer_start_img = fname
     db.session.flush()
+    _auto_close_stale_trips(booking.assigned_vehicle_id,
+                            mileage.odometer_start, mileage.actual_start, booking.id)
     _n_mileage_start(booking, mileage)
     flash(f'บันทึกเลขไมล์ก่อนออก #{booking.id} เรียบร้อย', 'success')
 
@@ -142,9 +145,13 @@ def _build_mileage_rows(bookings, fuel_by_vehicle, f_status, f_cost_min, f_cost_
         if f_cost_max is not None and (fuel_cost or 0) > f_cost_max:
             continue
         budget_type, budget_label, budget_sub = _get_mileage_budget_info(b)
-        bills      = fuel_by_vehicle.get(b.assigned_vehicle_id, []) if b.assigned_vehicle_id else []
-        has_refuel = (bool(m and m.odometer_start and m.odometer_end) and
-                      any(m.odometer_start <= km <= m.odometer_end for km in bills))
+        bills = fuel_by_vehicle.get(b.assigned_vehicle_id, []) if b.assigned_vehicle_id else []
+        if m and m.odometer_start and m.odometer_end:
+            refuel_odo = next((km for km in bills if m.odometer_start <= km <= m.odometer_end), None)
+            has_refuel = refuel_odo is not None
+        else:
+            refuel_odo = None
+            has_refuel = False
         rows.append({
             'b': b, 'm': m,
             'distance':     distance,
@@ -154,6 +161,7 @@ def _build_mileage_rows(bookings, fuel_by_vehicle, f_status, f_cost_min, f_cost_
             'budget_label': budget_label,
             'budget_sub':   budget_sub,
             'has_refuel':   has_refuel,
+            'refuel_odo':   refuel_odo,
         })
 
     display_rows = []
@@ -170,6 +178,21 @@ def _build_mileage_rows(bookings, fuel_by_vehicle, f_status, f_cost_min, f_cost_
         display_rows.append({'kind': 'group', 'row': members[0], 'count': len(members), 'members': members})
 
     return rows, display_rows
+
+
+def _calc_cost_ceiling(cutoff):
+    """Round-up-to-1000 ceiling from the highest fuel_cost across ALL approved bookings (ไม่จำกัด date filter)."""
+    bookings = VehicleBooking.query.filter(
+        VehicleBooking.status == 'approved',
+        VehicleBooking.start_datetime < cutoff,
+    ).all()
+    max_cost = 0.0
+    for b in bookings:
+        m = b.mileage[0] if b.mileage else None
+        _, cost, status_key = _compute_mileage_cost(b, m)
+        if status_key == 'complete' and cost and cost > max_cost:
+            max_cost = cost
+    return (int(max_cost // 1000) + 1) * 1000
 
 
 def _calc_mileage_kpi(now, cutoff):
@@ -304,6 +327,7 @@ def mileage_log():
 
     rows, display_rows        = _build_mileage_rows(bookings, fuel_by_vehicle,
                                                      f_status, f_cost_min, f_cost_max)
+    cost_ceiling              = _calc_cost_ceiling(cutoff)
     kpi                       = _calc_mileage_kpi(now, cutoff)
     vehicles_all              = Vehicle.query.order_by(Vehicle.license_plate).all()
     drivers_all               = Driver.query.filter_by(is_active=True).order_by(Driver.name).all()
@@ -315,6 +339,7 @@ def mileage_log():
     return render_template('vehicle/admin/vehicle_mileage.html',
         rows=rows,
         display_rows=display_rows,
+        cost_ceiling=cost_ceiling,
         fuel_price=fuel_price,
         today=today,
         curr_year=now.year,

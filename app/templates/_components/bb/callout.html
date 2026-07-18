@@ -1,0 +1,30 @@
+{#
+  bb_callout — กล่องแจ้งเตือนในหน้า (inline alert) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-callout)
+  JS:   core/js/bb-components.js  (dismissible → data-bb-dismiss)
+
+  static · tone: info | ok | wr | dg · มี title option · dismissible = มีปุ่มปิด
+
+  Usage:
+    {% from '_components/bb/callout.html' import bb_callout %}
+    {{ bb_callout('งบใกล้หมด — หมวดส่วนกลางเหลือ 8%', tone='wr', title='แจ้งเตือน') }}
+
+  params:
+    text         ข้อความหลัก (รับ HTML ผ่าน caller ได้ถ้าใช้ {% call %})
+    tone         info (default) | ok | wr | dg
+    title        หัวข้อตัวหนา (optional)
+    icon         Lucide icon (default ตาม tone)
+    dismissible  มีปุ่มปิด (default False)
+    id           id บน root
+#}
+{% set _bb_callout_icon = {'info': 'info', 'ok': 'check-circle', 'wr': 'alert-triangle', 'dg': 'alert-octagon'} %}
+{% macro bb_callout(text='', tone='info', title='', icon='', dismissible=False, id='') -%}
+<div class="bb-callout is-{{ tone }}"{% if id %} id="{{ id }}"{% endif %}>
+  <i data-lucide="{{ icon or _bb_callout_icon.get(tone, 'info') }}"></i>
+  <div class="bb-callout-body">
+    {%- if title %}<div class="bb-callout-title">{{ title }}</div>{% endif -%}
+    {{ caller() if caller else text }}
+  </div>
+  {%- if dismissible %}<button type="button" class="bb-callout-x" data-bb-dismiss aria-label="ปิด"><i data-lucide="x"></i></button>{% endif -%}
+</div>
+{%- endmacro %}

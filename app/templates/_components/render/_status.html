@@ -1,0 +1,3 @@
+{# render layer ของ components.Status → delegate macro bb_status / bb_status_inline #}
+{% from '_components/bb/badge.html' import bb_status, bb_status_inline -%}
+{% if inline %}{{ bb_status_inline(text, tone, icon) }}{% else %}{{ bb_status(text, tone) }}{% endif %}

@@ -17,6 +17,7 @@
 | System flow / architecture | [architecture.md](architecture.md) |
 | งานที่ทำแล้ว / กำลังทำ | [doc/](doc/) · [log/](log/) |
 | Feature backlog | [future_features.md](future_features.md) |
+| Redesign หน้าเก่า → bb-* (legacy CSS migration) | [redesign_migration_pattern.md](redesign_migration_pattern.md) |
 | Migration .sql ทั้งหมด | [app/migrations/migrations-index.md](../../app/migrations/migrations-index.md) |
 
 ---
@@ -26,6 +27,10 @@
 ```
 app/
   app.py · models/ (package ตาม domain) · ad_utils.py
+                            (มี route `/finance` bare ไม่มี blueprint/controller — prototype design mockup, 2026-07-05, → templates/layout.html)
+  components/               UI component layer (thin Python wrapper รอบ Jinja macro, 2026-06-29):
+                            base (BaseComponent) · table (Table/Column → macro bb_table_v2)
+                            register_components(app) → jinja global `component(obj)`
   .env (gitignored) · .env.example (template — env vars: architecture.md § Configuration)
   instance/portal.db        SQLite (gitignored)
   logs/app.log              error log กลาง rotate 1MB×5 (gitignored — config ใน app.py, 2026-06-11)
@@ -45,7 +50,7 @@ tests/                      pytest — conftest.py + test_budget_service.py (run
 pytest.ini · requirements-dev.txt   (root — pythonpath=app, pytest)
 docs/notes/
   INDEX.md (ไฟล์นี้, hub) · INDEX_routes.md · INDEX_code.md · INDEX_ui.md
-  architecture.md · design_system.md · task-lifecycle.md · future_features.md
+  architecture.md · design_guideline.md · page_pattern.md (โครงเขียนหน้า) · redesign_migration_pattern.md (migrate หน้าเก่า→bb-*) · task-lifecycle.md · future_features.md
   database/schema.md        ← Part 1 ปัจจุบัน + Part 2 history
   doc/ (completed) · log/ (in-progress) · skills/
 ```

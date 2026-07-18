@@ -73,6 +73,12 @@
                 <span class="budget-card-sep">·</span>
                 {{ budget.percent_used }}%
             </div>
+            {% if budget.remaining < 0 %}
+            <div class="budget-card-warn">
+                <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
+                งบเกิน ฿{{ '{:,.0f}'.format((-budget.remaining) | float) }}
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
 
@@ -107,9 +113,10 @@
                     <div class="ac-header-row">
                         <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
                         <div class="ac-header-right">
+                            {% set _fc = fuel_costs.get(b.id, 0) | float %}
                             <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
                                 <i data-lucide="fuel" class="vc-icon-sm"></i>
-                                ฿{{ '{:,.0f}'.format(fuel_costs.get(b.id, 0) | float) }}
+                                {% if _fc > 0 %}฿{{ '{:,.0f}'.format(_fc) }}{% else %}ยังไม่เดินทาง{% endif %}
                             </span>
                             <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-{{ b.id }}"></i>
                         </div>
@@ -223,9 +230,10 @@
                     <div class="ac-header-row">
                         <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
                         <div class="ac-header-right">
+                            {% set _fc = fuel_costs.get(b.id, 0) | float %}
                             <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
                                 <i data-lucide="fuel" class="vc-icon-sm"></i>
-                                ฿{{ '{:,.0f}'.format(fuel_costs.get(b.id, 0) | float) }}
+                                {% if _fc > 0 %}฿{{ '{:,.0f}'.format(_fc) }}{% else %}ยังไม่เดินทาง{% endif %}
                             </span>
                             <span class="vc-badge vc-badge-success vc-badge-dot">อนุมัติแล้ว</span>
                             <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-hist-{{ b.id }}"></i>
@@ -290,9 +298,10 @@
                     <div class="ac-header-row">
                         <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
                         <div class="ac-header-right">
+                            {% set _fc = fuel_costs.get(b.id, 0) | float %}
                             <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
                                 <i data-lucide="fuel" class="vc-icon-sm"></i>
-                                ฿{{ '{:,.0f}'.format(fuel_costs.get(b.id, 0) | float) }}
+                                {% if _fc > 0 %}฿{{ '{:,.0f}'.format(_fc) }}{% else %}ยังไม่เดินทาง{% endif %}
                             </span>
                             <span class="vc-badge vc-badge-danger vc-badge-dot">ปฏิเสธ</span>
                             <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-rej-{{ b.id }}"></i>

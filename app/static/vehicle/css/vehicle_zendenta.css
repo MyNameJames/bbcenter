@@ -8,27 +8,6 @@
      2) calendar restyle ตามภาพ 2 (layout/ขนาดเดิม)
    ============================================================ */
 
-/* ─────────────────── 1. ICON SIZE (sidebar + header) ──────────
-   ★★ จุดแก้ขนาด icon อยู่ที่นี่ทั้งหมด ★★
-   - sidebar  → block แรก (width/height/stroke-width)
-   - header   → block สอง
-   ถ้ายก global: sidebar → components/sidebar.css `.sb-icon svg.lucide`
-                 header  → core/css/vercel.css `.vrc-topbar ... svg` */
-body.zd .sb-icon [data-lucide],
-body.zd .sb-icon svg.lucide {
-    width: 21px; height: 21px; stroke-width: 2;     /* ★ sidebar icon */
-}
-body.zd .vrc-topbar [data-lucide],
-body.zd .vrc-topbar svg.lucide,
-body.zd .vrc-topbar .ds-btn-icon svg {
-    width: 22px; height: 22px; stroke-width: 2.2;     /* ★ header icon */
-}
-/* ส่วนประกอบ sidebar เล็ก (chevron + brand mark) ขยายตาม */
-body.zd .sb-chevron [data-lucide],
-body.zd .sb-chevron svg.lucide { width: 16px; height: 16px; stroke-width: 2.4; }
-body.zd .sb-logo-icon [data-lucide],
-body.zd .sb-logo-icon svg.lucide { width: 18px; height: 18px; stroke-width: 2.2; }
-
 /* ─────────────────── 3. CALENDAR — image 2 design ─────────────
    layout/ขนาด = เดิม (bordered grid, min-height 112). เปลี่ยนแค่ design:
    เลขมุมขวาบน + today วงกลมน้ำเงินทึบ + other-month ลายเฉียง + event pill */
@@ -46,6 +25,12 @@ body.zd .cal-month-label {
     text-align: center;
     font-size: 16px;
     font-variant-numeric: tabular-nums;
+}
+
+/* service hours caption (right col of toolbar, + mobile) */
+body.zd .cal-caption {
+    font-size: .75rem;
+    color: var(--vc-fg-subtle);
 }
 
 /* weekday header (base ถูก comment ทิ้ง → ใส่กลับ) — พื้นขาวตามภาพ */

@@ -4,6 +4,7 @@ from models import (db, get_bkk_time, Vehicle, Driver, VehicleMileage, VehicleBo
                     VehicleBudgetLog, OTRateConfig, DriverOT, DriverOTSlot)
 from sqlalchemy import extract, func
 from datetime import datetime, date
+from components import Table, Column
 import views.vehicle.vehicle_budget_service as budget_svc
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
@@ -142,6 +143,32 @@ def _calc_ot_kpi(all_ots):
     }
 
 
+def _build_ot_by_expense(ots):
+    """รวม OT ตามประเภทงาน → list เรียงยอดมากสุด."""
+    agg = {}
+    for o in ots:
+        if o.is_deleted:
+            continue
+        label, sub = _ot_budget_label(o.booking)
+        key = (label, sub or '')
+        a = agg.setdefault(key, {'amount': 0.0, 'hours': 0.0, 'count': 0})
+        a['amount'] += float(o.total_amount)
+        a['hours']  += float(o.total_hours)
+        a['count']  += 1
+    rows = [{'label': k[0], 'sub': k[1], **v} for k, v in agg.items()]
+    return sorted(rows, key=lambda r: r['amount'], reverse=True)
+
+
+def _personal_uncollected(ots):
+    """OT งานส่วนตัว (personal) ที่ยังไม่เรียกเก็บ = unpaid + ไม่ใช่ no_receipt."""
+    items = [o for o in ots
+             if not o.is_deleted and o.booking
+             and o.booking.expense_type == 'personal'
+             and o.status == 'unpaid' and not o.no_receipt]
+    total = round(sum(float(o.total_amount) for o in items), 2)
+    return items, total
+
+
 def _build_ot_pivot(from_year):
     pivot_rows = (db.session.query(
         DriverOT.driver_id,
@@ -205,6 +232,15 @@ def cost_summary():
         base_q = base_q.filter(DriverOT.driver_id == sel_driver)
     base_q = _apply_budget_filter(base_q, f_budget_type, f_budget_sub)
     kpi = _calc_ot_kpi(base_q.all())
+    ot_by_expense           = _build_ot_by_expense(kpi['live'])
+    ot_expense_table        = Table(data=ot_by_expense, columns=[
+        Column(key='label',  label='ประเภทงาน'),
+        Column(key='sub',    label='หมวด / กอง', cls='bb-cell-muted'),
+        Column(key='hours',  label='ชม.',       align='end', fmt='{:,.1f}'),
+        Column(key='amount', label='ยอด (฿)',   align='end', fmt='฿{:,.0f}'),
+        Column(key='count',  label='จำนวน',     align='end', fmt='num'),
+    ])
+    uncollected, uncoll_sum = _personal_uncollected(kpi['live'])
 
     bucket = {
         '': kpi['live'], 'unpaid': kpi['unpaid'], 'paid': kpi['paid'],
@@ -241,6 +277,8 @@ def cost_summary():
         ot_pivot=ot_pivot, ot_pivot_labels=ot_pivot_labels,
         ot_pivot_row_totals=row_totals, ot_pivot_col_totals=col_totals,
         ot_grand_hours=grand_hours, ot_grand_amount=grand_amount,
+        ot_by_expense=ot_by_expense, ot_expense_table=ot_expense_table,
+        uncollected_count=len(uncollected), uncollected_sum=uncoll_sum,
     )
 
 

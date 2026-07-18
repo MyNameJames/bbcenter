@@ -14,12 +14,33 @@ from views.core.notification_service import (
 )
 from views.vehicle.vehicle_workflow import guard_budget
 import os, time
+from collections import Counter
 from werkzeug.utils import secure_filename
+from components import Tabs, Tab, WeekStrip, DatePicker, ToastRegion
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
     is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
     EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
+    check_vehicle_conflict, check_driver_conflict, check_vehicle_active,
 )
+
+
+def _sync_user_vehicle_role(user_id):
+    """ตั้ง user.role_vehicle ตามบทบาทจริง: approver > driver > user.
+    ไม่แตะ admin/superadmin. เรียกหลังเพิ่ม/ลบ driver link หรือ DeptApprover."""
+    if not user_id:
+        return
+    user = User.query.get(int(user_id))
+    if not user or user.is_superadmin or user.role_vehicle == 'admin':
+        return
+    is_approver = DeptApprover.query.filter_by(user_id=user.id).first() is not None
+    is_driver   = Driver.query.filter_by(user_id=user.id).first() is not None
+    if is_approver:
+        user.role_vehicle = 'approver'
+    elif is_driver:
+        user.role_vehicle = 'driver'
+    else:
+        user.role_vehicle = 'user'
 
 
 def _save_driver_image(field_name, prefix):
@@ -63,6 +84,8 @@ def _fleet_add_driver():
     d.avatar_image  = _save_driver_image('avatar_image', 'avatar')
     d.id_card_image = _save_driver_image('id_card_image', 'idcard')
     db.session.add(d)
+    db.session.flush()
+    _sync_user_vehicle_role(d.user_id)
     db.session.commit()
     flash(f"เพิ่มพนักงานขับรถ {d.name} สำเร็จ!", 'success')
 
@@ -96,6 +119,7 @@ def _fleet_delete_vehicle():
 
 def _fleet_edit_driver():
     driver = Driver.query.get_or_404(int(request.form.get('driver_id')))
+    old_user_id            = driver.user_id
     driver.name             = request.form.get('name')
     driver.phone            = request.form.get('phone')
     driver.is_active        = True if request.form.get('is_active') else False
@@ -112,13 +136,20 @@ def _fleet_edit_driver():
     new_idcard = _save_driver_image('id_card_image', 'idcard')
     if new_idcard:
         driver.id_card_image = new_idcard
+    db.session.flush()
+    if old_user_id and old_user_id != driver.user_id:
+        _sync_user_vehicle_role(old_user_id)
+    _sync_user_vehicle_role(driver.user_id)
     db.session.commit()
     flash(f"อัปเดตข้อมูลคนขับ {driver.name} สำเร็จ!", 'success')
 
 
 def _fleet_delete_driver():
     driver = Driver.query.get_or_404(int(request.form.get('driver_id')))
+    uid = driver.user_id
     db.session.delete(driver)
+    db.session.flush()
+    _sync_user_vehicle_role(uid)
     db.session.commit()
     flash('ลบพนักงานขับรถออกจากระบบแล้ว', 'success')
 
@@ -130,13 +161,18 @@ def _fleet_add_approver():
         flash('ผู้อนุมัติคนนี้ถูกเพิ่มในกองนั้นแล้ว', 'warning')
     else:
         db.session.add(DeptApprover(user_id=uid, dept_id=did))
+        db.session.flush()
+        _sync_user_vehicle_role(uid)
         db.session.commit()
         flash('เพิ่มผู้อนุมัติเรียบร้อยแล้ว', 'success')
 
 
 def _fleet_delete_approver():
     row = DeptApprover.query.get_or_404(int(request.form.get('approver_id')))
+    uid = row.user_id
     db.session.delete(row)
+    db.session.flush()
+    _sync_user_vehicle_role(uid)
     db.session.commit()
     flash('ลบผู้อนุมัติออกจากกองแล้ว', 'success')
 
@@ -271,6 +307,19 @@ def admin_trips():
 
     fuel_price = FuelPrice.get_for_date(get_bkk_time().date()) or float(SystemConfig.get('fuel_price', 0) or 0)
 
+    # weekstrip badge — จำนวน booking ต่อวัน (ทุกสถานะ)
+    day_counts = Counter(b.start_datetime.date().isoformat() for b in bookings)
+
+    tabs = Tabs([
+        Tab('ทั้งหมด',      count=0, active=True, value='all'),
+        Tab('รออนุมัติ',     count=0, value='pending'),
+        Tab('ส่ง Approver', count=0, value='waiting_approver'),
+        Tab('อนุมัติแล้ว',   count=0, value='approved'),
+        Tab('ปฏิเสธ',       count=0, value='rejected'),
+    ])
+    weekstrip = WeekStrip(value='', counts=dict(day_counts))
+    week_datepicker = DatePicker(name='week_jump_date', value=now.date().isoformat(), align='right', id='weekJumpDp')
+
     return render_template('vehicle/admin/vehicle_admin.html',
                            bookings=bookings,
                            vehicles=vehicles,
@@ -279,7 +328,11 @@ def admin_trips():
                            central_items=central_items,
                            dept_items=dept_items,
                            fuel_price=fuel_price,
-                           now=now)
+                           now=now,
+                           tabs=tabs,
+                           weekstrip=weekstrip,
+                           week_datepicker=week_datepicker,
+                           toast_region=ToastRegion())
 
 
 # ─────────────────────────────────────────────
@@ -289,6 +342,8 @@ def admin_trips():
 @vehicle_bp.route('/vehicle/admin/booking/<int:booking_id>/notify', methods=['POST'])
 @login_required
 def admin_notify_booking(booking_id):
+    # Telegram/LINE group แจ้งเตือนผ่านปุ่มนี้เท่านั้น (manual re-notify)
+    # ไม่มี auto-notify ตามสถานะ — เพื่อให้ admin ควบคุมว่าจะส่งเมื่อไหร่
     if not is_vehicle_admin():
         return jsonify({'ok': False, 'msg': 'ไม่มีสิทธิ์'}), 403
     b = VehicleBooking.query.get_or_404(booking_id)
@@ -362,6 +417,11 @@ def admin_swap_vehicle(booking_id):
     new_vehicle_id = request.form.get('vehicle_id', type=int)
     if not new_vehicle_id:
         return jsonify({'ok': False, 'msg': 'ไม่ได้เลือกรถ'}), 400
+    if not check_vehicle_active(new_vehicle_id):
+        return jsonify({'ok': False, 'msg': 'รถคันนี้ไม่พร้อมใช้งาน (maintenance/inactive)'}), 400
+    vconf = check_vehicle_conflict(new_vehicle_id, b.start_datetime, b.end_datetime, [b.id])
+    if vconf:
+        return jsonify({'ok': False, 'msg': f'รถคันนี้ถูกใช้ทับช่วงเวลานี้ (#{vconf.id})'}), 400
     b.assigned_vehicle_id = new_vehicle_id
     db.session.commit()
     v = Vehicle.query.get(new_vehicle_id)
@@ -403,6 +463,23 @@ def admin_merge():
 
     # กำหนด status — ถ้างบกอง → waiting_approver
     new_status = 'waiting_approver' if expense_type == 'department' else 'approved'
+
+    if not check_vehicle_active(assigned_vehicle_id):
+        return jsonify({'ok': False, 'msg': 'รถคันนี้ไม่พร้อมใช้งาน (maintenance/inactive)'}), 400
+
+    # conflict guard ก่อน commit merge จริง
+    sel = [VehicleBooking.query.get(int(b)) for b in booking_ids]
+    sel = [b for b in sel if b]
+    if sel:
+        m_start = min(b.start_datetime for b in sel)
+        m_end   = max(b.end_datetime   for b in sel)
+        vconf = check_vehicle_conflict(assigned_vehicle_id, m_start, m_end, booking_ids)
+        if vconf:
+            return jsonify({'ok': False, 'msg': f'รถถูกใช้ทับช่วงนี้แล้ว (#{vconf.id})'}), 400
+        if driver_id:
+            dconf = check_driver_conflict(driver_id, m_start, m_end, booking_ids)
+            if dconf:
+                return jsonify({'ok': False, 'msg': f'คนขับมีทริปทับช่วงนี้ (#{dconf.id})'}), 400
 
     # อัปเดตทุก booking ที่เลือก
     for bid in booking_ids:
@@ -485,6 +562,22 @@ def admin_assign(booking_id):
             dept_obj = VehicleDepartment.query.filter_by(name=booking.trip_department).first()
             if dept_obj:
                 booking.trip_department_id = dept_obj.id
+
+        # conflict guard เฉพาะทริปอิสระที่กำลัง approve
+        if assign_action != 'reject' and not is_join_trip:
+            if not check_vehicle_active(booking.assigned_vehicle_id):
+                return jsonify({'ok': False, 'msg': 'รถคันนี้ไม่พร้อมใช้งาน (maintenance/inactive)'}), 400
+            exclude = [booking.id]
+            vconf = check_vehicle_conflict(booking.assigned_vehicle_id,
+                                           booking.start_datetime, booking.end_datetime, exclude)
+            if vconf:
+                return jsonify({'ok': False, 'msg':
+                    f'รถคันนี้ถูกใช้ทับช่วงเวลานี้แล้ว (#{vconf.id})'}), 400
+            dconf = check_driver_conflict(booking.driver_id,
+                                          booking.start_datetime, booking.end_datetime, exclude)
+            if dconf:
+                return jsonify({'ok': False, 'msg':
+                    f'คนขับมีทริปอื่นทับช่วงเวลานี้ (#{dconf.id})'}), 400
 
         if assign_action == 'reject':
             booking.status = 'rejected'
@@ -631,19 +724,11 @@ def api_check_merge():
     if vehicle_id:
         vehicle = Vehicle.query.get(int(vehicle_id))
         if vehicle:
-            # capacity check
             if total_pax > vehicle.capacity:
                 errors.append(
                     f'จำนวนผู้โดยสารรวม ({total_pax} คน) เกินความจุรถ {vehicle.brand} {vehicle.model} ({vehicle.capacity} ที่นั่ง)'
                 )
-            # overlap check — รถคันนี้ถูกใช้ในช่วงเวลาที่ merge แล้วไหม?
-            conflict = VehicleBooking.query.filter(
-                VehicleBooking.assigned_vehicle_id == vehicle.id,
-                VehicleBooking.status.in_(['approved', 'waiting_approver']),
-                VehicleBooking.id.notin_(booking_ids),
-                VehicleBooking.start_datetime < merged_end,
-                VehicleBooking.end_datetime   > merged_start,
-            ).first()
+            conflict = check_vehicle_conflict(vehicle.id, merged_start, merged_end, booking_ids)
             if conflict:
                 errors.append(
                     f'รถ {vehicle.brand} {vehicle.model} ({vehicle.license_plate}) '
@@ -653,13 +738,7 @@ def api_check_merge():
     # ── ตรวจสอบ driver (ถ้าเลือกมาแล้ว) ──────────────────────
     driver_id = data.get('driver_id')
     if driver_id:
-        conflict_d = VehicleBooking.query.filter(
-            VehicleBooking.driver_id == int(driver_id),
-            VehicleBooking.status.in_(['approved', 'waiting_approver']),
-            VehicleBooking.id.notin_(booking_ids),
-            VehicleBooking.start_datetime < merged_end,
-            VehicleBooking.end_datetime   > merged_start,
-        ).first()
+        conflict_d = check_driver_conflict(driver_id, merged_start, merged_end, booking_ids)
         if conflict_d:
             driver = Driver.query.get(int(driver_id))
             dname  = driver.name if driver else f'#{driver_id}'

@@ -1,0 +1,15 @@
+{#
+  bb_search — Component Library .bb-search
+  spec: components-gallery.html §3 · markup ตรง gallery เป๊ะ
+  ⚠️ (2026-07-07, sync จาก mockup-orders.html) collapse เป็น icon กลม 40px คลิก/focus → ขยายเป็น pill
+     ปิดกลับอัตโนมัติเมื่อ blur ตอนไม่มีข้อความ · JS: bb-components.js initSearch() ผ่าน [data-bb-search]
+
+  on_input → data-action (event convention กลาง)
+
+  Usage:
+    {% from '_components/bb/search.html' import bb_search %}
+    {{ bb_search(placeholder='ค้นหาทะเบียน, ผู้ขับ, ปลายทาง…') }}
+#}
+{% macro bb_search(placeholder='ค้นหา…', name='', value='', on_input='') -%}
+<div class="bb-search" data-bb-search><i data-lucide="search"></i><input{% if name %} id="{{ name }}" name="{{ name }}"{% endif %} placeholder="{{ placeholder }}"{% if value %} value="{{ value }}"{% endif %}{% if on_input %} data-action="{{ on_input }}"{% endif %}><button type="button" class="bb-search-clear" data-bb-search-clear aria-label="ล้างคำค้นหา"><i data-lucide="x"></i></button></div>
+{%- endmacro %}

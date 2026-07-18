@@ -20,7 +20,7 @@ admin_fuel.html** and renaming page-specific bits. Every section below
 gives you exact HTML / CSS / decision rules. Do not invent.
 
 **Canonical reference:** [admin_fuel.html](app/templates/vehicle/admin/admin_fuel.html)
-**Tokens reference:** [design_system.md](docs/notes/design_system.md)
+**Tokens reference:** [design_guideline.md](docs/notes/design_guideline.md) (canonical)
 **Macros (Phase 3+):** [`app/templates/_components/`](app/templates/_components/) — see §2.0
 
 ---
@@ -489,7 +489,7 @@ CSS:
 
 **Never** write a hex color in any template or page CSS. Use a token.
 
-> **Token namespace rule:** Use **`--vc-*` only**. `--ds-*` is legacy (Indigo-era) and will be retired in Phase 5 cleanup ([roadmap](../../docs/notes/log/2026-05-14_frontend-architecture-plan.md)) — already removed from canonical examples here. If you see `var(--ds-*)` in an existing file, leave it alone unless you're explicitly migrating that page (don't mix add-ds + add-vc in the same change). Migration map → [design_system.md §14](../../docs/notes/design_system.md).
+> **Token namespace rule:** Use **`--vc-*` only**. `--ds-*` is legacy (Indigo-era) and will be retired in Phase 5 cleanup ([roadmap](../../docs/notes/log/2026-05-14_frontend-architecture-plan.md)) — already removed from canonical examples here. If you see `var(--ds-*)` in an existing file, leave it alone unless you're explicitly migrating that page (don't mix add-ds + add-vc in the same change). (`--ds-*` ลบครบแล้ว Phase 5.1 · canonical → [design_guideline.md](../../docs/notes/design_guideline.md)).
 
 ### 3.3 Status → badge color (memorize this)
 

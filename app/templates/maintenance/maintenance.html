@@ -44,12 +44,8 @@
             {% endif %}
             {% endwith %}
 
-            {# Page header (vehicle_budget.html style, 2026-06-16) #}
-            <div class="maintenance-header d-flex align-items-end justify-content-between flex-wrap gap-3">
-                <div>
-                    <h1 class="fw-bold text-accent pt-3">แจ้งซ่อมอาคารสถานที่</h1>
-                    <h6 class="text-muted text-header">แจ้งปัญหาอาคาร สิ่งอำนวยความสะดวก และระบบสาธารณูปโภค</h6>
-                </div>
+            {# Action bar (หัวเรื่องอยู่ที่ topbar page-title — DNA 2026-06-17) #}
+            <div class="maintenance-header d-flex justify-content-end flex-wrap gap-3">
                 <div class="maintenance-header-actions">
                     {% if current_user.role_maintenance == 'admin' or current_user.is_superadmin %}
                     <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm"
@@ -66,74 +62,63 @@
                 </div>
             </div>
 
-            {# KPI — Admin only #}
+            {# KPI — Admin only — DNA .fuel-kpi strip (reuse vehicle_fuel.css) #}
             {% if current_user.role_maintenance == 'admin' or current_user.is_superadmin %}
-            <div class="vc-card" style="margin-bottom: var(--vc-space-4);">
-                <div class="vc-card-head">
-                    <h3 class="vc-card-head-title">
-                        <i data-lucide="bar-chart-2" class="vc-icon-sm"></i>
-                        สรุปประจำเดือน
-                        <span class="vc-card-head-meta">{{ summary.month_label }}</span>
-                    </h3>
-                </div>
-                <div class="vc-kpi-group">
+            <div class="fuel-kpi-strip" style="margin-bottom: var(--vc-space-4);">
+                <div class="row row-cols-2 row-cols-md-5 g-0">
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="file-text" class="vc-icon-sm"></i>
-                            รายการทั้งหมด
-                        </p>
-                        <p class="vc-kpi-value">{{ summary.total }}<span class="vc-kpi-unit">รายการ</span></p>
-                        <p class="vc-kpi-meta">เดือนนี้</p>
+                    <div class="col fuel-kpi">
+                        <span class="fuel-kpi-icon"><i data-lucide="file-text"></i></span>
+                        <div class="fuel-kpi-body">
+                            <p class="fuel-kpi-label">รายการทั้งหมด</p>
+                            <p class="fuel-kpi-value vc-mono">{{ summary.total }}<span class="fuel-kpi-unit">รายการ</span></p>
+                            <p class="fuel-kpi-sub">ในเดือน {{ summary.month_label }}</p>
+                        </div>
                     </div>
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="clock" class="vc-icon-sm"></i>
-                            รอดำเนินการ
-                        </p>
-                        <p class="vc-kpi-value {% if summary.pending > 0 %}vc-kpi-value--danger{% else %}vc-kpi-value--muted{% endif %}">
-                            {{ summary.pending }}<span class="vc-kpi-unit">รายการ</span>
-                        </p>
-                        <p class="vc-kpi-meta">รอช่างรับงาน</p>
+                    <div class="col fuel-kpi">
+                        <span class="fuel-kpi-icon"><i data-lucide="clock"></i></span>
+                        <div class="fuel-kpi-body">
+                            <p class="fuel-kpi-label">รอดำเนินการ</p>
+                            <p class="fuel-kpi-value vc-mono">{{ summary.pending }}<span class="fuel-kpi-unit">รายการ</span></p>
+                            <p class="fuel-kpi-sub">{% if summary.pending > 0 %}<span class="is-danger">รอช่างรับงาน</span>{% else %}รอช่างรับงาน{% endif %}</p>
+                        </div>
                     </div>
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="wrench" class="vc-icon-sm"></i>
-                            กำลังดำเนินการ
-                        </p>
-                        <p class="vc-kpi-value">{{ summary.in_progress }}<span class="vc-kpi-unit">รายการ</span></p>
-                        <p class="vc-kpi-meta">ช่างกำลังซ่อม</p>
+                    <div class="col fuel-kpi">
+                        <span class="fuel-kpi-icon"><i data-lucide="wrench"></i></span>
+                        <div class="fuel-kpi-body">
+                            <p class="fuel-kpi-label">กำลังดำเนินการ</p>
+                            <p class="fuel-kpi-value vc-mono">{{ summary.in_progress }}<span class="fuel-kpi-unit">รายการ</span></p>
+                            <p class="fuel-kpi-sub">ช่างกำลังซ่อม</p>
+                        </div>
                     </div>
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="check-circle" class="vc-icon-sm"></i>
-                            เสร็จสิ้น
-                        </p>
-                        <p class="vc-kpi-value vc-kpi-value--success">{{ summary.done }}<span class="vc-kpi-unit">รายการ</span></p>
-                        <p class="vc-kpi-meta">ปิดงานแล้ว</p>
+                    <div class="col fuel-kpi">
+                        <span class="fuel-kpi-icon"><i data-lucide="check-circle"></i></span>
+                        <div class="fuel-kpi-body">
+                            <p class="fuel-kpi-label">เสร็จสิ้น</p>
+                            <p class="fuel-kpi-value vc-mono">{{ summary.done }}<span class="fuel-kpi-unit">รายการ</span></p>
+                            <p class="fuel-kpi-sub"><span class="is-success">ปิดงานแล้ว</span></p>
+                        </div>
                     </div>
 
-                    <div class="vc-kpi-cell">
-                        <p class="vc-kpi-label">
-                            <i data-lucide="banknote" class="vc-icon-sm"></i>
-                            ค่าใช้จ่ายรวม
-                        </p>
-                        <p class="vc-kpi-value">{{ '{:,.0f}'.format(summary.total_cost) }}<span class="vc-kpi-unit">บาท</span></p>
-                        <p class="vc-kpi-meta">เฉพาะงานที่ปิดแล้ว</p>
+                    <div class="col fuel-kpi">
+                        <span class="fuel-kpi-icon"><i data-lucide="banknote"></i></span>
+                        <div class="fuel-kpi-body">
+                            <p class="fuel-kpi-label">ค่าใช้จ่ายรวม</p>
+                            <p class="fuel-kpi-value vc-mono">{{ '{:,.0f}'.format(summary.total_cost) }}<span class="fuel-kpi-unit">บาท</span></p>
+                            <p class="fuel-kpi-sub">เฉพาะงานที่ปิดแล้ว</p>
+                        </div>
                     </div>
 
                 </div>
                 {% if summary.by_category %}
-                <div style="padding: var(--vc-space-3) var(--vc-space-4); border-top: 1px solid var(--vc-border);">
-                    <div class="d-flex flex-wrap gap-2 align-items-center">
-                        <span style="font-size: var(--vc-text-xs); color: var(--vc-fg-subtle); font-weight: 600;">แยกตามประเภท:</span>
-                        {% for cat, count in summary.by_category.items() %}
-                        <span class="vc-badge vc-badge-neutral">{{ cat }}: {{ count }} งาน</span>
-                        {% endfor %}
-                    </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center" style="padding: var(--vc-space-3) var(--vc-space-4); border-top: 1px solid var(--vc-border);">
+                    <span class="fuel-kpi-label">แยกตามประเภท</span>
+                    {% for cat, count in summary.by_category.items() %}
+                    <span class="vc-badge vc-badge-neutral">{{ cat }}: {{ count }} งาน</span>
+                    {% endfor %}
                 </div>
                 {% endif %}
             </div>
@@ -231,7 +216,7 @@
                                     {% if ticket.status == 'pending' %}
                                     <span class="vc-badge vc-badge-neutral vc-badge-dot">รอช่างรับงาน</span>
                                     {% elif ticket.status == 'in_progress' %}
-                                    <span class="vc-badge vc-badge-blue vc-badge-dot">กำลังดำเนินการ</span>
+                                    <span class="vc-badge vc-badge-warning vc-badge-dot">กำลังดำเนินการ</span>
                                     {% else %}
                                     <span class="vc-badge vc-badge-success vc-badge-dot">เรียบร้อย</span>
                                     {% endif %}
@@ -271,7 +256,7 @@
                                     {% if ticket.technician_type == 'ช่างนอก' %}
                                     <span class="vc-badge vc-badge-warning">{{ ticket.technician_type }}</span>
                                     {% else %}
-                                    <span class="vc-badge vc-badge-blue">{{ ticket.technician_type }}</span>
+                                    <span class="vc-badge vc-badge-neutral">{{ ticket.technician_type }}</span>
                                     {% endif %}
                                     {% endif %}
                                     {% if ticket.repair_cost %}
@@ -350,8 +335,8 @@
 {% set src = edit_ticket or (copy_ticket if copy_ticket is defined else None) %}
 <div class="modal fade" id="maintenanceFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="border-radius: var(--vc-radius-md); border: 1px solid var(--vc-border);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--vc-border);">
+        <div class="modal-content vc-modal">
+            <div class="modal-header">
                 <h5 class="modal-title fw-bold" style="display:flex;align-items:center;gap:var(--vc-space-2);">
                     {% if edit_ticket %}
                     <i data-lucide="pencil" class="vc-icon-sm"></i>
@@ -368,67 +353,67 @@
                 <div class="modal-body">
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">ผู้แจ้ง</label>
-                        <input type="text" class="form-control bg-light"
+                        <label class="vc-form-label">ผู้แจ้ง</label>
+                        <input type="text" class="vc-form-input"
                                value="{{ current_user.full_name or current_user.username }}" readonly>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">ประเภทงานซ่อม <span class="text-danger">*</span></label>
-                            <select class="form-select" name="category" required>
+                            <label class="vc-form-label">ประเภทงานซ่อม <span class="vc-required">*</span></label>
+                            <select class="vc-form-select" name="category" required>
                                 <option value="" {% if not src %}selected{% endif %} disabled>-- เลือกประเภท --</option>
-                                <option value="ไฟฟ้า/แสงสว่าง" {% if src and src.category=='ไฟฟ้า/แสงสว่าง' %}selected{% endif %}>⚡ ระบบไฟฟ้า / แสงสว่าง</option>
-                                <option value="ประปา/ห้องน้ำ" {% if src and src.category=='ประปา/ห้องน้ำ' %}selected{% endif %}>💧 ระบบประปา / ท่อน้ำ</option>
-                                <option value="แอร์/ปรับอากาศ" {% if src and src.category=='แอร์/ปรับอากาศ' %}selected{% endif %}>❄️ เครื่องปรับอากาศ (แอร์)</option>
-                                <option value="อาคาร/เฟอร์นิเจอร์" {% if src and src.category=='อาคาร/เฟอร์นิเจอร์' %}selected{% endif %}>🚪 อาคารสถานที่ / เฟอร์นิเจอร์</option>
-                                <option value="อื่นๆ" {% if src and src.category=='อื่นๆ' %}selected{% endif %}>🔧 อื่นๆ</option>
+                                <option value="ไฟฟ้า/แสงสว่าง" {% if src and src.category=='ไฟฟ้า/แสงสว่าง' %}selected{% endif %}>ระบบไฟฟ้า / แสงสว่าง</option>
+                                <option value="ประปา/ห้องน้ำ" {% if src and src.category=='ประปา/ห้องน้ำ' %}selected{% endif %}>ระบบประปา / ท่อน้ำ</option>
+                                <option value="แอร์/ปรับอากาศ" {% if src and src.category=='แอร์/ปรับอากาศ' %}selected{% endif %}>เครื่องปรับอากาศ (แอร์)</option>
+                                <option value="อาคาร/เฟอร์นิเจอร์" {% if src and src.category=='อาคาร/เฟอร์นิเจอร์' %}selected{% endif %}>อาคารสถานที่ / เฟอร์นิเจอร์</option>
+                                <option value="อื่นๆ" {% if src and src.category=='อื่นๆ' %}selected{% endif %}>อื่นๆ</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">ความเร่งด่วน <span class="text-danger">*</span></label>
-                            <select class="form-select" name="urgency" required>
-                                <option value="ปกติ" {% if not src or src.urgency=='ปกติ' %}selected{% endif %}>🟢 ปกติ (ซ่อมตามคิว)</option>
-                                <option value="ด่วน" {% if src and src.urgency=='ด่วน' %}selected{% endif %}>🟡 ด่วน (รบกวนการทำงาน)</option>
-                                <option value="ด่วนมาก" {% if src and src.urgency=='ด่วนมาก' %}selected{% endif %}>🔴 ด่วนมาก (อันตราย / น้ำรั่วหนัก)</option>
+                            <label class="vc-form-label">ความเร่งด่วน <span class="vc-required">*</span></label>
+                            <select class="vc-form-select" name="urgency" required>
+                                <option value="ปกติ" {% if not src or src.urgency=='ปกติ' %}selected{% endif %}>ปกติ (ซ่อมตามคิว)</option>
+                                <option value="ด่วน" {% if src and src.urgency=='ด่วน' %}selected{% endif %}>ด่วน (รบกวนการทำงาน)</option>
+                                <option value="ด่วนมาก" {% if src and src.urgency=='ด่วนมาก' %}selected{% endif %}>ด่วนมาก (อันตราย / น้ำรั่วหนัก)</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">บริเวณ/สถานที่ <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="location"
+                            <label class="vc-form-label">บริเวณ/สถานที่ <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-form-input" name="location"
                                    placeholder="เช่น อาคาร A ชั้น 2"
                                    value="{{ src.location if src else '' }}" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">เบอร์ติดต่อกลับ <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="contact_number"
+                            <label class="vc-form-label">เบอร์ติดต่อกลับ <span class="vc-required">*</span></label>
+                            <input type="text" class="vc-form-input" name="contact_number"
                                    placeholder="08X-XXX-XXXX"
                                    value="{{ src.contact_number if src else '' }}" required>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">ปัญหาที่พบ <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="subject"
+                        <label class="vc-form-label">ปัญหาที่พบ <span class="vc-required">*</span></label>
+                        <input type="text" class="vc-form-input" name="subject"
                                placeholder="เช่น แอร์น้ำหยด, หลอดไฟขาด"
                                value="{{ src.subject if src else '' }}" required>
                     </div>
 
                     {% if not edit_ticket %}
                     <div class="mb-2">
-                        <label class="form-label text-muted small fw-bold">
+                        <label class="vc-form-label">
                             <i data-lucide="camera" class="vc-icon-sm"></i>
                             ถ่ายรูปจุดที่เสีย (ถ้ามี)
                         </label>
-                        <input class="form-control" type="file" name="image" accept="image/*">
+                        <input class="vc-form-input" type="file" name="image" accept="image/*">
                     </div>
                     {% endif %}
 
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--vc-border);">
+                <div class="modal-footer">
                     {% if edit_ticket %}
                     <a href="/maintenance" class="vc-btn vc-btn-ghost vc-btn-sm" title="กลับหน้าหลัก">
                         <i data-lucide="arrow-left" class="vc-icon-sm"></i>
@@ -455,8 +440,8 @@
 {# Modal: รับงาน #}
 <div class="modal fade" id="acceptModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: var(--vc-radius-md); border: 1px solid var(--vc-border);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--vc-border);">
+        <div class="modal-content vc-modal">
+            <div class="modal-header">
                 <h5 class="modal-title fw-bold" style="display:flex;align-items:center;gap:var(--vc-space-2);">
                     <i data-lucide="hammer" class="vc-icon-sm"></i>
                     รับงานแจ้งซ่อม
@@ -471,22 +456,22 @@
                         <span id="acceptTicketInfo" class="fw-bold"></span>
                     </p>
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">
+                        <label class="vc-form-label">
                             กำหนดวันนัดซ่อม <span class="fw-normal">(ไม่บังคับ)</span>
                         </label>
-                        <input type="date" class="form-control" name="scheduled_date">
-                        <div class="form-text">ผู้แจ้งจะเห็นวันที่นัดซ่อมในตาราง</div>
+                        <input type="date" class="vc-form-input" name="scheduled_date">
+                        <div class="vc-form-hint">ผู้แจ้งจะเห็นวันที่นัดซ่อมในตาราง</div>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label text-muted small fw-bold">ความเร่งด่วน</label>
-                        <select class="form-select" name="urgency" id="acceptUrgency">
-                            <option value="ปกติ">🟢 ปกติ (1-2 วัน)</option>
-                            <option value="ด่วน">🟡 ด่วน (กระทบงาน)</option>
-                            <option value="ด่วนมาก">🔴 ด่วนมาก (ระบบล่ม)</option>
+                        <label class="vc-form-label">ความเร่งด่วน</label>
+                        <select class="vc-form-select" name="urgency" id="acceptUrgency">
+                            <option value="ปกติ">ปกติ (1-2 วัน)</option>
+                            <option value="ด่วน">ด่วน (กระทบงาน)</option>
+                            <option value="ด่วนมาก">ด่วนมาก (ระบบล่ม)</option>
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--vc-border);">
+                <div class="modal-footer">
                     <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm"
                             data-bs-dismiss="modal" title="ยกเลิก">
                         <i data-lucide="x" class="vc-icon-sm"></i>
@@ -505,8 +490,8 @@
 {# Modal: ปิดงาน #}
 <div class="modal fade" id="closeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="border-radius: var(--vc-radius-md); border: 1px solid var(--vc-border);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--vc-border);">
+        <div class="modal-content vc-modal">
+            <div class="modal-header">
                 <h5 class="modal-title fw-bold" style="display:flex;align-items:center;gap:var(--vc-space-2);">
                     <i data-lucide="check-circle" class="vc-icon-sm"></i>
                     ปิดงานแจ้งซ่อม
@@ -521,38 +506,35 @@
                         <span id="closeTicketInfo" class="fw-bold"></span>
                     </p>
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">บันทึกผลการซ่อม <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="resolved_note" rows="3"
+                        <label class="vc-form-label">บันทึกผลการซ่อม <span class="vc-required">*</span></label>
+                        <textarea class="vc-form-textarea" name="resolved_note" rows="3"
                                   placeholder="เช่น เปลี่ยนหลอดไฟ LED, อุดรอยรั่ว, ล้างแอร์..." required></textarea>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">ประเภทช่าง <span class="text-danger">*</span></label>
-                            <select class="form-select" name="technician_type" required>
+                            <label class="vc-form-label">ประเภทช่าง <span class="vc-required">*</span></label>
+                            <select class="vc-form-select" name="technician_type" required>
                                 <option value="" disabled selected>-- เลือก --</option>
-                                <option value="ช่างใน">🏢 ช่างใน (ทีมภายใน)</option>
-                                <option value="ช่างนอก">🔧 ช่างนอก (จ้างภายนอก)</option>
+                                <option value="ช่างใน">ช่างใน (ทีมภายใน)</option>
+                                <option value="ช่างนอก">ช่างนอก (จ้างภายนอก)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold">ค่าใช้จ่าย <span class="fw-normal">(ถ้ามี)</span></label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" name="repair_cost"
-                                       placeholder="0.00" min="0" step="0.01">
-                                <span class="input-group-text">บาท</span>
-                            </div>
+                            <label class="vc-form-label">ค่าใช้จ่าย <span class="fw-normal">(ถ้ามี)</span></label>
+                            <input type="number" class="vc-form-input vc-mono" name="repair_cost"
+                                   placeholder="0.00 บาท" min="0" step="0.01">
                         </div>
                     </div>
                     <div class="mt-3">
-                        <label class="form-label text-muted small fw-bold">
+                        <label class="vc-form-label">
                             <i data-lucide="camera" class="vc-icon-sm"></i>
                             รูปภาพหลังซ่อม <span class="fw-normal">(ถ้ามี)</span>
                         </label>
-                        <input class="form-control" type="file" name="image_after" accept="image/*">
-                        <div class="form-text">แนบรูปเพื่อเป็นหลักฐานว่าซ่อมเสร็จเรียบร้อย</div>
+                        <input class="vc-form-input" type="file" name="image_after" accept="image/*">
+                        <div class="vc-form-hint">แนบรูปเพื่อเป็นหลักฐานว่าซ่อมเสร็จเรียบร้อย</div>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--vc-border);">
+                <div class="modal-footer">
                     <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm"
                             data-bs-dismiss="modal" title="ยกเลิก">
                         <i data-lucide="x" class="vc-icon-sm"></i>
@@ -571,8 +553,8 @@
 {# Modal: Export Excel #}
 <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: var(--vc-radius-md); border: 1px solid var(--vc-border);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--vc-border);">
+        <div class="modal-content vc-modal">
+            <div class="modal-header">
                 <h5 class="modal-title fw-bold" style="display:flex;align-items:center;gap:var(--vc-space-2);">
                     <i data-lucide="download" class="vc-icon-sm"></i>
                     Export ข้อมูลเป็น Excel
@@ -580,8 +562,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <label class="form-label text-muted small fw-bold">เลือกเดือนที่ต้องการ Export</label>
-                <select class="form-select" id="exportMonthSelect">
+                <label class="vc-form-label">เลือกเดือนที่ต้องการ Export</label>
+                <select class="vc-form-select" id="exportMonthSelect">
                     <option value="" disabled selected>-- เลือกเดือน --</option>
                     {% for m in available_months %}
                     {% set parts = m.split('-') %}
@@ -590,7 +572,7 @@
                     <option value="{{ m }}">{{ TH_MONTHS[mo - 1] }} {{ y + 543 }}</option>
                     {% endfor %}
                 </select>
-                <div class="form-text mt-2">จะ Export ทุกรายการในเดือนที่เลือก รวมถึงค่าใช้จ่ายและบันทึกการซ่อม</div>
+                <div class="vc-form-hint mt-2">จะ Export ทุกรายการในเดือนที่เลือก รวมถึงค่าใช้จ่ายและบันทึกการซ่อม</div>
             </div>
             <div class="modal-footer" style="border-top: 1px solid var(--vc-border);">
                 <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm"

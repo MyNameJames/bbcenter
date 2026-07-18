@@ -1,0 +1,134 @@
+/* ══════════════════════════════════════════════════
+   core/css/ue.css — UE (Uber-Eats-style) redesign foundation
+   ──────────────────────────────────────────────────
+   Phase 1.5 (2026-07-11): promote จาก inline <style> ของ vehicle_mileage.html
+   → shared foundation สำหรับทุกหน้าที่ redesign เป็นแบบ static/core/mockup-orders.html
+   ⚠️ โหลด "หลัง" components.css เสมอ (token override) · หน้าที่ไม่โหลด = คงสไตล์เดิม (contained)
+   sections: TOKENS · SHELL · MOTION · ICON-SIZING
+   NOTE: prefix .ml2-* = legacy (มาจาก mileage) — rename เป็น .ue-* ได้ทีหลัง (cosmetic)
+════════════════════════════════════════════════════ */
+
+/* ═══ TOKENS — green palette (เปลี่ยนสีทั้งระบบที่จุดเดียวนี้) ═══ */
+:root{
+  --bb-n0:#ffffff; --bb-n50:#f6f6f6; --bb-n100:#f6f6f6; --bb-n200:#e0e0e0; --bb-n300:#e0e0e0;
+  --bb-mut:#757575; --bb-str:#06060a; --bb-ph:#757575;
+  --bb-accent:#06C167; --bb-accent-i:#06C167; --bb-accent-h:#05a058; --bb-accent-bg:#EAFBF2;
+  --bb-accent-dk:#0B7A3E;
+}
+
+/* ═══ SHELL — frame / body-row / content / page-title ═══ */
+.ml2-frame{ width:100%; min-height:100vh; height:100vh; display:flex; flex-direction:column; background:transparent; }
+.ml2-body-row{ display:flex; flex:1; min-height:0; }
+.ml2-content{ flex:1; padding:40px 48px 56px; min-width:0; overflow-y:auto; }
+.ml2-content-inner{ max-width:1400px; margin:0 auto; }
+h1.page-title{
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--bb-str);
+  margin: 0 0 24px 0;
+  letter-spacing:-0.5px;
+}
+@media (max-width:1199.98px){
+  .ml2-content{ padding:20px 16px 32px; }
+  h1.page-title{ font-size:28px; margin-bottom:16px; }
+}
+
+/* ═══ MOTION — port อารมณ์จาก mockup-orders.html ═══ */
+@keyframes ml2FrameIn{ from{ opacity:0; transform:translateY(16px) scale(.99); } to{ opacity:1; transform:translateY(0) scale(1); } }
+@keyframes ml2RowIn{ from{ opacity:0; transform:translateX(-8px); } to{ opacity:1; transform:translateX(0); } }
+@keyframes ml2DotPop{ 0%{ transform:scale(0); } 70%{ transform:scale(1.15); } 100%{ transform:scale(1); } }
+@keyframes ml2Bump{ 0%{ transform:scale(1); } 40%{ transform:scale(1.15); } 100%{ transform:scale(1); } }
+@keyframes ml2Shimmer{ from{ background-position:200% 0; } to{ background-position:-200% 0; } }
+
+/* page entry */
+.ml2-content-inner{ animation: ml2FrameIn .5s cubic-bezier(.2,.8,.2,1) both; }
+
+/* KPI number: mockup 26/800 + bump ตอนค่าเปลี่ยน
+   NOTE: #sumAllCost = mileage-specific — generalize เป็น class (.ue-kpi-num) เมื่อ Phase 2 ต้องใช้หน้าอื่น */
+#sumAllCost{ font-size:26px; font-weight:800; letter-spacing:-.5px; display:inline-block; transition: color .25s ease; }
+#sumAllCost.is-bump{ animation: ml2Bump .3s ease; }
+
+/* row stagger + dotPop (delay ตั้งจาก JS) — .ml2-rowin เป็น marker generic (element ไหนก็ได้) */
+.ml2-rowin{ opacity:0; animation: ml2RowIn .4s ease both; }
+.ml2-dotpop{ animation: ml2DotPop .35s cubic-bezier(.34,1.56,.64,1) both; }
+
+/* button micro-interaction (scope .ml2-frame) */
+.ml2-frame .bb-btn{ transition: transform .15s ease, background-color .15s ease, border-color .15s ease; }
+.ml2-frame .bb-btn:hover{ transform: translateY(-1px); }
+.ml2-frame .bb-btn:active{ transform: translateY(0) scale(.97); }
+
+/* skeleton rows ตอนกรอง (AJAX is-loading) */
+.ml2-skel-row{ display:flex; padding:20px 12px; }
+.ml2-skel-row + .ml2-skel-row{ border-top:1px solid var(--bb-n200); }
+.ml2-skel-block{ height:16px; border-radius:6px; flex:1;
+  background:linear-gradient(90deg,var(--bb-n100) 25%,var(--bb-n200) 50%,var(--bb-n100) 75%);
+  background-size:200% 100%; animation: ml2Shimmer 1.1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce){
+  .ml2-content-inner, .ml2-rowin, .ml2-dotpop, #sumAllCost.is-bump, .ml2-skel-block{ animation:none !important; }
+}
+
+/* ═══ ICON-SIZING — Material Symbols (bb-* เดิม size ผ่าน `svg`; MS เป็น span ใช้ font-size) ═══
+   chrome (.sidebar2-scope/.hdr2-scope) มี rule เฉพาะ specificity สูงกว่า → base นี้ไม่กระทบ chrome */
+.material-symbols-outlined{ font-size:1.25rem; line-height:1; vertical-align:middle;
+  font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+.bb-btn .material-symbols-outlined,
+.bb-icon-btn .material-symbols-outlined{ font-size:1.15rem; }
+.bb-status .material-symbols-outlined,
+.bb-badge .material-symbols-outlined{ font-size:1rem; }
+.bb-sort-icon .material-symbols-outlined{ font-size:1.05rem; }
+.bb-select .material-symbols-outlined,
+.bb-search .material-symbols-outlined,
+.bb-menu .material-symbols-outlined,
+.bb-tab2 .material-symbols-outlined{ font-size:1.15rem; }
+.bb-check-box .material-symbols-outlined{ font-size:1rem; }
+.bb-kpi .material-symbols-outlined{ font-size:1.5rem; }
+.bb-avatar .material-symbols-outlined{ font-size:1.6rem; }
+.bb-empty-icon .material-symbols-outlined{ font-size:1.9rem; }
+.bb-timeline .material-symbols-outlined{ font-size:1rem; }
+.bb-tl-desc .material-symbols-outlined,
+.bb-subtext .material-symbols-outlined{ font-size:.95rem; }
+.bb-filter-btn .material-symbols-outlined{ font-size:1.1rem; }
+.bb-filter-clear .material-symbols-outlined{ font-size:1rem; }
+.bb-daterange .material-symbols-outlined,
+.bb-combo .material-symbols-outlined,
+.bb-tooltip .material-symbols-outlined{ font-size:1.1rem; }
+
+/* ═══ CHIP — Uber-style filter chip (ue_chip macro · JS: bb-components.js initUeChip*) ═══ */
+.ue-chip{ display:inline-flex; align-items:center; gap:8px; white-space:nowrap; flex-shrink:0;
+  height:44px; padding:0 18px; border-radius:999px; border:2px solid var(--bb-n300);
+  background:var(--bb-n0); font-family:inherit; font-size:15px; font-weight:600; color:var(--bb-str);
+  cursor:pointer; transition:border-color .15s ease, color .15s ease, transform .12s ease; }
+.ue-chip:hover{ border-color:var(--bb-mut); }
+.ue-chip:active{ transform:scale(.97); }
+.ue-chip.is-on{ border-color:var(--bb-accent-dk); color:var(--bb-accent-dk); }
+/* active → icon fill (Material Symbols) */
+.ue-chip.is-on .material-symbols-outlined,
+.ue-chip-dd.is-active > .ue-chip .material-symbols-outlined,
+.ue-chip-dd.is-open > .ue-chip .material-symbols-outlined{ font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24; }
+.ue-chip .material-symbols-outlined,
+.ue-chip i{ font-size:1.15rem; }
+.ue-chip-chev{ transition:transform .2s ease; }
+
+.ue-chip-badge{ display:none; }
+.ue-chip-badge.is-show{ display:inline-flex; align-items:center; justify-content:center;
+  min-width:20px; height:20px; padding:0 6px; border-radius:999px;
+  background:var(--bb-accent-dk); color:#fff; font-size:12px; font-weight:700; }
+
+.ue-chip-dd{ display:inline-block; }
+.ue-chip-dd.is-open > .ue-chip,
+.ue-chip-dd.is-active > .ue-chip{ border-color:var(--bb-accent-dk); color:var(--bb-accent-dk); }
+.ue-chip-dd.is-open .ue-chip-chev{ transform:rotate(180deg); }
+
+/* pop = position:fixed (JS ตั้ง top/left จาก getBoundingClientRect + portal ไป body) → escape overflow/transform ancestor */
+.ue-chip-pop{ position:fixed; z-index:1060; min-width:240px; max-width:320px;
+  background:var(--bb-n0); border:1px solid var(--bb-n300); border-radius:16px;
+  box-shadow:0 12px 32px rgba(0,0,0,.14); padding:8px; }
+.ue-chip-pop-head{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px 6px; }
+.ue-chip-pop-title{ font-size:13px; font-weight:700; color:var(--bb-mut); text-transform:uppercase; letter-spacing:.4px; }
+.ue-chip-pop-clear{ color:var(--bb-mut); font-weight:600; font-size:14px; cursor:pointer; text-decoration:none; }
+.ue-chip-pop-clear:hover{ color:var(--bb-accent-dk); text-decoration:underline; }
+.ue-chip-opt{ display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:11px 12px; border-radius:10px; font-size:15px; color:var(--bb-str); cursor:pointer; }
+.ue-chip-opt:hover{ background:var(--bb-n100); }
+.ue-chip-opt input{ accent-color:var(--bb-accent-dk); width:18px; height:18px; cursor:pointer; }

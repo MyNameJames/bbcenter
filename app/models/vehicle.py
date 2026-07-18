@@ -136,31 +136,6 @@ class VehicleMileage(db.Model):
 
 
 # ==========================================
-# 11. ตาราง TripPassenger (ขอติดรถ)
-# ==========================================
-class TripPassenger(db.Model):
-    __tablename__ = 'trip_passenger'
-
-    id         = db.Column(db.Integer, primary_key=True)
-    booking_id = db.Column(db.Integer, db.ForeignKey('vehicle_booking.id', ondelete='CASCADE'), nullable=False)
-    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
-    status     = db.Column(db.String(20), default='pending')  # pending | approved | rejected | cancelled
-    note       = db.Column(db.String(200), nullable=True)     # หมายเหตุจากผู้ขอ
-    admin_note = db.Column(db.Text, nullable=True)            # เหตุผลจาก admin
-
-    created_at  = db.Column(db.DateTime, default=get_bkk_time)
-    reviewed_at = db.Column(db.DateTime, nullable=True)
-    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-
-    booking  = db.relationship('VehicleBooking', foreign_keys=[booking_id], backref='passengers', passive_deletes=True)
-    user     = db.relationship('User', foreign_keys=[user_id])
-    reviewer = db.relationship('User', foreign_keys=[reviewed_by])
-
-    __table_args__ = (db.UniqueConstraint('booking_id', 'user_id'),)
-
-
-# ==========================================
 # 12. ตาราง VehicleServiceLog (ประวัติซ่อมบำรุงรถ)
 # ==========================================
 class VehicleServiceLog(db.Model):

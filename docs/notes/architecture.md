@@ -1,6 +1,6 @@
 # BBCenter V2 — System Architecture
 
-> **อัปเดตล่าสุด:** 2026-06-15
+> **อัปเดตล่าสุด:** 2026-06-18
 > Symbol/route/model lookup → [INDEX.md](INDEX.md)
 > Schema detail → [database/schema.md](database/schema.md)
 
@@ -58,6 +58,24 @@ BBCenter V2 = Internal Portal ขององค์กร, Flask monolithic, 4 �
 │  In-app Notifications (notification_service.py) │
 └─────────────────────────────────────────┘
 ```
+
+### UI Component Layer (2026-06-29)
+
+```
+Controller → Component (app/components/) → Jinja macro → HTML
+```
+
+ปรัชญา BBCenter UI Framework: ทุก layer single-responsibility — Model=ข้อมูล, Controller=ประกอบ Component, Component=ถือ config+เลือก template, Jinja=render HTML เท่านั้น (ห้าม build HTML string ใน Python).
+
+- `app/components/base.py` — `BaseComponent` (id/class_name/visible + `render()` ผ่าน `flask.render_template`)
+- `app/components/table.py` — `Table`/`Column` = thin wrapper ครอบ macro `bb_table_v2`
+- `app/components/badge.py` — `Badge`/`Status` = thin wrapper ครอบ macro `bb_badge`/`bb_status`/`bb_status_inline` (2026-06-29)
+- `register_components(app)` (เรียกใน `app.py`) → jinja global `component(obj)` = `obj.render()`
+- Controller สร้าง `Table(...)` ส่งเข้า template → `{{ component(table) }}`
+- ข้อห้าม: Component **ห้าม** query DB / business logic / ตรวจ permission (Controller จัดการ)
+- adopter แรก: cost `ot_expense_table`. ขยาย: เพิ่ม class ใหม่ใน `components/` ครอบ macro `_components/` เดิม
+- **Cell Component (2026-06-29):** `Column(cell=lambda row: Component)` → render component (เช่น `Status`) ต่อ row ใน cell ได้ (Jinja เรียก Python callable) — ตารางมี badge/status ในตัว ไม่ต้องใช้ shell `bb_table`
+- **Living Gallery** `/dev/components` (`templates/dev/components.html`) = render Python component จริงผ่าน `{{ component(obj) }}` → drift ไม่ได้ · โตทีละ component จน absorb static `components-gallery.html` (CSS catalog) แล้ว retire
 
 ---
 
@@ -184,12 +202,18 @@ Cron jobs (APScheduler, `notification_cron.init_scheduler()`):
 - `check_payment_escalation()` — 08:00 BKK, personal payment overdue escalation
 - `auto_reject_overdue_bookings()` — 08:10 BKK, reject pending/waiting_approver ที่เลยวันเดินทาง (Phase 2, 2026-06-12)
 
-### 3. LINE Messaging API (2026-06-12)
-**Channel impl:** `core/line_service.py` — `_push_group(text)` / `_push_user(line_user_id, text)` / `reply(reply_token, text)` (plain text, ไม่มี HTML; push ลบไม่ได้ → ไม่มี delete_old)
-**Group:** notify_* 5 ตัว (ชื่อตรงกับ telegram_service) เด้งเข้า `LINE_GROUP_ID` ผ่าน `broadcast.py`
-**Per-user:** `_create()` ส่ง LINE DM ให้ user ที่มี `User.line_user_id` (graceful skip ถ้า error — ไม่ rollback)
-**ผูกบัญชี** (`core/line_webhook.py`, blueprint `core_bp`): user เปิด `/line/link` → โค้ด 6 หลัก (`User.line_link_code`) → พิมพ์ใน chat OA → `POST /line/webhook` verify `X-Line-Signature` (HMAC-SHA256 ด้วย `LINE_CHANNEL_SECRET`) จับคู่ → set `line_user_id`. groupId ได้จาก webhook log ครั้งแรก
-⚠️ webhook ต้อง public HTTPS reachable จาก LINE platform (dev: tunnel)
+### 3. LINE Messaging API (2026-06-12 · flex 2026-06-18)
+**Channel impl:** `core/line_service.py`
+- plain text: `_push_group` / `_push_user` / `reply`
+- **Flex Message (2026-06-18):** `_push_flex_group` / `_push_flex_user` / `reply_flex` — JSON bubble card (SCB-style)
+- notify_* 5 ตัว ส่ง **Flex card** แทน plain text; ชื่อตรงกับ telegram_service (เรียกผ่าน broadcast.py)
+
+**Group:** notify_* 5 ตัว เด้งเข้า `LINE_GROUP_ID` ผ่าน `broadcast.py` — ได้รับ Flex card
+**Approver DM (2026-06-18):** `broadcast.notify_forwarded_to_approver` → เรียก `line_service.notify_approver_action_required_dm(booking)` → ส่ง Flex card + ปุ่ม **postback "อนุมัติ"** ไปหา approver รายคนที่ผูก LINE ไว้
+**Postback approve (2026-06-18):** approver กดปุ่มใน LINE → `POST /line/webhook` event type=`postback` → `_approve_via_line()` ตรวจ (สิทธิ์ + สถานะ + deadline 1 วัน + budget) → approve → reply Flex card ยืนยัน. deadline = ต้องกดก่อน 1 วันก่อน start_datetime
+**Per-user:** `_create()` ส่ง LINE DM plain text ให้ user ที่มี `User.line_user_id` (graceful skip ถ้า error)
+**ผูกบัญชี** (`core/line_webhook.py`, blueprint `core_bp`): user เปิด `/line/link` → โค้ด 6 หลัก → พิมพ์ใน chat OA → webhook จับคู่ → set `line_user_id`
+⚠️ webhook ต้อง public HTTPS reachable จาก LINE platform (dev: ngrok)
 > **LINE Notify ตายแล้ว** (เม.ย. 2025) → ใช้ Messaging API (Official Account) เท่านั้น
 
 ---
@@ -205,6 +229,7 @@ bbcenter/
 │   │                              maintenance/room/vehicle/vehicle_budget/vehicle_ot/
 │   │                              vehicle_fuel) — __init__.py re-export ครบ
 │   ├── ad_utils.py
+│   ├── components/              ← UI component layer (base/table → macro bb_table_v2, 2026-06-29)
 │   ├── instance/portal.db       ← SQLite (gitignored)
 │   ├── migrations/              ← manual .sql + migrations-index.md
 │   ├── views/
@@ -226,7 +251,7 @@ bbcenter/
 │   │       └── vehicle_budget_service.py  ← ย้ายจาก services/ (services/ ถูกลบ)
 │   ├── templates/
 │   │   ├── _shared/            ← partials กลาง (sidebar/header/navbar/notification_*) — ขั้น 4
-│   │   ├── _components/        ← Jinja macros (_modal/kpi/badge/filter_bar/...)
+│   │   ├── _components/        ← Jinja macros (_modal/kpi/badge/filter_bar/bb/ · render/ = components.py render layer)
 │   │   ├── auth/, dashboard/, repair/, maintenance/, usermng/
 │   │   ├── room/ + room/modals/room_*.html
 │   │   └── vehicle/
@@ -248,7 +273,7 @@ bbcenter/
     └── notes/
         ├── INDEX.md             ← symbol/route lookup (Claude entry)
         ├── architecture.md      ← ไฟล์นี้
-        ├── design_system.md
+        ├── design_guideline.md  ← canonical design (อ่านก่อนแตะ UI)
         ├── future_features.md
         ├── task-lifecycle.md    ← template + สรุป/จบงาน flow
         ├── CHANGELOG.md         ← ประวัติ phase (ย้ายจากหัว INDEX/CLAUDE)

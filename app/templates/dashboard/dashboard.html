@@ -1,6 +1,7 @@
 {# Dashboard — Action Hub (หน้าแรกของ user)
-   Vercel-style shell · vc-* tokens · no inline style/script
-   เน้น time-to-action: Quick Actions (สร้างใหม่) + คำขอของฉัน (+ ทำซ้ำ) + วันนี้ของฉัน
+   Zendenta DNA (commit 2026-06-18): พื้นเทา + การ์ดลอยเงานุ่ม + icon สี + donut
+   pilot หน้าแรกของ Zendenta full — DESIGN-OVERRIDE จาก flat DNA (ดู dashboard.css)
+   เน้น time-to-action: Quick Actions (สร้างใหม่) + ภาพรวม/คำขอของฉัน + วันนี้ของฉัน
 #}
 {% from '_components/empty_state.html' import empty_state %}
 <!DOCTYPE html>
@@ -28,10 +29,11 @@
 
     <main class="main-content vc-scope">
         {% set page_section = 'เมนู' %}
-        {% set page_title = 'Dashboard' %}
+        {% set greeting_name = current_user.full_name or current_user.username %}
+        {% set greeting_dept = current_user.department %}
         {% include '_shared/header.html' %}
 
-        <div class="container-xxl px-3 pt-2">
+        <div class="container-xxl px-2 pt-2">
 
             {# ── Flash messages ─────────────────────────── #}
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -45,7 +47,7 @@
             {% endwith %}
 
             {# ── Greeting ────────────────────────────────── #}
-            <div class="dash-header dash-fade d-1">
+            <div class="dash-header dash-fade d-1 d-none d-xl-flex pt-2 pb-3">
                 <div>
                     <h1 class="dash-title">สวัสดี, {{ current_user.full_name or current_user.username }}</h1>
                     <p class="dash-subtitle">
@@ -56,53 +58,74 @@
                 </div>
             </div>
 
-            {# ── Quick Actions — เริ่มงานใหม่ ───────────────── #}
-            <section class="dash-section dash-fade d-2">
-                <p class="dash-section-label">เริ่มงานใหม่</p>
-                <div class="dash-grid-4">
-                    <a href="{{ url_for('vehicle.index', new=1) }}" class="dash-svc" title="จองรถ">
-                        <div class="dash-svc-head">
-                            <span class="dash-svc-icon"><i data-lucide="car" class="vc-icon-sm"></i></span>
-                        </div>
-                        <h3 class="dash-svc-title">จองรถ</h3>
-                        <p class="dash-svc-desc">รถตู้ รถกระบะ ขอใช้รถส่วนกลาง</p>
-                        <div class="dash-svc-foot">
-                            <span class="dash-svc-cta">เริ่มจอง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
-                        </div>
-                    </a>
+            {# ── Quick Actions — สร้างงานใหม่ ───────────────── #}
+            <section class="dash-section dash-fade">
+                <p class="dash-section-label m-0 pt-2 py-1">บริการ</p>
 
-                    <a href="{{ url_for('room.index', new=1) }}" class="dash-svc" title="จองห้องประชุม">
-                        <div class="dash-svc-head">
-                            <span class="dash-svc-icon"><i data-lucide="users" class="vc-icon-sm"></i></span>
-                        </div>
-                        <h3 class="dash-svc-title">จองห้องประชุม</h3>
-                        <p class="dash-svc-desc">ดูตารางว่าง จองห้องล่วงหน้า</p>
-                        <div class="dash-svc-foot">
-                            <span class="dash-svc-cta">เริ่มจอง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
-                        </div>
+                {# Mobile: 4-col grid — lucide icon + label ในไทล์ #}
+                <div class="d-xl-none dash-quick-row">
+                    <a href="{{ url_for('vehicle.index', new=1) }}" class="dash-quick-tile" style="background:#e6f0ff;color:#4059e6">
+                        <i data-lucide="car"></i>
+                        <span class="dash-quick-label">จองรถ</span>
                     </a>
+                    <a href="{{ url_for('room.index', new=1) }}" class="dash-quick-tile" style="background:#e6f0ff;color:#4059e6">
+                        <i data-lucide="users"></i>
+                        <span class="dash-quick-label">นัดประชุม</span>
+                    </a>
+                    <a href="{{ url_for('repair.index', new=1) }}" class="dash-quick-tile" style="background:#e6f0ff;color:#4059e6">
+                        <i data-lucide="monitor"></i>
+                        <span class="dash-quick-label">ซ่อม IT</span>
+                    </a>
+                    <a href="{{ url_for('maintenance.index', new=1) }}" class="dash-quick-tile" style="background:#e6f0ff;color:#4059e6">
+                        <i data-lucide="building-2"></i>
+                        <span class="dash-quick-label">ซ่อมทั่วไป</span>
+                    </a>
+                </div>
 
-                    <a href="{{ url_for('repair.index', new=1) }}" class="dash-svc" title="แจ้งซ่อมไอที">
-                        <div class="dash-svc-head">
-                            <span class="dash-svc-icon"><i data-lucide="desktop" class="vc-icon-sm"></i></span>
-                        </div>
-                        <h3 class="dash-svc-title">แจ้งซ่อมไอที</h3>
-                        <p class="dash-svc-desc">คอมพิวเตอร์ เครือข่าย ปริ้นเตอร์</p>
-                        <div class="dash-svc-foot">
-                            <span class="dash-svc-cta">แจ้งเรื่อง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
-                        </div>
-                    </a>
-
-                    <a href="{{ url_for('maintenance.index', new=1) }}" class="dash-svc" title="แจ้งซ่อมอาคาร">
-                        <div class="dash-svc-head">
-                            <span class="dash-svc-icon"><i data-lucide="building-2" class="vc-icon-sm"></i></span>
-                        </div>
-                        <h3 class="dash-svc-title">แจ้งซ่อมอาคาร</h3>
-                        <p class="dash-svc-desc">ไฟฟ้า ประปา แอร์ สิ่งอำนวยความสะดวก</p>
-                        <div class="dash-svc-foot">
-                            <span class="dash-svc-cta">แจ้งเรื่อง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
-                        </div>
-                    </a>
+                {# Desktop: 4-column card grid #}
+                <div class="d-none d-xl-block">
+                    <div class="dash-grid-4">
+                        <a href="{{ url_for('vehicle.index', new=1) }}" class="dash-svc" title="จองรถ">
+                            <div class="dash-svc-head">
+                                <span class="dash-svc-icon"><i data-lucide="car" class="vc-icon-sm"></i></span>
+                            </div>
+                            <h3 class="dash-svc-title">จองรถ</h3>
+                            <p class="dash-svc-desc">รถตู้ รถกระบะ ขอใช้รถส่วนกลาง</p>
+                            <div class="dash-svc-foot">
+                                <span class="dash-svc-cta">เริ่มจอง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('room.index', new=1) }}" class="dash-svc" title="จองห้องประชุม">
+                            <div class="dash-svc-head">
+                                <span class="dash-svc-icon"><i data-lucide="users" class="vc-icon-sm"></i></span>
+                            </div>
+                            <h3 class="dash-svc-title">จองห้องประชุม</h3>
+                            <p class="dash-svc-desc">ดูตารางว่าง จองห้องล่วงหน้า</p>
+                            <div class="dash-svc-foot">
+                                <span class="dash-svc-cta">เริ่มจอง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('repair.index', new=1) }}" class="dash-svc" title="แจ้งซ่อมไอที">
+                            <div class="dash-svc-head">
+                                <span class="dash-svc-icon"><i data-lucide="monitor" class="vc-icon-sm"></i></span>
+                            </div>
+                            <h3 class="dash-svc-title">แจ้งซ่อมไอที</h3>
+                            <p class="dash-svc-desc">คอมพิวเตอร์ เครือข่าย ปริ้นเตอร์</p>
+                            <div class="dash-svc-foot">
+                                <span class="dash-svc-cta">แจ้งเรื่อง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('maintenance.index', new=1) }}" class="dash-svc" title="แจ้งซ่อมอาคาร">
+                            <div class="dash-svc-head">
+                                <span class="dash-svc-icon"><i data-lucide="building-2" class="vc-icon-sm"></i></span>
+                            </div>
+                            <h3 class="dash-svc-title">แจ้งซ่อมอาคาร</h3>
+                            <p class="dash-svc-desc">ไฟฟ้า ประปา แอร์ สิ่งอำนวยความสะดวก</p>
+                            <div class="dash-svc-foot">
+                                <span class="dash-svc-cta">แจ้งเรื่อง <i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
+                            </div>
+                        </a>
+                    </div>
                 </div>
             </section>
 
@@ -110,7 +133,7 @@
             {% if today_items %}
             <section class="dash-section dash-fade d-3">
                 <p class="dash-section-label">วันนี้ของฉัน</p>
-                <div class="vc-card dash-recent-card">
+                <div class="zen-card dash-recent-card">
                     <ul class="dash-today">
                         {% for it in today_items %}
                         <li class="dash-today-row">
@@ -127,13 +150,67 @@
             </section>
             {% endif %}
 
-            {# ── คำขอของฉัน (ทุก service) ───────────────────── #}
+            {# ── คำขอของฉัน — Zendenta-clean (KPI strip + data-table) ──── #}
             <section class="dash-section dash-fade d-4">
                 <p class="dash-section-label">คำขอของฉัน</p>
-                <div class="vc-card dash-recent-card">
-                    {% if my_requests %}
+                {% if my_requests %}
+                {% set total  = my_requests | length %}
+                {% set c_wait = my_requests | selectattr('status_color', 'equalto', 'warning') | list | length %}
+                {% set c_prog = my_requests | selectattr('status_color', 'equalto', 'blue')    | list | length %}
+                {% set c_done = my_requests | selectattr('status_color', 'equalto', 'success') | list | length %}
+                {% set p_wait = (c_wait / total * 100) | round | int %}
+                {% set p_prog = (c_prog / total * 100) | round | int %}
+                {% set p_done = (c_done / total * 100) | round | int %}
+                {% set badge_tint = {'warning': 'b-warning', 'blue': 'b-accent', 'success': 'b-full'} %}
+
+                {# KPI strip — inline ไม่มี border (mockup-style) #}
+                <div class="d-flex flex-wrap align-items-center gap-4 mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="kpi-tile"><i data-lucide="inbox"></i></span>
+                        <div>
+                            <p class="dash-kpi-label mb-1">ทั้งหมด</p>
+                            <span class="kpi-num">{{ total }}</span>
+                        </div>
+                    </div>
+                    <div class="border-start align-self-stretch"></div>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="kpi-tile"><i data-lucide="clock"></i></span>
+                        <div>
+                            <p class="dash-kpi-label mb-1">รอดำเนินการ</p>
+                            <span class="d-flex align-items-baseline gap-2">
+                                <span class="kpi-num">{{ c_wait }}</span>
+                                <span class="small fw-semibold vc-mono" style="color: var(--vc-amber)">{{ p_wait }}%</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="border-start align-self-stretch"></div>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="kpi-tile"><i data-lucide="loader"></i></span>
+                        <div>
+                            <p class="dash-kpi-label mb-1">กำลังดำเนินการ</p>
+                            <span class="d-flex align-items-baseline gap-2">
+                                <span class="kpi-num">{{ c_prog }}</span>
+                                <span class="small fw-semibold vc-mono" style="color: var(--vc-accent)">{{ p_prog }}%</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="border-start align-self-stretch"></div>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="kpi-tile"><i data-lucide="check-circle-2"></i></span>
+                        <div>
+                            <p class="dash-kpi-label mb-1">เสร็จแล้ว</p>
+                            <span class="d-flex align-items-baseline gap-2">
+                                <span class="kpi-num">{{ c_done }}</span>
+                                <span class="small fw-semibold vc-mono" style="color: var(--vc-green)">{{ p_done }}%</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {# table — Bootstrap .table.data-table (Zendenta) #}
+                <div class="zen-card">
                     <div class="table-responsive">
-                        <table class="vc-table mb-0">
+                        <table class="table data-table mb-0">
                             <thead>
                                 <tr>
                                     <th>รายการ</th>
@@ -143,34 +220,36 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for r in my_requests %}
+                            {% for r in my_requests %}
                                 <tr>
                                     <td>
-                                        <span class="dash-req-title">
-                                            <i data-lucide="{{ r.icon }}" class="vc-icon-sm"></i>
-                                            {{ r.title }}
-                                        </span>
-                                        {% if r.subtitle %}<span class="dash-recent-sub">{{ r.subtitle }}</span>{% endif %}
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="dash-req-tile"><i data-lucide="{{ r.icon }}" class="vc-icon-sm"></i></span>
+                                            <div style="min-width:0">
+                                                <div class="fw-semibold">{{ r.title }}</div>
+                                                {% if r.subtitle %}<div class="text-muted small">{{ r.subtitle }}</div>{% endif %}
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td>
-                                        <span class="vc-badge vc-badge-{{ r.status_color }} vc-badge-dot">{{ r.status_label }}</span>
-                                    </td>
-                                    <td class="dash-recent-time">{{ r.created_at.strftime('%d/%m/%Y') }}</td>
+                                    <td><span class="badge-pill {{ badge_tint.get(r.status_color, 'b-neutral') }}">{{ r.status_label }}</span></td>
+                                    <td class="vc-mono text-muted">{{ r.created_at.strftime('%d/%m/%Y') }}</td>
                                     <td class="text-end">
-                                        <a href="{{ r.repeat_url }}" class="vc-btn vc-btn-ghost vc-btn-sm" title="ทำซ้ำคำขอนี้ (แก้วันใหม่)">
+                                        <a href="{{ r.repeat_url }}" class="dash-repeat" title="ทำซ้ำคำขอนี้ (แก้วันใหม่)">
                                             <i data-lucide="copy" class="vc-icon-sm"></i>
-                                            ทำซ้ำ
+                                            <span>ทำซ้ำ</span>
                                         </a>
                                     </td>
                                 </tr>
-                                {% endfor %}
+                            {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                    {% else %}
-                    {{ empty_state(title='ยังไม่มีคำขอของคุณ', desc='เริ่มงานใหม่จากการ์ดด้านบน แล้วคำขอจะมาแสดงที่นี่', icon='inbox', compact=True) }}
-                    {% endif %}
                 </div>
+                {% else %}
+                <div class="zen-card dash-recent-card">
+                    {{ empty_state(title='ยังไม่มีคำขอของคุณ', desc='เริ่มงานใหม่จากการ์ดด้านบน แล้วคำขอจะมาแสดงที่นี่', icon='inbox', compact=True) }}
+                </div>
+                {% endif %}
             </section>
 
             {# ── Superadmin banner ───────────────────────── #}

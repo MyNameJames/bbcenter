@@ -1,6 +1,6 @@
 # BBCenter V2 — Project Rules
 
-> **อัปเดตล่าสุด:** 2026-06-17 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](docs/notes/CHANGELOG.md)
+> **อัปเดตล่าสุด:** 2026-06-28 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](docs/notes/CHANGELOG.md)
 
 ## 📖 Reading Strategy
 
@@ -10,7 +10,14 @@
 
 **ห้าม glob/grep หา function/route ก่อน** — เปิด INDEX.md ก่อน ถ้าไม่มี = INDEX outdated → อัปเดตหลังค้นเจอ
 
+**🚦 Vehicle domain — บังคับ:** ก่อนสร้าง/เพิ่ม/แก้ function หรือทำความเข้าใจระบบ vehicle → **อ่าน [vehicle_product_spec.md](docs/notes/vehicle_product_spec.md) ก่อนเสมอ** (North Star: "ระบบบริหารทรัพยากรยานพาหนะ" ไม่ใช่ booking self-service · demand > availability · ห้ามทำลายข้อมูล demand) — ฝ่าฝืน = เสี่ยง scope drift ผิดเจตนา product
+
+**🎨 Design — บังคับ:** ก่อนออกแบบ/แก้ UI · CSS · template ใดๆ → **อ่าน [design_guideline.md](docs/notes/design_guideline.md) ก่อนเสมอ** (canonical เดียว · ของเก่า design_system/dna/zendenta = ลบแล้ว 2026-06-28). ไฟล์นี้เป็น *target spec* (blurple · Sarabun+Inter · rem · soft-shadow) — โค้ดเดิมยังใช้ token เก่าจน migrate; UI ใหม่/redesign ยึด guideline
+
+**🧩 Component — บังคับ:** ก่อนใช้/เลือก UI component (Python wrapper รอบ macro) → **อ่าน [CHEATSHEET.md](app/components/CHEATSHEET.md) ก่อนเสมอ** (ประตูเดียว · signature + ตัวอย่าง copy-paste 28 export). **ห้าม glob/grep `app/components/`** — เปิด cheatsheet หา component → ถ้าไม่มี = ยังไม่ทำ. gallery มองด้วยตา → `/dev/components`
+
 **Entry docs (เปิดเฉพาะที่จำเป็น):**
+- 🚦 Vehicle product North Star (อ่านก่อนแตะ vehicle) → [vehicle_product_spec.md](docs/notes/vehicle_product_spec.md)
 - Nav hub (blueprints + file map) → [INDEX.md](docs/notes/INDEX.md)
 - Routes ทุก path → [INDEX_routes.md](docs/notes/INDEX_routes.md)
 - Functions + DB models → [INDEX_code.md](docs/notes/INDEX_code.md)
@@ -19,8 +26,9 @@
 - Migration .sql → [migrations-index.md](app/migrations/migrations-index.md)
 - System flows → [architecture.md](docs/notes/architecture.md)
 - Task lifecycle (template, สรุปงาน, จบงาน) → [task-lifecycle.md](docs/notes/task-lifecycle.md)
-- Design detail → [design_system.md](docs/notes/design_system.md)
-- DNA redesign 2026-06-17 (migration spec + component cookbook) → [design_dna_redesign.md](docs/notes/design_dna_redesign.md)
+- 🧱 **Page Pattern (อ่านก่อนเขียนหน้าใหม่ — โครง model→controller→component→jinja)** → [page_pattern.md](docs/notes/page_pattern.md)
+- 🎨 **Design Guideline (อ่านก่อนแตะ UI/CSS/template ทุกครั้ง — canonical)** → [design_guideline.md](docs/notes/design_guideline.md)
+- Design legacy เก่า (design_system / design_dna_redesign / zendenta_migration) = **ลบแล้ว 2026-06-28** → guideline เป็น canonical เดียว
 - Pending features → [future_features.md](docs/notes/future_features.md)
 - Token budget check → `bash tools/doc-stats.sh`
 
@@ -39,6 +47,7 @@
 | blueprint | INDEX.md § Blueprints + architecture.md |
 | template | INDEX_ui.md § Templates |
 | CSS/JS file | INDEX_ui.md § Design System |
+| component ใหม่/แก้ signature (`app/components/`) | `app/components/CHEATSHEET.md` (signature + ตัวอย่าง) + เพิ่ม section ใน `/dev/components` gallery |
 | auth/notification pattern | architecture.md |
 | folder ระดับโครงสร้าง | INDEX.md § File Map + architecture.md |
 | doc โต / โครงสร้าง doc เปลี่ยน | run `bash tools/doc-stats.sh` ถ้าเกิน budget → split section ที่โตที่สุด |
@@ -54,6 +63,7 @@
 3. ทำเฉพาะที่ขอ ไม่ over-engineer
 4. ก่อนรัน bash/click browser → แจ้ง+confirm; ไม่รู้ชื่อไฟล์ → ถาม อย่า glob/grep เอง
 5. คำสั่ง "ไว้เป็น future feature" → เพิ่มใน [future_features.md](docs/notes/future_features.md) ทันที (ไม่ implement)
+   - งาน vehicle: ก่อนลงมือ → อ่าน [vehicle_product_spec.md](docs/notes/vehicle_product_spec.md) เช็ก North Star + anti-patterns (§8) ก่อนเสมอ
 6. ก่อน mark เสร็จ → ตรวจ Maintenance Protocol
 7. **Scoped Command Template** — ทุก request ที่ขอแก้/เพิ่ม code ต้องมีครบ 5 field นี้ก่อนลงมือ:
    ```
@@ -199,15 +209,13 @@ if (!res.ok || !data.ok) { showToast(data.msg, 'danger'); return; }
 
 ## Design Quick Rules
 
-- Light, primary + accent `#4059e6` (indigo, 2026-06-17 redesign; เดิม `#014198`/`#0046FF`/navy) · text = navy `#162334` (`--vc-fg`)
-- **No shadow** (ยกเว้น modal) → ใช้ border (`var(--vc-border)` = `#f0f0f0`)
-- Radius 6px (`--vc-radius-sm`, = bootstrap `rounded-2`)
-- **ตัวเลข = Manrope** (ผ่าน `.vc-mono` / `--vc-font-mono`) · ข้อความไทย = Sarabun · icon monochrome `#9999b0` (`--vc-icon`) บนวงกลม/tile `#f0f0f0` (`--vc-icon-bg`)
-- Icons: Font Awesome (`fa-solid` นำหน้าทุก field เทคนิค)
-- **No `border-left/top` สีพิเศษ** บน card/KPI (ดู AI-generated)
-- Vehicle modal: ไฟล์แยกใน `vehicle/modals/vehicle_*.html` (ขั้น 4, 2026-06-07; เดิม `vehicle-modal-*.html`), **ห้ามมี inline `<script>`** — JS อยู่ใน vehicle.js · partials กลางอยู่ `templates/_shared/` · macro อยู่ `templates/_components/`
+**ทุกการออกแบบ/แก้ UI · CSS · template → ยึด [design_guideline.md](docs/notes/design_guideline.md) (canonical เดียว).** ของเก่า (design_system / design_dna_redesign / zendenta_migration) = **ลบแล้ว 2026-06-28**.
 
-รายละเอียด → [design_system.md](docs/notes/design_system.md)
+> ⚠️ guideline = *target spec* (blurple `#533AFD` · Sarabun+Inter · rem · soft-shadow). โค้ดเดิมยังใช้ `--vc-*` (indigo/no-shadow/px) จน migrate → **UI ใหม่/redesign ยึด guideline · หน้าเก่ายังไม่แตะ = legacy**
+
+**Binary ที่ผิดซ้ำบ่อย (รายละเอียดเต็มใน guideline §8):**
+- ✅ ตาราง `<table class="data-table">` — ❌ ห้าม `table-striped`/`table-hover`/`table-bordered`/`table-light`/`table-dark` · ไม่มี zebra · ไม่มีเส้นแนวตั้ง
+- ❌ ห้าม `border-left/top` สีพิเศษ บน card/KPI · ❌ ห้าม inline `<script>` ใน modal (JS อยู่ใน .js) · partials กลาง `_shared/` · macro `_components/`
 
 ---
 

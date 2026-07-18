@@ -15,6 +15,14 @@
             +icon/sidebar tokens, font-mono → Manrope; เดิม 2026-05-16 Phase 5.1)
    ============================================================ */
 
+/* ซ่อน scrollbar ทุกหน้า (global) — scroll ยังทำงานได้ปกติ แค่ไม่โชว์แถบ */
+html, body {
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* IE/Edge legacy */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none;              /* Chrome/Safari/Edge Chromium */
+}
 
 :root {
 
@@ -43,7 +51,7 @@
     --vc-icon-bg:        #f0f0f0;
 
     /* ── Sidebar surface (2026-06-17 redesign) ── */
-    --vc-sidebar-bg:     #fafbfc;
+    --vc-sidebar-bg:     #fafcfc;
     --vc-sidebar-active: #e6ecfa;
 
     /* ── Primary action (indigo #4059e6 — 2026-06-17 redesign; เดิม #014198 sila5 น้ำเงิน)

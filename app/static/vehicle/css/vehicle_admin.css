@@ -10,7 +10,7 @@
    reserve space ให้ <i data-lucide=""> ก่อน
    lucide.createIcons() swap เป็น <svg>
 ───────────────────────────────────────────── */
-.vc-scope [data-lucide]:not(svg) {
+[data-lucide]:not(svg) {
     display: inline-block;
     width: 14px;
     height: 14px;
@@ -113,6 +113,7 @@
    3. WEEK NAVIGATOR — polished frame + spacing
 ───────────────────────────────────────────── */
 .va-week-card {
+    border: 1px solid var(--vc-border);
     border-radius: var(--vc-radius-md);
     background: var(--vc-bg-subtle);
     overflow: hidden;
@@ -897,24 +898,12 @@
    bl-body > bl-head(ชื่อ/รถ | status/badge) + bl-trip(purpose→dest/สรุป) + bl-foot(bl-badges scroll-x | actions)
 ───────────────────────────────────────────── */
 
-/* Flat section (Phase 11.2, 2026-06-06: #sectionBefore เอากรอบ vc-card ออก — header/list ชิดขอบ) */
+/* Section card (Zendenta 2026-06-19: ให้ section มีกรอบชัดเจน ไม่จมกับพื้นหลัง) */
 .va-flat {
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-}
-.va-flat .vc-card-head {
-    padding-left: 0;
-    padding-right: 0;
-    border-bottom: 0;
-}
-.va-flat .va-list {
-    padding-left: 0;
-    padding-right: 0;
-}
-.va-flat .va-filter-tabs {
-    margin-left: 0;
-    margin-right: 0;
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius-md);
+    background: var(--vc-bg);
+    overflow: hidden;
 }
 
 .bl-card {

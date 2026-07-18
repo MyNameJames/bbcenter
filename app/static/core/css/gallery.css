@@ -1,0 +1,69 @@
+/* ============================================================
+   gallery.css — page/gallery chrome (bb-g-* prefix)
+   ────────────────────────────────────────────────────────────
+   คัดลอกจาก components-gallery.html <style> (.g-* → .bb-g-*)
+   tokens: --bb-* จาก components.css (ต้องโหลด components.css ก่อน)
+   ใช้: layout shell ของ gallery/doc + หน้า app ที่ยึด bb-system
+
+   SECTIONS: Wrap/Grid · Sidebar nav · Main · Head · Section · Demo+Code block
+   ============================================================ */
+
+/* ── wrap / grid ── */
+.bb-g-wrap { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+
+/* ── sidebar ── */
+.bb-g-nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+            background: #fff; border-right: 1px solid var(--bb-n200); padding: 1.25rem 1rem; }
+.bb-g-brand { font-weight: 500; font-size: 1.25rem; color: var(--bb-str); display: flex; align-items: center; gap: .5rem; margin-bottom: .25rem; font-family: var(--bb-num-font); }
+.bb-g-brand [data-lucide] { width: 1.325rem; height: 1.325rem; color: var(--bb-accent-i); }
+.bb-g-brand-sub { font-size: .75rem; color: var(--bb-mut); margin-bottom: 1.25rem; }
+.bb-g-nav a { display: block; font-size: .8125rem; color: var(--bb-mut); text-decoration: none;
+              padding: .375rem .5625rem; border-radius: var(--bb-r-sm); margin-bottom: 1px; }
+.bb-g-nav a:hover { background: var(--bb-n50); color: var(--bb-str); }
+.bb-g-nav a.is-on { background: var(--bb-accent-bg); color: var(--bb-accent-h); font-weight: 600; }
+.bb-g-nav-label { font-size: .6875rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+                  color: var(--bb-ph); padding: .5rem .5625rem .25rem; margin-top: .5rem; }
+
+/* ── main ── */
+.bb-g-main { padding: 2.25rem 2.5rem 6rem; max-width: 1080px; }
+
+/* ── head ── */
+.bb-g-head { margin-bottom: 2rem; }
+.bb-g-head h1 { font-size: 1.625rem; font-weight: 700; margin: 0 0 .375rem; letter-spacing: -.01em; }
+.bb-g-head p { font-size: .9375rem; color: var(--bb-mut); margin: 0; line-height: 1.6; }
+.bb-g-head code { font-family: var(--bb-num-font); background: var(--bb-n100); padding: 1px .375rem; border-radius: var(--bb-r-xs); font-size: .8125rem; }
+
+/* ── section ── */
+.bb-g-sec { margin-bottom: 2.5rem; scroll-margin-top: 1rem; }
+.bb-g-sec-head { display: flex; align-items: baseline; gap: .625rem; margin-bottom: .25rem; }
+.bb-g-sec-head h2 { font-size: 1.1875rem; font-weight: 600; margin: 0; }
+.bb-g-sec-head .bb-g-cls { font-family: var(--bb-num-font); font-size: .8125rem; color: var(--bb-accent-i); }
+.bb-g-sec-desc { font-size: .84375rem; color: var(--bb-mut); margin: 0 0 1rem; line-height: 1.55; }
+
+/* ── demo + code block ── */
+.bb-g-block { border: 1px solid var(--bb-n200); border-radius: var(--bb-r-lg); overflow: hidden; background: #fff; margin-bottom: 1rem; }
+.bb-g-demo { padding: 1.75rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; background:
+             linear-gradient(0deg, var(--bb-n50) 1px, transparent 1px) 0 0 / 100% 1.75rem, #fff; }
+.bb-g-demo.is-col { flex-direction: column; align-items: stretch; }
+.bb-g-demo.is-block { display: block; }
+.bb-g-code { position: relative; border-top: 1px solid var(--bb-n200); background: #0A1B33; }
+.bb-g-code pre { margin: 0; padding: 1rem 1.125rem; overflow-x: auto; font-family: 'Inter', ui-monospace, monospace;
+                 font-size: .78125rem; line-height: 1.65; color: #C9D6E8; tab-size: 2; }
+.bb-g-code .tok { color: #8FA6C4; }
+.bb-g-copy { position: absolute; top: .625rem; right: .625rem; font-size: .75rem; font-weight: 600;
+             color: #C9D6E8; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+             border-radius: var(--bb-r-sm); padding: .3125rem .625rem; cursor: pointer; display: inline-flex; align-items: center; gap: .375rem; }
+.bb-g-copy:hover { background: rgba(255,255,255,.16); }
+.bb-g-copy [data-lucide] { width: .8125rem; height: .8125rem; }
+.bb-g-copy.is-done { color: #7EE2A8; border-color: rgba(126,226,168,.4); }
+.bb-g-note { font-size: .8125rem; color: var(--bb-mut); background: var(--bb-accent-bg); border-radius: var(--bb-r-md);
+             padding: .625rem .875rem; margin-bottom: 1rem; display: flex; gap: .5rem; line-height: 1.55; }
+.bb-g-note [data-lucide] { width: 1rem; height: 1rem; color: var(--bb-accent-i); flex-shrink: 0; margin-top: 2px; }
+.bb-g-label { font-size: .6875rem; font-weight: 600; color: var(--bb-mut); width: 100%; margin-bottom: -.25rem; }
+
+/* ── responsive ── */
+@media (max-width: 860px) {
+  .bb-g-wrap { grid-template-columns: 1fr; }
+  .bb-g-nav { display: none; }
+  .bb-g-main { padding: 1.5rem 1.25rem 4rem; }
+}

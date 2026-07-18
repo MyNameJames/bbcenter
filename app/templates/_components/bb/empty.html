@@ -1,0 +1,20 @@
+{#
+  bb_empty — Component Library .bb-empty
+  spec: components-gallery.html §+ · markup ตรง gallery เป๊ะ
+
+  icon  = ชื่อ lucide (default 'inbox')
+  title / desc = ข้อความ
+  action = HTML ปุ่ม (render มาแล้ว) — เว้น = ไม่มีปุ่ม
+
+  Usage:
+    {% from '_components/bb/empty.html' import bb_empty %}
+    {{ bb_empty('ยังไม่มีรายการ', 'คำอธิบาย…', icon='inbox', action=btn_html) }}
+#}
+{% macro bb_empty(title, desc='', icon='inbox', action='') -%}
+<div class="bb-empty">
+  <div class="bb-empty-icon"><i data-lucide="{{ icon }}"></i></div>
+  <div class="bb-empty-title">{{ title }}</div>
+  {%- if desc %}<div class="bb-empty-desc">{{ desc }}</div>{% endif %}
+  {%- if action %}{{ action }}{% endif %}
+</div>
+{%- endmacro %}

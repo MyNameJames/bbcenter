@@ -1,0 +1,19 @@
+{#
+  bb_chip / bb_token / bb_addfilter — Component Library .bb-chip · .bb-token · .bb-addfilter
+  spec: components-gallery.html §4b · markup ตรง gallery เป๊ะ
+
+  bb_chip  — toggle filter: {label, count, active, value, on_click}
+  bb_token — applied filter: {field, op, value, on_remove}
+  bb_addfilter — ปุ่มเพิ่มตัวกรอง: {label, on_click}
+#}
+{% macro bb_chip(label, count=none, active=false, value='', on_click='') -%}
+<button class="bb-chip{% if active %} is-on{% endif %}"{% if on_click %} data-action="{{ on_click }}"{% endif %}{% if value %} data-chip="{{ value }}"{% endif %}>{{ label }}{% if count is not none and count != '' %} <span class="bb-chip-count">{{ count }}</span>{% endif %}</button>
+{%- endmacro %}
+
+{% macro bb_token(field, op, value, on_remove='') -%}
+<span class="bb-token"><b>{{ field }}</b> <span class="op">{{ op }}</span> {{ value }} <span class="bb-token-x"{% if on_remove %} data-action="{{ on_remove }}"{% endif %}><i data-lucide="x"></i></span></span>
+{%- endmacro %}
+
+{% macro bb_addfilter(label='เพิ่มตัวกรอง', on_click='') -%}
+<button class="bb-addfilter"{% if on_click %} data-action="{{ on_click }}"{% endif %}><i data-lucide="plus"></i> {{ label }}</button>
+{%- endmacro %}

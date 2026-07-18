@@ -16,7 +16,6 @@ from .vehicle import (
     Driver,
     VehicleBooking,
     VehicleMileage,
-    TripPassenger,
     VehicleServiceLog,
     TripExpenseItem,
 )
@@ -44,7 +43,7 @@ __all__ = [
     'MaintenanceTicket',
     'RoomBooking',
     'Vehicle', 'Driver', 'VehicleBooking', 'VehicleMileage',
-    'TripPassenger', 'VehicleServiceLog', 'TripExpenseItem',
+    'VehicleServiceLog', 'TripExpenseItem',
     'BudgetType', 'VehicleDepartment', 'VehicleBudget',
     'DeptApprover', 'VehicleBudgetLog',
     'OTRateConfig', 'DriverOT', 'DriverOTSlot',

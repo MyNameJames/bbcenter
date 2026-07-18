@@ -1,0 +1,32 @@
+"""Input component — wrapper บางๆ ของ macro bb_input.
+
+markup ตรง components-gallery.html §2 (.bb-field / .bb-input)
+icon → ห่อ .bb-input-wrap · error → .is-error (input + hint)
+"""
+from .base import BaseComponent
+
+
+class Input(BaseComponent):
+    """field: label + input + hint. error เด่นกว่า hint (แสดง error แทน)."""
+
+    template = '_components/render/_input.html'
+
+    def __init__(self, name, label='', value='', placeholder='', icon=None,
+                 hint='', error='', type='text', disabled=False, required=False, **kw):
+        super().__init__(**kw)
+        self.name = name
+        self.label = label
+        self.value = value
+        self.placeholder = placeholder
+        self.icon = icon
+        self.hint = hint
+        self.error = error
+        self.type = type
+        self.disabled = disabled
+        self.required = required
+
+    def context(self):
+        return {'name': self.name, 'label': self.label, 'value': self.value,
+                'placeholder': self.placeholder, 'icon': self.icon,
+                'hint': self.hint, 'error': self.error, 'type': self.type,
+                'disabled': self.disabled, 'required': self.required}

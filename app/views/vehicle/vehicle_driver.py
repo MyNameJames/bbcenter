@@ -17,6 +17,7 @@ from views.vehicle.vehicle_common import (
     is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
     EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
     get_fuel_price, calc_fuel_cost, deduct_budget_for_trip,
+    _auto_close_stale_trips,
 )
 
 
@@ -212,6 +213,8 @@ def _driver_handle_start(booking, mileage, upload_folder):
         img.save(os.path.join(upload_folder, fname))
         mileage.odometer_start_img = fname
     db.session.flush()
+    _auto_close_stale_trips(booking.assigned_vehicle_id,
+                            mileage.odometer_start, mileage.actual_start, booking.id)
     _n_mileage_start(booking, mileage)
     flash('บันทึกเลขไมล์ก่อนออกเรียบร้อย', 'success')
 

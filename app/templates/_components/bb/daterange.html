@@ -1,0 +1,88 @@
+{#
+  bb_daterange — date-range picker ของ Component Library .bb-* (Stripe-style v2)
+  spec: docs/notes/design_guideline.md §12 (Date range)
+  CSS:  core/css/components.css (.bb-daterange · .bb-cal)
+  JS:   core/js/bb-daterange.js  (include หลัง page JS — auto-init [data-bb-daterange])
+
+  layout: trigger เดียว → popover = preset sidebar (มือถือ = ปุ่ม "ช่วงเวลา" col-auto ชิดซ้าย ยุบ/กาง) + Start/End input (บน) +
+          bb-daterange-cals = 2 คอลัมน์ (.bb-dr-cal-col) แต่ละคอลัมน์มี head ตัวเอง (nav < / ชื่อเดือน caret / nav >) + ปฏิทินของตัวเอง
+          desktop = 2 คอลัมน์เรียงแนวนอน (ขนาดคงที่) · มือถือ = stack แนวตั้ง เต็มความกว้าง (2026-07-02)
+  เลือกเดือน/ปี (caret ชื่อเดือน) แทนที่เฉพาะฝั่งนั้น — อีกฝั่งเห็นปฏิทินเดิมต่อ (2026-07-02)
+  เลือก/preset/พิมพ์ = draft → กด "ยืนยัน" จึง commit → เซ็ต hidden input (start/end)
+  + dispatch 'bb-daterange:change' บน root (detail {preset, start, end})
+
+  Usage:
+    {% from '_components/bb/daterange.html' import bb_daterange %}
+    {{ bb_daterange(start=f.date_start, end=f.date_end, preset=initial_preset) }}
+
+  params:
+    name_start/name_end  ชื่อ hidden input (default date_start/date_end)
+    start/end            ISO 'YYYY-MM-DD' ค่าเริ่มต้น ('' = ว่าง)
+    preset               preset เริ่มต้น: '' | today | 7d | 4w | 3m | 6m | 12m | mtd | qtd | ytd
+    id                   id บน root (ไม่ใส่ = ไม่มี)
+    placeholder          label ตอนยังไม่เลือก (default 'ทั้งหมด')
+    align                ทิศที่ popover กาง: 'left' (default, ชิดซ้าย trigger) | 'right' (ชิดขวา)
+#}
+{% macro bb_daterange(name_start='date_start', name_end='date_end', start='', end='', preset='', id='', placeholder='ทั้งหมด', align='left') -%}
+<div class="bb-dr{% if align == 'right' %} is-align-right{% endif %}" data-bb-daterange{% if id %} id="{{ id }}"{% endif %}
+     data-preset="{{ preset }}" data-placeholder="{{ placeholder }}">
+  <button type="button" class="bb-select bb-dr-trigger" data-bb-dr-btn
+          aria-haspopup="dialog" aria-expanded="false" aria-label="ช่วงวันที่">
+    <i data-lucide="calendar"></i>
+    <span class="bb-dr-label" data-bb-dr-label>{{ placeholder }}</span>
+    <i data-lucide="chevron-down" class="bb-dr-caret"></i>
+  </button>
+  <input type="hidden" name="{{ name_start }}" value="{{ start }}" data-bb-dr-start>
+  <input type="hidden" name="{{ name_end }}" value="{{ end }}" data-bb-dr-end>
+
+  <div class="bb-daterange" data-bb-dr-pop role="dialog" aria-label="เลือกช่วงวันที่" hidden>
+    <div class="bb-dr-presets-wrap">
+      <button type="button" class="bb-select bb-dr-presets-trigger" data-bb-dr-presets-btn aria-haspopup="listbox" aria-expanded="false">
+        <span data-bb-dr-presets-label>ช่วงเวลา</span>
+        <i data-lucide="chevron-down"></i>
+      </button>
+      <div class="bb-daterange-presets" data-bb-dr-presets>
+        <button type="button" data-preset="today">วันนี้</button>
+        <button type="button" data-preset="7d">7 วันล่าสุด</button>
+        <button type="button" data-preset="4w">4 สัปดาห์ล่าสุด</button>
+        <button type="button" data-preset="3m">3 เดือนล่าสุด</button>
+        <button type="button" data-preset="6m">6 เดือนล่าสุด</button>
+        <button type="button" data-preset="12m">12 เดือนล่าสุด</button>
+        <button type="button" data-preset="mtd">เดือนนี้ถึงปัจจุบัน</button>
+        <button type="button" data-preset="qtd">ไตรมาสนี้ถึงปัจจุบัน</button>
+        <button type="button" data-preset="ytd">ปีนี้ถึงปัจจุบัน</button>
+      </div>
+    </div>
+    <div class="bb-daterange-main">
+      <div class="bb-daterange-top">
+        <label class="bb-dr-io"><span>เริ่ม</span>
+          <input type="text" class="bb-dr-input" data-bb-dr-start-in placeholder="วว/ดด/ปปปป" inputmode="numeric" autocomplete="off">
+        </label>
+        <label class="bb-dr-io"><span>ถึง</span>
+          <input type="text" class="bb-dr-input" data-bb-dr-end-in placeholder="วว/ดด/ปปปป" inputmode="numeric" autocomplete="off">
+        </label>
+      </div>
+      <div class="bb-daterange-cals" data-bb-dr-cals>
+        <div class="bb-dr-cal-col">
+          <div class="bb-dr-cal-head">
+            <button type="button" class="bb-dr-nav" data-bb-dr-prev aria-label="เดือนก่อนหน้า"><i data-lucide="chevron-left"></i></button>
+            <div class="bb-dr-cal-title" data-bb-dr-title="0"></div>
+          </div>
+          <div class="bb-dr-cal-body" data-bb-dr-cal="0"></div>
+        </div>
+        <div class="bb-dr-cal-col">
+          <div class="bb-dr-cal-head">
+            <div class="bb-dr-cal-title" data-bb-dr-title="1"></div>
+            <button type="button" class="bb-dr-nav" data-bb-dr-next aria-label="เดือนถัดไป"><i data-lucide="chevron-right"></i></button>
+          </div>
+          <div class="bb-dr-cal-body" data-bb-dr-cal="1"></div>
+        </div>
+      </div>
+      <div class="bb-daterange-foot">
+        <button type="button" class="bb-btn is-sec is-sm" data-bb-dr-clear>ยกเลิก</button>
+        <button type="button" class="bb-btn is-pri is-sm" data-bb-dr-apply>ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+</div>
+{%- endmacro %}

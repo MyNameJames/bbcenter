@@ -1,0 +1,16 @@
+{#
+  bb_tabs — Component Library .bb-tabs
+  spec: components-gallery.html §5 · markup ตรง gallery เป๊ะ
+
+  tabs = list ของ dict: {label, count, active, value, on_click}
+  underline = default status filter · count → .bb-tab-count (เว้น = ไม่แสดง)
+
+  Usage:
+    {% from '_components/bb/tabs.html' import bb_tabs %}
+    {{ bb_tabs([{'label':'ทั้งหมด','count':128,'active':True}, {'label':'รออนุมัติ','count':12}]) }}
+#}
+{% macro bb_tabs(tabs) -%}
+<div class="bb-tabs">
+{%- for t in tabs %}<button class="bb-tab{% if t.active %} is-on{% endif %}"{% if t.on_click %} data-action="{{ t.on_click }}"{% endif %}{% if t.value %} data-tab="{{ t.value }}"{% endif %}>{{ t.label }}{% if t.count is not none and t.count != '' %} <span class="bb-tab-count">{{ t.count }}</span>{% endif %}</button>{% endfor %}
+</div>
+{%- endmacro %}

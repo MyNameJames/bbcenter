@@ -1,0 +1,45 @@
+{#
+  bb_datepicker — date picker วันเดียว (Stripe-style) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-datepicker · reuse .bb-cal*)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-datepicker])
+
+  layout: trigger → popover (input บน · header < เดือน > · ปฏิทินเดือนเดียว · footer ล้าง/ใช้)
+  เลือก/พิมพ์ = draft → กด "ใช้" จึง commit → เซ็ต hidden input (name)
+  + dispatch 'bb-datepicker:change' {detail:{date}}
+
+  Usage:
+    {% from '_components/bb/datepicker.html' import bb_datepicker %}
+    {{ bb_datepicker(name='due_date', value=f.due_date) }}
+
+  params:
+    name         ชื่อ hidden input (default 'date')
+    value        ISO 'YYYY-MM-DD' ('' = ว่าง)
+    placeholder  label ตอนยังไม่เลือก (default 'เลือกวันที่')
+    align        ทิศที่ popover กาง: 'left' (default) | 'right'
+    id           id บน root
+#}
+{% macro bb_datepicker(name='date', value='', placeholder='เลือกวันที่', align='left', id='') -%}
+<div class="bb-dp{% if align == 'right' %} is-align-right{% endif %}" data-bb-datepicker data-value="{{ value }}" data-placeholder="{{ placeholder }}"{% if id %} id="{{ id }}"{% endif %}>
+  <button type="button" class="bb-select bb-dp-trigger" data-bb-dp-btn aria-haspopup="dialog" aria-expanded="false" aria-label="เลือกวันที่">
+    <i data-lucide="calendar"></i>
+    <span class="bb-dp-val{% if not value %} is-ph{% endif %}" data-bb-dp-label>{{ placeholder }}</span>
+    <i data-lucide="chevron-down" class="bb-dp-caret"></i>
+  </button>
+  <input type="hidden" name="{{ name }}" value="{{ value }}" data-bb-dp-input>
+  <div class="bb-datepicker" data-bb-dp-pop role="dialog" aria-label="เลือกวันที่" hidden>
+    <div class="bb-dp-io">
+      <input type="text" class="bb-dr-input" data-bb-dp-text placeholder="วว/ดด/ปปปป" inputmode="numeric" autocomplete="off">
+    </div>
+    <div class="bb-dp-head">
+      <button type="button" class="bb-dr-nav" data-bb-dp-prev aria-label="เดือนก่อนหน้า"><i data-lucide="chevron-left"></i></button>
+      <div class="bb-dp-month" data-bb-dp-month></div>
+      <button type="button" class="bb-dr-nav" data-bb-dp-next aria-label="เดือนถัดไป"><i data-lucide="chevron-right"></i></button>
+    </div>
+    <div class="bb-cal"><div class="bb-cal-grid" data-bb-dp-grid></div></div>
+    <div class="bb-dp-foot">
+      <button type="button" class="bb-btn is-ghost is-sm" data-bb-dp-clear>ล้าง</button>
+      <button type="button" class="bb-btn is-pri is-sm" data-bb-dp-apply>ยืนยัน</button>
+    </div>
+  </div>
+</div>
+{%- endmacro %}

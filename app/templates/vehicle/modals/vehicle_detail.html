@@ -49,6 +49,41 @@
             {# ── Members list (JS inject — bk-detail-member tiles) ── #}
             <div id="detailMembersList" class="bk-detail-members"></div>
 
+            {# ── Edit form (admin only, toggled by JS) ── #}
+            <div id="detailEditSection" class="d-none px-3 pb-3">
+                <div class="bk-detail-divider mb-3"></div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold mb-1">วันเริ่ม</label>
+                        <input type="datetime-local" id="editStart" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold mb-1">วันสิ้นสุด</label>
+                        <input type="datetime-local" id="editEnd" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold mb-1">ปลายทาง</label>
+                        <input type="text" id="editDest" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold mb-1">วัตถุประสงค์</label>
+                        <input type="text" id="editPurpose" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold mb-1">จำนวนผู้โดยสาร</label>
+                        <input type="number" id="editPax" class="form-control form-control-sm" min="1">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold mb-1">จุดขึ้นรถ</label>
+                        <input type="text" id="editPickup" class="form-control form-control-sm">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelAdminEdit()">ยกเลิก</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="saveAdminEdit()">บันทึก</button>
+                </div>
+            </div>
+
             {# ── Footer actions (single + owner + pending เท่านั้น; collapse via :has(#detailActions:empty)) ── #}
             <div class="bk-detail-footer">
                 <div id="detailActions" class="d-flex justify-content-end gap-2"></div>

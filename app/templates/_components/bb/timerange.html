@@ -1,0 +1,46 @@
+{#
+  bb_timerange — ช่วงเวลา (เริ่ม→สิ้นสุด) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-timerange)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-timerange])
+
+  2 ช่อง: เลือก "เริ่ม" เสร็จ → เด้งไป "สิ้นสุด" อัตโนมัติ
+  end เลือกเวลาก่อน start ไม่ได้ (option จาง) · ถ้าเลื่อน start เลย end → ดัน end ตาม
+  warn_before = 'HH:MM' → ค่าที่ก่อนเกณฑ์เปลี่ยนเป็นสี warning
+  commit ทั้งคู่ = เซ็ต hidden input (name_start/name_end) + dispatch 'bb-timerange:change'
+  {detail:{start, end}}
+
+  Usage:
+    {% from '_components/bb/timerange.html' import bb_timerange %}
+    {{ bb_timerange(start='08:00', end='10:00', step=15, warn_before='08:00') }}
+
+  params:
+    name_start/name_end  ชื่อ hidden input (default time_start/time_end)
+    start/end            'HH:MM' (default 08:00 / 10:00)
+    step                 step นาที (default 15)
+    warn_before          'HH:MM' เกณฑ์เตือน ('' = ไม่เตือน)
+    id                   id บน root
+#}
+{% macro _bb_tr_unit(role, name, value) -%}
+<div class="bb-tp" data-bb-tr-unit="{{ role }}">
+  <button type="button" class="bb-select bb-tp-trigger" data-bb-tp-btn aria-haspopup="dialog" aria-expanded="false">
+    <i data-lucide="clock"></i>
+    <span class="bb-tp-val" data-bb-tp-label>{{ value }}</span>
+    <i data-lucide="chevron-down" class="bb-tp-caret"></i>
+  </button>
+  <input type="hidden" name="{{ name }}" value="{{ value }}" data-bb-tp-input>
+  <div class="bb-timepicker" data-bb-tp-pop role="dialog" hidden>
+    <div class="bb-tp-cols">
+      <div class="bb-tp-col"><div class="bb-tp-cap">ชั่วโมง</div><div class="bb-tp-body" data-bb-tp-h></div></div>
+      <div class="bb-tp-col"><div class="bb-tp-cap">นาที</div><div class="bb-tp-body" data-bb-tp-m></div></div>
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro bb_timerange(name_start='time_start', name_end='time_end', start='08:00', end='10:00', step=15, warn_before='', id='') -%}
+<div class="bb-timerange" data-bb-timerange data-step="{{ step }}" data-warn="{{ warn_before }}"{% if id %} id="{{ id }}"{% endif %}>
+  {{ _bb_tr_unit('start', name_start, start) }}
+  <span class="bb-tr-arrow"><i data-lucide="arrow-right"></i></span>
+  {{ _bb_tr_unit('end', name_end, end) }}
+</div>
+{%- endmacro %}

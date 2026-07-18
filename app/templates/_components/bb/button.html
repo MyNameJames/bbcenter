@@ -1,0 +1,28 @@
+{#
+  bb_button — Component Library .bb-btn
+  spec: components-gallery.html §1 · markup ตรง gallery เป๊ะ
+
+  variant: pri | sec | ghost | danger   ·   size: '' | 'sm'
+  icon=lucide name · icon_only=True → .is-icon (ไม่มี text)
+  on_click → data-action (event convention กลาง — JS delegated listener)
+  href → render <a> (ลิงก์/ดาวน์โหลด — ปกติ = <button>) · target/id/title = attr ตรง
+  mobile_icon=True → .is-mobile-icon (จอ ≤575px เหลือเฉพาะ icon · text = .bb-btn-text)
+
+  Usage:
+    {% from '_components/bb/button.html' import bb_button %}
+    {{ bb_button('บันทึก') }}
+    {{ bb_button('ส่งออก', 'sec', icon='download') }}
+    {{ bb_button(variant='sec', icon='settings', icon_only=True) }}
+    {{ bb_button('Export', 'sec', icon='download', href='/export', target='_blank', mobile_icon=True) }}
+#}
+{% macro bb_button(text='', variant='pri', size='', icon=none, icon_only=false,
+                   disabled=false, on_click='', type='button',
+                   href='', target='', id='', title='', mobile_icon=false) -%}
+{%- set _cls = 'bb-btn is-' ~ variant ~ (' is-sm' if size == 'sm' else '') ~ (' is-icon' if icon_only else '') ~ (' is-mobile-icon' if mobile_icon else '') -%}
+{%- set _inner %}{% if icon %}<i data-lucide="{{ icon }}"></i>{% endif %}{% if not icon_only %}<span class="bb-btn-text">{{ text }}</span>{% endif %}{% endset -%}
+{%- if href -%}
+<a href="{{ href }}" class="{{ _cls }}"{% if id %} id="{{ id }}"{% endif %}{% if target %} target="{{ target }}"{% endif %}{% if title %} title="{{ title }}"{% endif %}{% if on_click %} data-action="{{ on_click }}"{% endif %}>{{ _inner }}</a>
+{%- else -%}
+<button type="{{ type }}" class="{{ _cls }}"{% if id %} id="{{ id }}"{% endif %}{% if title %} title="{{ title }}"{% endif %}{% if on_click %} data-action="{{ on_click }}"{% endif %}{% if disabled %} disabled{% endif %}>{{ _inner }}</button>
+{%- endif -%}
+{%- endmacro %}

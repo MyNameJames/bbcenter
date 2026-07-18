@@ -1,0 +1,24 @@
+{#
+  bb_bell — ปุ่มไอคอนแจ้งเตือน + count badge (alert icon) ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-bell)
+
+  static — count มาจาก server · เปิด panel ผ่าน on_click (controller ผูก listener เอง)
+  badge แดง (>99 → '99+') · ไม่มี count → ไม่แสดง badge
+
+  Usage:
+    {% from '_components/bb/bell.html' import bb_bell %}
+    {{ bb_bell(count=unread, on_click='open-notif') }}
+
+  params:
+    count     จำนวนแจ้งเตือน (0 = ไม่มี badge)
+    icon      Lucide icon (default 'bell')
+    ghost     ไม่มีกรอบ/พื้น (default False)
+    on_click  data-action สำหรับเปิด panel
+    id        id บนปุ่ม
+#}
+{% macro bb_bell(count=0, icon='bell', ghost=False, on_click='', id='') -%}
+<button type="button" class="bb-bell{% if ghost %} is-ghost{% endif %}"{% if id %} id="{{ id }}"{% endif %}{% if on_click %} data-action="{{ on_click }}"{% endif %} aria-label="การแจ้งเตือน{% if count %} ({{ count }}){% endif %}">
+  <i data-lucide="{{ icon }}"></i>
+  {% if count %}<span class="bb-bell-count bb-num">{{ count if count <= 99 else '99+' }}</span>{% endif %}
+</button>
+{%- endmacro %}

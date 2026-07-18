@@ -1,0 +1,27 @@
+{#
+  bb_weekstrip — แถบเลือกวัน 7 ช่อง + เลื่อนสัปดาห์ ของ Component Library .bb-*
+  spec: components-gallery.html · CSS: core/css/components.css (.bb-weekstrip)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-weekstrip])
+
+  - แสดงสัปดาห์รอบวันที่เลือก (value) · ปุ่ม < > เลื่อนทีละสัปดาห์
+  - count badge (แดง) ต่อวัน จาก counts {'YYYY-MM-DD': n}
+  - เลือกวัน → เซ็ต hidden input (name) + dispatch 'bb-weekstrip:change' {detail:{date}}
+
+  Usage:
+    {% from '_components/bb/weekstrip.html' import bb_weekstrip %}
+    {{ bb_weekstrip(name='date', value=sel_date, counts=day_counts) }}
+
+  params:
+    name      ชื่อ hidden input (default 'date')
+    value     ISO 'YYYY-MM-DD' วันที่เลือก ('' = วันนี้)
+    counts    dict {'YYYY-MM-DD': int} จำนวนรายการต่อวัน (badge)
+    id        id บน root
+#}
+{% macro bb_weekstrip(name='date', value='', counts={}, id='') -%}
+<div class="bb-weekstrip" data-bb-weekstrip data-value="{{ value }}" data-counts='{{ counts | tojson }}'{% if id %} id="{{ id }}"{% endif %}>
+  <button type="button" class="bb-ws-nav" data-bb-ws-prev aria-label="สัปดาห์ก่อนหน้า"><i data-lucide="chevron-left"></i></button>
+  <div class="bb-ws-strip" data-bb-ws-strip></div>
+  <button type="button" class="bb-ws-nav" data-bb-ws-next aria-label="สัปดาห์ถัดไป"><i data-lucide="chevron-right"></i></button>
+  <input type="hidden" name="{{ name }}" value="{{ value }}" data-bb-ws-input>
+</div>
+{%- endmacro %}
