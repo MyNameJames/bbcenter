@@ -1,6 +1,5 @@
 """Search component — wrapper บางๆ ของ macro bb_search.
 
-markup ตรง components-gallery.html §3 (.bb-search)
 on_input → data-action (event convention กลาง)
 """
 from .base import BaseComponent

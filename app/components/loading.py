@@ -1,6 +1,5 @@
 """Loading components — wrapper บางๆ ของ macro bb_spinner / bb_skeleton.
 
-markup ตรง components-gallery.html §+ (.bb-spinner · .bb-skeleton)
 - Spinner  — วงหมุน · size='sm' · text → inline (spinner + ข้อความ)
 - Skeleton — แถบ placeholder หลายบรรทัด (ส่ง width เป็น str ก็ได้)
 """

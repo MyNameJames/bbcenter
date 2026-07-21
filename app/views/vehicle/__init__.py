@@ -1,10 +1,12 @@
 """
-views.vehicle — vehicle domain (controller + service)
+views.vehicle — vehicle domain controllers เท่านั้น (ไม่มี service/business logic แล้ว —
+Clean Architecture refactor Phase 0-5, 2026-07-19: business logic ทั้งหมดย้ายไป
+app/services/vehicle/*.py (booking_service/mileage_service/budget_service) +
+app/domain/vehicle/*.py (workflow/fuel) แล้ว ดู docs/notes/adr/0001-clean-architecture-layers.md)
 
 ขั้น 3 module refactor (2026-06-07): vehicle_view.py (~3973 LOC) ตัดเป็น controller ต่อ feature
-- vehicle_common         blueprints(4) + helpers/constants กลาง (is_vehicle_admin,
-                         _lookup_budget_for_booking, auto_generate_ot, EXPENSE_CATEGORIES,
-                         TH_MONTHS, _fmt_date_th)
+- vehicle_common         blueprints(4) + shared constant เท่านั้น (is_vehicle_admin,
+                         EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th) — ห้ามเพิ่ม logic ใหม่
 - vehicle_booking        จอง/แก้/ลบ/cancel/detail/approve/approver  (vehicle_bp)
 - vehicle_notification   api_notifications/read/payment_report        (vehicle_bp)
 - vehicle_admin          admin_trips/assign/merge/manage_fleet/...  (vehicle_bp+adminfleet_bp)
@@ -12,7 +14,9 @@ views.vehicle — vehicle domain (controller + service)
 - vehicle_cost           cost_summary/export/override_fuel/ot_*       (admincost_bp)
 - vehicle_budget         budget_manage/personal + pivot               (adminfleet_bp)
 - vehicle_driver         driver_home/ad-hoc/mileage                   (driver_bp)
-- vehicle_budget_service ledger service (ทุก budget mutation ผ่านที่นี่)
+- vehicle_fuel           admin_fuel/bill/reimbursement/price           (fuel_bp — ย้ายจาก
+                         views/fuel_view.py เดิม, Phase 1; blueprint import ตรงใน app.py
+                         ไม่ผ่าน side-effect import ด้านล่างนี้)
 
 blueprints ถูก import จาก vehicle_common; controller modules ถูก import ที่นี่เพื่อ register routes
 """

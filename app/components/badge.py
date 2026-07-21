@@ -1,6 +1,5 @@
 """Badge / Status component — wrapper บางๆ ของ macro bb_badge / bb_status.
 
-markup ตรงกับ components-gallery.html §10-11 (.bb-badge · .bb-status · .bb-status-inline)
 Controller สร้าง object แทนการเขียน <span class="bb-..."> เองในหน้า
 """
 from .base import BaseComponent

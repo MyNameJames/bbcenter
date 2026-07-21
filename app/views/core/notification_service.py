@@ -313,6 +313,25 @@ def notify_mileage_ended(booking, mileage):
           event_key='mileage_end', title='สิ้นสุดการเดินทาง')
 
 
+# REQ-3 (Phase 3.5, 2026-07-19) — cron check_stale_mileage: เตือน driver ทริปบันทึกไมล์
+# เริ่มแล้วแต่ยังไม่ปิด ข้ามวันเดินทางไปแล้ว — pattern เดียวกับ notify_payment_reminder_user
+def notify_mileage_not_closed(booking, mileage, days_open):
+    driver_uid = _booking_driver_uid(booking)
+    if not driver_uid:
+        return
+    _create(
+        user_id    = driver_uid,
+        booking_id = booking.id,
+        message    = f'เตือน: ทริป #{booking.id} บันทึกไมล์เริ่มแล้วแต่ยังไม่ปิดงาน ({days_open} วันแล้ว) — กรุณาบันทึกเลขไมล์กลับ',
+        ntype      = 'warning',
+        category   = 'mileage',
+        icon       = ICON['reminder'],
+        is_sticky  = True,
+        action_url = '/driver',
+        expired_days = None,
+    )
+
+
 # #10, #11 — หักงบ central / department → owner + admin + approver
 def notify_budget_deducted(booking, fuel_cost, budget_type):
     """budget_type: 'central' | 'department' · fuel_cost: float

@@ -57,8 +57,6 @@
        {'label':'ค่าน้ำมัน', 'href': url_for('fuel.admin_fuel'),
         'active': ep == 'fuel.admin_fuel'},
      ]},
-    {'label':'การเงิน', 'icon':'wallet',
-     'href': url_for('finance'), 'active': ep == 'finance'},
   ]}) %}
   {% if is_budget_approver %}
     {% set _ = sections.append({'label':'ผู้อนุมัติ', 'items': [

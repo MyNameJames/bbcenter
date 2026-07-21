@@ -1,6 +1,6 @@
 """Pagination component — wrapper บางๆ ของ macro bb_pagination.
 
-markup ตรง components-gallery.html §12 (.bb-pag) — แบบ windowed (มี gap …)
+แบบ windowed (มี gap …)
 Python คำนวณ window/gap + info → macro render เฉยๆ (layering)
 
 window: หน้าแรก, หน้าสุดท้าย, current ± edge, แทรก gap คั่น

@@ -9,13 +9,17 @@
 ## 0. กฎทอง — 1 layer 1 หน้าที่
 
 ```
+Domain     → pure logic ล้วน (คำนวณ/state machine) ห้าม import flask/query ORM
+Service    → business logic ที่แตะเงิน/สถานะ: guard → เปลี่ยน state → side effect (notify)
 Model      → ดึง/แก้ข้อมูล (ORM เท่านั้น ห้าม SQL ดิบ)
-Controller → ประกอบหน้า: เรียก model → เตรียมข้อมูล → สร้าง component → render
+Controller → parse request → เรียก service (ถ้ามี) → ประกอบ component → render/flash
 Component  → ถือ config + render macro (ห้าม query DB / business logic / permission)
 Jinja      → แสดง HTML เท่านั้น (for/if/include/macro)
 ```
 
-อ่านโค้ดไล่จากบนลงล่างได้เสมอ: model → controller → template **ห้ามให้ layer หนึ่งทำงานแทนอีก layer**
+อ่านโค้ดไล่จากบนลงล่างได้เสมอ: domain/service → model → controller → template **ห้ามให้ layer หนึ่งทำงานแทนอีก layer**
+
+> **Clean Architecture refactor (2026-07-19):** Domain/Service เป็นชั้นใหม่จาก [ADR 0001](adr/0001-clean-architecture-layers.md) — **ใช้เมื่อ controller function มี business logic ที่แตะเงิน/สถานะ** (approve/reject/cancel/deduct budget ฯลฯ). หน้า/route ที่แค่ **อ่าน/แสดงข้อมูลล้วน** (เช่น `cost_summary()` ในตัวอย่าง §3.1 ด้านล่าง) ยัง query model ตรงใน controller ได้ปกติ ไม่ต้องผ่าน service — ดูตัวอย่างจริง: `app/services/vehicle/booking_service.py` (approve/reject/cancel/assign), `mileage_service.py` (close_trip/OT), `budget_service.py` (deduct/refund/top_up)
 
 ---
 
@@ -37,9 +41,9 @@ Jinja      → แสดง HTML เท่านั้น (for/if/include/macro)
 ## 2. Model — ข้อมูลอยู่ที่นี่
 
 - query ง่ายๆ เรียกตรงใน controller ได้: `DriverOT.query.filter_by(status='unpaid').all()`
-- query ซับซ้อน / ใช้ซ้ำ ≥2 ที่ → ทำเป็น helper (`@staticmethod`/`@classmethod` ใน model หรือ helper ใน `vehicle_common.py`) อย่า copy filter ซ้ำ
+- query ซับซ้อน / ใช้ซ้ำ ≥2 ที่ → ทำเป็น helper (`@staticmethod`/`@classmethod` ใน model หรือ helper ใน `services/<domain>/*.py`) อย่า copy filter ซ้ำ — **ห้าม** เพิ่ม logic ใหม่ใน `vehicle_common.py` (เหลือแค่ blueprint def + shared constant ตั้งแต่ Phase 5, 2026-07-19)
 - **ห้าม** raw SQL string · **ห้าม** render HTML / สร้าง component ใน model
-- mutation งบ/สถานะ → ผ่าน service เท่านั้น (`vehicle_budget_service.py`) ไม่แก้ field ตรง
+- mutation งบ/สถานะ (`VehicleBudget`/`VehicleBooking.status`) → ผ่าน service เท่านั้น (`services/vehicle/budget_service.py`/`booking_service.py`) ไม่แก้ field ตรง — ดู §0
 
 ---
 
@@ -88,6 +92,39 @@ def ot_mark_paid(ot_id):
 
 - POST หลาย action → **แตกเป็นฟังก์ชันต่อ action** ไม่ใช่ if-branch ยาวในฟังก์ชันเดียว
 - error: `logger.exception(...)` + flash ข้อความกลาง — **ห้าม** `flash(str(e))`
+
+### 3.2b POST ที่แตะเงิน/สถานะ → ผ่าน service (ตัวอย่างจริง, ตัด/ย่อจาก `vehicle_booking.py`)
+
+```python
+@vehicle_bp.route('/vehicle/cancel/<int:booking_id>', methods=['POST'])
+@login_required
+def cancel_booking(booking_id):
+    booking  = VehicleBooking.query.get_or_404(booking_id)
+    is_owner = (current_user.id == booking.user_id)
+    is_admin = is_vehicle_admin()
+    if not (is_owner or is_admin):
+        flash('คุณไม่มีสิทธิ์ยกเลิกการจองนี้', 'danger')
+        return redirect(url_for('vehicle.index'))
+
+    try:
+        # guard + state change + notify ทั้งหมดอยู่ใน service — route ไม่รู้รายละเอียด
+        ok, msg, info = booking_svc.cancel(booking, actor_id=current_user.id,
+                                           is_owner=is_owner, is_admin=is_admin)
+        if not ok:
+            flash(msg, 'warning')
+            return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
+        db.session.commit()
+        flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย', 'success')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('cancel_booking failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
+    return redirect(url_for('vehicle.index'))
+```
+
+- ต่างจาก §3.2 ตรงที่ **controller ไม่มี business logic เลย** — parse+permission check → เรียก service ตัวเดียว → flash ตาม `(ok, msg)` ที่ service คืนมา → commit
+- service function (`services/<domain>/*.py`) รับผิดชอบ: guard (เช่น เช็คสถานะ/สิทธิ์/เพดานงบ) → เปลี่ยน state (`apply_transition`/mutate field) → side effect (notify, หลัง flush) — controller **ไม่ commit เองใน service**, commit ยังเป็นหน้าที่ route เสมอ
+- ห้ามให้ service import `flask.request`/`flash()`/`current_user` ตรง — รับ `actor_id`/param ที่ต้องใช้เป็น argument (ดู `booking_service.cancel(actor_id=...)`)
 
 ### 3.3 AJAX/fetch → jsonify (ไม่ใช่ redirect)
 
@@ -159,6 +196,7 @@ if _wants_json():
 
 ```
 [ ] Model: ไม่มี HTML/component · query ซ้ำ extract เป็น helper
+[ ] Business logic แตะเงิน/สถานะ → อยู่ใน services/<domain>/*.py ไม่ inline ใน controller (ดู §0/§3.2b)
 [ ] Controller: GET เรียงตามลำดับ (สิทธิ์→ดึง→ประกอบ→render) · 1 func 1 action
 [ ] Controller: error = logger.exception + flash generic (ไม่ flash str(e))
 [ ] Component: config อยู่ใน controller ไม่ใช่ template

@@ -1,24 +1,20 @@
 from flask import render_template, request, redirect, url_for, flash, session, current_app
 from flask_login import login_required, current_user
-from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage,
-                    VehicleBudget, VehicleBudgetLog, VehicleDepartment, Notification, DeptApprover)
+from models import db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage
 from sqlalchemy import func
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 from views.core.notification_service import (
     notify_booking_created      as _n_booking_created,
     notify_mileage_started      as _n_mileage_start,
     notify_mileage_ended        as _n_mileage_end,
-    notify_ot_created           as _n_ot_created,
 )
 import os, time
 from werkzeug.utils import secure_filename
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
-    is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
-    EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
-    get_fuel_price, calc_fuel_cost, deduct_budget_for_trip,
-    _auto_close_stale_trips,
+    is_vehicle_admin,
 )
+import services.vehicle.mileage_service as mileage_svc
 
 
 @driver_bp.route('/driver')
@@ -64,7 +60,8 @@ def driver_home():
                            tomorrow_end=tomorrow_end,
                            vehicles=vehicles,
                            users=users,
-                           latest_odo=latest_odo)
+                           latest_odo=latest_odo,
+                           distance_cap=mileage_svc.get_distance_cap_km())
 
 
 # ─────────────────────────────────────────────
@@ -74,6 +71,59 @@ def driver_home():
 # expense_type=NULL → admin มาเลือกที่หลัง
 # is_ad_hoc=True → ซ่อนจากหน้าปฏิทิน /vehicle
 # ─────────────────────────────────────────────
+
+def _create_ad_hoc_booking(driver, contact_user_id, destination, purpose, vehicle):
+    """สร้าง VehicleBooking แบบ ad-hoc (driver ออกงานนอกระบบ) (extract จาก driver_ad_hoc_trip
+    ตอน Phase 5, logic เดิม 100%) — flush แต่ไม่ commit ให้ caller คุม transaction
+    คืน (booking, now) — now ใช้ต่อเป็น actual_start ของ mileage"""
+    now = get_bkk_time()
+    end_placeholder = now.replace(hour=23, minute=59, second=0, microsecond=0)
+
+    booking = VehicleBooking(
+        user_id             = contact_user_id,
+        start_datetime      = now,
+        end_datetime        = end_placeholder,
+        destination         = destination,
+        purpose             = purpose or 'งานนอกระบบ',
+        passenger_count     = 1,
+        need_driver         = True,
+        driver_id           = driver.id,
+        assigned_vehicle_id = vehicle.id,
+        status              = 'approved',
+        is_ad_hoc           = True,
+        snap_vehicle_plate  = vehicle.license_plate,
+        snap_driver_name    = driver.name,
+    )
+    db.session.add(booking)
+    db.session.flush()
+    _n_booking_created(booking)   # แจ้ง admin → มาเลือก expense_type ที่หลัง
+    return booking, now
+
+
+def _create_ad_hoc_mileage_start(booking, odo_start_raw, now):
+    """บันทึกเลขไมล์ออกทันที (ad-hoc = ออกรถเลย) — สร้าง VehicleMileage start record
+    (extract จาก driver_ad_hoc_trip ตอน Phase 5, logic เดิม 100%)
+    คืน mileage หรือ None ถ้าไม่ได้กรอกเลขไมล์"""
+    if not odo_start_raw:
+        return None
+    mileage = VehicleMileage(
+        booking_id     = booking.id,
+        odometer_start = int(odo_start_raw),
+        actual_start   = now,
+        noted_by       = current_user.id,
+    )
+    img = request.files.get('odometer_start_img')
+    if img and img.filename:
+        upload_folder = os.path.join('static', 'uploads', 'mileage')
+        os.makedirs(upload_folder, exist_ok=True)
+        fname = f"{int(time.time())}_start_{secure_filename(img.filename)}"
+        img.save(os.path.join(upload_folder, fname))
+        mileage.odometer_start_img = fname
+    db.session.add(mileage)
+    db.session.flush()
+    _n_mileage_start(booking, mileage)   # Event #8
+    return mileage
+
 
 @driver_bp.route('/driver/ad-hoc-trip', methods=['POST'])
 @login_required
@@ -103,48 +153,8 @@ def driver_ad_hoc_trip():
         flash('ไม่พบรถที่เลือก', 'danger')
         return redirect(url_for('driver.driver_home'))
 
-    now = get_bkk_time()
-    end_placeholder = now.replace(hour=23, minute=59, second=0, microsecond=0)
-
-    booking = VehicleBooking(
-        user_id             = int(contact_user_id_raw),
-        start_datetime      = now,
-        end_datetime        = end_placeholder,
-        destination         = destination,
-        purpose             = purpose or 'งานนอกระบบ',
-        passenger_count     = 1,
-        need_driver         = True,
-        driver_id           = driver.id,
-        assigned_vehicle_id = vehicle.id,
-        status              = 'approved',
-        is_ad_hoc           = True,
-        snap_vehicle_plate  = vehicle.license_plate,
-        snap_driver_name    = driver.name,
-    )
-    db.session.add(booking)
-    db.session.flush()
-    _n_booking_created(booking)   # แจ้ง admin → มาเลือก expense_type ที่หลัง
-
-    # บันทึกเลขไมล์ออกทันที (ad-hoc = ออกรถเลย) — สร้าง VehicleMileage start record
-    mileage = None
-    if odo_start_raw:
-        mileage = VehicleMileage(
-            booking_id     = booking.id,
-            odometer_start = int(odo_start_raw),
-            actual_start   = now,
-            noted_by       = current_user.id,
-        )
-        img = request.files.get('odometer_start_img')
-        if img and img.filename:
-            upload_folder = os.path.join('static', 'uploads', 'mileage')
-            os.makedirs(upload_folder, exist_ok=True)
-            fname = f"{int(time.time())}_start_{secure_filename(img.filename)}"
-            img.save(os.path.join(upload_folder, fname))
-            mileage.odometer_start_img = fname
-        db.session.add(mileage)
-        db.session.flush()
-        _n_mileage_start(booking, mileage)   # Event #8
-
+    booking, now = _create_ad_hoc_booking(driver, int(contact_user_id_raw), destination, purpose, vehicle)
+    mileage = _create_ad_hoc_mileage_start(booking, odo_start_raw, now)
     db.session.commit()
 
     if mileage:
@@ -213,8 +223,11 @@ def _driver_handle_start(booking, mileage, upload_folder):
         img.save(os.path.join(upload_folder, fname))
         mileage.odometer_start_img = fname
     db.session.flush()
-    _auto_close_stale_trips(booking.assigned_vehicle_id,
-                            mileage.odometer_start, mileage.actual_start, booking.id)
+    stale_msgs = mileage_svc.auto_close_stale_trips(
+        booking.assigned_vehicle_id, mileage.odometer_start, mileage.actual_start,
+        booking.id, actor_id=current_user.id)
+    for msg, cat in stale_msgs:
+        flash(msg, cat)
     _n_mileage_start(booking, mileage)
     flash('บันทึกเลขไมล์ก่อนออกเรียบร้อย', 'success')
 
@@ -228,6 +241,19 @@ def _driver_handle_end(booking, mileage, upload_folder):
             'danger',
         )
         return False
+    # REQ-3 (Phase 3.5, 2026-07-19): เพดานระยะทาง — confirm ผ่านได้ ไม่ hard block (ตกลง
+    # กับเจ้าของโปรเจกต์) — JS ถาม confirm() ก่อนแล้วเซ็ต confirm_distance=1 ให้ปกติ เกิด
+    # ที่นี่เฉพาะกรณี JS ถูกข้าม/ปิดไป (safety net)
+    if mileage.odometer_start is not None:
+        distance = submitted_end - mileage.odometer_start
+        cap = mileage_svc.get_distance_cap_km()
+        if distance > cap and request.form.get('confirm_distance') != '1':
+            flash(
+                f'⚠️ ระยะทาง {distance:,} กม. เกินเพดานปกติ ({cap:,.0f} กม.) — '
+                f'กรุณาตรวจสอบเลขไมล์แล้วยืนยันอีกครั้งถ้าถูกต้อง',
+                'warning',
+            )
+            return False
     mileage.odometer_end = submitted_end
     mileage.actual_end   = datetime.strptime(request.form.get('actual_end'), '%Y-%m-%dT%H:%M')
     img = request.files.get('odometer_end_img')
@@ -284,11 +310,12 @@ def driver_mileage():
     db.session.commit()
 
     if entry_type == 'end':
-        ot = auto_generate_ot(booking, mileage)
-        if ot:
-            _n_ot_created(booking, ot)
+        # notify_ot_created อยู่ใน auto_generate_ot() แล้ว (Phase 4, 2026-07-19)
+        mileage_svc.auto_generate_ot(booking, mileage, actor_id=current_user.id)
         m2 = VehicleMileage.query.filter_by(booking_id=booking_id).first()
-        deduct_budget_for_trip(booking, m2, source='driver_mileage')
+        result = mileage_svc.close_trip(booking, m2, source='driver_mileage')
+        for msg, cat in result['flash_messages']:
+            flash(msg, cat)
 
     return redirect(url_for('driver.driver_home'))
 

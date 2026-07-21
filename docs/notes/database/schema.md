@@ -184,7 +184,8 @@
 | `personal_paid_by_id` | FK → user | admin ที่ยืนยันรับเงิน |
 | `user_reported_paid` | Boolean | user แจ้งว่าจ่ายแล้ว (v2.2) |
 | `user_reported_at` | DateTime | (v2.2) |
-| `last_reminder_at` | DateTime | cron กันเตือนซ้ำ (v2.2) |
+| `last_reminder_at` | DateTime | cron กันเตือนซ้ำ "เตือนจ่ายเงินส่วนตัว" (v2.2) |
+| `mileage_open_reminder_at` | DateTime nullable | cron กันแจ้งซ้ำ "เตือน driver ปิดไมล์ค้าง" — แยกจาก `last_reminder_at` (v2.22) |
 | `budget_deducted_at` | DateTime nullable | null = ยังไม่เคยหักงบ (idempotency, v2.8) |
 | `last_budget_log_id` | FK → vehicle_budget_log nullable | tx ที่ active ใช้สำหรับ refund/rededuct (v2.8) |
 
@@ -531,6 +532,7 @@ INSERT INTO budget_type (id, name) VALUES (1, 'central'), (2, 'department');
 | v2.19 | 2026-06-15 | 26 | `notification` + `event_key`/`superseded_at` — supersede กัน notif ชนิดเดียวกันต่อ booking สะสมซ้ำ |
 | v2.20 | 2026-06-16 | 26 | `notification` + `title` — freeze title ตอนสร้าง notif (เดิม compute จาก event_key → แยก case ไม่ได้) |
 | v2.21 | 2026-06-20 | 25 | `trip_passenger` table **DROPPED** — feature "ขอติดรถ" ตัดออก (ไม่มี UI/route ใช้งานจริง); ทดแทนด้วย trip_group linking ที่ admin จัดผ่าน `admin_merge` |
+| v2.22 | 2026-07-19 | 25 | `vehicle_mileage` + `mileage_open_reminder_at` — guard กันแจ้งซ้ำ cron เตือน driver ปิดไมล์ค้างข้ามวัน (Phase 3.5 REQ-3, clean architecture masterplan) |
 
 ---
 
@@ -1044,6 +1046,24 @@ App: `vehicle_cost.py` — route `ot_create` (POST `/admin/ot/create`, standalon
 | `DROP TABLE trip_passenger` | `passive_deletes=True` + `ondelete='CASCADE'` อยู่ฝั่ง trip_passenger → ไม่กระทบ vehicle_booking |
 
 **Note:** table count 26 → 25. ไม่มี backfill (ไม่มีข้อมูลใช้งานจริงในตาราง)
+
+---
+
+## v2.22 — VehicleMileage Open-Reminder Guard (2026-07-19)
+
+*Migration: [2026-07-19_vehicle-mileage-open-reminder.sql](../../../app/migrations/2026-07-19_vehicle-mileage-open-reminder.sql)*
+
+### Feature codename: Phase 3.5 REQ-3 (Clean Architecture masterplan)
+
+**บริบทธุรกิจ:** *อ้างอิง: [log/2026-07-19_clean_architecture_masterplan.md](../log/2026-07-19_clean_architecture_masterplan.md)* — REQ-3 ต้องเพิ่ม cron job ใหม่ที่แจ้งเตือน driver เมื่องานค้าง คือกรณี `VehicleMileage` ถูกบันทึกเริ่มไมล์ไปแล้ว (`actual_start`/`odometer_start` มีค่า) แต่ยังไม่ปิด (`actual_end`/`odometer_end` ว่าง) ข้ามวันไปแล้ว — cron ต้องมี field guard กันแจ้งเตือนซ้ำเหมือน pattern ที่ `last_reminder_at` ใช้อยู่แล้วกับ `check_payment_escalation()` (v2.2) แต่ **ต้องแยก field กัน** เพราะเป็นคนละเรื่อง ถ้าใช้ field เดียวกันสอง cron จะเขียนทับ guard ของกันและกัน
+
+### `vehicle_mileage` + 1 field
+
+| Field | เหตุผล |
+|-------|--------|
+| `mileage_open_reminder_at` DateTime nullable | guard กันแจ้งเตือนซ้ำสำหรับ cron ใหม่ที่เตือน driver เมื่อเปิดจดไมล์ทริปแล้วยังไม่ปิด ข้ามวันไปแล้ว **แยกจาก `last_reminder_at` โดยเจตนา** — field นั้นเป็น guard ของ `check_payment_escalation()` (เตือนจ่ายเงินส่วนตัว, v2.2) คนละ concern กัน ใช้ field ร่วมกันจะทำให้ cron หนึ่งเขียนทับ timestamp ของอีก cron หนึ่ง (แจ้งซ้ำผิดจังหวะ/พลาดแจ้งเตือน) Semantics: `NULL` = ยังไม่เคยแจ้งเตือนเรื่องนี้, มีค่า = timestamp แจ้งเตือนล่าสุด — cron เช็กค่านี้ก่อนส่งแจ้งเตือนซ้ำในวันเดียวกัน (pattern เดียวกับ `last_reminder_at`) |
+
+**หมายเหตุ:** migration นี้เพิ่มเฉพาะ column — ยังไม่มี cron function ที่ใช้ field นี้จริง (cron job ของ REQ-3 เป็นงานถัดไปที่จะตามมาแยกต่างหาก)
 
 ---
 

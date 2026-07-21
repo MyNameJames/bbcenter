@@ -25,7 +25,6 @@ docs/notes/INDEX_code.md|6000
 docs/notes/INDEX_ui.md|50000
 docs/notes/database/schema.md|8000
 docs/notes/architecture.md|4000
-docs/notes/design_system.md|4000
 docs/notes/task-lifecycle.md|4000
 docs/notes/future_features.md|4000
 app/migrations/migrations-index.md|4000

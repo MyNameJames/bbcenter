@@ -164,9 +164,11 @@ flowchart TD
 **Phase 4 — Driver (execute + capture cost)**
 - รับงาน → ไมล์ออก/เข้า + น้ำมัน → ปิดทริป = **หักงบจริง** (จากงบกลาง/กองตามประเภท) + คิด OT
 - cost/ไมล์ ผูกที่ **leader row** เท่านั้น → ป้อน execution metric (§4)
+- **งบที่หักแล้วไม่มีการคืนทุกกรณี** (implemented behavior, จารึกเป็น spec ทางการ Phase 3.5, 2026-07-19) — แม้ booking ถูกยกเลิกภายหลัง (ซึ่งทำไม่ได้อยู่แล้วถ้าออกรถแล้ว ดู guard ด้านล่าง) เงินที่หักจาก `VehicleBudgetLog` ไม่มี flow refund
 
 ### จุดเสี่ยง UX ที่ต้องกัน
 - ปุ่ม "ยกเลิก" บน leader row → cancel แล้ว un-merge อัตโนมัติ (members → pending, §5 #1 implemented 2026-06-20); user ยกเลิกได้เฉพาะ `pending` ก่อน admin จัดรถ — หลังจัดแล้วต้องผ่าน admin
+- **Trip all-or-nothing guard (Phase 3.5, 2026-07-19):** ถ้างานใดในทริป (leader หรือ mate) มี mileage start entry แล้ว (`odometer_start` ไม่ null — รถออกแล้ว) → block ทั้ง cancel และ un-merge/ungroup ของ**ทุกงานในทริปนั้น รวม admin ด้วย** (เข้มกว่า guard เดิมที่เช็กแค่ `budget_deducted_at` ของตัวเอง) · ungroup 1 คน = ทุกคนที่เหลือกลับ `pending` ทั้งหมด ไม่มี partial/skip case
 - งานกอง: ถ้า Admin ลืมส่งต่อ → คำขอค้าง ไม่เข้า approver inbox
 
 ---

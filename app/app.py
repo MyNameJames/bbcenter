@@ -51,14 +51,8 @@ from markupsafe import Markup
 register_components(app)
 
 
-@app.route('/finance')
-@login_required
-def finance():
-    return render_template('layout.html')
-
-
 # Living component gallery (dev) — render component จริงผ่าน {{ component(obj) }}
-# โตทีละตัวจน absorb static components-gallery.html ได้แล้ว retire ของเก่า
+# แทนที่ static components-gallery.html แล้ว (retired 2026-07-19)
 @app.route('/dev/components')
 def dev_components():
     demo_vehicles = [
@@ -160,7 +154,7 @@ app.register_blueprint(driver_bp)
 from views.room_view import room_bp
 app.register_blueprint(room_bp)
 
-from views.fuel_view import fuel_bp
+from views.vehicle.vehicle_fuel import fuel_bp
 app.register_blueprint(fuel_bp)
 
 from views.core.line_webhook import core_bp

@@ -1,6 +1,5 @@
 """Input component — wrapper บางๆ ของ macro bb_input.
 
-markup ตรง components-gallery.html §2 (.bb-field / .bb-input)
 icon → ห่อ .bb-input-wrap · error → .is-error (input + hint)
 """
 from .base import BaseComponent

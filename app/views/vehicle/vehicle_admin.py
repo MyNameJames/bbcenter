@@ -6,22 +6,22 @@ from sqlalchemy import func
 from datetime import date
 from views.core.broadcast import notify_approved
 from views.core.notification_service import (
-    notify_admin_assigned       as _n_admin_assigned,
     notify_admin_approved       as _n_admin_approved,
     notify_forwarded_to_approver as _n_forwarded,
-    notify_rejected             as _n_rejected,
     notify_merged_into_group    as _n_merged,
 )
-from views.vehicle.vehicle_workflow import guard_budget
+import services.vehicle.booking_service as booking_svc
+from services.vehicle.booking_service import (
+    check_vehicle_conflict, check_driver_conflict, check_vehicle_active,
+)
 import os, time
 from collections import Counter
 from werkzeug.utils import secure_filename
 from components import Tabs, Tab, WeekStrip, DatePicker, ToastRegion
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
-    is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
+    is_vehicle_admin, _lookup_budget_for_booking,
     EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
-    check_vehicle_conflict, check_driver_conflict, check_vehicle_active,
 )
 
 
@@ -362,13 +362,9 @@ def admin_revert_booking(booking_id):
     if not is_vehicle_admin():
         return jsonify({'ok': False, 'msg': 'ไม่มีสิทธิ์'}), 403
     b = VehicleBooking.query.get_or_404(booking_id)
-    if any(m.budget_deducted_at for m in b.mileage):
-        return jsonify({'ok': False, 'msg': 'revert ไม่ได้ — มีการหักงบแล้ว'}), 400
-    if b.status not in ('approved', 'waiting_approver', 'rejected'):
-        return jsonify({'ok': False, 'msg': f'revert ไม่ได้จากสถานะ {b.status}'}), 400
-    b.status = 'pending'
-    b.reject_reason = None
-    b.updated_by = current_user.id
+    ok, msg = booking_svc.revert(b, actor_id=current_user.id)
+    if not ok:
+        return jsonify({'ok': False, 'msg': msg}), 400
     db.session.commit()
     return jsonify({'ok': True})
 
@@ -523,90 +519,56 @@ def admin_assign(booking_id):
         flash('คุณไม่มีสิทธิ์', 'danger')
         return redirect(url_for('vehicle.index'))
 
-    booking              = VehicleBooking.query.get_or_404(booking_id)
-    assigned_vehicle_id  = request.form.get('assigned_vehicle_id')
-    driver_id            = request.form.get('driver_id') or None
-    trip_group           = request.form.get('trip_group', '').strip() or None
-    action               = request.form.get('action', 'assign')
-    assign_action        = request.form.get('assign_action', 'approve')
+    booking       = VehicleBooking.query.get_or_404(booking_id)
+    trip_group    = request.form.get('trip_group', '').strip() or None
+    action        = request.form.get('action', 'assign')
+    assign_action = request.form.get('assign_action', 'approve')
 
     if action == 'ungroup':
-        booking.trip_group           = None
-        booking.assigned_vehicle_id  = None
+        ok, msg = booking_svc.ungroup(booking)
+        if not ok:
+            return jsonify({'ok': False, 'msg': msg}), 400
         db.session.commit()
         flash(f'นำ #{booking_id} ออกจากกลุ่มทริปแล้ว', 'success')
+        return jsonify({'ok': True})
+
+    # ── ข้อ 1: ถ้าเป็นทริปร่วม (มี trip_group) ──────────────
+    # รถและคนขับสืบทอดจากทริปหลักอัตโนมัติ ไม่ต้องกำหนดใหม่ (assign_resources ข้าม set+validate)
+    is_join_trip = bool(trip_group)
+    ok, msg = booking_svc.assign_resources(
+        booking,
+        vehicle_id=request.form.get('assigned_vehicle_id'),
+        driver_id=request.form.get('driver_id') or None,
+        trip_group=trip_group,
+        expense_type=request.form.get('expense_type') or None,
+        central_category=request.form.get('central_category') or None,
+        trip_department=request.form.get('trip_department', '').strip(),
+        is_join_trip=is_join_trip,
+    )
+    if not ok:
+        return jsonify({'ok': False, 'msg': msg}), 400
+
+    if assign_action == 'reject':
+        # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07) — confirm/reject ไม่ส่ง
+        # notify (Event #6) อยู่ใน reject_from_pending() แล้ว (Phase 4, 2026-07-19)
+        ok, msg = booking_svc.reject_from_pending(
+            booking, reason=request.form.get('reject_reason', '').strip() or None)
+        if not ok:
+            return jsonify({'ok': False, 'msg': msg}), 400
+        db.session.commit()
     else:
-        # ── ข้อ 1: ถ้าเป็นทริปร่วม (มี trip_group) ──────────────
-        # รถและคนขับสืบทอดจากทริปหลักอัตโนมัติ ไม่ต้องกำหนดใหม่
-        is_join_trip = bool(trip_group)
-
-        if not is_join_trip:
-            # validate คนขับเฉพาะกรณีไม่ใช่ทริปร่วม
-            if booking.need_driver and not driver_id and not booking.driver_id:
-                return jsonify({'ok': False, 'msg': f'รายการ #{booking_id} ขอคนขับ กรุณาเลือกคนขับด้วย'}), 400
-            # กำหนดรถและคนขับเฉพาะทริปอิสระ
-            if assigned_vehicle_id:
-                booking.assigned_vehicle_id = int(assigned_vehicle_id)
-            if driver_id:
-                booking.driver_id  = int(driver_id)
-
-        booking.trip_group       = trip_group
-        booking.expense_type     = request.form.get('expense_type') or None
-        booking.central_category = request.form.get('central_category') or None
-        trip_dept = request.form.get('trip_department', '').strip()
-        booking.trip_department  = trip_dept or booking.user.department or None
-
-        trip_dept = request.form.get('trip_department', '').strip()
-        booking.trip_department = trip_dept or booking.user.department or None
-        if booking.trip_department:
-            dept_obj = VehicleDepartment.query.filter_by(name=booking.trip_department).first()
-            if dept_obj:
-                booking.trip_department_id = dept_obj.id
-
-        # conflict guard เฉพาะทริปอิสระที่กำลัง approve
-        if assign_action != 'reject' and not is_join_trip:
-            if not check_vehicle_active(booking.assigned_vehicle_id):
-                return jsonify({'ok': False, 'msg': 'รถคันนี้ไม่พร้อมใช้งาน (maintenance/inactive)'}), 400
-            exclude = [booking.id]
-            vconf = check_vehicle_conflict(booking.assigned_vehicle_id,
-                                           booking.start_datetime, booking.end_datetime, exclude)
-            if vconf:
-                return jsonify({'ok': False, 'msg':
-                    f'รถคันนี้ถูกใช้ทับช่วงเวลานี้แล้ว (#{vconf.id})'}), 400
-            dconf = check_driver_conflict(booking.driver_id,
-                                          booking.start_datetime, booking.end_datetime, exclude)
-            if dconf:
-                return jsonify({'ok': False, 'msg':
-                    f'คนขับมีทริปอื่นทับช่วงเวลานี้ (#{dconf.id})'}), 400
-
-        if assign_action == 'reject':
-            booking.status = 'rejected'
-            booking.reject_reason = request.form.get('reject_reason', '').strip() or None
-            db.session.flush()
-            # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07) — confirm/reject ไม่ส่ง
-            _n_rejected(booking, current_user, by_approver=False)  # In-app Event #6
-            db.session.commit()
-        else:
-            # approve — เช็ค budget active ก่อน (gap: admin_assign ไม่เคยเช็ค)
-            if booking.expense_type in ('central', 'department'):
-                ok, err = guard_budget(booking)
-                if not ok:
-                    return jsonify({'ok': False, 'msg': err}), 400
-
-            # ถ้างบกอง → ส่ง Approver อัตโนมัติ
-            if not is_join_trip and (booking.assigned_vehicle_id or booking.driver_id):
-                _n_admin_assigned(booking)                         # In-app Event #2
-            if booking.expense_type == 'department':
-                booking.status = 'waiting_approver'
-                db.session.flush()
-                # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07)
-                _n_forwarded(booking)                              # In-app Event #4
-            else:
-                booking.status = 'approved'
-                db.session.flush()
-                # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07)
-                _n_admin_approved(booking)                         # In-app Event #3
-            db.session.commit()
+        # approve — guard budget + conflict รวมอยู่ใน approve_from_pending แล้ว
+        # (เดิม admin_assign เช็ค conflict, approve_booking ไม่เช็ค — ตกลงให้รวมเข้าด้วยกัน)
+        # Telegram ส่งผ่านปุ่ม btnNotify เท่านั้น (2026-06-07)
+        # notify (Event #2/#3/#4) อยู่ใน approve_from_pending() แล้ว (Phase 4, 2026-07-19) —
+        # notify_assigned ส่งเงื่อนไขเดิม (not is_join_trip and had_resources) เข้า service
+        had_resources = bool(booking.assigned_vehicle_id or booking.driver_id)
+        ok, msg = booking_svc.approve_from_pending(
+            booking, skip_conflict_check=is_join_trip,
+            notify_assigned=(not is_join_trip and had_resources))
+        if not ok:
+            return jsonify({'ok': False, 'msg': msg}), 400
+        db.session.commit()
 
     return jsonify({'ok': True})
 

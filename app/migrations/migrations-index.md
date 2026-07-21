@@ -29,6 +29,7 @@
 | 2026-06-15 | [2026-06-15_notification-supersede.sql](2026-06-15_notification-supersede.sql) | `notification` (+event_key, +superseded_at) — supersede กัน notif ชนิดเดียวกันสะสมซ้ำ | [v2.19](../../docs/notes/database/schema.md#v219--notification-supersede-2026-06-15) |
 | 2026-06-16 | [2026-06-16_notification-add-title.sql](2026-06-16_notification-add-title.sql) | `notification` (+title) — freeze title ตอนสร้าง notif (เดิม compute จาก event_key) | [v2.20](../../docs/notes/database/schema.md#v220--notification-title-2026-06-16) |
 | 2026-06-20 | [2026-06-20_drop-trip-passenger.sql](2026-06-20_drop-trip-passenger.sql) | `trip_passenger` table dropped — feature "ขอติดรถ" ตัดออก; ทดแทนด้วย trip_group linking | [v2.21](../../docs/notes/database/schema.md#v221--drop-trip-passenger-2026-06-20) |
+| 2026-07-19 | [2026-07-19_vehicle-mileage-open-reminder.sql](2026-07-19_vehicle-mileage-open-reminder.sql) | `vehicle_mileage` (+mileage_open_reminder_at) — guard กันแจ้งซ้ำ cron เตือน driver ปิดไมล์ค้างข้ามวัน (Phase 3.5 REQ-3) | [v2.22](../../docs/notes/database/schema.md#v222--vehiclemileage-open-reminder-guard-2026-07-19) |
 
 ---
 

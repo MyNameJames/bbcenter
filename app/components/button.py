@@ -1,6 +1,5 @@
 """Button component — wrapper บางๆ ของ macro bb_button.
 
-markup ตรง components-gallery.html §1 (.bb-btn)
 on_click → data-action (event convention กลาง — JS delegated listener ผูกเอง)
 """
 from .base import BaseComponent

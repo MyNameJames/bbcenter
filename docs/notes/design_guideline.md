@@ -237,7 +237,7 @@ sidebar→drawer · ตารางกว้าง 3 กลยุทธ์ (hori
 
 ## 12. Component Library (spec · canonical)
 
-> 🖼️ **Gallery (ดูก่อนสร้างเสมอ):** [`app/static/core/components-gallery.html`](../../app/static/core/components-gallery.html) — render component ทุกตัวจาก CSS จริง + ปุ่ม copy markup. **อยากได้ component → เปิด gallery ก่อน:** มีแล้ว = copy ไปใช้ · ยังไม่มี = แจ้งกลับเพื่อเพิ่มเข้า gallery + components.css (ห้ามสร้าง class `.bb-*` ใหม่เองมั่ว). เปิด `/static/core/components-gallery.html`
+> 🖼️ **Gallery (ดูก่อนสร้างเสมอ):** `/dev/components` ([templates/dev/components.html](../../app/templates/dev/components.html)) — Living Gallery, render component จริงทุกตัวผ่าน `{{ component(obj) }}` (drift ไม่ได้; static `components-gallery.html` retired 2026-07-19). **อยากได้ component → เปิด `/dev/components` ก่อน:** มีแล้ว = copy ไปใช้ · ยังไม่มี = แจ้งกลับเพื่อเพิ่มเข้า gallery + components.css (ห้ามสร้าง class `.bb-*` ใหม่เองมั่ว)
 >
 > implement: [`app/static/core/css/components.css`](../../app/static/core/css/components.css) · prefix `.bb-*` (target ใหม่ — `--vc-*`/`.zen-*`/`.data-table` เดิม = legacy จะ migrate เข้าหา) · icon = **Lucide** (`data-lucide`) · เลข = Inter (`.bb-num`)
 >

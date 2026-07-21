@@ -1,23 +1,22 @@
 from flask import render_template, request, redirect, url_for, flash, session, current_app
 from flask_login import login_required, current_user
 from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage,
-                    SystemConfig, VehicleBudget, FuelPrice, FuelBill)
+                    VehicleBudget, FuelBill)
 from sqlalchemy import extract, or_
 from datetime import datetime, date, timedelta
 from views.core.notification_service import (
     notify_mileage_started      as _n_mileage_start,
     notify_mileage_ended        as _n_mileage_end,
-    notify_ot_created           as _n_ot_created,
 )
 import os, time
 from werkzeug.utils import secure_filename
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
-    is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
+    is_vehicle_admin, _lookup_budget_for_booking,
     TH_MONTHS, _fmt_date_th, _build_budget_subs,
-    get_fuel_price, calc_fuel_cost, deduct_budget_for_trip,
-    _auto_close_stale_trips,
+    get_fuel_price, calc_fuel_cost,
 )
+import services.vehicle.mileage_service as mileage_svc
 
 
 def _compute_mileage_cost(b, m):
@@ -57,8 +56,11 @@ def _handle_mileage_start(booking, mileage, upload_folder):
         img.save(os.path.join(upload_folder, fname))
         mileage.odometer_start_img = fname
     db.session.flush()
-    _auto_close_stale_trips(booking.assigned_vehicle_id,
-                            mileage.odometer_start, mileage.actual_start, booking.id)
+    stale_msgs = mileage_svc.auto_close_stale_trips(
+        booking.assigned_vehicle_id, mileage.odometer_start, mileage.actual_start,
+        booking.id, actor_id=current_user.id)
+    for msg, cat in stale_msgs:
+        flash(msg, cat)
     _n_mileage_start(booking, mileage)
     flash(f'บันทึกเลขไมล์ก่อนออก #{booking.id} เรียบร้อย', 'success')
 
@@ -73,6 +75,19 @@ def _handle_mileage_end(booking, mileage, upload_folder):
             'danger'
         )
         return False
+    # REQ-3 (Phase 3.5, 2026-07-19): เพดานระยะทาง — confirm ผ่านได้ ไม่ hard block
+    # (ตกลงกับเจ้าของโปรเจกต์) — JS ถาม confirm() ก่อนแล้วเซ็ต confirm_distance=1 ให้ปกติ
+    # เกิดที่นี่เฉพาะกรณี JS ถูกข้าม/ปิดไป (safety net)
+    if mileage.odometer_start is not None:
+        distance = submitted_end - mileage.odometer_start
+        cap = mileage_svc.get_distance_cap_km()
+        if distance > cap and request.form.get('confirm_distance') != '1':
+            flash(
+                f'⚠️ ระยะทาง {distance:,} กม. เกินเพดานปกติ ({cap:,.0f} กม.) — '
+                f'กรุณาตรวจสอบเลขไมล์แล้วยืนยันอีกครั้งถ้าถูกต้อง',
+                'warning'
+            )
+            return False
     mileage.odometer_end = submitted_end
     mileage.actual_end   = datetime.strptime(request.form.get('actual_end'), '%Y-%m-%dT%H:%M')
     img = request.files.get('odometer_end_img')
@@ -257,49 +272,10 @@ def _build_vehicle_breakdown(vehicles_all, now):
     return breakdown, breakdown_totals
 
 
-@vehicle_bp.route('/vehicle/mileage', methods=['GET', 'POST'])
-@login_required
-def mileage_log():
-    if not is_vehicle_admin():
-        flash('คุณไม่มีสิทธิ์เข้าหน้านี้', 'danger')
-        return redirect(url_for('vehicle.index'))
-
-    if request.method == 'POST':
-        booking_id = int(request.form.get('booking_id'))
-        booking    = VehicleBooking.query.get_or_404(booking_id)
-        entry_type = request.form.get('entry_type')
-
-        mileage = VehicleMileage.query.filter_by(booking_id=booking_id).first()
-        if not mileage:
-            mileage = VehicleMileage(booking_id=booking_id, noted_by=current_user.id)
-            db.session.add(mileage)
-
-        upload_folder = os.path.join('static', 'uploads', 'mileage')
-        os.makedirs(upload_folder, exist_ok=True)
-
-        if entry_type == 'start':
-            _handle_mileage_start(booking, mileage, upload_folder)
-        elif entry_type == 'end':
-            if not _handle_mileage_end(booking, mileage, upload_folder):
-                return redirect(url_for('vehicle.mileage_log'))
-            _n_mileage_end(booking, mileage)
-
-        db.session.commit()
-
-        if entry_type == 'end':
-            ot = auto_generate_ot(booking, mileage)
-            if ot:
-                _n_ot_created(booking, ot)
-            m2 = VehicleMileage.query.filter_by(booking_id=booking_id).first()
-            deduct_budget_for_trip(booking, m2, source='mileage_log')
-
-        return redirect(url_for('vehicle.mileage_log'))
-
-    # ── GET: Admin mileage dashboard ─────────────────────────────
-    today      = get_bkk_time().date()
-    now        = get_bkk_time()
-    fuel_price = FuelPrice.get_for_date(today) or float(SystemConfig.get('fuel_price', '40') or 40)
-
+def _parse_mileage_filters(today):
+    """Parse GET query param (mileage dashboard filter) (extract จาก mileage_log ตอน Phase 5,
+    logic เดิม 100% รวม default-date เมื่อไม่ระบุช่วงและไม่กด show_all)
+    คืน tuple 11 ค่าตามลำดับที่ route ใช้"""
     show_all      = request.args.get('show_all', '') == '1'
     f_date_start  = request.args.get('date_start', '').strip()
     f_date_end    = request.args.get('date_end', '').strip()
@@ -315,6 +291,62 @@ def mileage_log():
     if not show_all and not f_date_start and not f_date_end:
         f_date_start = today.replace(day=1).strftime('%Y-%m-%d')
         f_date_end   = today.strftime('%Y-%m-%d')
+
+    return (show_all, f_date_start, f_date_end, f_vehicle, f_driver, f_status,
+            f_cost_min, f_cost_max, f_budget_type, f_budget_sub, f_booker)
+
+
+def _handle_mileage_post():
+    """POST ของ mileage_log — บันทึกไมล์ start/end (extract จาก mileage_log ตอน Phase 5,
+    logic เดิม 100%) คืน response (redirect) ให้ route return ตรง"""
+    booking_id = int(request.form.get('booking_id'))
+    booking    = VehicleBooking.query.get_or_404(booking_id)
+    entry_type = request.form.get('entry_type')
+
+    mileage = VehicleMileage.query.filter_by(booking_id=booking_id).first()
+    if not mileage:
+        mileage = VehicleMileage(booking_id=booking_id, noted_by=current_user.id)
+        db.session.add(mileage)
+
+    upload_folder = os.path.join('static', 'uploads', 'mileage')
+    os.makedirs(upload_folder, exist_ok=True)
+
+    if entry_type == 'start':
+        _handle_mileage_start(booking, mileage, upload_folder)
+    elif entry_type == 'end':
+        if not _handle_mileage_end(booking, mileage, upload_folder):
+            return redirect(url_for('vehicle.mileage_log'))
+        _n_mileage_end(booking, mileage)
+
+    db.session.commit()
+
+    if entry_type == 'end':
+        # notify_ot_created อยู่ใน auto_generate_ot() แล้ว (Phase 4, 2026-07-19)
+        mileage_svc.auto_generate_ot(booking, mileage, actor_id=current_user.id)
+        m2 = VehicleMileage.query.filter_by(booking_id=booking_id).first()
+        result = mileage_svc.close_trip(booking, m2, source='mileage_log')
+        for msg, cat in result['flash_messages']:
+            flash(msg, cat)
+
+    return redirect(url_for('vehicle.mileage_log'))
+
+
+@vehicle_bp.route('/vehicle/mileage', methods=['GET', 'POST'])
+@login_required
+def mileage_log():
+    if not is_vehicle_admin():
+        flash('คุณไม่มีสิทธิ์เข้าหน้านี้', 'danger')
+        return redirect(url_for('vehicle.index'))
+
+    if request.method == 'POST':
+        return _handle_mileage_post()
+
+    # ── GET: Admin mileage dashboard ─────────────────────────────
+    today      = get_bkk_time().date()
+    now        = get_bkk_time()
+    fuel_price = mileage_svc.get_fuel_price(today)
+    (show_all, f_date_start, f_date_end, f_vehicle, f_driver, f_status,
+     f_cost_min, f_cost_max, f_budget_type, f_budget_sub, f_booker) = _parse_mileage_filters(today)
 
     cutoff   = datetime.combine(today + timedelta(days=1), datetime.min.time())
     bookings = _query_mileage_bookings(cutoff, f_date_start, f_date_end, f_vehicle,
@@ -341,6 +373,7 @@ def mileage_log():
         display_rows=display_rows,
         cost_ceiling=cost_ceiling,
         fuel_price=fuel_price,
+        distance_cap=mileage_svc.get_distance_cap_km(),
         today=today,
         curr_year=now.year,
         curr_month=now.month,
@@ -367,46 +400,49 @@ def mileage_log():
 # Export Excel — mileage (admin)
 # ─────────────────────────────────────────────
 
-@vehicle_bp.route('/vehicle/mileage/export')
-@login_required
-def mileage_export():
-    if not is_vehicle_admin():
-        flash('คุณไม่มีสิทธิ์', 'danger')
-        return redirect(url_for('vehicle.index'))
+def _filter_and_calc_mileage_rows(bookings, f_status, f_cost_min, f_cost_max):
+    """คำนวณ distance/fuel_cost/status ต่อ booking + กรองตาม status/cost (post-DB filter —
+    fuel_cost มาจากสูตร ไม่ใช่ column ตรง กรองใน SQL ไม่ได้) (extract จาก mileage_export
+    ตอน Phase 5 — logic เดิม 100%)
+    คืน (rows, total_distance, total_fuel) — rows = [(booking, mileage, distance, fuel_cost,
+    status_key), ...]"""
+    rows = []
+    total_distance = 0.0
+    total_fuel     = 0.0
+    for b in bookings:
+        m = b.mileage[0] if b.mileage else None
+        distance = fuel_cost = None
+        status_key = 'none'
+        if m and m.odometer_start and m.odometer_end:
+            distance = m.odometer_end - m.odometer_start
+            td = m.actual_end.date() if m.actual_end else b.start_datetime.date()
+            fuel_cost  = calc_fuel_cost(b.assigned_vehicle, distance, get_fuel_price(td), m.fuel_cost) or None
+            status_key = 'complete'
+        elif m and m.odometer_start:
+            status_key = 'partial'
 
-    import io
-    try:
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    except ImportError:
-        flash('ไม่พบ openpyxl — รัน: pip install openpyxl', 'danger')
-        return redirect(url_for('vehicle.mileage_log'))
+        if f_status and f_status != status_key: continue
+        if f_cost_min is not None and (fuel_cost or 0) < f_cost_min: continue
+        if f_cost_max is not None and (fuel_cost or 0) > f_cost_max: continue
 
-    from flask import send_file
-    today = get_bkk_time().date()
+        if distance: total_distance += distance
+        if fuel_cost: total_fuel += fuel_cost
+        rows.append((b, m, distance, fuel_cost, status_key))
+    return rows, total_distance, total_fuel
 
-    f_date_start = request.args.get('date_start', '').strip()
-    f_date_end   = request.args.get('date_end', '').strip()
-    f_vehicle    = request.args.get('vehicle_id', type=int)
-    f_driver     = request.args.get('driver_id', type=int)
-    f_status     = request.args.get('status_filter', '').strip()
-    f_cost_min   = request.args.get('cost_min', type=float)
-    f_cost_max   = request.args.get('cost_max', type=float)
 
-    cutoff = datetime.combine(today + timedelta(days=1), datetime.min.time())
-    q = VehicleBooking.query.filter(
-        VehicleBooking.status == 'approved',
-        VehicleBooking.start_datetime < cutoff,
-    )
-    if f_date_start:
-        try: q = q.filter(VehicleBooking.start_datetime >= datetime.strptime(f_date_start, '%Y-%m-%d'))
-        except ValueError: pass
-    if f_date_end:
-        try: q = q.filter(VehicleBooking.start_datetime < datetime.strptime(f_date_end, '%Y-%m-%d') + timedelta(days=1))
-        except ValueError: pass
-    if f_vehicle: q = q.filter(VehicleBooking.assigned_vehicle_id == f_vehicle)
-    if f_driver:  q = q.filter(VehicleBooking.driver_id == f_driver)
-    bookings = q.order_by(VehicleBooking.start_datetime.desc()).all()
+def _build_mileage_workbook(rows, total_distance, total_fuel, today):
+    """สร้าง openpyxl Workbook จาก rows ที่กรอง+คำนวณแล้ว (extract จาก mileage_export ตอน
+    Phase 5 — logic/styling เดิม 100%) คืน wb ให้ route save+send
+
+    import openpyxl ในนี้ตั้งใจ (ไม่ย้ายขึ้น top-of-file) — เหตุผลเดียวกับ apscheduler ใน
+    notification_cron.py (Phase 5): openpyxl เป็น optional dependency เฉพาะ export feature
+    นี้ ถ้าย้ายขึ้น top-level ของ vehicle_mileage.py ทั้งไฟล์ (mileage dashboard/POST
+    start-end) จะ import ไม่ได้ทันทีถ้า deployment ไหนไม่ได้ติดตั้ง openpyxl ทั้งที่ฟีเจอร์
+    หลักไม่เกี่ยวกับ Excel เลย — mileage_export() (route ที่เรียกฟังก์ชันนี้) เช็ก
+    ImportError + flash แจ้งเตือนไว้ก่อนเรียกแล้ว จึงมั่นใจได้ว่าถึงจุดนี้ import สำเร็จแน่"""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -427,28 +463,8 @@ def mileage_export():
 
     ST_LABEL  = {'complete':'ครบ','partial':'รอกลับ','none':'รอกรอก'}
     EXP_LABEL = {'central':'ส่วนกลาง','department':'หน่วยงาน','personal':'ส่วนตัว'}
-    total_distance = 0.0
-    total_fuel     = 0.0
     ri = 2
-    for b in bookings:
-        m = b.mileage[0] if b.mileage else None
-        distance = fuel_cost = None
-        status_key = 'none'
-        if m and m.odometer_start and m.odometer_end:
-            distance = m.odometer_end - m.odometer_start
-            td = m.actual_end.date() if m.actual_end else b.start_datetime.date()
-            fuel_cost  = calc_fuel_cost(b.assigned_vehicle, distance, get_fuel_price(td), m.fuel_cost) or None
-            status_key = 'complete'
-        elif m and m.odometer_start:
-            status_key = 'partial'
-
-        if f_status and f_status != status_key: continue
-        if f_cost_min is not None and (fuel_cost or 0) < f_cost_min: continue
-        if f_cost_max is not None and (fuel_cost or 0) > f_cost_max: continue
-
-        if distance: total_distance += distance
-        if fuel_cost: total_fuel += fuel_cost
-
+    for b, m, distance, fuel_cost, status_key in rows:
         row_data = [
             f"BK-{b.id}",
             b.user.full_name or b.user.username,
@@ -482,6 +498,52 @@ def mileage_export():
     for ci, w in enumerate(col_widths, 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(ci)].width = w
     ws.row_dimensions[1].height = 22
+    return wb
+
+
+@vehicle_bp.route('/vehicle/mileage/export')
+@login_required
+def mileage_export():
+    if not is_vehicle_admin():
+        flash('คุณไม่มีสิทธิ์', 'danger')
+        return redirect(url_for('vehicle.index'))
+
+    import io
+    try:
+        import openpyxl
+    except ImportError:
+        flash('ไม่พบ openpyxl — รัน: pip install openpyxl', 'danger')
+        return redirect(url_for('vehicle.mileage_log'))
+
+    from flask import send_file
+    today = get_bkk_time().date()
+
+    f_date_start = request.args.get('date_start', '').strip()
+    f_date_end   = request.args.get('date_end', '').strip()
+    f_vehicle    = request.args.get('vehicle_id', type=int)
+    f_driver     = request.args.get('driver_id', type=int)
+    f_status     = request.args.get('status_filter', '').strip()
+    f_cost_min   = request.args.get('cost_min', type=float)
+    f_cost_max   = request.args.get('cost_max', type=float)
+
+    cutoff = datetime.combine(today + timedelta(days=1), datetime.min.time())
+    q = VehicleBooking.query.filter(
+        VehicleBooking.status == 'approved',
+        VehicleBooking.start_datetime < cutoff,
+    )
+    if f_date_start:
+        try: q = q.filter(VehicleBooking.start_datetime >= datetime.strptime(f_date_start, '%Y-%m-%d'))
+        except ValueError: pass
+    if f_date_end:
+        try: q = q.filter(VehicleBooking.start_datetime < datetime.strptime(f_date_end, '%Y-%m-%d') + timedelta(days=1))
+        except ValueError: pass
+    if f_vehicle: q = q.filter(VehicleBooking.assigned_vehicle_id == f_vehicle)
+    if f_driver:  q = q.filter(VehicleBooking.driver_id == f_driver)
+    bookings = q.order_by(VehicleBooking.start_datetime.desc()).all()
+
+    rows, total_distance, total_fuel = _filter_and_calc_mileage_rows(
+        bookings, f_status, f_cost_min, f_cost_max)
+    wb = _build_mileage_workbook(rows, total_distance, total_fuel, today)
 
     buf = io.BytesIO()
     wb.save(buf)

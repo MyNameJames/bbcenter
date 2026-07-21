@@ -1,7 +1,8 @@
 # Mileage Redesign Plan — handoff (executor: Sonnet high)
 
-> **เป้าหมาย:** apply design จาก `app/static/core/mockup-mileage.html` → `app/templates/vehicle/admin/vehicle_mileage.html`
-> **reference:** mockup ข้างต้น · `components-gallery.html` (component จริง) · `design_guideline.md §12-13`
+> ⚠️ **redesign เสร็จแล้ว — doc นี้เป็น historical record** (mockup ต้นฉบับ `mockup-mileage.html` + `components-gallery.html` ลบออกจาก repo แล้ว 2026-07-19; design ปัจจุบัน → `design_guideline.md`)
+> **เป้าหมายเดิม:** apply design จาก `mockup-mileage.html` (ลบแล้ว) → `app/templates/vehicle/admin/vehicle_mileage.html`
+> **reference:** `design_guideline.md §12-13` · living gallery `/dev/components`
 > **สถานะ components.css:** อัปเดตแล้ว (modal responsive 500px+sheet · bb_daterange Stripe-style) — **อย่า re-add**
 
 ---

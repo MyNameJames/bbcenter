@@ -26,6 +26,7 @@ const mmOdoStart  = document.getElementById('mmOdoStart');
 const mmOdoEnd    = document.getElementById('mmOdoEnd');
 const mmOdoEndErr = document.getElementById('mmOdoEndErr');
 const mmEntryType = document.getElementById('mmEntryType');
+const mmConfirmDistance = document.getElementById('mmConfirmDistance');
 let bsModal    = null;
 let currentRow = null;
 
@@ -111,6 +112,17 @@ formMileage.addEventListener('submit', function (e) {
         e.preventDefault();
         mmOdoEnd.classList.add('is-error');
         mmOdoEndErr.style.display = 'block';
+        return;
+    }
+    // REQ-3 (Phase 3.5): เพดานระยะทาง — confirm ผ่านได้ ไม่ block เด็ดขาด (ตกลงกับ
+    // เจ้าของโปรเจกต์) — backend มี guard เดียวกันเป็น safety net เผื่อ JS ถูกข้าม
+    const distance = end - start;
+    if (distance > window.BBML_DISTANCE_CAP && mmConfirmDistance.value !== '1') {
+        const ok = confirm(
+            `ระยะทาง ${fmt(distance)} กม. เกินเพดานปกติ (${fmt(window.BBML_DISTANCE_CAP)} กม.) — ยืนยันว่าเลขถูกต้องใช่ไหม?`
+        );
+        if (!ok) { e.preventDefault(); return; }
+        mmConfirmDistance.value = '1';
     }
 });
 

@@ -258,10 +258,11 @@
                                     </div>
                                 </div>
 
-                                <form method="POST" action="/driver/mileage" enctype="multipart/form-data" class="driver-form" data-driver-form>
+                                <form method="POST" action="/driver/mileage" enctype="multipart/form-data" class="driver-form" data-driver-form data-odo-start="{{ m.odometer_start }}">
                                     <input type="hidden" name="booking_id" value="{{ b.id }}">
                                     <input type="hidden" name="entry_type" value="end">
                                     <input type="hidden" name="actual_end" data-actual-now>
+                                    <input type="hidden" name="confirm_distance" value="0" data-confirm-distance>
 
                                     <div class="driver-form__title pt-2">บันทึกเลขไมล์กลับ</div>
 
@@ -377,6 +378,9 @@
     </div>
 </main>
 
+<script>
+    window.DRIVER_DISTANCE_CAP = {{ distance_cap }};
+</script>
 <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>

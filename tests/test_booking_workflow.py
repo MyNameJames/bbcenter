@@ -51,13 +51,13 @@ def _mock_booking(status='pending', expense_type=None):
 # ─────────────────────────────────────────────────────────────
 
 def test_1_allowed_transitions_covers_all_statuses():
-    from views.vehicle.vehicle_workflow import ALLOWED_TRANSITIONS
+    from domain.vehicle.workflow import ALLOWED_TRANSITIONS
     expected = {'pending', 'waiting_approver', 'approved', 'rejected', 'cancelled'}
     assert set(ALLOWED_TRANSITIONS.keys()) == expected
 
 
 def test_2_apply_transition_invalid():
-    from views.vehicle.vehicle_workflow import apply_transition
+    from domain.vehicle.workflow import apply_transition
     b = _mock_booking('rejected')
     ok, msg = apply_transition(b, 'approved')
     assert ok is False
@@ -65,14 +65,14 @@ def test_2_apply_transition_invalid():
 
 
 def test_2b_apply_transition_same_status_blocked():
-    from views.vehicle.vehicle_workflow import apply_transition
+    from domain.vehicle.workflow import apply_transition
     b = _mock_booking('pending')
     ok, msg = apply_transition(b, 'pending')
     assert ok is False
 
 
 def test_3_apply_transition_valid():
-    from views.vehicle.vehicle_workflow import apply_transition
+    from domain.vehicle.workflow import apply_transition
     b = _mock_booking('pending')
     ok, msg = apply_transition(b, 'approved')
     assert ok is True
@@ -81,14 +81,14 @@ def test_3_apply_transition_valid():
 
 
 def test_4_apply_transition_sets_updated_by():
-    from views.vehicle.vehicle_workflow import apply_transition
+    from domain.vehicle.workflow import apply_transition
     b = _mock_booking('pending')
     apply_transition(b, 'approved', actor_id=99)
     assert b.updated_by == 99
 
 
 def test_5_apply_transition_no_actor_keeps_updated_by():
-    from views.vehicle.vehicle_workflow import apply_transition
+    from domain.vehicle.workflow import apply_transition
     b = _mock_booking('pending')
     b.updated_by = 7
     apply_transition(b, 'approved', actor_id=None)
@@ -115,7 +115,7 @@ def mini_app():
 
 
 def test_6_guard_budget_personal_skip(mini_app, monkeypatch):
-    from views.vehicle import vehicle_workflow as wf
+    from domain.vehicle import workflow as wf
     called = []
     monkeypatch.setattr(wf, '_lookup_budget_for_booking', lambda *a, **kw: called.append(1) or (None, None))
     b = _mock_booking(expense_type=None)
@@ -125,7 +125,7 @@ def test_6_guard_budget_personal_skip(mini_app, monkeypatch):
 
 
 def test_7_guard_budget_no_active_budget(mini_app, monkeypatch):
-    from views.vehicle import vehicle_workflow as wf
+    from domain.vehicle import workflow as wf
     monkeypatch.setattr(wf, '_lookup_budget_for_booking', lambda *a, **kw: (None, 'ส่วนกลาง'))
     b = _mock_booking(expense_type='central')
     ok, msg = wf.guard_budget(b)
@@ -134,7 +134,7 @@ def test_7_guard_budget_no_active_budget(mini_app, monkeypatch):
 
 
 def test_8_guard_budget_active_budget_ok(mini_app, monkeypatch):
-    from views.vehicle import vehicle_workflow as wf
+    from domain.vehicle import workflow as wf
 
     class FakeBudget:
         id = 1
@@ -266,9 +266,10 @@ def test_9_admin_assign_approve_central_no_budget(wf_app, wf_client):
 
 def test_10_admin_assign_approve_central_with_budget(wf_app, wf_client, monkeypatch):
     """admin_assign approve central expense ที่มีงบ active → 200"""
-    import views.vehicle.vehicle_admin as va_mod
-    # patch ที่ vehicle_admin เพราะ from ... import guard_budget copy reference มาแล้ว
-    monkeypatch.setattr(va_mod, 'guard_budget', lambda b: (True, None))
+    import services.vehicle.booking_service as bs_mod
+    # patch ที่ booking_service (Phase 2) เพราะ guard_budget ถูกเรียกจาก
+    # approve_from_pending() ในนั้นแล้ว — ไม่ใช่จาก vehicle_admin ตรงๆ อีกต่อไป
+    monkeypatch.setattr(bs_mod, 'guard_budget', lambda b: (True, None))
 
     with wf_app.app_context():
         bt, dept, bgt = _make_dept_budget(is_active=True)

@@ -1,6 +1,5 @@
 """Modal component — wrapper บางๆ ของ macro bb_modal.
 
-markup ตรง components-gallery.html §13 (.bb-modal)
 - body / actions รับ component อื่นได้ (reuse _render_body จาก card — DRY)
 - actions = list ปุ่ม (Button) → render ลง .bb-modal-foot
 - overlay=True (default) = canonical (ห่อ overlay, hidden รอ JS เปิด)

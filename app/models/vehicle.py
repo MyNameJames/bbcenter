@@ -128,7 +128,11 @@ class VehicleMileage(db.Model):
     # ข้อ 4: User แจ้งว่าจ่ายแล้ว (ยังไม่ใช่ยืนยันจริง — รอ admin confirm)
     user_reported_paid   = db.Column(db.Boolean, default=False)
     user_reported_at     = db.Column(db.DateTime, nullable=True)
-    last_reminder_at     = db.Column(db.DateTime, nullable=True)   # cron: เตือนล่าสุดเมื่อไหร่ (กันเตือนซ้ำ)
+    last_reminder_at     = db.Column(db.DateTime, nullable=True)   # cron: เตือนล่าสุดเมื่อไหร่ เรื่อง "เตือนจ่ายเงินส่วนตัว" (กันเตือนซ้ำ)
+
+    # ข้อ 4.1: Driver ปิดไมล์ค้าง (Phase 3.5 REQ-3, 2026-07-19) — คนละเรื่องกับ last_reminder_at ห้ามใช้ field เดียวกัน (จะชนกัน)
+    # NULL = ยังไม่เคยแจ้งเตือนเรื่องนี้ / มีค่า = แจ้งเตือนล่าสุดเมื่อไหร่ (guard กันแจ้งซ้ำวันเดียวกัน เหมือน pattern last_reminder_at)
+    mileage_open_reminder_at = db.Column(db.DateTime, nullable=True)
 
     # ข้อ 5: Budget idempotency (migration 2026-05-06) — ทุก mutation ต้องผ่าน BudgetService
     budget_deducted_at  = db.Column(db.DateTime, nullable=True)                                    # null = ยังไม่เคยหักงบ

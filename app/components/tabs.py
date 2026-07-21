@@ -1,6 +1,6 @@
 """Tabs component — wrapper บางๆ ของ macro bb_tabs.
 
-markup ตรง components-gallery.html §5 (.bb-tabs) — underline = status filter
+underline = status filter
 ส่ง tabs เป็น Tab หรือ dict ก็ได้
 """
 from dataclasses import dataclass

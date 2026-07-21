@@ -1,5 +1,5 @@
 """
-Tests สำหรับ views/vehicle/vehicle_budget_service.py — core money/ledger logic
+Tests สำหรับ services/vehicle/budget_service.py — core money/ledger logic
 
 คลุม: deduct (+idempotency), refund (+no-double-refund), rededuct,
 set_budget_amount, manual_adjust, set_active,
@@ -10,7 +10,7 @@ from decimal import Decimal
 import pytest
 
 from models import db, VehicleBudgetLog
-import views.vehicle.vehicle_budget_service as bs
+import services.vehicle.budget_service as bs
 from conftest import SNAP
 
 

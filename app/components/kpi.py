@@ -1,6 +1,5 @@
 """KPI component — wrapper บางๆ ของ macro bb_kpi.
 
-markup ตรง components-gallery.html §8 (.bb-kpi)
 variant: card | ghost · delta_dir: 'up' | 'down' (เว้นว่าง = ไม่มี delta)
 """
 from .base import BaseComponent

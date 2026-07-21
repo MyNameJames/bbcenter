@@ -1,27 +1,19 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, session, current_app
 from flask_login import login_required, current_user
-from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, Driver,
-                    VehicleBudget, VehicleDepartment, DeptApprover, OTRateConfig)
-from sqlalchemy import or_
+from models import (db, get_bkk_time, Vehicle, VehicleBooking, Driver,
+                    VehicleBudget, DeptApprover, OTRateConfig)
 from datetime import datetime, date
-from views.core.broadcast import (notify_approved, notify_forwarded_to_approver,
-                                   notify_approver_approved, notify_rejected,
-                                   notify_cancelled as tg_notify_cancelled)
 from views.core.notification_service import (
     notify_booking_created      as _n_booking_created,
-    notify_admin_approved       as _n_admin_approved,
-    notify_forwarded_to_approver as _n_forwarded,
-    notify_approver_approved    as _n_approver_approved,
-    notify_rejected             as _n_rejected,
     notify_admin_deleted        as _n_admin_deleted,
-    notify_user_cancelled       as _n_user_cancelled,
 )
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
-    is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
+    is_vehicle_admin,
     EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
     get_fuel_price, calc_fuel_cost,
 )
+import services.vehicle.booking_service as booking_svc
 
 
 @vehicle_bp.route('/vehicle')
@@ -241,63 +233,6 @@ def delete_booking(booking_id):
 # Time guard: must be BEFORE booking.start_datetime
 # ─────────────────────────────────────────────
 
-def _build_cancel_recipients(booking, is_admin, is_owner, prev_status):
-    already_notified = {current_user.id}
-
-    owner_notify_id = booking.user_id if (is_admin and not is_owner) else None
-    if owner_notify_id and owner_notify_id not in already_notified:
-        already_notified.add(owner_notify_id)
-    else:
-        owner_notify_id = None
-
-    admin_user_ids = {u.id for u in User.query.filter(
-        or_(User.role_vehicle == 'admin', User.is_superadmin.is_(True))
-    ).all()} - already_notified
-    already_notified |= admin_user_ids
-
-    approver_user_ids = set()
-    if booking.trip_department_id and prev_status in ('waiting_approver', 'approved'):
-        apv_rows = DeptApprover.query.filter_by(dept_id=booking.trip_department_id).all()
-        approver_user_ids = {r.user_id for r in apv_rows} - already_notified
-        already_notified |= approver_user_ids
-
-    driver_user_id = None
-    if booking.driver_id and booking.driver and booking.driver.user_id:
-        cand = booking.driver.user_id
-        if cand not in already_notified:
-            driver_user_id = cand
-            already_notified.add(cand)
-
-    trip_mate_user_ids = set()
-    if booking.trip_group:
-        mate_rows = VehicleBooking.query.filter(
-            VehicleBooking.trip_group == booking.trip_group,
-            VehicleBooking.id != booking.id,
-        ).all()
-        trip_mate_user_ids = {m.user_id for m in mate_rows if m.user_id} - already_notified
-
-    return owner_notify_id, admin_user_ids, approver_user_ids, driver_user_id, trip_mate_user_ids
-
-
-def _send_cancel_notifications(booking, owner_notify_id, admin_user_ids,
-                                approver_user_ids, driver_user_id, trip_mate_user_ids):
-    if owner_notify_id:
-        _n_user_cancelled(user_id=owner_notify_id, booking=booking,
-                          cancelled_by=current_user, role_label='owner')
-    for uid in admin_user_ids:
-        _n_user_cancelled(user_id=uid, booking=booking,
-                          cancelled_by=current_user, role_label='admin')
-    for uid in approver_user_ids:
-        _n_user_cancelled(user_id=uid, booking=booking,
-                          cancelled_by=current_user, role_label='approver')
-    if driver_user_id:
-        _n_user_cancelled(user_id=driver_user_id, booking=booking,
-                          cancelled_by=current_user, role_label='driver')
-    for uid in trip_mate_user_ids:
-        _n_user_cancelled(user_id=uid, booking=booking,
-                          cancelled_by=current_user, role_label='mate')
-
-
 @vehicle_bp.route('/vehicle/cancel/<int:booking_id>', methods=['POST'])
 @login_required
 def cancel_booking(booking_id):
@@ -308,45 +243,15 @@ def cancel_booking(booking_id):
     if not (is_owner or is_admin):
         flash('คุณไม่มีสิทธิ์ยกเลิกการจองนี้', 'danger')
         return redirect(url_for('vehicle.index'))
-    if not is_admin and booking.status != 'pending':
-        flash('ยกเลิกได้เฉพาะก่อนที่ Admin จะจัดรถ — ติดต่อ Admin หากต้องการยกเลิก', 'warning')
-        return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
-    if booking.status not in ('pending', 'waiting_approver', 'approved'):
-        flash(f'ยกเลิกไม่ได้ — สถานะปัจจุบันคือ {booking.status}', 'warning')
-        return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
-    if not is_admin and get_bkk_time() >= booking.start_datetime:
-        flash('ทริปเริ่มแล้ว ไม่สามารถยกเลิกได้ — ติดต่อ Admin หากจำเป็น', 'warning')
-        return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
-    if any(m.budget_deducted_at for m in booking.mileage):
-        flash('ทริปนี้หักงบแล้ว ไม่สามารถยกเลิกได้ — ติดต่อผู้ดูแลระบบ', 'warning')
-        return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
 
     try:
-        prev_status = booking.status
-        recipients  = _build_cancel_recipients(booking, is_admin, is_owner, prev_status)
-        _send_cancel_notifications(booking, *recipients)
-        booking.status     = 'cancelled'
-        booking.updated_by = current_user.id
-        tg_notify_cancelled(booking, current_user)
-
-        # reset สมาชิกทริปร่วม → pending (un-merge) หลัง notify ที่ยังอ่าน trip_group ได้
-        if booking.trip_group:
-            mates = VehicleBooking.query.filter(
-                VehicleBooking.trip_group == booking.trip_group,
-                VehicleBooking.id != booking.id,
-            ).all()
-            skipped = 0
-            for mb in mates:
-                if any(m.budget_deducted_at for m in mb.mileage):
-                    skipped += 1
-                    continue
-                mb.status              = 'pending'
-                mb.assigned_vehicle_id = None
-                mb.driver_id           = None
-                mb.trip_group          = None
-            if skipped:
-                flash(f'⚠️ {skipped} รายการในกลุ่มทริปหักงบแล้ว — ไม่สามารถ reset ได้ โปรดตรวจสอบ', 'warning')
-            booking.trip_group = None
+        # notify (in-app owner/admin/approver/driver/trip-mate + Telegram) อยู่ใน
+        # booking_svc.cancel() แล้ว (Phase 4, 2026-07-19 — เดิม build recipients + ส่งเองตรงนี้)
+        ok, msg, info = booking_svc.cancel(booking, actor_id=current_user.id,
+                                           is_owner=is_owner, is_admin=is_admin)
+        if not ok:
+            flash(msg, 'warning')
+            return redirect(url_for('vehicle.detail_booking', booking_id=booking_id))
 
         db.session.commit()
         flash(f'ยกเลิกการจอง #{booking_id} เรียบร้อย', 'success')
@@ -512,43 +417,24 @@ def approve_booking(booking_id):
     try:
         if is_vehicle_admin() and booking.status == 'pending':
             if action == 'approve':
-                # Block ถ้าไม่มีงบ active ที่ช่วงเวลาครอบวันเดินทางนี้
-                _bgt, _kl = _lookup_budget_for_booking(booking)
-                if _bgt is None:
-                    flash(
-                        'อนุมัติไม่ได้ — ไม่มีงบที่เปิดใช้ครอบวันเดินทางนี้'
-                        + (f' (หมวด {_kl})' if _kl else '')
-                        + ' — กรุณาตั้งงบหรือเพิ่มเวลาช่วงงบที่หน้าจัดการงบประมาณก่อน',
-                        'danger'
-                    )
+                # notify (Event #3/#4) อยู่ใน approve_from_pending() แล้ว (Phase 4, 2026-07-19)
+                # Telegram: manual-only ตามปุ่มแจ้งเตือน (ยึด pattern admin_assign, 2026-06-07)
+                ok, msg = booking_svc.approve_from_pending(booking, driver_id=driver_id)
+                if not ok:
+                    flash(msg, 'danger')
                     return redirect(url_for('vehicle.detail_booking', booking_id=booking.id))
-                if driver_id: booking.driver_id = driver_id
-                if booking.expense_type == 'department':
-                    if booking.trip_department_id is None:
-                        dept_name = booking.trip_department or booking.user.department
-                        if dept_name:
-                            dept = VehicleDepartment.query.filter_by(name=dept_name).first()
-                            if dept:
-                                booking.trip_department_id = dept.id
-                    booking.status = 'waiting_approver'
-                    db.session.flush()
-                    notify_forwarded_to_approver(booking)    # Telegram
-                    _n_forwarded(booking)                    # In-app Event #4
-                    db.session.commit()
+                if booking.status == 'waiting_approver':
                     flash(f'อนุมัติแล้ว — รอผู้ประสานงานแผนก {booking.user.department} ยืนยัน', 'info')
                 else:
-                    booking.status = 'approved'
-                    db.session.flush()
-                    notify_approved(booking)                 # Telegram
-                    _n_admin_approved(booking)               # In-app Event #3
-                    db.session.commit()
                     flash('อนุมัติการจองรถเรียบร้อย', 'success')
+                db.session.commit()
             elif action == 'reject':
-                booking.status = 'rejected'
-                booking.reject_reason = request.form.get('reject_reason', '').strip() or None
-                db.session.flush()
-                notify_rejected(booking, current_user)       # Telegram
-                _n_rejected(booking, current_user, by_approver=False)  # In-app Event #6
+                # notify (Event #6) อยู่ใน reject_from_pending() แล้ว (Phase 4, 2026-07-19)
+                ok, msg = booking_svc.reject_from_pending(
+                    booking, reason=request.form.get('reject_reason', '').strip() or None)
+                if not ok:
+                    flash(msg, 'danger')
+                    return redirect(url_for('vehicle.detail_booking', booking_id=booking.id))
                 db.session.commit()
                 flash('ไม่อนุมัติการจองรถ', 'danger')
 
@@ -564,30 +450,21 @@ def approve_booking(booking_id):
                 return redirect(url_for('vehicle.approver_inbox'))
 
             if action == 'approve':
-                # Block ถ้าไม่มีงบ active ที่ช่วงเวลาครอบวันเดินทางนี้ (approver path)
-                _bgt, _kl = _lookup_budget_for_booking(booking)
-                if _bgt is None:
-                    flash(
-                        'อนุมัติไม่ได้ — ไม่มีงบที่เปิดใช้ครอบวันเดินทางนี้'
-                        + (f' (หมวด {_kl})' if _kl else '')
-                        + ' — กรุณาตั้งงบหรือเพิ่มเวลาช่วงงบที่หน้าจัดการงบประมาณก่อน',
-                        'danger'
-                    )
+                # notify (Event #5) อยู่ใน approver_approve() แล้ว (Phase 4, 2026-07-19)
+                ok, msg = booking_svc.approver_approve(booking, actor_id=current_user.id)
+                if not ok:
+                    flash(msg, 'danger')
                     return redirect(url_for('vehicle.approver_inbox'))
-                booking.status = 'approved'
-                booking.updated_by = current_user.id
-                db.session.flush()
-                notify_approver_approved(booking, current_user)   # Telegram
-                _n_approver_approved(booking, current_user)       # In-app Event #5
                 db.session.commit()
                 flash('อนุมัติการเดินทางเรียบร้อยแล้ว', 'success')
             elif action == 'reject':
-                booking.status = 'rejected'
-                booking.updated_by = current_user.id
-                booking.reject_reason = request.form.get('reject_reason', '').strip() or None
-                db.session.flush()
-                notify_rejected(booking, current_user)            # Telegram
-                _n_rejected(booking, current_user, by_approver=True)  # In-app Event #6
+                # notify (Event #6) อยู่ใน approver_reject() แล้ว (Phase 4, 2026-07-19)
+                ok, msg = booking_svc.approver_reject(
+                    booking, actor_id=current_user.id,
+                    reason=request.form.get('reject_reason', '').strip() or None)
+                if not ok:
+                    flash(msg, 'danger')
+                    return redirect(url_for('vehicle.approver_inbox'))
                 db.session.commit()
                 flash('ปฏิเสธการเดินทางนี้แล้ว', 'danger')
         else:

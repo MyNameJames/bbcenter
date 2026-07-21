@@ -1,6 +1,6 @@
 """Segmented component — wrapper บางๆ ของ macro bb_segmented.
 
-markup ตรง components-gallery.html §4 (.bb-seg) — toggle ช่วงเวลา/มุมมอง
+toggle ช่วงเวลา/มุมมอง
 ส่ง items เป็น Seg หรือ dict ก็ได้
 """
 from dataclasses import dataclass

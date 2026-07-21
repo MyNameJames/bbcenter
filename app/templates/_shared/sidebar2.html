@@ -139,8 +139,6 @@
        {'label':'ค่าน้ำมัน', 'icon':'local_gas_station', 'href': url_for('fuel.admin_fuel'),
         'active': ep == 'fuel.admin_fuel'},
      ]},
-    {'label':'การเงิน', 'icon':'account_balance_wallet',
-     'href': url_for('finance'), 'active': ep == 'finance'},
   ]}) %}
   {% if is_appr %}
     {% set _ = sections.append({'label':'ผู้อนุมัติ', 'items': [

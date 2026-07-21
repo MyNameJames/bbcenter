@@ -39,9 +39,26 @@ const nowStamp = () => {
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 document.querySelectorAll('[data-driver-form]').forEach(form => {
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (e) => {
         const stamp = form.querySelector('[data-actual-now]');
         if (stamp) stamp.value = nowStamp();
+
+        // REQ-3 (Phase 3.5): เพดานระยะทาง — confirm ผ่านได้ ไม่ block เด็ดขาด (ตกลงกับ
+        // เจ้าของโปรเจกต์) — backend มี guard เดียวกันเป็น safety net เผื่อ JS ถูกข้าม
+        const odoInput = form.querySelector('[data-odo-input]');
+        const confirmField = form.querySelector('[data-confirm-distance]');
+        if (odoInput && confirmField) {
+            const start = Number(form.dataset.odoStart || 0);
+            const end   = Number(odoInput.value || 0);
+            const distance = end - start;
+            if (distance > window.DRIVER_DISTANCE_CAP && confirmField.value !== '1') {
+                const ok = confirm(
+                    `ระยะทาง ${distance.toLocaleString()} กม. เกินเพดานปกติ (${window.DRIVER_DISTANCE_CAP.toLocaleString()} กม.) — ยืนยันว่าเลขถูกต้องใช่ไหม?`
+                );
+                if (!ok) { e.preventDefault(); return; }
+                confirmField.value = '1';
+            }
+        }
     });
 });
 

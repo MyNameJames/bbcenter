@@ -1,6 +1,5 @@
 """Dropdown component — wrapper บางๆ ของ macro bb_dropdown.
 
-markup ตรง components-gallery.html §6 (.bb-select + .bb-menu)
 trigger (hint + label + caret) → panel เมนู
 
 menu item 4 ชนิด (helper สร้าง dict 'kind'):

@@ -53,6 +53,14 @@ def _add_deducted_mileage(bk: VehicleBooking) -> VehicleMileage:
     return m
 
 
+def _add_started_mileage(bk: VehicleBooking) -> VehicleMileage:
+    """mileage start entry เท่านั้น (ไม่หักงบ) — ใช้ทดสอบ REQ-1 guard (Phase 3.5)"""
+    m = VehicleMileage(booking_id=bk.id, odometer_start=1000)
+    db.session.add(m)
+    db.session.flush()
+    return m
+
+
 def _log_count() -> int:
     return VehicleBudgetLog.query.count()
 
@@ -74,8 +82,11 @@ def test_owner_cancel_pending_ok(client):
     assert _log_count() == before
 
 
-def test_owner_cancel_waiting_approver_ok(client):
-    """owner cancel waiting_approver → cancelled"""
+def test_owner_cancel_waiting_approver_blocked(client):  # BUG-1 — เดิมชื่อ _ok, assert ผิด
+    """owner cancel waiting_approver → blocked (สถานะไม่เปลี่ยน)
+    ตัดสิทธิ์นี้ออกตั้งใจเมื่อ 2026-06-20 (ดู INDEX_code.md:39 changelog) — user ยกเลิกได้
+    เฉพาะก่อน admin จัดรถ (status='pending') เท่านั้น ก่อนหน้านี้ test เขียนไว้ผิด (คาดหวัง
+    behavior เก่าก่อน 2026-06-20) ยืนยันกับเจ้าของโปรเจกต์แล้วว่า code ถูก ไม่ใช่ test"""
     owner = _user('u_cwa')
     bk = _booking(owner.id, 'waiting_approver')
     login(client, owner.id)
@@ -84,7 +95,7 @@ def test_owner_cancel_waiting_approver_ok(client):
 
     assert r.status_code == 302
     bk = VehicleBooking.query.get(bk.id)
-    assert bk.status == 'cancelled'
+    assert bk.status == 'waiting_approver'  # ไม่เปลี่ยน — block ไม่ใช่ cancel
 
 
 def test_owner_cancel_approved_blocked(client):  # *NEW* — FAILS before guard
@@ -234,3 +245,27 @@ def test_budget_manage_cancel_booking_action(client):  # *NEW* — FAILS before 
     bk = VehicleBooking.query.get(bk.id)
     assert bk.status == 'cancelled'
     assert _log_count() == before  # no budget ledger change
+
+
+def test_budget_manage_cancel_booking_blocked_when_started(client):  # *NEW* (Phase 3.5)
+    """budget_manage POST action=cancel_booking บน booking ที่มี mileage start entry แล้ว
+    → block, status ไม่เปลี่ยน — ปิด DEBT-3 เต็มรูป (REQ-2): เรียก booking_svc.cancel()
+    ตัวเดียวกับ path อื่นทั้งหมด จึงได้ guard เดียวกัน (เดิม _handle_cancel_booking() ไม่มี
+    guard อะไรเลยนอกจากกัน double-flip status)"""
+    admin = _user('u_bmc_b_a', role='admin')
+    owner = _user('u_bmc_b')
+    bk = _booking(owner.id, 'approved')
+    _add_started_mileage(bk)
+    db.session.commit()
+    login(client, admin.id)
+
+    r = client.post('/admin/budget', data={
+        'action': 'cancel_booking',
+        'booking_id': str(bk.id),
+        'year': '2026',
+        'month': '6',
+    }, follow_redirects=False)
+
+    assert r.status_code == 302
+    bk = VehicleBooking.query.get(bk.id)
+    assert bk.status == 'approved'  # ไม่เปลี่ยน — ถูก block

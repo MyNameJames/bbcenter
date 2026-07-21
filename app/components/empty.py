@@ -1,6 +1,6 @@
 """Empty component — wrapper บางๆ ของ macro bb_empty.
 
-markup ตรง components-gallery.html §+ (.bb-empty) — empty state
+empty state
 action รับ component (เช่น Button) → reuse _render_body จาก card (DRY)
 """
 from .base import BaseComponent

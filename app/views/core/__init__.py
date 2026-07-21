@@ -6,5 +6,6 @@ views.core — function กลางที่ไม่ผูก request/blueprin
 - notification_cron    APScheduler escalation
 
 หมายเหตุ: core = util ข้าม domain เท่านั้น. budget_service (vehicle business logic)
-อยู่ที่ views/vehicle/vehicle_budget_service.py ไม่ใช่ที่นี่
+อยู่ที่ services/vehicle/budget_service.py ไม่ใช่ที่นี่ (Clean Architecture refactor
+Phase 1, 2026-07-19 — เดิมเคยอยู่ views/vehicle/vehicle_budget_service.py)
 """

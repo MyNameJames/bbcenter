@@ -1,6 +1,5 @@
 """Chip / Token component — wrapper บางๆ ของ macro bb_chip / bb_token.
 
-markup ตรง components-gallery.html §4b
 - Chip  = toggle filter (มี count) — เลือกได้/ปิดได้
 - Token = applied filter ที่ติดอยู่แล้ว (field op value + ปุ่ม x)
 on_click / on_remove → data-action (event convention กลาง)

@@ -1,6 +1,5 @@
 """Card component — wrapper บางๆ ของ macro bb_card.
 
-markup ตรง components-gallery.html §7 (.bb-card)
 body รับได้: str/Markup, BaseComponent, หรือ list ของ component → ประกอบ component ซ้อนได้
 """
 from markupsafe import Markup

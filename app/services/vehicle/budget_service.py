@@ -16,7 +16,7 @@ from sqlalchemy import func
 from flask_login import current_user
 from models import (
     db, VehicleBudget, VehicleBudgetLog, VehicleMileage,
-    VehicleBooking, get_bkk_time,
+    VehicleBooking, BudgetType, VehicleDepartment, get_bkk_time,
 )
 
 D0 = Decimal('0')
@@ -174,3 +174,47 @@ def verify_cache_integrity():
         if Decimal(str(s)) != Decimal(str(b.used_amount)):
             drift.append((b.id, b.used_amount, s))
     return drift
+
+
+# ──────────────────────────────────────────────────────────────
+# Budget lookup (ย้ายจาก views/vehicle/vehicle_common.py, Phase 2 — ปิด DEBT-1:
+# domain/vehicle/workflow.py::guard_budget() เรียกใช้ function นี้ ต้องไม่ import จาก views)
+# ──────────────────────────────────────────────────────────────
+def _lookup_budget_for_booking(booking, on_date=None):
+    """หา VehicleBudget ที่ booking จะหักงบ — งบ active (is_active=True) ที่ช่วง
+    start_date–end_date ครอบ `on_date` (default = วันเริ่ม booking; deduct ส่งวันปิดทริป).
+    คืน (budget, key_label) — budget=None ถ้าไม่พบงบ active ที่ครอบวันนั้น.
+    overlap หลายก้อน → เอา start_date ล่าสุด (specific สุด)"""
+    if booking.expense_type not in ('central', 'department'):
+        return None, None
+    d = on_date or (booking.start_datetime.date() if booking.start_datetime else None)
+    if d is None:
+        return None, None
+    bt = BudgetType.query.filter_by(name=booking.expense_type).first()
+    if not bt:
+        return None, booking.expense_type
+
+    if booking.expense_type == 'central':
+        key_label = booking.central_category
+        dept_obj = VehicleDepartment.query.filter_by(name=key_label).first() if key_label else None
+    else:
+        key_label = booking.trip_department or (booking.user.department if booking.user else None)
+        if booking.trip_department_id:
+            dept_obj = VehicleDepartment.query.get(booking.trip_department_id)
+        elif key_label:
+            dept_obj = VehicleDepartment.query.filter_by(name=key_label).first()
+        else:
+            dept_obj = None
+    if not dept_obj:
+        return None, key_label
+
+    budget = (VehicleBudget.query.filter(
+        VehicleBudget.department_id == dept_obj.id,
+        VehicleBudget.budget_type_id == bt.id,
+        VehicleBudget.is_active.is_(True),
+        VehicleBudget.start_date.isnot(None),
+        VehicleBudget.end_date.isnot(None),
+        VehicleBudget.start_date <= d,
+        VehicleBudget.end_date >= d,
+    ).order_by(VehicleBudget.start_date.desc(), VehicleBudget.id.desc()).first())
+    return budget, key_label

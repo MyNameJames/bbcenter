@@ -1017,24 +1017,39 @@ async function submitRevert() {
 
 /* ── Ungroup ──────────────────────────────────── */
 async function ungroupAll(grpName) {
+    // res.ok/data.ok check (correction, 2026-07-19): REQ-1 ทำให้ ungroup มี 400-guard จริง
+    // (block ถ้ามีใครในกลุ่ม start แล้ว) — เดิม patch ทันทีไม่เช็ก response เลย ทำให้โชว์
+    // "สำเร็จ" ปลอมตอน backend block จริง (ผิด pattern CLAUDE.md § Flask Response)
     if (!confirm(`แยกกลุ่ม ${grpName} คืนทุกรายการเป็น "รออนุมัติ" ใช่ไหม?`)) return;
     const members = bookings.filter(b=>b.tripGroup===grpName);
-    for (const b of members) {
-        const fd = new FormData(); fd.append('action','ungroup');
-        await fetch(b.assignUrl, { method:'POST', body:fd });
-        patchBooking(b.id, { tripGroup:null, status:'pending', vehicleId:null, vehicleLabel:null, driverId:null });
+    const fd = new FormData(); fd.append('action','ungroup');
+    const res  = await fetch(members[0].assignUrl, { method:'POST', body:fd });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+        showToast(data.msg || 'แยกกลุ่มไม่สำเร็จ');
+        return;
     }
+    members.forEach(b => patchBooking(b.id, { tripGroup:null, status:'pending', vehicleId:null, vehicleLabel:null, driverId:null }));
     showToast('✓ แยกกลุ่มแล้ว');
     renderAll();
 }
 
 async function splitBooking(bookingId, grpName) {
-    if (!confirm('แยกรายการนี้ออกจากกลุ่ม?')) return;
-    const b  = bookings.find(x=>x.id===bookingId);
+    // all-or-nothing (REQ-1, Phase 3.5): ถอด 1 รายการ = ทั้งกลุ่มกลับ pending หมด — ไม่มี
+    // partial split อีกแล้ว ข้อความ/patch ต้องครอบทุกสมาชิก ไม่ใช่แค่ bookingId เดียว
+    // res.ok/data.ok check (correction, 2026-07-19): ดูเหตุผลเดียวกับ ungroupAll ด้านบน
+    if (!confirm(`ถอด #${bookingId} ออกจากกลุ่ม ${grpName} — ทุกรายการในกลุ่มนี้จะกลับเป็น "รออนุมัติ" ทั้งหมด ใช่ไหม?`)) return;
+    const b       = bookings.find(x=>x.id===bookingId);
+    const members = bookings.filter(x=>x.tripGroup===grpName);
     const fd = new FormData(); fd.append('action','ungroup');
-    await fetch(b.assignUrl, { method:'POST', body:fd });
-    patchBooking(bookingId, { tripGroup:null, status:'pending', vehicleId:null, vehicleLabel:null, driverId:null });
-    showToast('✓ แยกแล้ว');
+    const res  = await fetch(b.assignUrl, { method:'POST', body:fd });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+        showToast(data.msg || 'แยกกลุ่มไม่สำเร็จ');
+        return;
+    }
+    members.forEach(m => patchBooking(m.id, { tripGroup:null, status:'pending', vehicleId:null, vehicleLabel:null, driverId:null }));
+    showToast('✓ แยกกลุ่มแล้ว');
     renderAll();
 }
 

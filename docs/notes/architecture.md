@@ -1,6 +1,6 @@
 # BBCenter V2 — System Architecture
 
-> **อัปเดตล่าสุด:** 2026-06-18
+> **อัปเดตล่าสุด:** 2026-07-19
 > Symbol/route/model lookup → [INDEX.md](INDEX.md)
 > Schema detail → [database/schema.md](database/schema.md)
 
@@ -31,17 +31,23 @@ BBCenter V2 = Internal Portal ขององค์กร, Flask monolithic, 4 �
                    │ Authenticated Request
 ┌──────────────────▼──────────────────────┐
 │  Layer 3: Application (Flask)           │
-│  app.py → 8 Blueprints                  │
+│  app.py → 10 Blueprints                 │
 │  auth / repair / maintenance / room     │
-│  vehicle / adminfleet / admincost / driver │
+│  vehicle / adminfleet / admincost /     │
+│  driver / fuel / core                   │
 │  + APScheduler (notification_cron)      │
 └──────────────────┬──────────────────────┘
                    │
 ┌──────────────────▼──────────────────────┐
-│  Layer 3.5: Vehicle Domain Service      │
-│  views/vehicle/vehicle_budget_service.py│
-│    • ledger ของ VehicleBudget — ทุก     │
-│      mutation ผ่านที่นี่เท่านั้น        │
+│ Layer 3.5: Vehicle Domain (Clean Arch   │
+│ Phase 1-4, 2026-07-19)                  │
+│ services/vehicle/*.py — use-case:       │
+│   guard budget/conflict → state change  │
+│   → notify (booking/mileage/budget_svc) │
+│ domain/vehicle/*.py — pure logic:       │
+│   workflow.py state machine,            │
+│   fuel.py calc_fuel_cost — ห้าม import   │
+│   flask หรือ query ORM เด็ดขาด            │
 └──────────────────┬──────────────────────┘
                    │ SQLAlchemy ORM
 ┌──────────────────▼──────────────────────┐
@@ -75,7 +81,7 @@ Controller → Component (app/components/) → Jinja macro → HTML
 - ข้อห้าม: Component **ห้าม** query DB / business logic / ตรวจ permission (Controller จัดการ)
 - adopter แรก: cost `ot_expense_table`. ขยาย: เพิ่ม class ใหม่ใน `components/` ครอบ macro `_components/` เดิม
 - **Cell Component (2026-06-29):** `Column(cell=lambda row: Component)` → render component (เช่น `Status`) ต่อ row ใน cell ได้ (Jinja เรียก Python callable) — ตารางมี badge/status ในตัว ไม่ต้องใช้ shell `bb_table`
-- **Living Gallery** `/dev/components` (`templates/dev/components.html`) = render Python component จริงผ่าน `{{ component(obj) }}` → drift ไม่ได้ · โตทีละ component จน absorb static `components-gallery.html` (CSS catalog) แล้ว retire
+- **Living Gallery** `/dev/components` (`templates/dev/components.html`) = render Python component จริงผ่าน `{{ component(obj) }}` → drift ไม่ได้ · absorb static `components-gallery.html` (CSS catalog) ครบแล้ว → **retired (2026-07-19)**, ไฟล์ถูกลบออกจาก repo
 
 ---
 
@@ -111,9 +117,11 @@ Browser
 | `adminfleet_bp` | `views/vehicle/` | จัดการรถ + งบ + personal reimbursement |
 | `admincost_bp` | `views/vehicle/` | สรุปค่าใช้จ่าย + export |
 | `driver_bp` | `views/vehicle/` | หน้าคนขับ + บันทึกไมล์ |
+| `fuel_bp` | `views/vehicle/vehicle_fuel.py` | จัดการน้ำมัน + เบิกจ่าย (ย้ายจาก `views/fuel_view.py` เดิม — Phase 1 refactor, 2026-07-19; ชื่อ+URL เดิม) |
+| `room_bp` | `room_view.py` | จองห้องประชุม |
+| `core_bp` | `views/core/` | shared util ข้าม domain (`/dev/components` gallery, LINE webhook) |
 
 > ขั้น 3 (2026-06-07): blueprints 4 ตัว def ใน `views/vehicle/vehicle_common.py`, routes กระจายตาม controller (booking/notification/history/admin/mileage/cost/budget/driver) — mapping เต็มที่ [INDEX §Blueprints](INDEX.md#-blueprints)
-| `room_bp` | `room_view.py` | จองห้องประชุม |
 
 ---
 
@@ -135,15 +143,16 @@ Browser
 
 | จาก | ไป | ใคร / เงื่อนไข | Code path |
 |---|---|---|---|
-| pending | waiting_approver | admin approve + `expense_type=department` | `approve_booking` และ `admin_assign` (2 path ซ้ำ) |
-| pending | approved | admin approve + central/personal | `approve_booking` (เช็กงบ active) / `admin_assign` (**guard_budget() Phase 5 #15, 2026-06-12**) |
-| pending | rejected | admin reject | ทั้ง 2 path |
-| waiting_approver | approved / rejected | approver เฉพาะแผนกตัวเอง (เช็กงบ active) | `approve_booking` |
-| pending/waiting_approver/approved | cancelled | owner: pending/waiting เท่านั้น; admin: +approved ก่อน `start_datetime` | `cancel_booking` (**Phase 1, 2026-06-12** — ถอด refund) |
-| approved | cancelled | admin ยกเลิก booking ที่อนุมัติแล้ว | `budget_manage` action `cancel_booking` (เปลี่ยนจาก `refund_booking` Phase 1, 2026-06-12) |
+| pending | waiting_approver | admin approve + `expense_type=department` | `booking_service.approve_from_pending()` (**Phase 2, 2026-07-19** — เรียกจากทั้ง `approve_booking`+`admin_assign`; เดิม 2 path ซ้ำ รวมเป็นทางเดียวแล้ว) |
+| pending | approved | admin approve + central/personal | `booking_service.approve_from_pending()` (**Phase 2, 2026-07-19** — `guard_budget()` เดียวกันทั้ง 2 route เดิม) |
+| pending | rejected | admin reject | `booking_service.reject_from_pending()` (Phase 2 — ทางเดียว) |
+| waiting_approver | approved / rejected | approver เฉพาะแผนกตัวเอง (เช็กงบ active) | `booking_service.approver_approve()`/`approver_reject()` (Phase 2) |
+| pending/waiting_approver/approved | cancelled | owner: **pending เท่านั้น** (waiting_approver ตัดออกตั้งใจ 2026-06-20 — ดู [INDEX_code.md](INDEX_code.md)); admin: pending/waiting_approver/approved ทั้งหมด (ไม่มี time guard) — **block ทุกคน (รวม admin) ถ้ามีใครในทริปเดียวกันมี mileage start entry แล้ว** (`odometer_start` ไม่ null — เข้มกว่าเดิมที่เช็กแค่ `budget_deducted_at` ของตัวเอง, REQ-1 Phase 3.5 2026-07-19) | `booking_service.cancel()` — ทางเดียวทั้งระบบ (Phase 2 ย้ายจาก `cancel_booking` route · **ปิด DEBT-3 (REQ-2, Phase 3.5, 2026-07-19):** `budget_manage` action `cancel_booking` เรียก function นี้ตัวเดียวกันแล้ว ไม่มี path แยกเซ็ต `status='cancelled'` ตรงอีกต่อไป) |
 | approved/waiting_approver/rejected | pending | admin revert (guard: ห้ามถ้ามี deduct; เคลียร์ reject_reason) | `admin_revert_booking` (**Phase 1, 2026-06-12** — เพิ่ม guard) |
+| ทริปกลุ่ม (`trip_group`) — สมาชิกใดๆ | **ทั้งกลุ่มกลับ pending** | ungroup 1 งาน หรือ cancel งานใดในทริป → สมาชิกที่เหลือ**ทุกงาน**กลับ `pending` (reset รถ/คนขับ/`trip_group`) — all-or-nothing ไม่มี partial/skip case อีก · block ทั้งกลุ่มถ้ามีใครมี mileage start entry | `booking_service.ungroup()`/`cancel()` (**REQ-1, Phase 3.5, 2026-07-19** — เดิม `ungroup()` เคลียร์แค่ booking ตัวเดียวที่รับเข้ามาและไม่ครบ field ด้วย: ไม่เคย reset `status`/`driver_id` เลย) |
+| pending/waiting_approver | rejected | **ระบบอัตโนมัติ** — เลยกำหนดวันเดินทาง (`start_datetime < now`), cron 08:10 BKK ทุกวัน ไม่ใช่ user action | `notification_cron.auto_reject_overdue_bookings()` เรียก `apply_transition()` ตรง (**ปิด DEBT-4, Phase 4, 2026-07-19** — เดิมเซ็ต `bk.status='rejected'` ตรงไม่ผ่าน gate เลย; ไม่เรียก `booking_service.reject_from_pending()` เพราะ notify คนละความหมาย — `notify_auto_rejected()` ไม่ใช่ `notify_rejected()`) |
 
-สถานะย่อยของทริป (ไม่อยู่ใน `status`): `VehicleMileage.actual_start/actual_end` = กำลังเดินทาง/ปิดทริป → ปิดทริปจึงหักงบ. **Phase 5 #15 (2026-06-12):** state machine กลางอยู่ใน `vehicle_workflow.py` (ALLOWED_TRANSITIONS, guard_budget, apply_transition) — gaps จาก workflow review 2026-06-11 ปิดครบแล้ว
+สถานะย่อยของทริป (ไม่อยู่ใน `status`): `VehicleMileage.actual_start/actual_end` = กำลังเดินทาง/ปิดทริป → ปิดทริปจึงหักงบ. งบที่หักแล้ว**ไม่มีการคืนทุกกรณี** (REQ-2, Phase 3.5, 2026-07-19 — จารึก behavior เดิมเป็น spec ทางการ ดู [vehicle_product_spec.md](vehicle_product_spec.md) §9). **Phase 5 #15 (2026-06-12):** state machine กลางอยู่ใน `domain/vehicle/workflow.py` (ALLOWED_TRANSITIONS, guard_budget, apply_transition — ย้ายจาก `views/vehicle/vehicle_workflow.py` เดิม ใน Clean Architecture refactor Phase 1, 2026-07-19) — gaps จาก workflow review 2026-06-11 ปิดครบแล้ว
 
 ---
 
@@ -165,16 +174,19 @@ booking approved
         → notify_budget_deducted()
 ```
 
-⚠️ **ทุก mutation ต้องผ่าน `BudgetService`** — ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` ตรงๆ
+> **Phase 3, 2026-07-19:** flow ทั้งหมดข้างบน (จาก entry_type='end' เป็นต้นไป) รวมเป็นจุดเดียวแล้วที่ `services/vehicle/mileage_service.py::close_trip()` — เดิมกระจาย 3 จุด (`mileage_log()`/`driver_mileage()`/auto-close ทริปค้าง) เรียก logic เดียวกันซ้ำแยกกัน
+
+⚠️ **ทุก mutation ต้องผ่าน `BudgetService`** (`services/vehicle/budget_service.py`) — ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` ตรงๆ
 - 4 call sites: `mileage_log()`, `driver_mileage()`, `override_fuel()` (rededuct), `budget_manage()` POST (set_budget_amount)
-- Cancel/reject หลัง mileage แล้ว → ควรเรียก `BudgetService.refund_for_booking()` (pending wire-up ใน `approve_booking` reject path / `delete_booking`)
 - `vehicle_budget.used_amount` เป็น **cache** ของ `SUM(vehicle_budget_log.change_amount WHERE event_type != 'set_budget')` → verify ด้วย `BudgetService.verify_cache_integrity()`
 
 ---
 
 ## Notification Architecture (3 ช่องทาง)
 
-> **Group broadcast dispatcher** (`core/broadcast.py`) รวม Telegram + LINE group ไว้ที่เดียว — controller import `notify_*` จาก `broadcast` (ไม่ใช่ `telegram_service` ตรงๆ) call site เดียวเด้งครบทั้ง 2 group channel. **Per-user DM** (LINE หา user รายคน) hook อยู่ใน `notification_service._create()` → mirror ทุก in-app event อัตโนมัติ
+> **Group broadcast dispatcher** (`core/broadcast.py`) รวม Telegram + LINE group ไว้ที่เดียว — import `notify_*` จาก `broadcast` (ไม่ใช่ `telegram_service` ตรงๆ) call site เดียวเด้งครบทั้ง 2 group channel. **Per-user DM** (LINE หา user รายคน) hook อยู่ใน `notification_service._create()` → mirror ทุก in-app event อัตโนมัติ
+>
+> **Phase 4, 2026-07-19:** flow ที่แตกเข้า service แล้ว (booking approve/reject/cancel, mileage OT) — ทั้ง in-app (`notification_service`) และ Telegram (`broadcast`) call site ย้ายจาก controller (`views/vehicle/*.py`) เข้า service function ท้ายสุด (หลัง guard/state-change, ก่อน commit ที่ controller ยังเป็นคนเรียก) แล้ว ไม่ใช่ controller เรียกตรงอีกต่อไปสำหรับ flow เหล่านี้ — flow ที่ยังไม่มี service รองรับ (merge, manual re-notify, ad-hoc booking) ยังเรียกจาก controller เหมือนเดิม
 
 ### 1. Telegram Bot
 **Pattern:**
@@ -230,6 +242,15 @@ bbcenter/
 │   │                              vehicle_fuel) — __init__.py re-export ครบ
 │   ├── ad_utils.py
 │   ├── components/              ← UI component layer (base/table → macro bb_table_v2, 2026-06-29)
+│   ├── domain/                  ← pure logic, ห้าม import flask (Clean Architecture, Phase 0-1, 2026-07-19)
+│   │   └── vehicle/
+│   │       ├── workflow.py      ← ALLOWED_TRANSITIONS/guard_budget/apply_transition (state machine กลาง)
+│   │       └── fuel.py          ← calc_fuel_cost() (pure — get_fuel_price() ไม่ pure ย้ายไป services/ แล้ว)
+│   ├── services/                ← use-case orchestration: guard → state change → notify (Phase 0-4, 2026-07-19)
+│   │   └── vehicle/
+│   │       ├── booking_service.py   ← approve/reject/cancel/revert/assign (gateway เดียวของ VehicleBooking.status)
+│   │       ├── mileage_service.py   ← close_trip/auto_generate_ot/override_fuel_cost (gateway เดียวของ mileage flow)
+│   │       └── budget_service.py    ← deduct/refund/top_up/manual_adjust (gateway เดียวของ VehicleBudget mutation)
 │   ├── instance/portal.db       ← SQLite (gitignored)
 │   ├── migrations/              ← manual .sql + migrations-index.md
 │   ├── views/
@@ -237,18 +258,18 @@ bbcenter/
 │   │   ├── repair_view.py
 │   │   ├── maintenance_view.py
 │   │   ├── room_view.py
-│   │   ├── fuel_view.py
 │   │   ├── core/               ← util ข้าม domain (ย้ายมา 2026-06-07)
 │   │   │   ├── telegram_service.py
 │   │   │   ├── line_service.py · broadcast.py · line_webhook.py  ← LINE + group dispatcher (2026-06-12)
 │   │   │   ├── notification_service.py
 │   │   │   └── notification_cron.py
-│   │   └── vehicle/            ← vehicle domain (ตัดจาก vehicle_view.py ขั้น 3, 2026-06-07)
-│   │       ├── vehicle_common.py    ← blueprints(4) + helpers/constants กลาง
+│   │   └── vehicle/            ← vehicle domain controllers (ตัดจาก vehicle_view.py ขั้น 3, 2026-06-07)
+│   │       ├── vehicle_common.py    ← blueprints(4) + shared constant/helper เท่านั้น (Phase 5, 2026-07-19:
+│   │       │                          logic ทั้งหมดย้ายออกไป domain/services แล้ว ห้ามเพิ่ม logic ใหม่ที่นี่)
 │   │       ├── vehicle_booking.py · vehicle_notification.py
 │   │       ├── vehicle_admin.py · vehicle_mileage.py · vehicle_cost.py
 │   │       ├── vehicle_budget.py · vehicle_driver.py    ← controllers ต่อ feature
-│   │       └── vehicle_budget_service.py  ← ย้ายจาก services/ (services/ ถูกลบ)
+│   │       └── vehicle_fuel.py      ← ย้ายจาก views/fuel_view.py เดิม (Phase 1, 2026-07-19 — fuel_bp ชื่อ/URL เดิม)
 │   ├── templates/
 │   │   ├── _shared/            ← partials กลาง (sidebar/header/navbar/notification_*) — ขั้น 4
 │   │   ├── _components/        ← Jinja macros (_modal/kpi/badge/filter_bar/bb/ · render/ = components.py render layer)
@@ -311,14 +332,23 @@ config ทั้งหมดอ่านจาก `app/.env` (gitignored) ผ่
 
 pytest + in-memory SQLite — รัน: `.venv/bin/python -m pytest` (deps: `requirements-dev.txt`)
 
-| ไฟล์ | คลุม |
-|------|------|
-| `tests/conftest.py` | fixtures: in-memory DB + request context (current_user=anonymous) + factory `make_budget`/`make_mileage` |
-| `tests/test_budget_service.py` | `views/vehicle/vehicle_budget_service.py` — deduct(+idempotency), refund(+no-double), rededuct, refund_for_booking, set_budget, manual_adjust, set_active, verify_cache_integrity + invariant `used_amount == SUM(log≠set_budget)` |
+**อัปเดต Phase 6, 2026-07-19** — Clean Architecture refactor (Phase 0-5) ขยาย test suite จาก 1 ไฟล์/13 case เป็น 8 ไฟล์/97 case (path เดิมของตารางนี้ก็ชี้ผิดไปแล้วด้วย — `vehicle_budget_service.py` ไม่มีอยู่จริงตั้งแต่ Phase 1):
+
+| ไฟล์ | คลุม | case |
+|------|------|------|
+| `tests/conftest.py` | fixtures: in-memory DB + request context (current_user=anonymous) + factory `make_budget`/`make_mileage`; route-level fixtures `route_app`/`client`/`login` (StaticPool SQLite, monkeypatch telegram `_send`) |
+| `tests/test_budget_service.py` | `services/vehicle/budget_service.py` — deduct(+idempotency), refund(+no-double), rededuct, set_budget, manual_adjust, set_active, verify_cache_integrity + invariant `used_amount == SUM(log≠set_budget)` | 13 |
+| `tests/test_booking_service.py` | `services/vehicle/booking_service.py` (Phase 2) — approve(central/dept/personal+budget/conflict guard)/reject/approver approve-reject/cancel(guard+role+un-merge)/revert/assign_resources/ungroup + Phase 4 notify consolidation (notify=True/False lock) | 31 |
+| `tests/test_mileage_service.py` | `services/vehicle/mileage_service.py` (Phase 3) — close_trip(+idempotency)/auto_generate_ot(+notify flag, Phase 5)/override_fuel_cost/get_fuel_price/get_distance_cap_km | 15 |
+| `tests/test_booking_workflow.py` | `domain/vehicle/workflow.py` state machine (ALLOWED_TRANSITIONS/apply_transition, unit) + `admin_assign()` route-level (central/personal/reject) | 13 |
+| `tests/test_booking_cancel_guards.py` | route-level guard: owner/admin cancel ตาม status, delete, revert, `budget_manage` action `cancel_booking` | 11 |
+| `tests/test_auto_reject_cron.py` | `notification_cron.auto_reject_overdue_bookings()` — auto-reject เลยกำหนด + idempotent (ปิด DEBT-4, Phase 4) | 6 |
+| `tests/test_stale_mileage_cron.py` | `notification_cron.check_stale_mileage()` (REQ-3, Phase 3.5) — เตือน driver งานค้างข้ามวัน | 5 |
+| `tests/test_mileage_distance_cap.py` | REQ-3 (Phase 3.5) validation เพดานระยะทาง — block/confirm-bypass | 3 |
 
 config: `pytest.ini` (`pythonpath=app`, `testpaths=tests`)
 
-> ส่วนอื่นยังไม่มี test — เพิ่ม service/view ใหม่ที่แตะเงิน/สถานะ ควรเพิ่ม test คู่กัน
+> เพิ่ม service/view ใหม่ที่แตะเงิน/สถานะ ควรเพิ่ม test คู่กัน (ตาม pattern ไฟล์ข้างบน)
 
 ---
 

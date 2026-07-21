@@ -1,6 +1,5 @@
 """Timeline component — wrapper บางๆ ของ macro bb_timeline.
 
-markup ตรง components-gallery.html §+ (.bb-timeline)
 state ของแต่ละ item: 'done' · 'cur' · 'todo'
 ส่ง items เป็น TLItem หรือ dict ก็ได้
 """

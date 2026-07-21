@@ -16,6 +16,8 @@
 
 **🧩 Component — บังคับ:** ก่อนใช้/เลือก UI component (Python wrapper รอบ macro) → **อ่าน [CHEATSHEET.md](app/components/CHEATSHEET.md) ก่อนเสมอ** (ประตูเดียว · signature + ตัวอย่าง copy-paste 28 export). **ห้าม glob/grep `app/components/`** — เปิด cheatsheet หา component → ถ้าไม่มี = ยังไม่ทำ. gallery มองด้วยตา → `/dev/components`
 
+**🏛️ Architecture — บังคับ:** ก่อนเพิ่ม/แก้ logic ที่แตะ **เงิน/สถานะ** (approve/reject/cancel/deduct/หักงบ ฯลฯ) → **อ่าน [ADR 0001](docs/notes/adr/0001-clean-architecture-layers.md) ก่อนเสมอ** (Clean Architecture layering, 2026-07-19). กฎ: `domain/<domain>/` = pure logic ห้าม import flask · `services/<domain>/` = orchestrate (query+commit+notify หลัง commit) · `views/` = parse→service→flash/redirect ผอม. **logic แตะเงิน/สถานะห้ามเขียนใน controller** — ไปที่ service · ทุก status transition ผ่าน `domain/vehicle/workflow.py::apply_transition` เท่านั้น. หน้า **อ่าน/แสดงล้วน** query model ตรงใน controller ได้ ไม่ต้องผ่าน service (เกณฑ์เต็ม → [page_pattern.md](docs/notes/page_pattern.md))
+
 **Entry docs (เปิดเฉพาะที่จำเป็น):**
 - 🚦 Vehicle product North Star (อ่านก่อนแตะ vehicle) → [vehicle_product_spec.md](docs/notes/vehicle_product_spec.md)
 - Nav hub (blueprints + file map) → [INDEX.md](docs/notes/INDEX.md)
@@ -26,6 +28,7 @@
 - Migration .sql → [migrations-index.md](app/migrations/migrations-index.md)
 - System flows → [architecture.md](docs/notes/architecture.md)
 - Task lifecycle (template, สรุปงาน, จบงาน) → [task-lifecycle.md](docs/notes/task-lifecycle.md)
+- 🏛️ **Architecture layering / ADR (อ่านก่อนแตะ logic เงิน/สถานะ — domain/service/view)** → [ADR 0001](docs/notes/adr/0001-clean-architecture-layers.md)
 - 🧱 **Page Pattern (อ่านก่อนเขียนหน้าใหม่ — โครง model→controller→component→jinja)** → [page_pattern.md](docs/notes/page_pattern.md)
 - 🎨 **Design Guideline (อ่านก่อนแตะ UI/CSS/template ทุกครั้ง — canonical)** → [design_guideline.md](docs/notes/design_guideline.md)
 - Design legacy เก่า (design_system / design_dna_redesign / zendenta_migration) = **ลบแล้ว 2026-06-28** → guideline เป็น canonical เดียว
@@ -89,8 +92,10 @@
 | `import X` กลางฟังก์ชัน | ย้ายขึ้น top-of-file เสมอ |
 | Copy import block จากไฟล์อื่น | import เฉพาะที่ไฟล์นี้ใช้จริง |
 | `flash(str(e), 'danger')` | `logger.exception(...)` + `flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')` |
-| Formula/pattern เดิม copy ครั้งที่ 3 | extract helper ใน `vehicle_common.py` ก่อนเขียนซ้ำ |
+| Formula/pattern เดิม copy ครั้งที่ 3 | extract helper ใน service file ที่เกี่ยวข้อง (`services/vehicle/*.py`) — **ไม่ใช่** `vehicle_common.py` อีกต่อไป (Clean Architecture refactor, Phase 5, 2026-07-19: `vehicle_common.py` เหลือแค่ blueprint def + shared constant ห้ามรับ logic ใหม่) |
 | [DEBUG ...] หรือ debug comment ค้างใน code | ลบก่อน mark เสร็จ |
+
+> **ข้อยกเว้น mid-function import (Phase 5, 2026-07-19):** `views/core/notification_cron.py::init_scheduler()` ยัง import `apscheduler.*` ในตัวฟังก์ชัน — ตั้งใจ ไม่ใช่ตกหล่น เพราะ `apscheduler` ไม่ได้ถูกติดตั้งในทุก environment ที่ import module นี้ (`tests/conftest.py` เตือนไว้แล้วว่า "ห้าม import app/app.py ใน test — จะ start APScheduler") — ทดสอบแล้วย้ายขึ้น top-level จริง → `ModuleNotFoundError` ทันทีที่ import module (ไม่ใช่ circular import — เป็นเรื่อง optional/deferred dependency) จุดอื่นในไฟล์เดียวกัน (models/domain/notification_service) ย้ายขึ้น top-level แล้วตามปกติ
 
 ### ✅ Function ใหม่ทุกตัว — checklist ก่อน submit
 
@@ -107,9 +112,9 @@
 
 ### กฎ DRY — ตรวจก่อนเขียน
 
-1. ก่อนเขียน formula ค่าใช้จ่าย/คำนวณ → เช็ก `vehicle_common.py` ว่ามี helper แล้วหรือยัง
-2. Fuel cost formula — **ห้าม inline** ใช้ `calc_fuel_cost(vehicle, distance, fuel_price, override=None)` จาก `vehicle_common.py` (extracted 2026-06-12)
-3. FuelPrice fallback — **ห้าม inline** ใช้ `get_fuel_price(on_date)` จาก `vehicle_common.py` (extracted 2026-06-12)
+1. ก่อนเขียน formula ค่าใช้จ่าย/คำนวณ → เช็ก `services/vehicle/*.py` (`mileage_service.py`/`budget_service.py`/`booking_service.py`) ว่ามี helper แล้วหรือยัง (ย้ายออกจาก `vehicle_common.py` ทั้งหมดแล้ว — Clean Architecture refactor Phase 1-3, 2026-07-19)
+2. Fuel cost formula — **ห้าม inline** ใช้ `calc_fuel_cost(vehicle, distance, fuel_price, override=None)` จาก `domain/vehicle/fuel.py` (pure function — ย้ายจาก `vehicle_common.py` ไป Phase 1, 2026-07-19)
+3. FuelPrice fallback — **ห้าม inline** ใช้ `get_fuel_price(on_date)` จาก `services/vehicle/mileage_service.py` (query ORM จึงอยู่ service ไม่ใช่ domain — ย้ายจาก `vehicle_common.py` ไป Phase 3, 2026-07-19 ปิด DEBT-2)
 
 ### Logger pattern ตาม context
 
@@ -137,7 +142,7 @@ Flask · SQLite + SQLAlchemy · LDAP auth · Jinja2 + Bootstrap 5 · Telegram + 
 ## Gotchas — สิ่งที่ลืมบ่อย
 
 **Business logic**
-- Budget mutation: ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` / `is_active` ตรงๆ — ทุก mutation ต้องผ่าน `app/views/vehicle/vehicle_budget_service.py` (vehicle domain service — ย้ายจาก `services/` 2026-06-07; core = util ข้าม domain เท่านั้น เพื่อ ledger + idempotency)
+- Budget mutation: ห้ามแก้ `VehicleBudget.used_amount` / `budget_amount` / `is_active` ตรงๆ — ทุก mutation ต้องผ่าน `app/services/vehicle/budget_service.py` (ย้ายกลับมาที่ `services/` ใน Clean Architecture refactor Phase 1, 2026-07-19 — เดิมเคยย้ายไป `views/vehicle/` ตอน 2026-06-07 เพราะตอนนั้นมี service เดียวทั้งระบบ ตอนนี้ทุก domain มี service ของตัวเองแล้วจึงย้ายกลับ; core = util ข้าม domain เท่านั้น เพื่อ ledger + idempotency)
   - **Deduct/override** 4 call sites: `mileage_log()`, `driver_mileage()`, `override_fuel()`, `budget_manage()` POST
   - **Refund** — `refund_for_booking()` ถูกลบออกแล้ว (Phase 1, 2026-06-12) เพราะงบหักที่ mileage ไม่ใช่ approve; admin ยกเลิก approved booking ผ่าน `budget_manage` action `cancel_booking` เท่านั้น
   - **`set_active(budget, active)`** (2026-05-18) — toggle ปิด/เปิดใช้งาน → log `set_active`/`set_inactive`; `is_active=False` block `approve_booking` (admin + approver paths ผ่าน `_lookup_budget_for_booking()`) + `top_up` + `manual_adjust`; ไม่ block mileage deduct/refund (booking เก่าปิดทริปได้); KPI sum filter `is_active=True`

@@ -5,10 +5,11 @@ from models import (db, get_bkk_time, Vehicle, Driver, VehicleMileage, VehicleBo
 from sqlalchemy import extract, func
 from datetime import datetime, date
 from components import Table, Column
-import views.vehicle.vehicle_budget_service as budget_svc
+import services.vehicle.budget_service as budget_svc
+import services.vehicle.mileage_service as mileage_svc
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
-    is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot, next_ot_number,
+    is_vehicle_admin,
     EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th, _build_budget_subs,
 )
 
@@ -75,23 +76,8 @@ def override_fuel():
     if not mileage:
         mileage = VehicleMileage(booking_id=booking_id, noted_by=current_user.id)
         db.session.add(mileage)
-    mileage.fuel_cost = fuel_cost
 
-    # ถ้า mileage เคยถูกหักงบไปแล้ว → refund เก่า แล้ว deduct ใหม่ด้วยจำนวนใหม่
-    if mileage.id and mileage.last_budget_log_id:
-        booking = mileage.booking
-        target_date = mileage.actual_end.date() if mileage.actual_end else get_bkk_time().date()
-        if booking and booking.trip_department and booking.expense_type in ['central', 'department']:
-            budget, _ = _lookup_budget_for_booking(booking, on_date=target_date)
-            if budget:
-                budget_svc.rededuct_for_mileage(
-                    mileage, budget, fuel_cost,
-                    snap={'distance': (mileage.odometer_end - mileage.odometer_start)
-                          if (mileage.odometer_end and mileage.odometer_start) else None,
-                          'fuel_rate': float(booking.assigned_vehicle.fuel_rate) if booking.assigned_vehicle else None,
-                          'fuel_price': None},
-                    note=f'override_fuel by {current_user.username} → {fuel_cost}',
-                )
+    mileage_svc.override_fuel_cost(mileage, fuel_cost, actor_username=current_user.username)
 
     db.session.commit()
     flash(f'Override ค่าน้ำมัน #{booking_id} เป็น {fuel_cost:,.2f} บาท เรียบร้อย', 'success')
@@ -352,7 +338,7 @@ def ot_create():
     ot = DriverOT(
         booking_id   =None,                      # standalone — ไม่ผูก booking/งบ
         driver_id    =driver_id,
-        ot_number    =next_ot_number(ot_date.year),
+        ot_number    =mileage_svc.next_ot_number(ot_date.year),
         date         =ot_date,
         note         =request.form.get('note', '').strip() or None,
         status       ='unpaid',

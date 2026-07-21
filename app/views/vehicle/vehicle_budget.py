@@ -9,10 +9,11 @@ from calendar import monthrange
 from views.core.notification_service import (
     notify_payment_confirmed    as _n_payment_confirmed,
 )
-import views.vehicle.vehicle_budget_service as budget_svc
+import services.vehicle.budget_service as budget_svc
+import services.vehicle.booking_service as booking_svc
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
-    is_vehicle_admin, _lookup_budget_for_booking, auto_generate_ot,
+    is_vehicle_admin, _lookup_budget_for_booking,
     EXPENSE_CATEGORIES, TH_MONTHS, _fmt_date_th,
     get_fuel_price, calc_fuel_cost,
 )
@@ -194,17 +195,101 @@ def _handle_extend_period():
 
 
 def _handle_cancel_booking():
+    """ปิด DEBT-3 (Phase 3.5, 2026-07-19): เรียก booking_svc.cancel() ทางเดียวกับ
+    vehicle_booking.py::cancel_booking() แทนเซ็ต booking.status = 'cancelled' ตรง — ได้ guard
+    ครบ (status/time/mileage start entry) + trip-mate un-merge cascade มาด้วยอัตโนมัติ (เดิม
+    ไม่มีเลยทั้งคู่). เปลี่ยน behavior ตั้งใจ: เดิม status เป็น rejected/cancelled อยู่แล้ว =
+    no-op เงียบๆ แต่ flash success — ตอนนี้ guard จะ block พร้อม error message ชัดเจนแทน
+
+    notify=False (Phase 4, 2026-07-19): เส้นทางนี้ไม่เคยแจ้งเตือนใครมาก่อนเลย (ไม่มี notify
+    import ในไฟล์นี้ด้วยซ้ำ) — cancel() ตอนนี้มี notify logic เต็ม (in-app + Telegram) แต่
+    การรวม path ตอน Phase 3.5 ตั้งใจรวมแค่ guard/status ไม่ได้ตั้งใจให้ budget_manage ได้
+    notify ใหม่มาด้วยเป็นผลพลอยได้ — คง gap เดิมไว้ผ่าน flag นี้"""
     try:
         bk_id   = int(request.form.get('booking_id'))
         booking = VehicleBooking.query.get_or_404(bk_id)
-        if booking.status not in ('rejected', 'cancelled'):
-            booking.status = 'cancelled'
+        ok, msg, info = booking_svc.cancel(booking, actor_id=current_user.id,
+                                           is_owner=False, is_admin=True, notify=False)
+        if not ok:
+            flash(msg, 'warning')
+            return
         db.session.commit()
         flash(f'ยกเลิก booking #{bk_id} เรียบร้อย', 'success')
     except Exception:
         db.session.rollback()
         current_app.logger.exception('budget_manage:cancel_booking failed')
         flash('ยกเลิก booking ไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
+
+
+def _build_pending_count_map(pending_bookings):
+    """นับ pending booking (ยังไม่หักงบ) ต่อแผนก — key = trip_department_id (extract จาก
+    _load_budget_rows ตอน Phase 5, logic เดิม 100%)"""
+    pending_count_map = {}
+    for pb in pending_bookings:
+        if pb.trip_department_id:
+            key = pb.trip_department_id
+            pending_count_map[key] = pending_count_map.get(key, 0) + 1
+    return pending_count_map
+
+
+def _budget_row_dict(b, month_start, month_end, pending_count_map):
+    """คำนวณ 1 row ของงบ (pct/status_reason/active_for_month) (extract จาก _load_budget_rows
+    ตอน Phase 5, logic เดิม 100%) คืน (row: dict, active_for_month: bool)"""
+    pct        = round(min(float(b.used_amount) / float(b.budget_amount) * 100, 100), 1) if b.budget_amount > 0 else 0
+    pkey       = b.department_id
+    has_period = bool(b.start_date and b.end_date)
+    active_for_month = (b.is_active and has_period
+                        and b.start_date <= month_end and b.end_date >= month_start)
+    if active_for_month:
+        status_reason = ''
+    elif not b.is_active:
+        status_reason = 'closed'
+    elif not has_period:
+        status_reason = 'no_period'
+    elif b.end_date < month_start:
+        status_reason = 'expired'
+    elif b.start_date > month_end:
+        status_reason = 'future'
+    else:
+        status_reason = ''
+    row = {
+        'id':            b.id,
+        'department':    b.department.name,
+        'budget_amount': b.budget_amount,
+        'used_amount':   b.used_amount,
+        'remaining':     round(float(b.budget_amount) - float(b.used_amount), 2),
+        'pct':           pct,
+        'budget_type':   b.budget_type.name,
+        'approver_id':   b.approver_id,
+        'approver_name': (b.approver.full_name or b.approver.username) if b.approver else None,
+        'start_date':    b.start_date.isoformat() if b.start_date else '',
+        'end_date':      b.end_date.isoformat()   if b.end_date   else '',
+        'start_date_th': _fmt_date_th(b.start_date) if b.start_date else '',
+        'end_date_th':   _fmt_date_th(b.end_date)   if b.end_date   else '',
+        'pending_count': pending_count_map.get(pkey, 0),
+        'is_active':     b.is_active,
+        'status_reason': status_reason,
+    }
+    return row, active_for_month
+
+
+def _build_pending_list(pending_bookings):
+    """แปลง pending_bookings เป็น list ของ dict สำหรับแสดงผล (extract จาก _load_budget_rows
+    ตอน Phase 5, logic เดิม 100%)"""
+    pending_list = []
+    for pb in pending_bookings:
+        m = VehicleMileage.query.filter_by(booking_id=pb.id).first()
+        pending_list.append({
+            'id':           pb.id,
+            'department':   pb.trip_department or '—',
+            'expense_type': pb.expense_type or '—',
+            'destination':  pb.destination or '—',
+            'start':        pb.start_datetime,
+            'user':         (pb.user.full_name or pb.user.username) if pb.user else '—',
+            'has_mileage':  bool(m),
+            'has_deduct':   bool(m and m.budget_deducted_at),
+        })
+    return pending_list
 
 
 def _load_budget_rows(sel_year, sel_month):
@@ -223,72 +308,36 @@ def _load_budget_rows(sel_year, sel_month):
                                     VehicleMileage.budget_deducted_at.is_(None)))
                         .order_by(VehicleBooking.start_datetime.desc())
                         .all())
-
-    pending_count_map = {}
-    for pb in pending_bookings:
-        if pb.trip_department_id:
-            key = pb.trip_department_id
-            pending_count_map[key] = pending_count_map.get(key, 0) + 1
+    pending_count_map = _build_pending_count_map(pending_bookings)
 
     budgets  = []
     archived = []
     for b in raw_budgets:
-        pct        = round(min(float(b.used_amount) / float(b.budget_amount) * 100, 100), 1) if b.budget_amount > 0 else 0
-        pkey       = b.department_id
-        has_period = bool(b.start_date and b.end_date)
-        active_for_month = (b.is_active and has_period
-                            and b.start_date <= month_end and b.end_date >= month_start)
-        if active_for_month:
-            status_reason = ''
-        elif not b.is_active:
-            status_reason = 'closed'
-        elif not has_period:
-            status_reason = 'no_period'
-        elif b.end_date < month_start:
-            status_reason = 'expired'
-        elif b.start_date > month_end:
-            status_reason = 'future'
-        else:
-            status_reason = ''
-        row = {
-            'id':            b.id,
-            'department':    b.department.name,
-            'budget_amount': b.budget_amount,
-            'used_amount':   b.used_amount,
-            'remaining':     round(float(b.budget_amount) - float(b.used_amount), 2),
-            'pct':           pct,
-            'budget_type':   b.budget_type.name,
-            'approver_id':   b.approver_id,
-            'approver_name': (b.approver.full_name or b.approver.username) if b.approver else None,
-            'start_date':    b.start_date.isoformat() if b.start_date else '',
-            'end_date':      b.end_date.isoformat()   if b.end_date   else '',
-            'start_date_th': _fmt_date_th(b.start_date) if b.start_date else '',
-            'end_date_th':   _fmt_date_th(b.end_date)   if b.end_date   else '',
-            'pending_count': pending_count_map.get(pkey, 0),
-            'is_active':     b.is_active,
-            'status_reason': status_reason,
-        }
+        row, active_for_month = _budget_row_dict(b, month_start, month_end, pending_count_map)
         (budgets if active_for_month else archived).append(row)
 
     central_budgets  = [b for b in budgets if b['budget_type'] == 'central']
     dept_budgets     = [b for b in budgets if b['budget_type'] == 'department']
     archived_budgets = sorted(archived, key=lambda x: x['end_date'] or '', reverse=True)
 
-    pending_list = []
-    for pb in pending_bookings:
-        m = VehicleMileage.query.filter_by(booking_id=pb.id).first()
-        pending_list.append({
-            'id':           pb.id,
-            'department':   pb.trip_department or '—',
-            'expense_type': pb.expense_type or '—',
-            'destination':  pb.destination or '—',
-            'start':        pb.start_datetime,
-            'user':         (pb.user.full_name or pb.user.username) if pb.user else '—',
-            'has_mileage':  bool(m),
-            'has_deduct':   bool(m and m.budget_deducted_at),
-        })
+    pending_list = _build_pending_list(pending_bookings)
 
     return central_budgets, dept_budgets, archived_budgets, pending_list
+
+
+def _sum_personal_fuel_cost(mileages, fuel_price):
+    """รวม fuel_cost ของ mileage list (override ถ้ามี ไม่งั้นคำนวณจาก odometer) (extract จาก
+    _calc_budget_kpi ตอน Phase 5 — เดิม copy logic นี้ซ้ำ 2 จุด (received + unpaid) รวมเป็น
+    helper เดียว behavior เดิม 100% ทุกจุด)"""
+    total = 0.0
+    for m in mileages:
+        if m.fuel_cost:
+            total += float(m.fuel_cost)
+        elif m.odometer_end and m.odometer_start and m.booking.assigned_vehicle:
+            dist = m.odometer_end - m.odometer_start
+            rate = float(m.booking.assigned_vehicle.fuel_rate or 10)
+            total += round((dist / rate) * fuel_price, 2)
+    return total
 
 
 def _calc_budget_kpi(central_budgets, dept_budgets, sel_year, sel_month):
@@ -309,14 +358,7 @@ def _calc_budget_kpi(central_budgets, dept_budgets, sel_year, sel_month):
         extract('year',  VehicleMileage.personal_paid_at) == sel_year,
         extract('month', VehicleMileage.personal_paid_at) == sel_month,
     ).all()
-    total_personal_received = 0.0
-    for m in personal_mileages:
-        if m.fuel_cost:
-            total_personal_received += float(m.fuel_cost)
-        elif m.odometer_end and m.odometer_start and m.booking.assigned_vehicle:
-            dist = m.odometer_end - m.odometer_start
-            rate = float(m.booking.assigned_vehicle.fuel_rate or 10)
-            total_personal_received += round((dist / rate) * fuel_price, 2)
+    total_personal_received = _sum_personal_fuel_cost(personal_mileages, fuel_price)
 
     personal_unpaid_mileages = VehicleMileage.query.join(VehicleBooking).filter(
         VehicleBooking.expense_type == 'personal',
@@ -325,14 +367,7 @@ def _calc_budget_kpi(central_budgets, dept_budgets, sel_year, sel_month):
         extract('year',  VehicleMileage.actual_end) == sel_year,
         extract('month', VehicleMileage.actual_end) == sel_month,
     ).all()
-    total_personal_unpaid_amount = 0.0
-    for m in personal_unpaid_mileages:
-        if m.fuel_cost:
-            total_personal_unpaid_amount += float(m.fuel_cost)
-        elif m.odometer_end and m.odometer_start and m.booking.assigned_vehicle:
-            dist = m.odometer_end - m.odometer_start
-            rate = float(m.booking.assigned_vehicle.fuel_rate or 10)
-            total_personal_unpaid_amount += round((dist / rate) * fuel_price, 2)
+    total_personal_unpaid_amount = _sum_personal_fuel_cost(personal_unpaid_mileages, fuel_price)
 
     over_budget_rows = [b for b in (_active_central + _active_dept)
                         if float(b['used_amount']) > float(b['budget_amount']) > 0]
@@ -467,43 +502,12 @@ def budget_manage():
 
 
 
-def _build_budget_pivot(fiscal_year_start_ad):
-    """Build fiscal-year (Mar→Feb) pivot for budget_manage page.
-
-    Phase 7 (2026-05-22). Fiscal year = months [3..12] of `fiscal_year_start_ad`
-    + months [1..2] of `fiscal_year_start_ad + 1`. Filter `is_active=True` only
-    (inactive budgets excluded from pivot per design intent).
-
-    Phase 2 (2026-05-22, redesign continuation): เพิ่ม `personal` row —
-    sum fuel_cost ของ VehicleMileage ที่ expense_type='personal' + personal_status=1
-    (admin ยืนยันรับเงินแล้ว) ภายใน fiscal year. Aggregate ตาม personal_paid_at.
-
-    Returns dict:
-      {
-        'central':        { dept_id: { month_num: used_amount } },
-        'central_labels': { dept_id: dept_name },
-        'central_max':    float,           # max used cell (for heat scale)
-        'dept':           { dept_id: { month_num: used_amount } },
-        'dept_labels':    { dept_id: dept_name },
-        'dept_max':       float,
-        'personal':       { month_num: total_received },   # 1 row across fiscal year
-        'personal_max':   float,
-        'fiscal_months':  [(month, year_ad), ...],  # ordered Mar→Feb (12 tuples)
-        'summary': {                                 # 2026-06-08: default pivot view
-          'central':  {'budget','used','pct','count'},   # เพดาน+ใช้ไป รวมทั้งปีงบ
-          'dept':     {'budget','used','pct','count'},
-          'personal': {'used'},                          # ไม่มีเพดาน
-        }
-      }
-    """
-    fiscal_months = [(m, fiscal_year_start_ad) for m in range(3, 13)] \
-                  + [(m, fiscal_year_start_ad + 1) for m in (1, 2)]
-
-    # ── งบช่วงเวลา (2026-06-06): pivot ดึง "ยอดหักจริงต่อเดือน" จาก ledger
-    #    used_amount เป็นยอดสะสมทั้งช่วงงบ (ข้ามเดือน) → break down ต่อเดือนจาก
-    #    created_at ของ event หัก/คืน/ปรับ (net change_amount). set_budget/set_active = 0 ตัดออกแล้ว
-    fy_start = datetime(fiscal_year_start_ad,     3, 1)
-    fy_end   = datetime(fiscal_year_start_ad + 1, 3, 1)
+def _build_central_dept_pivot(fy_start, fy_end):
+    """งบช่วงเวลา (2026-06-06): pivot ดึง "ยอดหักจริงต่อเดือน" จาก ledger — used_amount เป็น
+    ยอดสะสมทั้งช่วงงบ (ข้ามเดือน) → break down ต่อเดือนจาก created_at ของ event หัก/คืน/ปรับ
+    (net change_amount). set_budget/set_active = 0 ตัดออกแล้ว (extract จาก _build_budget_pivot
+    ตอน Phase 5, logic เดิม 100%)
+    คืน (central, dept, labels_c, labels_d, max_c, max_d)"""
     log_rows = (db.session.query(VehicleBudgetLog, VehicleBudget, BudgetType)
                 .join(VehicleBudget, VehicleBudgetLog.budget_id == VehicleBudget.id)
                 .join(BudgetType, VehicleBudget.budget_type_id == BudgetType.id)
@@ -527,9 +531,14 @@ def _build_budget_pivot(fiscal_year_start_ad):
 
     max_c = max((v for row in central.values() for v in row.values() if v > 0), default=0)
     max_d = max((v for row in dept.values()    for v in row.values() if v > 0), default=0)
+    return central, dept, labels_c, labels_d, max_c, max_d
 
-    # ── Personal row: aggregate ทุก mileage ที่ admin รับเงินแล้ว (personal_status=1)
-    #    ภายใน fiscal year (group by month of personal_paid_at) — fy_start/fy_end นิยามด้านบนแล้ว
+
+def _build_personal_pivot(fy_start, fy_end):
+    """Personal row: aggregate ทุก mileage ที่ admin รับเงินแล้ว (personal_status=1) ภายใน
+    fiscal year (group by month of personal_paid_at) (extract จาก _build_budget_pivot ตอน
+    Phase 5, logic เดิม 100%)
+    คืน (personal, personal_by_user, personal_user_labels, max_p)"""
     personal_mileages = (VehicleMileage.query
                          .join(VehicleBooking)
                          .filter(VehicleBooking.expense_type == 'personal',
@@ -562,11 +571,14 @@ def _build_budget_pivot(fiscal_year_start_ad):
         personal_by_user[uid][mkey] = personal_by_user[uid].get(mkey, 0.0) + cost
 
     max_p = max((v for v in personal.values() if v > 0), default=0)
+    return personal, personal_by_user, personal_user_labels, max_p
 
-    # ── Fiscal-year summary per category (2026-06-08 redesign):
-    #    default pivot view = 3 สรุปแถว (ส่วนกลาง/กอง/ส่วนตัว) เพดานรวม + ใช้ไป%
-    #    used = sum ยอดหักจริงต่อเดือนทั้งปีงบ (จาก cells ที่ build ด้านบน)
-    #    budget = sum เพดานของ VehicleBudget ที่ (year, month) อยู่ในปีงบนี้ ตามประเภท
+
+def _build_pivot_summary(central, dept, personal, fiscal_months):
+    """Fiscal-year summary per category (2026-06-08 redesign): default pivot view = 3 สรุปแถว
+    (ส่วนกลาง/กอง/ส่วนตัว) เพดานรวม + ใช้ไป% — used = sum ยอดหักจริงต่อเดือนทั้งปีงบ (จาก
+    cells ที่ build แล้ว) · budget = sum เพดานของ VehicleBudget ที่ (year, month) อยู่ในปีงบนี้
+    ตามประเภท (extract จาก _build_budget_pivot ตอน Phase 5, logic เดิม 100%)"""
     central_used_fy = sum(v for row in central.values() for v in row.values())
     dept_used_fy    = sum(v for row in dept.values()    for v in row.values())
     personal_used_fy = sum(personal.values())
@@ -585,7 +597,7 @@ def _build_budget_pivot(fiscal_year_start_ad):
             elif btname == 'department':
                 dept_cap_fy += float(amt or 0)
 
-    summary = {
+    return {
         'central': {
             'budget': central_cap_fy,
             'used':   central_used_fy,
@@ -602,6 +614,49 @@ def _build_budget_pivot(fiscal_year_start_ad):
             'used':   personal_used_fy,
         },
     }
+
+
+def _build_budget_pivot(fiscal_year_start_ad):
+    """Build fiscal-year (Mar→Feb) pivot for budget_manage page.
+
+    Phase 7 (2026-05-22). Fiscal year = months [3..12] of `fiscal_year_start_ad`
+    + months [1..2] of `fiscal_year_start_ad + 1`. Filter `is_active=True` only
+    (inactive budgets excluded from pivot per design intent).
+
+    Phase 2 (2026-05-22, redesign continuation): เพิ่ม `personal` row —
+    sum fuel_cost ของ VehicleMileage ที่ expense_type='personal' + personal_status=1
+    (admin ยืนยันรับเงินแล้ว) ภายใน fiscal year. Aggregate ตาม personal_paid_at.
+
+    Phase 5 (2026-07-19): แตกเป็น 3 helper ตาม sub-concern (central/dept จาก ledger,
+    personal จาก mileage, summary aggregate) — ฟังก์ชันนี้เหลือแค่ orchestrate + ประกอบ dict
+    ผลลัพธ์ logic เดิม 100% ทุกจุด
+
+    Returns dict:
+      {
+        'central':        { dept_id: { month_num: used_amount } },
+        'central_labels': { dept_id: dept_name },
+        'central_max':    float,           # max used cell (for heat scale)
+        'dept':           { dept_id: { month_num: used_amount } },
+        'dept_labels':    { dept_id: dept_name },
+        'dept_max':       float,
+        'personal':       { month_num: total_received },   # 1 row across fiscal year
+        'personal_max':   float,
+        'fiscal_months':  [(month, year_ad), ...],  # ordered Mar→Feb (12 tuples)
+        'summary': {                                 # 2026-06-08: default pivot view
+          'central':  {'budget','used','pct','count'},   # เพดาน+ใช้ไป รวมทั้งปีงบ
+          'dept':     {'budget','used','pct','count'},
+          'personal': {'used'},                          # ไม่มีเพดาน
+        }
+      }
+    """
+    fiscal_months = [(m, fiscal_year_start_ad) for m in range(3, 13)] \
+                  + [(m, fiscal_year_start_ad + 1) for m in (1, 2)]
+    fy_start = datetime(fiscal_year_start_ad,     3, 1)
+    fy_end   = datetime(fiscal_year_start_ad + 1, 3, 1)
+
+    central, dept, labels_c, labels_d, max_c, max_d = _build_central_dept_pivot(fy_start, fy_end)
+    personal, personal_by_user, personal_user_labels, max_p = _build_personal_pivot(fy_start, fy_end)
+    summary = _build_pivot_summary(central, dept, personal, fiscal_months)
 
     return {
         'central':        central,

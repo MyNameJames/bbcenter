@@ -3,11 +3,6 @@
    ─────────────────────────────────────────────────────────────
    CANONICAL: --vc-* — use in ALL CSS/templates/JS
 
-   ⚠️  LINT RULE: ห้ามเพิ่ม --ds-* ใหม่ทุกกรณี
-       Phase 5.1 (2026-05-16): --ds-* Part A ลบครบแล้ว
-       ถ้า grep --ds- เจอใน .css/.html → BUG ให้แก้ทันที
-       Quick check: grep -r "var(--ds-" app/static/css app/templates
-
    No component classes here — components live in design-system.css
    and component-specific CSS files.
 
