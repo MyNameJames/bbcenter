@@ -21,15 +21,22 @@
 }
 @keyframes sb2FadeUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
 
-.sidebar2-scope.sidebar{
+/* ⚠️ ห้ามใส่ class `sidebar` ที่ element นี้ — main.css (โหลดจาก header2 = ทีหลัง) มี
+   `.sidebar{position:fixed;z-index:1040}` legacy → ทับ z-index 1045 ของ offcanvas
+   → เท่ากับ backdrop → backdrop (append ท้าย body) ชนะ paint order = ทับ drawer กดไม่ได้ */
+.offcanvas.sidebar2-scope{
   width:260px; --bs-offcanvas-width:260px; flex-shrink:0; background:var(--sb2-white);
   border-right:1px solid var(--sb2-gray-300); display:flex; flex-direction:column; overflow-y:auto;
+  scrollbar-width:none;          /* Firefox — ซ่อนแถบ แต่ยัง scroll ได้ (pattern เดียวกับ tokens.css/notif-tabs) */
+  -ms-overflow-style:none;       /* IE/Edge เก่า */
 }
+.offcanvas.sidebar2-scope::-webkit-scrollbar{ display:none; }   /* Chrome/Safari */
 @media (min-width:1200px){
   .offcanvas.sidebar2-scope{
     position:static !important; top:auto !important; left:auto !important; bottom:auto !important;
     z-index:auto !important; visibility:visible !important; transform:none !important; transition:none !important;
     max-width:none !important; width:260px !important; height:auto !important;
+    min-height:0;   /* ไม่มี utility ใน BS5 — จำเป็นเพื่อให้เมนูยาวเกินจอ scroll ในตัวเอง ไม่ดันแถวล้น */
     background-color:var(--sb2-white) !important; border-right:1px solid var(--sb2-gray-300) !important; box-shadow:none !important;
   }
 }
@@ -88,7 +95,10 @@
   font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
   line-height:1;
 }
-.offcanvas-backdrop{ --bs-backdrop-bg:#06060a; --bs-backdrop-opacity:0.4; }
+/* BS เวอร์ชันนี้ .offcanvas-backdrop hardcode #000 + .show{opacity:.5} (ไม่อ่าน --bs-backdrop-*)
+   → ต้อง override ที่ property ตรงๆ · z-index 1040 < .offcanvas 1045 = พื้นดำอยู่ใต้ drawer ถูกแล้ว */
+.offcanvas-backdrop{ background-color:#06060a; }
+.offcanvas-backdrop.show{ opacity:.4; }
 </style>
 
 {# ── role logic (port จาก _shared/sidebar.html — icon เปลี่ยนเป็น Material Symbols) ── #}
@@ -160,8 +170,10 @@
   ]}) %}
 {% endif %}
 
-<div id="sidebar2Root">
-  <div class="offcanvas offcanvas-start sidebar sidebar2-scope pt-3 pb-1 px-3 gap-1" tabindex="-1" id="sidebar2Offcanvas">
+{# ≥xl (1200px): root เป็น flex column เพื่อส่งความสูงลงให้ offcanvas ข้างใน (flex-xl-grow-1)
+   — เดิม offcanvas สูงเท่าเนื้อหา เส้น border-right เลยหยุดกลางจอ · <xl ปล่อยเป็น offcanvas ปกติ #}
+<div id="sidebar2Root" class="d-xl-flex flex-xl-column align-self-xl-stretch">
+  <div class="offcanvas offcanvas-start sidebar2-scope pt-3 pb-1 px-3 gap-1 flex-xl-grow-1" tabindex="-1" id="sidebar2Offcanvas">
     <div class="biz-switch">
       <div>
         <div class="name">{{ current_user.full_name or current_user.username }}</div>
@@ -208,7 +220,8 @@ document.addEventListener('DOMContentLoaded', function(){
       inst.show();
     });
   }
-  offEl.querySelectorAll('.nav-item, .sub-nav-item').forEach(function(item){
+  {# เฉพาะตัวที่ "พาไปหน้าอื่น" — .has-submenu เป็น label พับ/กางเมนู กดแล้วต้องอยู่ต่อ ไม่ใช่ปิด drawer #}
+  offEl.querySelectorAll('.nav-item:not(.has-submenu), .sub-nav-item').forEach(function(item){
     item.addEventListener('click', function(){
       if (window.innerWidth < 1200) {
         var inst = bootstrap.Offcanvas.getInstance(offEl);

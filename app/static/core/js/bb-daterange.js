@@ -11,8 +11,8 @@
      (คอลัมน์ 0: nav < + ชื่อเดือน caret · คอลัมน์ 1: ชื่อเดือน caret + nav >) + ปฏิทินของตัวเอง (2026-07-02)
    - desktop = 2 คอลัมน์เรียงแนวนอน ขนาดคงที่ · มือถือ = stack แนวตั้ง เต็มความกว้าง (เต็มพื้นที่เหลือ)
    - caret ชื่อเดือน → แทนที่เฉพาะฝั่งนั้นด้วย month/year grid (4 คอลัมน์) ฝั่งตรงข้ามเห็นปฏิทินเดิมต่อ
-   - footer: "ยกเลิก" (clear draft) · "ยืนยัน" (commit)
-   - popover กันล้นจอ: desktop clamp ด้วย translateX ถ้าเกิน viewport, มือถือ position:fixed กึ่งกลางจอ
+   - footer: "ปิด" (หุบ popover เฉยๆ ไม่ commit — เดิมชื่อ "ยกเลิก" แต่ทำแค่ล้าง draft ไม่ได้ปิดจริง) · "ยืนยัน" (commit)
+   - popover กันล้นจอ: desktop clamp ด้วย translateX ถ้าเกิน viewport, มือถือ position:fixed เต็มความกว้างใต้ header
 
    draft vs applied: เลือก/preset/พิมพ์ = แก้ draft เท่านั้น → กด "ใช้" จึง commit
    commit = เขียน hidden input (start/end) + dispatch 'bb-daterange:change'
@@ -87,7 +87,8 @@
 
     const openInstances = new Set();
     document.addEventListener('click', e => {
-        openInstances.forEach(inst => { if (!inst.root.contains(e.target)) inst.cancel(); });
+        // pop portal ไป document.body ตอนเปิด (escape overflow ancestor) → เช็ก pop.contains ด้วย ไม่งั้นคลิกในปฏิทินโดนนับเป็น outside
+        openInstances.forEach(inst => { if (!inst.root.contains(e.target) && !inst.pop.contains(e.target)) inst.cancel(); });
     });
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') openInstances.forEach(inst => inst.cancel());
@@ -119,6 +120,7 @@
         if (!btn || !pop || !calsWrap) return;
 
         const isMobile = () => mqMobile.matches;
+        const isRight = root.classList.contains('is-align-right');
 
         const placeholder = root.dataset.placeholder || 'ทั้งหมด';
 
@@ -293,10 +295,9 @@
             if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
         }));
 
-        /* ── clear / apply ── */
-        clearBtn.addEventListener('click', () => {
-            draftStart = null; draftEnd = null; draftPreset = ''; monthPick = null; render();
-        });
+        /* ── close / apply — ปุ่ม "ปิด" (เดิม "ยกเลิก" แต่ทำแค่ล้าง draft ไม่ได้ปิดจริง) แค่หุบ popover เฉยๆ
+           (2026-07-22) ── */
+        clearBtn.addEventListener('click', () => close());
         function commit() {
             if (draftStart && !draftEnd) draftEnd = draftStart;
             appliedStart = draftStart; appliedEnd = draftEnd; appliedPreset = draftPreset;
@@ -309,7 +310,19 @@
         }
         applyBtn.addEventListener('click', commit);
 
-        /* ── กัน popover ล้นจอ (desktop) — มือถือ position:fixed กึ่งกลางอยู่แล้ว ── */
+        /* ── ตำแหน่ง popover (desktop) — portal ไป document.body ตอนเปิด (escape overflow ของ
+           ancestor เช่น toolbar scroll แนวนอน) → ต้องคำนวณ top/left/right เองจาก getBoundingClientRect
+           มือถือปล่อยให้ CSS media query คุมเต็ม (position:fixed คงที่อยู่แล้วไม่ต้องอิง trigger) ── */
+        function place() {
+            if (isMobile()) { pop.style.position = ''; pop.style.top = ''; pop.style.left = ''; pop.style.right = ''; return; }
+            const r = btn.getBoundingClientRect();
+            pop.style.position = 'fixed';
+            pop.style.top = `${r.bottom + 6}px`;
+            if (isRight) { pop.style.left = 'auto'; pop.style.right = `${window.innerWidth - r.right}px`; }
+            else { pop.style.left = `${r.left}px`; pop.style.right = 'auto'; }
+        }
+
+        /* ── กัน popover ล้นจอ (desktop) ── */
         function clampToViewport() {
             pop.style.transform = '';
             if (isMobile()) return;
@@ -325,18 +338,30 @@
         function open() {
             draftStart = appliedStart; draftEnd = appliedEnd; draftPreset = appliedPreset;
             cursor = firstOfMonth(appliedStart || new Date()); monthPick = null;
-            render(); pop.hidden = false; root.classList.add('is-open');
+            render();
+            document.body.appendChild(pop);      // portal
+            pop.hidden = false; root.classList.add('is-open');
             btn.setAttribute('aria-expanded', 'true'); openInstances.add(inst);
+            place();
+            window.addEventListener('scroll', place, true);
+            window.addEventListener('resize', place);
             requestAnimationFrame(clampToViewport);
+            // popover mutual-exclusion ร่วมกับ combo/ue_chip_dd (bb-components.js) ผ่าน window เพราะคนละไฟล์
+            if (window.__bbActivePopoverClose && window.__bbActivePopoverClose !== cancel) window.__bbActivePopoverClose();
+            window.__bbActivePopoverClose = cancel;
         }
         function close() {
             pop.hidden = true; root.classList.remove('is-open');
             presets.classList.remove('is-open');
             if (presetsBtn) presetsBtn.setAttribute('aria-expanded', 'false');
             btn.setAttribute('aria-expanded', 'false'); openInstances.delete(inst);
+            root.appendChild(pop);               // ย้ายกลับเข้า root
+            window.removeEventListener('scroll', place, true);
+            window.removeEventListener('resize', place);
+            if (window.__bbActivePopoverClose === cancel) window.__bbActivePopoverClose = null;
         }
         function cancel() { draftStart = appliedStart; draftEnd = appliedEnd; draftPreset = appliedPreset; close(); }
-        const inst = { root, cancel };
+        const inst = { root, pop, cancel };
 
         btn.addEventListener('click', e => { e.stopPropagation(); if (pop.hidden) open(); else cancel(); });
         pop.addEventListener('click', e => {

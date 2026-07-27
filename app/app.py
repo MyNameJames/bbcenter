@@ -46,7 +46,8 @@ from components import (register_components, Table, Column, Badge, Status,
                         Button, Card, KPI, Input, Search, Tabs, Tab,
                         Segmented, Seg, Chip, Token, DateRange,
                         Dropdown, MenuItem, MenuLabel, MenuDivider, MenuRich,
-                        Pagination, Modal, Timeline, TLItem)
+                        Pagination, Modal, Timeline, TLItem,
+                        Callout, Drawer, Section, DescList)
 from markupsafe import Markup
 register_components(app)
 
@@ -56,13 +57,21 @@ register_components(app)
 @app.route('/dev/components')
 def dev_components():
     demo_vehicles = [
-        {'plate': 'กข 1234', 'brand': 'Toyota Hilux', 'rate': 12.5, 'status': ('ใช้งาน', 'ok')},
-        {'plate': '1กก 5678', 'brand': 'Isuzu D-Max', 'rate': 11.0, 'status': ('ใช้งาน', 'ok')},
-        {'plate': 'ผบ 9012', 'brand': 'Honda City', 'rate': 15.2, 'status': ('พักใช้งาน', 'wr')},
+        {'_group': 'ใช้งานอยู่', '_group_note': 'แก้ไขได้', '_accent': True},
+        {'plate': 'กข 1234', 'brand': 'Toyota Hilux', 'seats': '4 ที่นั่ง', 'rate': 12.5,
+         'status': ('ใช้งาน', 'ok')},
+        {'plate': '1กก 5678', 'brand': 'Isuzu D-Max', 'seats': '4 ที่นั่ง', 'rate': 11.0,
+         'status': ('ใช้งาน', 'ok')},
+        {'plate': 'ผบ 9012', 'brand': 'Honda City', 'seats': '4 ที่นั่ง', 'rate': 15.2,
+         'status': ('พักใช้งาน', 'wr'), '_sel': True},
+        {'_group': 'ปลดระวางแล้ว', '_group_note': 'อ่านอย่างเดียว'},
+        {'plate': 'ขข 3456', 'brand': 'Toyota Vios', 'seats': '4 ที่นั่ง', 'rate': 14.0,
+         'status': ('ปลดระวาง', 'neutral'), '_locked': True},
     ]
-    table = Table(data=demo_vehicles, info=True, columns=[
+    # total ระบุเอง — data มีแถวหัวกลุ่ม (_group) ปนอยู่ นับเป็นรายการไม่ได้
+    table = Table(data=demo_vehicles, info=True, total=4, columns=[
         Column(key='plate', label='ทะเบียน'),
-        Column(key='brand', label='ยี่ห้อ'),
+        Column(key='brand', sub='seats', label='ยี่ห้อ'),
         Column(key='rate', label='กม./ลิตร', align='end', fmt='{:,.1f}'),
         # Cell Component — สถานะ render ผ่าน Status (badge ในตาราง)
         Column(label='สถานะ', cell=lambda r: Status(r['status'][0], r['status'][1], inline=True)),
@@ -71,11 +80,12 @@ def dev_components():
     statuses = [Status('เสร็จสิ้น', 'ok'), Status('รออนุมัติ', 'wr'),
                 Status('ยกเลิก', 'dg'), Status('กำลังเดินทาง', 'info'),
                 Status('ร่าง', 'neutral')]
-    inline_statuses = [Status('เสร็จสิ้น', 'ok', inline=True, icon='check-circle-2'),
-                       Status('รออนุมัติ', 'wr', inline=True, icon='clock'),
-                       Status('ยกเลิก', 'dg', inline=True, icon='x-circle')]
+    inline_statuses = [Status('เสร็จสิ้น', 'ok', inline=True),
+                       Status('รออนุมัติ', 'wr', inline=True),
+                       Status('ยกเลิก', 'dg', inline=True)]
     buttons = [Button('บันทึก'), Button('ส่งออก', 'sec', icon='download'),
                Button('ยกเลิก', 'ghost'), Button('ลบ', 'danger', icon='trash-2'),
+               Button('ปฏิเสธคำขอ', 'danger-sec'),
                Button('เล็ก', 'pri', size='sm'),
                Button(variant='sec', icon='settings', icon_only=True),
                Button('ปิดใช้งาน', 'pri', disabled=True)]
@@ -113,13 +123,32 @@ def dev_components():
         TLItem('รออนุมัติ', '09:15', 'หัวหน้าแผนกขนส่ง', state='cur'),
         TLItem('เริ่มเดินทาง', state='todo'),
     ])
+    desc = DescList([
+        {'label': 'แผนก', 'value': 'ปฏิบัติการ'},
+        {'label': 'ผู้ขอ', 'value': 'สมชาย ใจดี'},
+        {'label': 'ผู้โดยสาร', 'value': '6', 'num': True},
+        {'label': 'เวลารับ', 'value': '09:00', 'num': True},
+        {'label': 'ปลายทาง', 'value': 'สนามบินสุวรรณภูมิ'},
+        {'label': 'หมายเหตุ', 'value': 'กรุณามารับก่อนเวลา 10 นาที ที่จุดจอดหน้าอาคาร A',
+         'stack': True},
+    ])
+    drawer = Drawer('VR-240719-001', eyebrow='คำขอใช้รถ', sub='พรุ่งนี้ · 19 ก.ค. 2569',
+                    overlay=False, on_close='close-drawer',
+                    status=Status('รออนุมัติ', 'wr'),
+                    body=[Section('รายละเอียดคำขอ', desc),
+                          Section(body=Callout('คำขอของวันที่ 19 ก.ค. เท่านั้นที่กดอนุมัติได้ตอนนี้',
+                                               tone='ok', title='อนุมัติได้เฉพาะของพรุ่งนี้',
+                                               icon='lock'))],
+                    actions=[Button('อนุมัติคำขอ', 'pri', block=True),
+                             Button('ปฏิเสธคำขอ', 'danger-sec', block=True)])
     return render_template('dev/components.html', table=table, badges=badges,
                            statuses=statuses, inline_statuses=inline_statuses,
                            buttons=buttons, card=card, kpis=kpis, inputs=inputs,
                            search=search, tabs=tabs, segmented=segmented,
                            chips=chips, tokens=tokens, daterange=daterange,
                            dropdown=dropdown, pagination=pagination,
-                           modal=modal, timeline=timeline)
+                           modal=modal, timeline=timeline,
+                           drawer=drawer, desc=desc)
 
 # ตั้งค่า Login Manager
 login_manager = LoginManager()

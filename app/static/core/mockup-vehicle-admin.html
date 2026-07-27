@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — อนุมัติรถ (table + drawer)</title>
+<!--
+  mockup-vehicle-admin.html — proposal layout สำหรับ vehicle/admin/vehicle_admin.html
+  standalone (ไม่ผูก app) · fake data · เปิดดูด้วยตาอย่างเดียว
+  ยึด design_guideline v2.1: ink=ปุ่มหลัก · เขียวโผล่ 2 จุด (tint #EAFBF2 / ลิงก์ #0B7A3E) · px · radius 8/pill
+
+  rev 2 (2026-07-21) ตามฟีดแบ็ก:
+   1. weekstrip ขึ้นเหนือ tabs
+   2. weekstrip = pill ดำ + ลูกศร ‹ › · load indicator: dot=1 งาน / เส้นเล็ก=2-3 / เส้นใหญ่=4+
+   3. ตัด toolbar (search/filter/sort) → เหลือ action bar: รวมทริป + แจ้ง Telegram
+   4. motion pass — stagger, drawer slide, pill morph, press feedback (honor prefers-reduced-motion)
+-->
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+<style>
+:root{
+  --ink:#000000; --str:#111111; --mut:#6b6b6b; --faint:#8e8e8e;
+  --n50:#fafafa; --n100:#f6f6f6; --n200:#e8e8e8; --n300:#d9d9d9;
+  --green:#06C167; --green-dk:#0B7A3E; --tint:#EAFBF2;
+  --warn:#8a6100; --warn-bg:#FFF4D6; --dg:#b42318;
+  --r:8px;
+  --ease:cubic-bezier(.2,.8,.2,1);      /* grab-ish: เร็วออก ช้าเข้า */
+  --ease-pop:cubic-bezier(.34,1.56,.64,1);
+}
+*{ box-sizing:border-box; }
+body{ margin:0; font-family:'Sarabun',sans-serif; color:var(--str); background:#fff; font-size:14px; }
+.ms{ font-family:'Material Symbols Outlined'; font-size:20px; line-height:1; vertical-align:middle; }
+.ms.sm{ font-size:16px; }
+
+/* ══ keyframes ══ */
+@keyframes fadeUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+@keyframes rowIn{ from{ opacity:0; transform:translateX(-10px); } to{ opacity:1; transform:none; } }
+@keyframes drawerIn{ from{ opacity:0; transform:translateX(28px); } to{ opacity:1; transform:none; } }
+@keyframes pop{ 0%{ transform:scale(.85); } 60%{ transform:scale(1.06); } 100%{ transform:scale(1); } }
+@keyframes dotPop{ 0%{ transform:scale(0); } 70%{ transform:scale(1.25); } 100%{ transform:scale(1); } }
+@keyframes shimmer{ from{ background-position:200% 0; } to{ background-position:-200% 0; } }
+@keyframes ring{ 0%{ box-shadow:0 0 0 0 rgba(0,0,0,.18); } 100%{ box-shadow:0 0 0 12px rgba(0,0,0,0); } }
+
+/* ── shell ── */
+.frame{ height:100vh; display:flex; flex-direction:column; }
+.topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--n300); flex-shrink:0; }
+.brand{ font-size:20px; font-weight:800; letter-spacing:-.4px; }
+.brand span{ color:var(--green); }
+.topbar-right{ display:flex; align-items:center; gap:14px; font-size:14px; font-weight:600; }
+.icon-btn{ width:36px; height:36px; border:none; background:var(--n100); border-radius:999px; display:grid; place-items:center; cursor:pointer;
+  transition:background-color .18s var(--ease), transform .18s var(--ease); }
+.icon-btn:hover{ background:var(--n200); transform:rotate(-8deg); }
+.icon-btn:active{ transform:scale(.92); }
+.body-row{ flex:1; display:flex; min-height:0; }
+
+/* ── sidebar ── */
+.sidebar{ width:260px; flex-shrink:0; border-right:1px solid var(--n300); padding:16px 12px; overflow-y:auto; }
+.sb-user .name{ font-weight:700; } .sb-user .sub{ font-size:12px; color:var(--mut); }
+.sb-user{ padding:8px 12px 16px; }
+.sb-label{ padding:14px 12px 6px; font-size:12px; font-weight:700; color:var(--faint); }
+.sb-item{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:var(--r); color:var(--str); text-decoration:none; font-size:14px; font-weight:500;
+  transition:background-color .18s var(--ease), padding-left .18s var(--ease); animation:fadeUp .4s var(--ease) both; }
+.sb-item:hover{ background:var(--n100); padding-left:18px; }
+.sb-item.active{ background:var(--tint); font-weight:700; box-shadow:inset 3px 0 0 var(--green); }
+.sb-badge{ margin-left:auto; background:var(--ink); color:#fff; font-size:11px; font-weight:700; border-radius:999px; padding:1px 7px; }
+.divider{ height:1px; background:var(--n200); margin:8px 0; }
+
+/* ── main ── */
+.content{ flex:1; min-width:0; display:flex; }
+.main{ flex:1; min-width:0; overflow-y:auto; padding:28px 32px 48px; animation:fadeUp .5s var(--ease) both; }
+h1{ font-size:32px; font-weight:800; letter-spacing:-.6px; margin:0 0 4px; }
+.sub{ color:var(--mut); margin:0 0 20px; }
+
+/* ══ WEEKSTRIP — เหนือ tabs · pill ดำ + ลูกศร ══ */
+.week-wrap{ display:flex; align-items:center; gap:4px; border:1px solid var(--n200); border-radius:12px; padding:10px 8px; margin-bottom:18px; }
+.week-nav{ width:32px; height:32px; border:none; background:transparent; border-radius:999px; display:grid; place-items:center; cursor:pointer; color:var(--str); flex-shrink:0;
+  transition:background-color .18s var(--ease), transform .18s var(--ease); }
+.week-nav:hover{ background:var(--n100); }
+.week-nav:active{ transform:scale(.88); }
+.week{ display:flex; flex:1; gap:2px; }
+.day{ flex:1; border:none; background:transparent; border-radius:10px; padding:8px 4px 7px; cursor:pointer; font-family:inherit; text-align:center; position:relative;
+  transition:background-color .22s var(--ease), transform .22s var(--ease); }
+.day:hover{ background:var(--n100); }
+.day:active{ transform:scale(.95); }
+.day .mon{ font-size:11px; font-weight:500; color:var(--mut); transition:color .22s var(--ease); }
+.day .num{ font-size:20px; font-weight:700; letter-spacing:-.4px; line-height:1.15; transition:color .22s var(--ease); }
+.day .load{ height:8px; margin-top:5px; display:grid; place-items:center; }
+/* load indicator: dot = 1 งาน · เส้นเล็ก = 2-3 · เส้นใหญ่ = 4+ */
+.load i{ display:block; background:var(--ink); border-radius:999px; animation:dotPop .35s var(--ease-pop) both; }
+.load.lv-dot  i{ width:4px;  height:4px; }
+.load.lv-sm   i{ width:14px; height:2.5px; }
+.load.lv-lg   i{ width:26px; height:4px; }
+.load.lv-0    i{ display:none; }
+.day.on{ background:var(--ink); }
+.day.on .mon{ color:rgba(255,255,255,.65); }
+.day.on .num{ color:#fff; }
+.day.on .load i{ background:var(--green); }
+.day.today .mon{ color:var(--green-dk); font-weight:700; }
+.day.on.today .mon{ color:var(--green); }
+
+/* ── tabs (ใต้ weekstrip) — underline เลื่อนตาม ── */
+.tabs{ position:relative; display:flex; gap:28px; border-bottom:1px solid var(--n200); margin-bottom:16px; }
+.tab{ padding:0 0 12px; font-size:15px; font-weight:600; color:var(--mut); cursor:pointer; transition:color .2s var(--ease); background:none; border:none; font-family:inherit; }
+.tab:hover{ color:var(--str); }
+.tab.on{ color:var(--ink); font-weight:700; }
+.tab .cnt{ color:var(--faint); font-weight:500; margin-left:4px; }
+.tab-ink{ position:absolute; bottom:-1px; height:2px; background:var(--ink); border-radius:2px;
+  transition:left .32s var(--ease), width .32s var(--ease); }
+
+/* ── action bar (แทน toolbar เดิม) ── */
+.actions{ display:flex; align-items:center; gap:8px; margin-bottom:14px; min-height:38px; }
+.sel-count{ font-size:13px; color:var(--mut); font-weight:600; margin-right:auto;
+  transition:color .2s var(--ease); }
+.sel-count.has{ color:var(--ink); }
+.sel-count b{ display:inline-block; }
+.sel-count b.bump{ animation:pop .3s var(--ease-pop); }
+.btn{ border:none; border-radius:999px; padding:9px 18px; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+  transition:transform .16s var(--ease), background-color .18s var(--ease), opacity .2s var(--ease), box-shadow .2s var(--ease); }
+.btn:hover{ transform:translateY(-1px); }
+.btn:active{ transform:translateY(0) scale(.96); }
+.btn.pri{ background:var(--ink); color:#fff; }
+.btn.pri:hover{ box-shadow:0 4px 14px rgba(0,0,0,.18); }
+.btn.sec{ background:#fff; color:var(--ink); border:1px solid var(--n300); }
+.btn.sec:hover{ background:var(--n50); }
+.btn.danger{ background:transparent; color:var(--dg); }
+.btn[disabled]{ opacity:.35; pointer-events:none; }
+.btn.wake{ animation:ring .5s var(--ease); }
+.btn.block{ width:100%; justify-content:center; padding:13px; font-size:15px; }
+
+/* ── supply bar ── */
+.supply{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--tint); border-radius:var(--r); padding:10px 14px; margin-bottom:14px; font-size:13px;
+  animation:fadeUp .45s var(--ease) both .06s; }
+.chip{ display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--n200); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600;
+  transition:transform .18s var(--ease-pop); }
+.chip:hover{ transform:translateY(-1px) scale(1.03); }
+.chip .dot{ width:7px; height:7px; border-radius:999px; background:var(--green); }
+.chip.busy .dot{ background:var(--faint); }
+.chip.fix .dot{ background:var(--dg); }
+.supply .more{ color:var(--green-dk); font-weight:700; text-decoration:none; margin-left:auto; }
+
+/* ── table ── */
+.tbl-wrap{ border:1px solid var(--n200); border-radius:12px; overflow:hidden; }
+table{ width:100%; border-collapse:collapse; }
+th{ text-align:left; font-size:12px; font-weight:700; color:var(--mut); padding:12px 14px; border-bottom:1px solid var(--n200); background:var(--n50); white-space:nowrap; }
+td{ padding:14px; border-bottom:1px solid var(--n200); vertical-align:middle; }
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr{ cursor:pointer; animation:rowIn .38s var(--ease) both;
+  transition:background-color .18s var(--ease), box-shadow .18s var(--ease); }
+tbody tr:hover{ background:var(--n50); }
+tbody tr.on{ background:var(--tint); box-shadow:inset 3px 0 0 var(--ink); }
+tbody tr.picked{ background:#fbfbfb; }
+.who{ font-weight:600; } .who small{ display:block; font-weight:400; color:var(--mut); font-size:12px; }
+.time{ font-weight:600; font-variant-numeric:tabular-nums; }
+.time small{ display:block; font-weight:400; color:var(--mut); font-size:12px; }
+.badge{ display:inline-block; border-radius:999px; padding:2px 10px; font-size:12px; font-weight:700; }
+.badge.wait{ background:var(--warn-bg); color:var(--warn); }
+.badge.ok{ background:var(--tint); color:var(--green-dk); }
+.badge.grp{ background:var(--n100); color:var(--str); }
+.veh{ font-size:13px; } .veh small{ display:block; color:var(--mut); font-size:12px; }
+.dash{ color:var(--n300); }
+.warn-inline{ display:inline-flex; align-items:center; gap:4px; color:var(--dg); font-size:12px; font-weight:600; margin-top:3px; }
+.hint-merge{ color:var(--green-dk); }
+input[type=checkbox]{ width:16px; height:16px; accent-color:#000; cursor:pointer; transition:transform .18s var(--ease-pop); }
+input[type=checkbox]:active{ transform:scale(1.25); }
+
+/* ── drawer ── */
+.drawer{ width:400px; flex-shrink:0; border-left:1px solid var(--n300); overflow-y:auto; padding:22px 22px 40px; }
+.drawer.swap{ animation:drawerIn .34s var(--ease); }
+.dr-head{ display:flex; justify-content:space-between; align-items:flex-start; }
+.dr-kicker{ font-size:11px; font-weight:700; color:var(--faint); letter-spacing:.6px; }
+.dr-title{ font-size:22px; font-weight:800; letter-spacing:-.4px; margin:2px 0 4px; }
+.dr-tabs{ position:relative; display:flex; gap:20px; border-bottom:1px solid var(--n200); margin:16px 0; }
+.dr-tab{ font-size:14px; font-weight:600; color:var(--mut); padding-bottom:10px; cursor:pointer; background:none; border:none; font-family:inherit;
+  transition:color .2s var(--ease); }
+.dr-tab.on{ color:var(--ink); font-weight:700; }
+.dr-ink{ position:absolute; bottom:-1px; height:2px; background:var(--ink); border-radius:2px; transition:left .3s var(--ease), width .3s var(--ease); }
+.dr-pane{ animation:fadeUp .3s var(--ease) both; }
+.dr-sec{ font-size:13px; font-weight:700; margin:20px 0 8px; }
+.kv{ display:flex; justify-content:space-between; gap:16px; padding:7px 0; font-size:13px; border-bottom:1px solid var(--n100); }
+.kv .k{ color:var(--mut); } .kv .v{ font-weight:600; text-align:right; }
+.field{ margin-bottom:10px; }
+.field label{ display:block; font-size:12px; font-weight:700; color:var(--mut); margin-bottom:5px; }
+select{ width:100%; height:40px; border:1px solid var(--n300); border-radius:var(--r); padding:0 12px; font-family:inherit; font-size:14px; background:#fff;
+  transition:border-color .18s var(--ease), box-shadow .18s var(--ease); }
+select:focus{ outline:none; border-color:var(--ink); box-shadow:0 0 0 3px rgba(0,0,0,.06); }
+.seg{ display:flex; gap:6px; }
+.seg button{ flex:1; height:34px; border:1px solid var(--n300); background:#fff; border-radius:999px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  transition:background-color .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease), transform .16s var(--ease); }
+.seg button:active{ transform:scale(.95); }
+.seg button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+.bar{ height:6px; border-radius:999px; background:var(--n200); overflow:hidden; margin-top:6px; }
+.bar i{ display:block; height:100%; background:var(--green); width:0; transition:width .7s var(--ease); }
+.callout{ display:flex; gap:8px; border-radius:var(--r); padding:10px 12px; font-size:12.5px; line-height:1.5; margin:12px 0; animation:fadeUp .35s var(--ease) both; }
+.callout.wr{ background:var(--warn-bg); color:var(--warn); }
+.avail{ display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--n100); animation:rowIn .35s var(--ease) both; }
+.avail .pic{ width:36px; height:36px; border-radius:var(--r); background:var(--n100); display:grid; place-items:center; color:var(--mut); }
+.avail .nm{ font-weight:600; font-size:13px; } .avail .nm small{ display:block; font-weight:400; color:var(--mut); font-size:12px; }
+.avail .st{ margin-left:auto; font-size:12px; font-weight:700; }
+.avail .st.free{ color:var(--green-dk); } .avail .st.busy{ color:var(--mut); } .avail .st.fix{ color:var(--dg); }
+.foot-actions{ margin-top:22px; display:flex; flex-direction:column; gap:8px; }
+.hide{ display:none !important; }
+
+/* skeleton ตอนสลับวัน */
+.skel td{ padding:18px 14px; }
+.skel .blk{ height:14px; border-radius:6px; background:linear-gradient(90deg,var(--n100) 25%,var(--n200) 37%,var(--n100) 63%); background-size:400% 100%; animation:shimmer 1.2s linear infinite; }
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation:none !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="topbar">
+    <div class="brand">BB<span>Center</span></div>
+    <div class="topbar-right">
+      <button class="icon-btn"><span class="ms">notifications</span></button>
+      <span>ปาริชาติ จตุพร</span>
+      <a href="#" style="color:var(--str);text-decoration:none">ออกจากระบบ</a>
+    </div>
+  </div>
+
+  <div class="body-row">
+
+    <nav class="sidebar">
+      <div class="sb-user"><div class="name">ปาริชาติ จตุพร</div><div class="sub">ผู้ดูแลระบบ</div></div>
+      <div class="divider"></div>
+      <a class="sb-item" href="#"><span class="ms">space_dashboard</span>แดชบอร์ด</a>
+      <div class="sb-label">บริการ</div>
+      <a class="sb-item" href="#"><span class="ms">directions_car</span>ปฏิทินจองรถ</a>
+      <a class="sb-item" href="#"><span class="ms">diversity_3</span>ปฏิทินจองห้องประชุม</a>
+      <a class="sb-item" href="#"><span class="ms">computer</span>แจ้งซ่อม IT</a>
+      <div class="sb-label">ผู้ดูแลระบบ</div>
+      <a class="sb-item active" href="#"><span class="ms">cards_stack</span>อนุมัติรถ<span class="sb-badge">6</span></a>
+      <a class="sb-item" href="#"><span class="ms">speed</span>บันทึกเลขไมล์</a>
+      <a class="sb-item" href="#"><span class="ms">accessibility_new</span>รถและคนขับ</a>
+      <a class="sb-item" href="#"><span class="ms">add_card</span>งบประมาณ</a>
+      <a class="sb-item" href="#"><span class="ms">local_gas_station</span>ค่าน้ำมัน</a>
+    </nav>
+
+    <div class="content">
+      <main class="main">
+        <h1>อนุมัติรถ</h1>
+        <p class="sub">จัดรถ คนขับ และงบประมาณให้คำขอใช้รถ</p>
+
+        <!-- ══ 1) WEEKSTRIP — เหนือ tabs ══ -->
+        <div class="week-wrap">
+          <button class="week-nav" data-shift="-1"><span class="ms">chevron_left</span></button>
+          <div class="week" id="week"></div>
+          <button class="week-nav" data-shift="1"><span class="ms">chevron_right</span></button>
+        </div>
+
+        <!-- ══ 2) TABS ══ -->
+        <div class="tabs" id="tabs">
+          <button class="tab on">ทั้งหมด <span class="cnt">6</span></button>
+          <button class="tab">รออนุมัติ <span class="cnt">4</span></button>
+          <button class="tab">ส่งผู้ประสานงาน <span class="cnt">1</span></button>
+          <button class="tab">อนุมัติแล้ว <span class="cnt">2</span></button>
+          <button class="tab">ยกเลิก <span class="cnt">0</span></button>
+          <span class="tab-ink" id="tabInk"></span>
+        </div>
+
+        <!-- ══ 3) ACTION BAR (แทน toolbar) ══ -->
+        <div class="actions">
+          <span class="sel-count" id="selCount">ยังไม่ได้เลือกรายการ</span>
+          <button class="btn sec" id="btnMerge" disabled><span class="ms sm">merge</span> รวมทริป</button>
+          <button class="btn pri" id="btnNotify" disabled><span class="ms sm">send</span> แจ้ง Telegram</button>
+        </div>
+
+        <div class="supply">
+          <b>รถวันนี้</b>
+          <span class="chip"><i class="dot"></i> ว่าง 3</span>
+          <span class="chip busy"><i class="dot"></i> ใช้งาน 5</span>
+          <span class="chip fix"><i class="dot"></i> ซ่อม 1</span>
+          <span style="color:var(--mut)">· คนขับว่าง 2 / 6</span>
+          <a class="more" href="#">ดูรายละเอียด</a>
+        </div>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:38px"><input type="checkbox" id="checkAll"></th>
+                <th>ผู้จอง</th><th style="width:96px">เวลา</th><th>ปลายทาง</th>
+                <th style="width:52px">คน</th><th>รถ / คนขับ</th><th style="width:96px">งบ</th><th style="width:104px">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </main>
+
+      <!-- ══ DRAWER ══ -->
+      <aside class="drawer" id="drawer">
+        <div class="dr-head">
+          <div>
+            <div class="dr-kicker">คำขอ #<span id="drId">1042</span></div>
+            <div class="dr-title" id="drName">สมชาย ใจดี</div>
+            <span class="badge wait" id="drBadge">รออนุมัติ</span>
+          </div>
+          <button class="icon-btn"><span class="ms">close</span></button>
+        </div>
+
+        <div class="dr-tabs" id="drTabs">
+          <button class="dr-tab on">รายละเอียด</button>
+          <button class="dr-tab">รถว่างวันนี้ <span style="color:var(--green-dk)">3</span></button>
+          <span class="dr-ink" id="drInk"></span>
+        </div>
+
+        <!-- pane 1 -->
+        <div class="dr-pane" id="pane1">
+          <div class="dr-sec">คำขอ</div>
+          <div class="kv"><span class="k">แผนก</span><span class="v" id="drDept">ฝ่ายจัดซื้อ</span></div>
+          <div class="kv"><span class="k">วัน–เวลา</span><span class="v" id="drWhen">22 ก.ค. · 09:00–12:00</span></div>
+          <div class="kv"><span class="k">จุดรับ</span><span class="v">อาคารสำนักงานใหญ่</span></div>
+          <div class="kv"><span class="k">ปลายทาง</span><span class="v" id="drDest">สนามบินสุวรรณภูมิ</span></div>
+          <div class="kv"><span class="k">ผู้โดยสาร</span><span class="v" id="drPax">6 คน</span></div>
+          <div class="kv"><span class="k">วัตถุประสงค์</span><span class="v">รับลูกค้าต่างประเทศ</span></div>
+
+          <div class="dr-sec">จัดทรัพยากร</div>
+          <div class="field"><label>เลือกรถ</label>
+            <select><option>Toyota Commuter · 1กข 1234 (12 ที่นั่ง) — ว่าง</option><option>Isuzu D-Max · 2ขค 5678 (4 ที่นั่ง)</option></select>
+          </div>
+          <div class="field"><label>เลือกคนขับ</label>
+            <select><option>สมศักดิ์ มีชัย — ว่าง</option><option>ประยุทธ์ ขยัน — ว่าง</option></select>
+          </div>
+
+          <div class="callout wr"><span class="ms sm">warning</span>
+            <div>คนขับคนนี้มีงาน 12:30 ที่บางนา — เผื่อเวลาเดินทางกลับ</div>
+          </div>
+
+          <div class="dr-sec">ค่าใช้จ่าย</div>
+          <div class="seg" id="seg" style="margin-bottom:10px">
+            <button class="on">ส่วนกลาง</button><button>ส่วนกอง</button><button>ส่วนตัว</button>
+          </div>
+          <div class="field"><select><option>รับ-ส่งลูกค้า</option></select></div>
+          <div style="font-size:13px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--mut)">งบคงเหลือ · รับ-ส่งลูกค้า</span><b>28,400 / 50,000</b></div>
+            <div class="bar"><i id="budgetFill"></i></div>
+          </div>
+
+          <div class="foot-actions">
+            <button class="btn pri block">อนุมัติและจัดรถ</button>
+            <button class="btn sec block">บันทึกร่าง</button>
+            <button class="btn danger block">ปฏิเสธคำขอ</button>
+          </div>
+        </div>
+
+        <!-- pane 2 -->
+        <div class="dr-pane hide" id="pane2">
+          <div class="avail"><div class="pic"><span class="ms sm">directions_car</span></div><div class="nm">Toyota Commuter<small>1กข 1234 · 12 ที่นั่ง</small></div><div class="st free">ว่าง</div></div>
+          <div class="avail"><div class="pic"><span class="ms sm">directions_car</span></div><div class="nm">Toyota Fortuner<small>4ฉช 3456 · 7 ที่นั่ง</small></div><div class="st free">ว่าง</div></div>
+          <div class="avail"><div class="pic"><span class="ms sm">directions_car</span></div><div class="nm">Nissan Almera<small>5ญฎ 7788 · 4 ที่นั่ง</small></div><div class="st free">ว่าง</div></div>
+          <div class="avail"><div class="pic"><span class="ms sm">directions_car</span></div><div class="nm">Isuzu D-Max<small>2ขค 5678 · 4 ที่นั่ง</small></div><div class="st busy">14:00–16:00</div></div>
+          <div class="avail"><div class="pic"><span class="ms sm">build</span></div><div class="nm">Honda City<small>3งจ 9012</small></div><div class="st fix">ส่งซ่อม</div></div>
+          <div class="dr-sec">คนขับ</div>
+          <div class="avail"><div class="pic"><span class="ms sm">person</span></div><div class="nm">สมศักดิ์ มีชัย<small>OT เดือนนี้ 12 ชม.</small></div><div class="st free">ว่าง</div></div>
+          <div class="avail"><div class="pic"><span class="ms sm">person</span></div><div class="nm">ประยุทธ์ ขยัน<small>OT เดือนนี้ 4 ชม.</small></div><div class="st free">ว่าง</div></div>
+          <div class="avail"><div class="pic"><span class="ms sm">person</span></div><div class="nm">วิชัย ตรงเวลา<small>ทริป A</small></div><div class="st busy">13:00–17:00</div></div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════ fake data ══════ */
+const MONTH_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const DAYS = [
+  { d:21, mon:6, jobs:1 }, { d:22, mon:6, jobs:6, today:true }, { d:23, mon:6, jobs:3 },
+  { d:24, mon:6, jobs:9 }, { d:25, mon:6, jobs:2 }, { d:26, mon:6, jobs:0 }, { d:27, mon:6, jobs:0 },
+];
+const ROWS = [
+  { id:1042, name:'สมชาย ใจดี',        dept:'ฝ่ายจัดซื้อ',  t:'09:00', t2:'12:00', dest:'สนามบินสุวรรณภูมิ',       pax:6, veh:null, bud:'ส่วนกลาง', st:'wait', hint:'merge' },
+  { id:1043, name:'จันทร์เพ็ญ ศรีสุข', dept:'ฝ่ายบุคคล',   t:'09:30', t2:'11:30', dest:'สนามบินสุวรรณภูมิ',       pax:2, veh:null, bud:'ส่วนกอง',  st:'wait', hint:'merge' },
+  { id:1044, name:'มานะ ตั้งใจ',       dept:'ฝ่ายการเงิน', t:'10:30', t2:'15:00', dest:'ธนาคารกรุงเทพ สนญ.',      pax:3, veh:null, bud:'ส่วนกอง',  st:'wait' },
+  { id:1045, name:'สุภาพร วงศ์ทอง',    dept:'ฝ่ายการตลาด', t:'13:00', t2:'17:00', dest:'ไอคอนสยาม',               pax:4, veh:{n:'Toyota Commuter', s:'สมศักดิ์ · 1กข 1234'}, bud:'ส่วนกลาง', st:'ok' },
+  { id:1046, name:'ธนพล รุ่งเรือง',    dept:'ฝ่ายผลิต',    t:'14:00', t2:'16:00', dest:'นิคมฯ บางปู',             pax:2, veh:{n:'Isuzu D-Max', s:'ไม่ใช้คนขับ · 2ขค 5678'}, bud:'ส่วนตัว', st:'ok', grp:'ทริป A' },
+  { id:1047, name:'อารีย์ พงษ์ไพบูลย์',dept:'ฝ่ายขาย',     t:'16:00', t2:'18:30', dest:'สนามบินดอนเมือง',         pax:5, veh:null, bud:'ส่วนกลาง', st:'wait', hint:'low' },
+];
+
+/* ══════ weekstrip ══════ */
+// load indicator: 1 งาน = dot · 2-3 = เส้นเล็ก · 4+ = เส้นใหญ่
+const level = n => n === 0 ? 'lv-0' : n === 1 ? 'lv-dot' : n <= 3 ? 'lv-sm' : 'lv-lg';
+let activeDay = 1;
+
+function renderWeek(){
+  document.getElementById('week').innerHTML = DAYS.map((x,i) => `
+    <button class="day${i===activeDay?' on':''}${x.today?' today':''}" data-i="${i}" title="${x.jobs} งาน">
+      <div class="mon">${x.today ? 'วันนี้' : MONTH_TH[x.mon]}</div>
+      <div class="num">${x.d}</div>
+      <div class="load ${level(x.jobs)}"><i style="animation-delay:${i*40}ms"></i></div>
+    </button>`).join('');
+}
+
+document.getElementById('week').addEventListener('click', e => {
+  const b = e.target.closest('.day'); if (!b) return;
+  activeDay = +b.dataset.i; renderWeek(); loadRows();
+});
+document.querySelectorAll('.week-nav').forEach(b => b.addEventListener('click', () => {
+  const s = +b.dataset.shift;
+  DAYS.forEach(x => { x.d += s*7; x.today = false; });
+  renderWeek(); loadRows();
+}));
+
+/* ══════ table ══════ */
+function rowHtml(r,i){
+  const veh = r.veh ? `<div class="veh">${r.veh.n}<small>${r.veh.s}</small></div>`
+                    : `<span class="dash">— ยังไม่จัด —</span>`;
+  const hint = r.hint === 'merge' ? `<div class="warn-inline hint-merge"><span class="ms sm">merge</span> ปลายทางซ้ำกับคำขออื่น</div>`
+             : r.hint === 'low'   ? `<div class="warn-inline"><span class="ms sm">warning</span> รถว่างเหลือ 1 คัน</div>` : '';
+  const st = r.st === 'ok' ? `<span class="badge ok">อนุมัติแล้ว</span>` : `<span class="badge wait">รออนุมัติ</span>`;
+  return `<tr data-id="${r.id}" style="animation-delay:${i*45}ms">
+    <td><input type="checkbox"></td>
+    <td><div class="who">${r.name}<small>${r.dept}</small></div></td>
+    <td><div class="time">${r.t}<small>— ${r.t2}</small></div></td>
+    <td>${r.dest}</td>
+    <td>${r.pax}</td>
+    <td>${veh}${hint}</td>
+    <td>${r.bud}</td>
+    <td>${st}${r.grp ? ` <span class="badge grp">${r.grp}</span>` : ''}</td>
+  </tr>`;
+}
+
+const tbody = document.getElementById('rows');
+function loadRows(){
+  // skeleton สั้นๆ ให้รู้สึกว่าโหลดใหม่จริง
+  tbody.innerHTML = Array.from({length:4}).map(() =>
+    `<tr class="skel"><td colspan="8"><div class="blk"></div></td></tr>`).join('');
+  setTimeout(() => {
+    tbody.innerHTML = ROWS.map(rowHtml).join('');
+    selectRow(tbody.querySelector('tr'));
+    syncCount();
+  }, 340);
+}
+
+/* row click → drawer */
+function selectRow(tr){
+  if (!tr) return;
+  tbody.querySelectorAll('tr').forEach(x => x.classList.remove('on'));
+  tr.classList.add('on');
+  const r = ROWS.find(x => x.id == tr.dataset.id); if (!r) return;
+  drId.textContent = r.id; drName.textContent = r.name; drDept.textContent = r.dept;
+  drDest.textContent = r.dest; drPax.textContent = r.pax + ' คน';
+  drWhen.textContent = `${DAYS[activeDay].d} ${MONTH_TH[DAYS[activeDay].mon]} · ${r.t}–${r.t2}`;
+  drBadge.className = 'badge ' + (r.st === 'ok' ? 'ok' : 'wait');
+  drBadge.textContent = r.st === 'ok' ? 'อนุมัติแล้ว' : 'รออนุมัติ';
+  const dr = document.getElementById('drawer');
+  dr.classList.remove('swap'); void dr.offsetWidth; dr.classList.add('swap');
+  growBudget();
+}
+tbody.addEventListener('click', e => {
+  if (e.target.type === 'checkbox'){ syncCount(); return; }
+  selectRow(e.target.closest('tr'));
+});
+
+/* ══════ selection → action bar ══════ */
+const btnMerge = document.getElementById('btnMerge'), btnNotify = document.getElementById('btnNotify');
+const selCount = document.getElementById('selCount');
+let lastN = 0;
+function syncCount(){
+  const boxes = [...tbody.querySelectorAll('input[type=checkbox]')];
+  const n = boxes.filter(b => b.checked).length;
+  boxes.forEach(b => b.closest('tr').classList.toggle('picked', b.checked));
+  selCount.classList.toggle('has', n > 0);
+  selCount.innerHTML = n ? `เลือก <b>${n}</b> รายการ` : 'ยังไม่ได้เลือกรายการ';
+  const b = selCount.querySelector('b'); if (b) b.classList.add('bump');
+  btnMerge.disabled = n < 2;       // รวมทริปต้อง ≥2
+  btnNotify.disabled = n < 1;
+  if (n > lastN) [btnMerge, btnNotify].forEach(x => {
+    if (!x.disabled){ x.classList.remove('wake'); void x.offsetWidth; x.classList.add('wake'); }
+  });
+  lastN = n;
+}
+document.getElementById('checkAll').addEventListener('change', e => {
+  tbody.querySelectorAll('input[type=checkbox]').forEach(b => b.checked = e.target.checked);
+  syncCount();
+});
+
+/* ══════ tabs — underline เลื่อน ══════ */
+function moveInk(wrap, ink){
+  const on = wrap.querySelector('.on'); if (!on) return;
+  ink.style.left = on.offsetLeft + 'px';
+  ink.style.width = on.offsetWidth + 'px';
+}
+const tabs = document.getElementById('tabs'), tabInk = document.getElementById('tabInk');
+tabs.addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  tabs.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  t.classList.add('on'); moveInk(tabs, tabInk);
+});
+
+const drTabs = document.getElementById('drTabs'), drInk = document.getElementById('drInk');
+drTabs.addEventListener('click', e => {
+  const t = e.target.closest('.dr-tab'); if (!t) return;
+  const idx = [...drTabs.querySelectorAll('.dr-tab')].indexOf(t);
+  drTabs.querySelectorAll('.dr-tab').forEach(x => x.classList.remove('on'));
+  t.classList.add('on'); moveInk(drTabs, drInk);
+  const p1 = document.getElementById('pane1'), p2 = document.getElementById('pane2');
+  p1.classList.toggle('hide', idx === 1); p2.classList.toggle('hide', idx === 0);
+  const shown = idx === 0 ? p1 : p2;
+  shown.style.animation = 'none'; void shown.offsetWidth; shown.style.animation = '';
+  if (idx === 1) p2.querySelectorAll('.avail').forEach((a,i) => a.style.animationDelay = (i*45)+'ms');
+});
+
+/* seg */
+document.getElementById('seg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#seg button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); growBudget();
+});
+function growBudget(){
+  const f = document.getElementById('budgetFill');
+  f.style.width = '0'; setTimeout(() => f.style.width = '57%', 60);
+}
+
+/* init */
+renderWeek(); loadRows();
+requestAnimationFrame(() => { moveInk(tabs, tabInk); moveInk(drTabs, drInk); });
+document.querySelectorAll('.sb-item').forEach((x,i) => x.style.animationDelay = (i*35)+'ms');
+</script>
+</body>
+</html>

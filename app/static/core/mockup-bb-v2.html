@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BB v2 · Batch 0 — Token</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/components.css">
+
+<style>
+/* ══════════════════════════════════════════════════════════════
+   Batch 0 · TOKEN  — proposal (design_guideline.md v2.0 §2 §6)
+   scope = .tok-new เท่านั้น (ยังไม่แตะ components.css)
+   ══════════════════════════════════════════════════════════════ */
+.tok-new {
+  /* ── ink = สีหลักของระบบ (ubereats.design.md · button-primary = ink fill) ── */
+  --bb-ink:       #000000;   /* ★ ใหม่ — CTA fill · active · text-strong */
+  --bb-ink-h:     #262626;   /* hover ของ ink fill */
+
+  /* ── accent เขียว — โผล่แค่ 2 หน้าที่ (เคาะ 2026-07-21) ── */
+  --bb-accent:    #06C167;   /* fill เล็ก: dot · check · progress (2.38:1 → ห้ามเป็นตัวหนังสือ) */
+  --bb-accent-dk: #0B7A3E;   /* ★ link + ghost button (5.43:1 AA) */
+  --bb-accent-bg: #EAFBF2;   /* ★ tint bg: แถวที่เลือก · nav active · callout */
+  --bb-accent-h:  #05a058;
+  /* ⚠️ --bb-accent-i (ชื่อเดิม = "CTA fill") ตอนนี้ชี้ไป ink เพราะปุ่มหลักเป็นดำแล้ว
+     → batch 1 จะลบชื่อนี้ทิ้ง แล้วให้ CSS เรียก --bb-ink / --bb-accent-dk ตรงๆ */
+  --bb-accent-i:  #000000;
+
+  /* ── neutral — ตรง ubereats.design.md (surface-1/2) + ramp เทาสำหรับ text hierarchy ── */
+  --bb-n0:   #FFFFFF;        /* canvas */
+  --bb-n50:  #F6F6F6;        /* page bg */
+  --bb-n100: #F3F3F3;        /* surface-1 (spec) — band/thead/hover */
+  --bb-n200: #E8E8E8;        /* surface-2 (spec) — border */
+  --bb-n300: #E0E0E0;        /* border-strong */
+  --bb-n400: #9E9E9E;        /* ★ text-disabled */
+  --bb-n500: #8A8A8A;        /* ★ text-subtle · placeholder */
+  --bb-mut:  #757575;        /* text-muted (4.61:1 AA) — spec ไม่มี, เราเพิ่ม (ดูหมายเหตุ §2) */
+  --bb-str:  #000000;        /* ink — ดำสนิทตาม spec (เดิม #06060A) */
+  --bb-ph:   #8A8A8A;
+  --bb-body: #3D3D3D;        /* ★ text-body */
+
+  /* semantic — คงเดิม (§2) · ok ชนเขียว accent → บังคับ icon+label */
+  --bb-ok: #16A34A;  --bb-ok-tx: #15803D;  --bb-ok-bg: rgba(22,163,74,.10);
+  --bb-wr: #D97706;  --bb-wr-tx: #B45309;  --bb-wr-bg: rgba(217,119,6,.12);
+  --bb-dg: #DC2626;  --bb-dg-tx: #C81E1E;  --bb-dg-bg: rgba(220,38,38,.10);
+  --bb-info: #2563EB; --bb-info-tx: #1D5FD0; --bb-info-bg: rgba(37,99,235,.10);
+
+  /* radius — binary (§5) · ตัวเก่าคง alias ไว้ให้ CSS เดิมไม่พัง จน batch 1-2 rewrite */
+  --bb-r-surface: 8px;
+  --bb-r-pill:    999px;
+  --bb-r-flush:   0;
+
+  /* shadow — ดำ low-opacity 2 ระดับ (§6) */
+  --bb-shadow-sm: 0 1px 4px rgba(0,0,0,.08);
+  --bb-shadow-md: 0 1px 4px rgba(0,0,0,.08);   /* ยุบเข้า sm — ระดับกลางไม่เคยใช้แยกจริง */
+  --bb-shadow-lg: 0 12px 32px rgba(0,0,0,.14);
+
+  /* focus ring — ดำ (คู่กับ border ink · เขียวสว่างเป็นเส้นขอบไม่ได้) */
+  --bb-ring: 0 0 0 3px rgba(0,0,0,.12);
+}
+
+/* ── mockup chrome (ไม่ใช่ design system) ─────────────────── */
+body { background: #FAFAFA; font-family: 'Sarabun', system-ui, sans-serif; color: #06060A; }
+.mk { max-width: 1400px; margin: 0 auto; padding: 40px 48px 80px; }
+.mk h1 { font-size: 38px; font-weight: 800; letter-spacing: -.5px; margin: 0 0 4px; }
+.mk .mk-sub { font-size: 15px; color: #757575; margin-bottom: 32px; }
+.mk h2 { font-size: 20px; font-weight: 700; margin: 40px 0 4px; }
+.mk .mk-note { font-size: 13px; color: #757575; margin-bottom: 16px; line-height: 1.7; }
+.mk-panel { background: #fff; border: 1px solid #E8E8E8; border-radius: 8px; padding: 24px; }
+.mk-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 991px) { .mk-split { grid-template-columns: 1fr; } }
+.mk-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+          letter-spacing: .04em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; margin-bottom: 14px; }
+.mk-tag.old { background: #F3F3F3; color: #757575; }
+.mk-tag.new { background: #EAFBF2; color: #0B7A3E; }
+.mk-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.mk-row:last-child { margin-bottom: 0; }
+.mk-cap { font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase;
+          color: #9E9E9E; margin: 22px 0 8px; }
+.mk-cap:first-child { margin-top: 0; }
+
+/* swatch */
+.mk-sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 12px; }
+.mk-sw { border: 1px solid #E8E8E8; border-radius: 8px; overflow: hidden; background: #fff; }
+.mk-sw-chip { height: 56px; }
+.mk-sw-meta { padding: 8px 10px; }
+.mk-sw-name { font-size: 12px; font-weight: 600; }
+.mk-sw-hex { font-family: 'Inter', system-ui; font-size: 11px; color: #757575; font-feature-settings: 'tnum'; }
+.mk-sw-cr { font-family: 'Inter', system-ui; font-size: 11px; font-weight: 600; margin-top: 2px; }
+.mk-sw-cr.pass { color: #15803D; }
+.mk-sw-cr.fail { color: #C81E1E; }
+
+/* icon sizing (Material Symbols แทน svg ของ Lucide) */
+.material-symbols-outlined { font-size: 20px; line-height: 1; vertical-align: middle; }
+.bb-btn .material-symbols-outlined { font-size: 18px; }
+.bb-status .material-symbols-outlined,
+.bb-badge .material-symbols-outlined { font-size: 15px; }
+.bb-pg .material-symbols-outlined,
+.bb-select .material-symbols-outlined { font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="mk">
+
+  <h1>Batch 0 · Token</h1>
+  <div class="mk-sub">
+    ฐานสี = <code>docs/notes/ubereats.design.md</code> (ink + canvas + surface 2 ชั้น) · เขียว <code>#06C167</code> โผล่แค่ 2 จุด: <b>tint bg</b> กับ <b>link/ghost</b><br>
+    เปลี่ยนเฉพาะชั้น token ใน <code>components.css :root</code> — ยังไม่แตะ CSS ของ component ตัวไหนเลย (radius / spacing / markup = เดิมทุกอย่าง)
+  </div>
+
+  <!-- ══════════════════════════ 1 · ACCENT ══════════════════════════ -->
+  <h2>1 · Ink + เขียว 2 จุด</h2>
+  <div class="mk-note">
+    <b>ฐานเป็น monochrome ตาม <code>ubereats.design.md</code></b> — ink ดำสนิทคุมทุกอย่าง (text · border · ปุ่มหลัก · active)
+    ส่วนเขียวโผล่แค่ <b>2 หน้าที่</b>: พื้น tint <code>#EAFBF2</code> และ ลิงก์/ปุ่ม ghost <code>#0B7A3E</code><br>
+    เขียวสว่าง <code>#06C167</code> เหลือใช้เฉพาะ fill ชิ้นเล็ก (dot · check) — บนขาวได้แค่ 2.38:1 เป็นตัวหนังสือไม่ได้
+  </div>
+  <div class="mk-panel">
+    <div class="mk-cap">ink — สีหลัก</div>
+    <div class="mk-sw-grid">
+      <div class="mk-sw"><div class="mk-sw-chip" style="background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:14px">ปุ่มหลัก</div>
+        <div class="mk-sw-meta"><div class="mk-sw-name">ink ★ ใหม่</div><div class="mk-sw-hex">#000000</div>
+        <div class="mk-sw-cr pass">21:1 · CTA fill · text · active</div></div></div>
+      <div class="mk-sw"><div class="mk-sw-chip" style="background:#262626"></div>
+        <div class="mk-sw-meta"><div class="mk-sw-name">ink-h ★ ใหม่</div><div class="mk-sw-hex">#262626</div>
+        <div class="mk-sw-cr">hover ของ ink fill</div></div></div>
+    </div>
+
+    <div class="mk-cap">เขียว — 2 จุดที่อนุญาต</div>
+    <div class="mk-sw-grid">
+      <div class="mk-sw"><div class="mk-sw-chip" style="background:#EAFBF2;display:flex;align-items:center;justify-content:center;color:#000;font-size:13px">แถวที่เลือก</div>
+        <div class="mk-sw-meta"><div class="mk-sw-name">accent-bg ✅</div><div class="mk-sw-hex">#EAFBF2</div>
+        <div class="mk-sw-cr">tint bg · nav active · callout</div></div></div>
+      <div class="mk-sw"><div class="mk-sw-chip" style="background:#fff;border-bottom:1px solid #E8E8E8;display:flex;align-items:center;justify-content:center;color:#0B7A3E;font-weight:600;font-size:14px">ดูรายละเอียด</div>
+        <div class="mk-sw-meta"><div class="mk-sw-name">accent-dk ✅</div><div class="mk-sw-hex">#0B7A3E</div>
+        <div class="mk-sw-cr pass">5.43:1 · link · ghost btn</div></div></div>
+      <div class="mk-sw"><div class="mk-sw-chip" style="background:#06C167"></div>
+        <div class="mk-sw-meta"><div class="mk-sw-name">accent ⚠️</div><div class="mk-sw-hex">#06C167</div>
+        <div class="mk-sw-cr fail">2.38:1 · dot/check เท่านั้น</div></div></div>
+    </div>
+
+    <div class="mk-cap">เลิกใช้</div>
+    <div class="mk-sw-grid">
+      <div class="mk-sw" style="opacity:.5"><div class="mk-sw-chip" style="background:#4081EC"></div>
+        <div class="mk-sw-meta"><div class="mk-sw-name">accent เดิม</div><div class="mk-sw-hex">#4081EC</div>
+        <div class="mk-sw-cr">น้ำเงิน — ตัดทิ้ง</div></div></div>
+      <div class="mk-sw" style="opacity:.5"><div class="mk-sw-chip" style="background:#06C167;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px">ปุ่มเขียว</div>
+        <div class="mk-sw-meta"><div class="mk-sw-name">CTA เขียว</div><div class="mk-sw-hex">ไม่เอา</div>
+        <div class="mk-sw-cr">ปุ่มหลัก = ดำ</div></div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 2 · NEUTRAL ══════════════════════════ -->
+  <h2>2 · Neutral</h2>
+  <div class="mk-note">
+    เทาอมฟ้า (cool) → เทากลาง · <code>n100</code>=<code>surface-1 #f3f3f3</code> และ <code>n200</code>=<code>surface-2 #e8e8e8</code> <b>ตรงกับ spec เป๊ะ</b><br>
+    ⚠️ spec ให้ <code>ink-muted = #000000</code> (ไม่มีเทาสำหรับข้อความ) — ใช้กับ dashboard ไม่ได้ เพราะ label/meta/cell รอง จะดำเท่ากันหมด
+    <b>จึงเก็บ ramp เทาไว้</b> (<code>mut #757575</code> · <code>n500</code> subtle · <code>n400</code> disabled) — ตรงกับภาพ drawer ที่ label ซ้ายเป็นเทา ค่าขวาเป็นดำ
+  </div>
+  <div class="mk-panel mk-split">
+    <div>
+      <span class="mk-tag old">เดิม · cool</span>
+      <div class="mk-sw-grid">
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#F6F9FC"></div><div class="mk-sw-meta"><div class="mk-sw-name">n50</div><div class="mk-sw-hex">#F6F9FC</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#EEF2F8"></div><div class="mk-sw-meta"><div class="mk-sw-name">n100</div><div class="mk-sw-hex">#EEF2F8</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#E2E8F1"></div><div class="mk-sw-meta"><div class="mk-sw-name">n200</div><div class="mk-sw-hex">#E2E8F1</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#CBD5E1"></div><div class="mk-sw-meta"><div class="mk-sw-name">n300</div><div class="mk-sw-hex">#CBD5E1</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#5B6B83"></div><div class="mk-sw-meta"><div class="mk-sw-name">mut</div><div class="mk-sw-hex">#5B6B83</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#0A2540"></div><div class="mk-sw-meta"><div class="mk-sw-name">str</div><div class="mk-sw-hex">#0A2540</div></div></div>
+      </div>
+    </div>
+    <div>
+      <span class="mk-tag new">ใหม่ · เทากลาง</span>
+      <div class="mk-sw-grid">
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#F6F6F6"></div><div class="mk-sw-meta"><div class="mk-sw-name">n50 · bg</div><div class="mk-sw-hex">#F6F6F6</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#F3F3F3"></div><div class="mk-sw-meta"><div class="mk-sw-name">n100 · subtle</div><div class="mk-sw-hex">#F3F3F3</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#E8E8E8"></div><div class="mk-sw-meta"><div class="mk-sw-name">n200 · border</div><div class="mk-sw-hex">#E8E8E8</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#E0E0E0"></div><div class="mk-sw-meta"><div class="mk-sw-name">n300 · border-s</div><div class="mk-sw-hex">#E0E0E0</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#9E9E9E"></div><div class="mk-sw-meta"><div class="mk-sw-name">n400 ★ disabled</div><div class="mk-sw-hex">#9E9E9E</div><div class="mk-sw-cr">2.68</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#8A8A8A"></div><div class="mk-sw-meta"><div class="mk-sw-name">n500 ★ subtle</div><div class="mk-sw-hex">#8A8A8A</div><div class="mk-sw-cr">3.45</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#757575"></div><div class="mk-sw-meta"><div class="mk-sw-name">mut · n600</div><div class="mk-sw-hex">#757575</div><div class="mk-sw-cr pass">4.61 AA</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#3D3D3D"></div><div class="mk-sw-meta"><div class="mk-sw-name">n800 ★ body</div><div class="mk-sw-hex">#3D3D3D</div><div class="mk-sw-cr pass">10.9</div></div></div>
+        <div class="mk-sw"><div class="mk-sw-chip" style="background:#06060A"></div><div class="mk-sw-meta"><div class="mk-sw-name">str · n900</div><div class="mk-sw-hex">#06060A</div><div class="mk-sw-cr pass">20.2</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 3 · SHADOW ══════════════════════════ -->
+  <h2>3 · Shadow</h2>
+  <div class="mk-note">cool-tint <code>rgba(16,37,64,…)</code> 3 ระดับ → <b>ดำล้วน 2 ระดับ</b> · ระดับกลางยุบเข้า sm</div>
+  <div class="mk-panel mk-split">
+    <div>
+      <span class="mk-tag old">เดิม</span>
+      <div class="mk-row">
+        <div style="width:150px;height:72px;background:#fff;border-radius:8px;box-shadow:0 1px 2px rgba(16,37,64,.06),0 1px 3px rgba(16,37,64,.04);display:flex;align-items:center;justify-content:center;font-size:13px;color:#5B6B83">sm</div>
+        <div style="width:150px;height:72px;background:#fff;border-radius:8px;box-shadow:0 4px 8px rgba(16,37,64,.08),0 2px 4px rgba(16,37,64,.06);display:flex;align-items:center;justify-content:center;font-size:13px;color:#5B6B83">md</div>
+        <div style="width:150px;height:72px;background:#fff;border-radius:8px;box-shadow:0 12px 28px rgba(16,37,64,.12),0 4px 10px rgba(16,37,64,.08);display:flex;align-items:center;justify-content:center;font-size:13px;color:#5B6B83">lg</div>
+      </div>
+    </div>
+    <div>
+      <span class="mk-tag new">ใหม่</span>
+      <div class="mk-row">
+        <div style="width:150px;height:72px;background:#fff;border-radius:8px;border:1px solid #E8E8E8;display:flex;align-items:center;justify-content:center;font-size:13px;color:#757575">none · border</div>
+        <div style="width:150px;height:72px;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;font-size:13px;color:#757575">sm</div>
+        <div style="width:150px;height:72px;background:#fff;border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;font-size:13px;color:#757575">lg</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 4 · ผลกับ component ══════════════════════════ -->
+  <h2>4 · ผลที่ตกกับ component (ยังไม่แก้ CSS ตัวไหนเลย)</h2>
+  <div class="mk-note">
+    ซ้าย = token เดิม · ขวา = token ใหม่ · <b>markup + CSS เดียวกันเป๊ะ</b> ต่างกันแค่ค่าตัวแปร<br>
+    สิ่งที่ยัง<b>ไม่</b>ถูกแก้ใน batch นี้ (ไปแก้ batch 1-2): radius ที่ยังไม่ binary · tab/ghost/focus ที่ยังใช้เขียวสว่างเป็นตัวหนังสือ (จุด ⛔ ล่าง)
+  </div>
+  <div class="mk-panel mk-split">
+
+    <!-- ─────────── OLD ─────────── -->
+    <div class="tok-old">
+      <span class="mk-tag old">token เดิม · น้ำเงิน</span>
+
+      <div class="mk-cap">Tabs</div>
+      <div class="bb-tabs" style="border-bottom:1px solid var(--bb-n200)">
+        <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">24</span></button>
+        <button class="bb-tab">รออนุมัติ <span class="bb-tab-count">8</span></button>
+        <button class="bb-tab">อนุมัติแล้ว</button>
+      </div>
+
+      <div class="mk-cap">Dropdown · Search · Button</div>
+      <div class="mk-row">
+        <button class="bb-select">แผนก <i data-lucide="chevron-down"></i></button>
+        <button class="bb-select is-active">ประเภทรถ <i data-lucide="chevron-down"></i></button>
+        <div class="bb-search is-expanded" style="max-width:200px"><i data-lucide="search"></i><input placeholder="ค้นหา…"></div>
+        <button class="bb-btn is-icon is-sec"><i data-lucide="search"></i></button>
+        <button class="bb-btn is-pri"><i data-lucide="check"></i> อนุมัติ</button>
+        <button class="bb-btn is-ghost">ดูรายละเอียด</button>
+      </div>
+
+      <div class="mk-cap">Status · Badge</div>
+      <div class="mk-row">
+        <span class="bb-status is-wr"><span class="bb-dot"></span>รออนุมัติ</span>
+        <span class="bb-status is-ok"><span class="bb-dot"></span>ปิดงาน</span>
+        <span class="bb-badge is-accent">ใหม่</span>
+        <span class="bb-status-inline is-ok"><i data-lucide="check-circle"></i>อนุมัติแล้ว</span>
+      </div>
+
+      <div class="mk-cap">Table</div>
+      <div style="border:1px solid var(--bb-n200);border-radius:var(--bb-r-md);overflow:hidden">
+        <table class="bb-table">
+          <thead><tr><th>เลขที่</th><th>ผู้ขอ</th><th>สถานะ</th><th class="bb-cell-num">ระยะ</th></tr></thead>
+          <tbody>
+            <tr><td class="bb-cell-id">VR-001</td><td class="bb-cell-strong">สมชาย</td>
+                <td><span class="bb-status is-wr"><span class="bb-dot"></span>รออนุมัติ</span></td>
+                <td class="bb-cell-num bb-num">128</td></tr>
+            <tr><td class="bb-cell-id">VR-002</td><td class="bb-cell-strong">มานี</td>
+                <td><span class="bb-status is-info"><span class="bb-dot"></span>อนุมัติ</span></td>
+                <td class="bb-cell-num bb-num">64</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mk-cap">Pagination</div>
+      <div class="bb-pag">
+        <div class="bb-pag-info">แสดง 1–8 จาก 24 รายการ</div>
+        <div class="bb-pag-nav">
+          <button class="bb-pg is-disabled"><i data-lucide="chevron-left"></i></button>
+          <button class="bb-pg is-on">1</button>
+          <button class="bb-pg">2</button>
+          <button class="bb-pg"><i data-lucide="chevron-right"></i></button>
+        </div>
+      </div>
+
+      <div class="mk-cap">Input focus ring</div>
+      <div class="bb-field"><input class="bb-input" value="กดที่ช่องนี้เพื่อดู ring" style="border-color:var(--bb-accent-i);box-shadow:var(--bb-ring)"></div>
+    </div>
+
+    <!-- ─────────── NEW ─────────── -->
+    <div class="tok-new">
+      <span class="mk-tag new">token ใหม่ · เขียว</span>
+
+      <div class="mk-cap">Tabs</div>
+      <div class="bb-tabs" style="border-bottom:1px solid var(--bb-n200)">
+        <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">24</span></button>
+        <button class="bb-tab">รออนุมัติ <span class="bb-tab-count">8</span></button>
+        <button class="bb-tab">อนุมัติแล้ว</button>
+      </div>
+
+      <div class="mk-cap">Dropdown · Search · Button</div>
+      <div class="mk-row">
+        <button class="bb-select">แผนก <i data-lucide="chevron-down"></i></button>
+        <button class="bb-select is-active">ประเภทรถ <i data-lucide="chevron-down"></i></button>
+        <div class="bb-search is-expanded" style="max-width:200px"><i data-lucide="search"></i><input placeholder="ค้นหา…"></div>
+        <button class="bb-btn is-icon is-sec"><i data-lucide="search"></i></button>
+        <button class="bb-btn is-pri"><i data-lucide="check"></i> อนุมัติ</button>
+        <button class="bb-btn is-ghost">ดูรายละเอียด</button>
+      </div>
+
+      <div class="mk-cap">Status · Badge</div>
+      <div class="mk-row">
+        <span class="bb-status is-wr"><span class="bb-dot"></span>รออนุมัติ</span>
+        <span class="bb-status is-ok"><span class="bb-dot"></span>ปิดงาน</span>
+        <span class="bb-badge is-accent">ใหม่</span>
+        <span class="bb-status-inline is-ok"><i data-lucide="check-circle"></i>อนุมัติแล้ว</span>
+      </div>
+
+      <div class="mk-cap">Table</div>
+      <div style="border:1px solid var(--bb-n200);border-radius:var(--bb-r-md);overflow:hidden">
+        <table class="bb-table">
+          <thead><tr><th>เลขที่</th><th>ผู้ขอ</th><th>สถานะ</th><th class="bb-cell-num">ระยะ</th></tr></thead>
+          <tbody>
+            <tr><td class="bb-cell-id">VR-001</td><td class="bb-cell-strong">สมชาย</td>
+                <td><span class="bb-status is-wr"><span class="bb-dot"></span>รออนุมัติ</span></td>
+                <td class="bb-cell-num bb-num">128</td></tr>
+            <tr><td class="bb-cell-id">VR-002</td><td class="bb-cell-strong">มานี</td>
+                <td><span class="bb-status is-info"><span class="bb-dot"></span>อนุมัติ</span></td>
+                <td class="bb-cell-num bb-num">64</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mk-cap">Pagination</div>
+      <div class="bb-pag">
+        <div class="bb-pag-info">แสดง 1–8 จาก 24 รายการ</div>
+        <div class="bb-pag-nav">
+          <button class="bb-pg is-disabled"><i data-lucide="chevron-left"></i></button>
+          <button class="bb-pg is-on">1</button>
+          <button class="bb-pg">2</button>
+          <button class="bb-pg"><i data-lucide="chevron-right"></i></button>
+        </div>
+      </div>
+
+      <div class="mk-cap">Input focus ring</div>
+      <div class="bb-field"><input class="bb-input" value="กดที่ช่องนี้เพื่อดู ring" style="border-color:var(--bb-accent-i);box-shadow:var(--bb-ring)"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 5 · ⛔ จุดที่ token อย่างเดียวแก้ไม่ได้ ══════════════════════════ -->
+  <h2>5 · ⛔ จุดที่เปลี่ยน token อย่างเดียวยังไม่จบ</h2>
+  <div class="mk-note">
+    CSS เดิมใช้ <code>--bb-accent-i</code> ตัวเดียวทำ 3 หน้าที่ (ปุ่มหลัก + ลิงก์ + active) — พอแยกเป็น ink/เขียวแล้วต้องแตกทีละจุด
+    ในไฟล์ <code>components.css</code> ตอน batch 1-2
+  </div>
+  <div class="mk-panel tok-new">
+    <table class="bb-table">
+      <thead><tr><th>จุด</th><th>CSS ตอนนี้</th><th>token ล้วนจะได้</th><th>ต้องเป็น (batch 1-2)</th></tr></thead>
+      <tbody>
+        <tr><td class="bb-cell-strong">.bb-btn.is-pri</td><td class="bb-cell-id">bg: accent-i</td>
+            <td><span style="display:inline-flex;background:#000;color:#fff;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px">อนุมัติ</span></td>
+            <td><span style="display:inline-flex;background:#000;color:#fff;font-size:13px;font-weight:600;padding:7px 16px;border-radius:999px">อนุมัติ</span> <span class="bb-cell-id">ถูกสีแล้ว · เหลือ pill</span></td></tr>
+        <tr><td class="bb-cell-strong">.bb-btn.is-ghost</td><td class="bb-cell-id">color: accent-i</td>
+            <td><span style="color:#000;font-weight:600">ดูรายละเอียด</span> <span class="bb-cell-id">ดำ = ไม่เหมือนลิงก์</span></td>
+            <td><span style="color:#0B7A3E;font-weight:600">ดูรายละเอียด</span> <span class="bb-cell-id">accent-dk</span></td></tr>
+        <tr><td class="bb-cell-strong">.bb-tab.is-on</td><td class="bb-cell-id">color + border-bottom</td>
+            <td><span style="color:#000;font-weight:700;border-bottom:2px solid #000">ทั้งหมด</span></td>
+            <td><span style="color:#000;font-weight:700;border-bottom:2px solid #000">ทั้งหมด</span> <span class="bb-cell-id">ผ่าน — active = ink</span></td></tr>
+        <tr><td class="bb-cell-strong">.bb-tab.is-on .bb-tab-count</td><td class="bb-cell-id">bg: accent-bg + color: accent-h</td>
+            <td><span style="background:#EAFBF2;color:#05a058;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px">24</span></td>
+            <td><span style="background:#000;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px">24</span> <span class="bb-cell-id">count ตาม tab = ink</span></td></tr>
+        <tr><td class="bb-cell-strong">.bb-table thead th</td><td class="bb-cell-id">color: accent-i</td>
+            <td><span style="color:#000;font-weight:500">ผู้ขอ</span> <span class="bb-cell-id">แย่ง attention กับ cell</span></td>
+            <td><span style="color:#757575;font-weight:500">ผู้ขอ</span> <span class="bb-cell-id">หัวตาราง = mut</span></td></tr>
+        <tr><td class="bb-cell-strong">.bb-input:focus</td><td class="bb-cell-id">border: accent + ring</td>
+            <td><span style="display:inline-block;width:60px;height:22px;border:2px solid #06C167;border-radius:6px"></span> <span class="bb-cell-id">2.38:1 ตก</span></td>
+            <td><span style="display:inline-block;width:60px;height:22px;border:2px solid #000;border-radius:8px;box-shadow:0 0 0 3px rgba(0,0,0,.12)"></span> <span class="bb-cell-id">ink + ring ดำ</span></td></tr>
+        <tr><td class="bb-cell-strong">.bb-pg.is-on</td><td class="bb-cell-id">bg: accent-i</td>
+            <td><span style="display:inline-flex;background:#000;color:#fff;font-size:12px;padding:4px 10px;border-radius:8px">1</span></td>
+            <td><span style="display:inline-flex;background:#000;color:#fff;font-size:12px;padding:4px 10px;border-radius:999px">1</span> <span class="bb-cell-id">ผ่าน — เหลือ pill</span></td></tr>
+        <tr><td class="bb-cell-strong">.bb-badge.is-accent</td><td class="bb-cell-id">bg: accent-bg + color: accent-h</td>
+            <td><span style="background:#EAFBF2;color:#05a058;font-size:12px;font-weight:600;padding:3px 9px;border-radius:4px">ใหม่</span> <span class="bb-cell-id">3.4:1 ตก</span></td>
+            <td><span style="background:#EAFBF2;color:#0B7A3E;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px">ใหม่</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════ 6 · สรุป diff ══════════════════════════ -->
+  <h2>6 · diff ที่จะลงจริงใน components.css :root</h2>
+  <div class="mk-panel tok-new">
+    <table class="bb-table">
+      <thead><tr><th>token</th><th>เดิม</th><th>ใหม่</th></tr></thead>
+      <tbody>
+        <tr><td class="bb-cell-strong">--bb-ink / --bb-ink-h</td><td class="bb-cell-id">— ไม่มี</td><td>#000000 / #262626 ★ เพิ่ม — CTA · active</td></tr>
+        <tr><td class="bb-cell-strong">--bb-accent</td><td class="bb-cell-id">#4081EC</td><td>#06C167 (dot/check เท่านั้น)</td></tr>
+        <tr><td class="bb-cell-strong">--bb-accent-i</td><td class="bb-cell-id">#4081EC</td><td>#000000 ชั่วคราว → batch 1 ลบทิ้ง ใช้ --bb-ink</td></tr>
+        <tr><td class="bb-cell-strong">--bb-accent-h</td><td class="bb-cell-id">#1766E8</td><td>#05a058</td></tr>
+        <tr><td class="bb-cell-strong">--bb-accent-dk</td><td class="bb-cell-id">— ไม่มี</td><td>#0B7A3E ★ เพิ่ม — link · ghost</td></tr>
+        <tr><td class="bb-cell-strong">--bb-accent-bg</td><td class="bb-cell-id">#EFF6FF</td><td>#EAFBF2 — tint bg</td></tr>
+        <tr><td class="bb-cell-strong">--bb-chip-green / -accent</td><td class="bb-cell-id">#06C167 / #0B7A3E</td><td>ลบ — ใช้ accent-dk ตรงๆ</td></tr>
+        <tr><td class="bb-cell-strong">--bb-n50…n300</td><td class="bb-cell-id">cool</td><td>#F6F6F6 / #F3F3F3 / #E8E8E8 / #E0E0E0 (n100·n200 = surface-1·2 ตาม spec)</td></tr>
+        <tr><td class="bb-cell-strong">--bb-n400 / n500 / n800</td><td class="bb-cell-id">— ไม่มี</td><td>#9E9E9E / #8A8A8A / #3D3D3D ★ เพิ่ม</td></tr>
+        <tr><td class="bb-cell-strong">--bb-mut</td><td class="bb-cell-id">#5B6B83</td><td>#757575 — spec ไม่มี เราเพิ่มเพื่อ hierarchy ในตาราง</td></tr>
+        <tr><td class="bb-cell-strong">--bb-str</td><td class="bb-cell-id">#0A2540</td><td>#000000 — ดำสนิทตาม spec</td></tr>
+        <tr><td class="bb-cell-strong">--bb-ph</td><td class="bb-cell-id">#8A98AE</td><td>#8A8A8A</td></tr>
+        <tr><td class="bb-cell-strong">--bb-ok/wr/dg/info-bg</td><td class="bb-cell-id">hex ทึบ</td><td>rgba tint (§2)</td></tr>
+        <tr><td class="bb-cell-strong">--bb-r-surface / -pill / -flush</td><td class="bb-cell-id">— ไม่มี</td><td>8px / 999px / 0 ★ เพิ่ม (ตัวเก่า xs-xl คงไว้ก่อน)</td></tr>
+        <tr><td class="bb-cell-strong">--bb-shadow-sm/md/lg</td><td class="bb-cell-id">cool-tint 2 ชั้น</td><td>ดำ 1 ชั้น · md ยุบเข้า sm</td></tr>
+        <tr><td class="bb-cell-strong">--bb-ring</td><td class="bb-cell-id">rgba(64,129,236,.18)</td><td>rgba(0,0,0,.12) — ดำ คู่กับ border ink</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>window.lucide = { createIcons(){}, icons:{} };</script>
+<script src="./js/ms-icons.js"></script>
+</body>
+</html>

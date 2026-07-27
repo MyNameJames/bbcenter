@@ -66,6 +66,7 @@
     <a href="#case13" class="bb-g-link">Case 13 · Booking trip card — group (desktop)</a>
     <a href="#case14" class="bb-g-link">Case 14 · Booking trip card — group (มือถือ)</a>
     <a href="#case16" class="bb-g-link">Case 16 · Vehicle usage list (synced)</a>
+    <a href="#case17" class="bb-g-link">Case 17 · Booking trip card — mileage/OT/cost confirm</a>
     <div class="bb-g-nav-label">Calendar</div>
     <a href="#case15" class="bb-g-link">Case 15 · Week strip — day name top</a>
   </nav>
@@ -1562,6 +1563,229 @@
          <b>5 สถานะ</b> (ไม่มีสถานะที่ 6 "ยกเลิก" แล้ว — ตัดออกตามที่ตกลง): ว่าง `is-ok`(badge)/thumb เทา → อนุมัติแล้ว `is-wr` → ออกเดินทางแล้ว `is-info` → สิ้นสุดการเดินทาง `is-info` (สีเดียวกับออกเดินทางแล้ว ตั้งใจ) → กำลังซ่อม `is-wr`(thumb+badge). มุมขวา header เปลี่ยนความหมายตามสถานะ: ว่าง/ซ่อม = ไม่มีเลย, อนุมัติแล้ว/ออกเดินทางแล้ว = เวลาเดินทาง, สิ้นสุดการเดินทาง = หักงบกลาง/หักงบกอง(static) หรือปุ่มเรียกเก็บ→จ่ายแล้ว. <b>ตัดปุ่มคลิกทะเบียน=Swap ออกแล้ว</b> (ไม่ได้อยู่ใน spec ที่ขอ) — ทะเบียนเป็น text ธรรมดา. multi-job (4งจ-5567) คั่น <code>mb-3</code>. ใช้ Bootstrap utility ล้วน (d-flex/justify-content-between/gap/text-muted/small) ไม่มี custom CSS เพิ่มนอกจาก <code>.bb-buy-thumb.is-ok/.is-wr</code> เดิมที่มีอยู่แล้ว.
          <b>(2026-07 rev.2):</b> ตัดแถว "รายละเอียดงาน" (คนขับ · ปลายทาง เช่น "วิชัย มั่นคง · ส่งเอกสารกระทรวง") ออกทุกแถว รวมทั้งใน multi-job (เหลือแค่ "งานที่ N" เฉยๆ) · ตัดปุ่ม "ส่งซ่อม" ออกจากแถวว่าง และปุ่ม "เสร็จซ่อม" ออกจากแถวกำลังซ่อม (ทั้งสองแถวไม่มี header-row ขวาแล้ว เหลือแค่ทะเบียนบรรทัดเดียว).
          <b>(2026-07 rev.3):</b> เปลี่ยน label badge "รอเดินทาง"→"อนุมัติแล้ว" และ "เสร็จสิ้น"→"สิ้นสุดการเดินทาง" (ให้ตรงกับ desc list ที่เขียนไว้แต่แรก) · เงินทั้งหมดเปลี่ยนจาก "฿N" เป็น "N บาท" (รวม OT badge) · header row ของแต่ละ "งานที่ N" ใน multi-job เปลี่ยนเป็น <code>align-items-center</code> (เดิม <code>align-items-start</code> ทำให้ label เอียงขึ้นบนเทียบกับปุ่ม "เรียกเก็บ" ที่สูงกว่า) · ระยะห่างระหว่างงานที่ 1–2 เปลี่ยนจาก <code>mb-2</code> เป็น <code>mb-3</code>.</div>
+    </section>
+
+    <!-- ========== CASE 17 ========== -->
+    <section id="case17" class="bb-g-sec">
+      <div class="bb-g-sec-head"><h2>Case 17 · Booking trip card — mileage entry + OT + cost confirm</h2><span class="bb-g-cls">Case 12 header · Case 9 mileage box · bb-timeline 3 stop</span></div>
+      <p class="bb-g-sec-desc">เมื่อไหร่: รวม Case 12 (header+avatar+timeline) กับ Case 9 (ช่อง input เลขไมล์) เป็นการ์ดเดียว ให้คนขับกรอกเลขไมล์แล้วเห็น OT + ค่าใช้จ่ายรวม กดยืนยันจบในหน้าเดียว ไม่ต้องเปิด modal แยกแบบ Case 9 เดิม. ขยาย <code>bb-timeline</code> จาก 1 stop (Case 12 อนุมัติเดี่ยว) เป็น 3 stop: รายละเอียด(คนขับ/รถ/งบ+กรอกเลขไมล์) → ช่วงเวลา/ค่า OT → ค่าใช้จ่ายทั้งหมด จบด้วยปุ่มยกเลิก/ยืนยันท้ายการ์ด.</p>
+      <div class="bb-g-block">
+        <div class="bb-g-demo is-block">
+          <div class="bb-card mx-auto" style="max-width:26.25rem">
+            <div class="bb-card-body">
+              <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                  <div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)">
+                    <span class="bb-num">#BK-24</span>
+                    <i data-lucide="dot" style="width:.75rem;height:.75rem"></i>
+                    <i data-lucide="clock" style="width:.75rem;height:.75rem"></i>
+                    <span class="bb-num">08:00 - 10:00 (2 ชม.)</span>
+                  </div>
+                  <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">ธิกรณ์ หงษ์โสภา</div>
+                  <div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                    <span class="d-flex align-items-center gap-1"><i data-lucide="users" style="width:.875rem;height:.875rem"></i>1</span>
+                    <span>|</span>
+                    <span>เรียนหนังสือ <i data-lucide="arrow-right" style="width:.75rem;height:.75rem"></i> <b style="color:var(--bb-str)">วัดพระธรรมกาย</b></span>
+                  </div>
+                </div>
+                <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-wr-bg)">
+                  <i data-lucide="bike" style="width:1.75rem;height:1.75rem;color:var(--bb-wr-tx)"></i>
+                </div>
+              </div>
+
+              <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-3">
+
+              <div class="bb-timeline">
+                <div class="bb-tl-item done">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">รายละเอียด</div>
+                  <div class="bb-tl-desc">ISUZU D-MAX (ศม 139)</div>
+                  <div class="bb-tl-desc">วรกฤต | โทร <b style="color:var(--bb-mut)">089-123-4567</b></div>
+                  <div class="bb-tl-desc">งบส่วนกอง-กองสนับสนุนและบริการ</div>
+                  <div class="bg-light rounded-3 p-3 mt-2">
+                    <div class="row g-2">
+                      <div class="col-6">
+                        <div class="bb-field mb-0">
+                          <label class="bb-label">เลขไมล์ออก</label>
+                          <div class="bb-input-wrap"><i data-lucide="gauge"></i><input class="bb-input" placeholder="0"></div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div class="bb-field mb-0">
+                          <label class="bb-label">เลขไมล์กลับ</label>
+                          <div class="bb-input-wrap"><i data-lucide="gauge"></i><input class="bb-input" placeholder="0"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bb-tl-item done">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">ช่วงเวลา / ค่า OT</div>
+                  <div class="bb-tl-desc">08:00 - 10:45 (OT : 45 นาที)</div>
+                  <div class="bg-light rounded-3 p-3 mt-2">
+                    <div class="text-muted d-flex align-items-center gap-1" style="font-size:.8125rem">
+                      <i data-lucide="coins" style="width:.8125rem;height:.8125rem"></i>
+                      OT rate : 20 บาท/ชม. (รวมเป็น <b style="color:var(--bb-str)">15 บาท</b>)
+                    </div>
+                    <div class="mt-3">
+                      <div class="d-flex justify-content-between" style="font-size:.6875rem;color:var(--bb-mut)">
+                        <span class="bb-num">08:00</span>
+                        <span class="bb-num">10:00</span>
+                        <span class="bb-num">10:45</span>
+                      </div>
+                      <div class="d-flex mt-1" style="height:.5rem;border-radius:999px;overflow:hidden">
+                        <div style="width:73%;background:var(--bb-n200)"></div>
+                        <div style="width:27%;background:var(--bb-wr)"></div>
+                      </div>
+                      <div class="d-flex justify-content-between mt-1" style="font-size:.6875rem;color:var(--bb-mut)">
+                        <span>Regular time</span>
+                        <span>Overtime</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bb-tl-item done">
+                  <span class="bb-tl-dot"></span>
+                  <div class="bb-tl-title">ค่าใช้จ่ายทั้งหมด</div>
+                  <div class="bb-tl-desc">ระยะทางทั้งหมด 176 กม.</div>
+                  <div class="bb-tl-desc">ราคาน้ำมันต่อลิตร 40 บาท (4 กม. ต่อลิตร)</div>
+                  <div class="bg-light rounded-3 p-3 mt-2">
+                    <div class="text-muted" style="font-size:.8125rem">ค่าน้ำมัน : 1,760 บาท / ค่า OT 15 บาท</div>
+                    <div style="font-size:.9375rem;font-weight:700;color:var(--bb-str)">รวมทั้งหมด 1,775 บาท</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-end gap-2 mt-3">
+                <button type="button" class="bb-btn is-sec">ยกเลิก</button>
+                <button type="button" class="bb-btn is-pri">ยืนยัน</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bb-g-code"><button class="bb-g-copy" data-copy><i data-lucide="copy"></i> copy</button><pre>
+{% for b in bookings %}
+&lt;div class="bb-card"&gt;
+  &lt;div class="bb-card-body"&gt;
+    &lt;div class="d-flex justify-content-between align-items-start gap-3 mb-3"&gt;
+      &lt;div&gt;
+        &lt;div class="d-flex align-items-center gap-1" style="font-size:.75rem;color:var(--bb-mut)"&gt;
+          &lt;span class="bb-num"&gt;#BK-{{ b.id }}&lt;/span&gt;
+          &lt;i data-lucide="dot"&gt;&lt;/i&gt;
+          &lt;i data-lucide="clock"&gt;&lt;/i&gt;
+          &lt;span class="bb-num"&gt;{{ b.time_start }} - {{ b.time_end }} ({{ b.duration_hours }} ชม.)&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)"&gt;{{ b.requester_name }}&lt;/div&gt;
+        &lt;div class="d-flex align-items-center flex-wrap gap-2 mt-1" style="font-size:.8125rem;color:var(--bb-mut)"&gt;
+          &lt;span class="d-flex align-items-center gap-1"&gt;&lt;i data-lucide="users"&gt;&lt;/i&gt;{{ b.people_count }}&lt;/span&gt;
+          &lt;span&gt;|&lt;/span&gt;
+          &lt;span&gt;{{ b.purpose }} &lt;i data-lucide="arrow-right"&gt;&lt;/i&gt; &lt;b style="color:var(--bb-str)"&gt;{{ b.location }}&lt;/b&gt;&lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:var(--bb-{{ b.status_variant }}-bg)"&gt;
+        &lt;i data-lucide="bike" style="color:var(--bb-{{ b.status_variant }}-tx)"&gt;&lt;/i&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;hr style="border-top:1px dashed var(--bb-n300)" class="my-3"&gt;
+
+    &lt;div class="bb-timeline"&gt;
+      &lt;div class="bb-tl-item done"&gt;   {# stop 1: รายละเอียด — คนขับ/รถ/งบ + กรอกเลขไมล์ #}
+        &lt;span class="bb-tl-dot"&gt;&lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;รายละเอียด&lt;/div&gt;
+        {% if b.vehicle_approved %}
+        &lt;div class="bb-tl-desc"&gt;{{ b.vehicle.name }} ({{ b.vehicle.plate }})&lt;/div&gt;
+        {% endif %}
+        &lt;div class="bb-tl-desc"&gt;
+          {% if b.driver %}{{ b.driver.name }}
+          {% elif b.self_drive %}&lt;span style="color:var(--bb-mut)"&gt;ยังไม่ได้เลือก (ต้องการเดินทางด้วยตนเอง)&lt;/span&gt;
+          {% else %}&lt;span style="color:var(--bb-mut)"&gt;ยังไม่ได้เลือก&lt;/span&gt;{% endif %}
+          {% if b.driver_approved %} | โทร &lt;b style="color:var(--bb-mut)"&gt;{{ b.driver.phone }}&lt;/b&gt;{% endif %}
+        &lt;/div&gt;
+        &lt;div class="bb-tl-desc"&gt;
+          {% if not b.budget_approved %}-
+          {% elif b.is_off_system %}งานนอกระบบ · งบส่วนกอง-{{ b.budget_sub }}
+          {% else %}งบส่วนกอง-{{ b.budget_sub }}{% endif %}
+        &lt;/div&gt;
+        &lt;div class="bg-light rounded-3 p-3 mt-2"&gt;
+          &lt;div class="row g-2"&gt;
+            &lt;div class="col-6"&gt;
+              &lt;div class="bb-field mb-0"&gt;
+                &lt;label class="bb-label"&gt;เลขไมล์ออก&lt;/label&gt;
+                &lt;div class="bb-input-wrap"&gt;&lt;i data-lucide="gauge"&gt;&lt;/i&gt;&lt;input class="bb-input" name="odometer_start" placeholder="0"&gt;&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class="col-6"&gt;
+              &lt;div class="bb-field mb-0"&gt;
+                &lt;label class="bb-label"&gt;เลขไมล์กลับ&lt;/label&gt;
+                &lt;div class="bb-input-wrap"&gt;&lt;i data-lucide="gauge"&gt;&lt;/i&gt;&lt;input class="bb-input" name="odometer_end" placeholder="0"&gt;&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;div class="bb-tl-item done"&gt;   {# stop 2: ช่วงเวลา/ค่า OT — โชว์หลังคำนวณจากเลขไมล์+เวลาแล้ว #}
+        &lt;span class="bb-tl-dot"&gt;&lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;ช่วงเวลา / ค่า OT&lt;/div&gt;
+        &lt;div class="bb-tl-desc"&gt;
+          {{ m.time_actual_start }} - {{ m.time_actual_end }}
+          {% if r.ot_minutes and r.ot_minutes &lt; 60 %} (OT : {{ r.ot_minutes }} นาที)
+          {% elif r.ot_hours %} (OT : {{ r.ot_hours }} ชม.){% endif %}
+        &lt;/div&gt;
+        {% if r.ot_hours or r.ot_minutes %}
+        &lt;div class="bg-light rounded-3 p-3 mt-2"&gt;
+          &lt;div class="text-muted d-flex align-items-center gap-1" style="font-size:.8125rem"&gt;
+            &lt;i data-lucide="coins"&gt;&lt;/i&gt; OT rate : {{ r.ot_rate }} บาท/ชม. (รวมเป็น &lt;b style="color:var(--bb-str)"&gt;{{ r.ot_cost }} บาท&lt;/b&gt;)
+          &lt;/div&gt;
+          &lt;div class="mt-3"&gt;
+            &lt;div class="d-flex justify-content-between" style="font-size:.6875rem;color:var(--bb-mut)"&gt;
+              &lt;span class="bb-num"&gt;{{ m.time_actual_start }}&lt;/span&gt;
+              &lt;span class="bb-num"&gt;{{ b.time_end }}&lt;/span&gt;
+              &lt;span class="bb-num"&gt;{{ m.time_actual_end }}&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class="d-flex mt-1" style="height:.5rem;border-radius:999px;overflow:hidden"&gt;
+              &lt;div style="width:{{ r.regular_pct }}%;background:var(--bb-n200)"&gt;&lt;/div&gt;
+              &lt;div style="width:{{ r.ot_pct }}%;background:var(--bb-wr)"&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class="d-flex justify-content-between mt-1" style="font-size:.6875rem;color:var(--bb-mut)"&gt;
+              &lt;span&gt;Regular time&lt;/span&gt;
+              &lt;span&gt;Overtime&lt;/span&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        {% endif %}
+      &lt;/div&gt;
+
+      &lt;div class="bb-tl-item done"&gt;   {# stop 3: ค่าใช้จ่ายทั้งหมด #}
+        &lt;span class="bb-tl-dot"&gt;&lt;/span&gt;
+        &lt;div class="bb-tl-title"&gt;ค่าใช้จ่ายทั้งหมด&lt;/div&gt;
+        &lt;div class="bb-tl-desc"&gt;ระยะทางทั้งหมด {{ r.distance }} กม.&lt;/div&gt;
+        &lt;div class="bb-tl-desc"&gt;ราคาน้ำมันต่อลิตร {{ r.fuel_price }} บาท ({{ b.vehicle.fuel_rate }} กม. ต่อลิตร)&lt;/div&gt;
+        &lt;div class="bg-light rounded-3 p-3 mt-2"&gt;
+          &lt;div class="text-muted" style="font-size:.8125rem"&gt;ค่าน้ำมัน : {{ r.fuel_cost }} บาท / ค่า OT {{ r.ot_cost }} บาท&lt;/div&gt;
+          &lt;div style="font-size:.9375rem;font-weight:700;color:var(--bb-str)"&gt;รวมทั้งหมด {{ r.total_cost }} บาท&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class="d-flex justify-content-end gap-2 mt-3"&gt;
+      &lt;button type="button" class="bb-btn is-sec"&gt;ยกเลิก&lt;/button&gt;
+      &lt;button type="submit" class="bb-btn is-pri"&gt;ยืนยัน&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+{% endfor %}</pre></div>
+      </div>
+      <div class="bb-g-note"><i data-lucide="info"></i> <b>Case 17 (2026-07):</b> รวม Case 12 (header 2 บรรทัด+avatar สีตาม status+เส้นประคั่นก่อน timeline ตามแพทเทิร์น Case 11) กับ Case 9 (2 ช่อง input เลขไมล์ออก/กลับ) เป็นการ์ดเดียว แล้วขยาย <code>bb-timeline</code> จาก 1 stop เป็น 3 stop.
+         <b>stop 1 "รายละเอียด":</b> title เปลี่ยนจากชื่อคนขับ (Case 12 เดิมผูก <code>{{ b.driver.name }}</code>) เป็น label คงที่ — ชื่อคนขับย้ายไปรวมกับเบอร์โทรเป็นบรรทัดเดียว "{{ driver }} | โทร {{ phone }}" (เดิมรวมกับรถ) · รถแยกบรรทัดของตัวเอง (ตัดเบอร์โทรออก) · งบแยกเป็นบรรทัดข้อความเฉยๆ ไม่ใช่กล่องอีกต่อไป · กล่อง (<code>bg-light rounded-3 p-3</code>) เปลี่ยนจาก "ประเภทงบ+ปุ่มแก้ไข" เดิม เป็น 2 ช่อง input เลขไมล์ยกมาจาก Case 9 ทั้งชุด.
+         <b>stop 2 "ช่วงเวลา / ค่า OT":</b> บรรทัดเวลาโชว์ช่วงเวลาจริง (ออก-กลับ) + OT ท้ายวงเล็บ format ตามเงื่อนไข: &lt;1ชม.=นาที, ≥1ชม.=ทศนิยมชั่วโมง — ต่างจาก Case 11 ที่โชว์ทศนิยมชั่วโมงเสมอแม้ OT น้อยมาก (เช่น "+0.03 ชม."). ในกล่องมี rate+ยอดรวม OT บรรทัดเดียว ตามด้วยเส้นเทียบเวลาปกติ(เทา <code>--bb-n200</code>)/OT(ส้ม <code>--bb-wr</code>) เป็น 2 <code>div</code> ซ้อน flex กว้างตาม % จริง (ไม่มี JS/library ใหม่) พร้อม label เวลากำกับ 3 จุด (ออก/เวลาสิ้นสุดตามจอง/กลับจริง) เหนือเส้น + "Regular time"/"Overtime" ใต้เส้น — ดีไซน์ตาม reference image ที่ผู้ใช้ส่งมา ปรับเป็นเส้นบางแทนแท่งหนา.
+         <b>stop 3 "ค่าใช้จ่ายทั้งหมด":</b> ระยะทาง+ราคาน้ำมันเป็นบรรทัดข้อความ (สอดคล้องสูตร <code>calc_fuel_cost</code> เดิม: distance/fuel_rate×fuel_price) ในกล่องมีค่าน้ำมัน+ค่า OT รวมกันบรรทัดเดียว แล้วยอดรวมสุดท้าย<b>ตัวหนา</b>แยกอีกบรรทัด.
+         ท้ายการ์ด: ปุ่ม ยกเลิก(<code>is-sec</code>)/ยืนยัน(<code>is-pri</code>) ชิดขวา — โครงจาก footer ปุ่มของ Case 9 แต่เปลี่ยนคำ "บันทึก"→"ยืนยัน".
+         <b>หมายเหตุตัวเลข demo:</b> 176 กม. · 40 บาท/ล. · 4 กม./ล. · OT 45 นาที × 20 บาท/ชม. คำนวณลงตัว: ค่าน้ำมัน 1,760 + OT 15 = รวม 1,775 บาท — ปรับเวลากลับจาก "10:00" เป็น "10:45" ให้ตรงกับ OT 45 นาที (ถ้าใช้ "10:00" ซ้ำกับเวลาจอง OT จะกลายเป็น 0 ไม่ตรงกับตัวอย่างที่ขอ).</div>
     </section>
 
   </main>

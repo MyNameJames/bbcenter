@@ -4,6 +4,11 @@
 > ตัวอย่างทุกบรรทัด copy-paste ได้จริง · gallery มองด้วยตา → `/dev/components`
 > source = `app/components/*.py` · ถ้า signature ไม่ตรง = ไฟล์นี้ outdated → อัปเดตหลังแก้
 
+> ⏸ **ทิศทาง (2026-07-21) — object = ประตูเดียว · macro = private**
+> หน้าใหม่/redesign เรียก component ผ่าน **object** เท่านั้น (`from components import X` ใน controller → `{{ component(x) }}` ใน jinja) · **ห้าม** import macro `_components/bb/*` ตรงจากไฟล์เพจ
+> เหลือ **2 gap** ที่ทำให้บางหน้าต้องเรียก macro ตรงอยู่ (`bb_filter` ไม่มี object · `bb_ml_dd` ต้องยกเป็น `Select`) — ⏸ **ไม่แก้ตอนนี้ รอรอบ redesign ของ component นั้นๆ** → รายละเอียด + จังหวะแก้ [design_guideline.md §14 P5](../../docs/notes/design_guideline.md)
+> ✅ ปิดไปแล้ว 1: `Button` รับ `href`/`target`/`title`/`mobile_icon`/`block` ครบเท่า macro (Batch 1 · 2026-07-21)
+
 ## วิธีใช้ร่วม (เหมือนกันทุก component)
 
 ```python
@@ -28,13 +33,15 @@ event ทุกตัวลงท้าย `on_*` → ออกเป็น `dat
 |---|---|---|
 | **Input** | `Input(name, label='', value='', placeholder='', icon=None, hint='', error='', type='text', disabled=False, required=False)` | `Input('phone', 'เบอร์โทร', icon='phone', required=True)` |
 | **Search** | `Search(placeholder='ค้นหา…', name='', value='', on_input='')` | `Search('ค้นหาทะเบียน', on_input='search')` |
-| **Button** | `Button(text='', variant='pri', size=None, icon=None, icon_only=False, disabled=False, on_click=None, type='button')` | `Button('บันทึก', 'pri', icon='check', on_click='save')` |
+| **Button** | `Button(text='', variant='pri', size=None, icon=None, icon_only=False, disabled=False, on_click=None, type='button', href='', target='', title='', mobile_icon=False, block=False)` | `Button('บันทึก', 'pri', icon='check', on_click='save')` |
 | **DateRange** | `DateRange(name_start='date_start', name_end='date_end', start='', end='', preset='', placeholder='ทั้งหมด', align='left')` | `DateRange(placeholder='เลือกช่วงวันที่')` |
 | **Combo** | `Combo(name='', options=[{'value','label'}], value='', placeholder='เลือก…', search_placeholder='ค้นหา…')` | `Combo('driver_id', options=drivers, placeholder='เลือกคนขับ')` |
 | **Upload** | `Upload(name='file', accept='', multiple=False, hint='…')` | `Upload('attachment', accept='image/*,.pdf', multiple=True)` |
 | **Slider** | `Slider(min=0, max=100, step=1, unit='', dual=False, scale=True, name='value', value=None, name_min='', name_max='', start=None, end=None)` | `Slider(name='dist', min=0, max=500, step=10, start=50, end=300, unit='กม.', dual=True)` |
 
-- Button `variant`: `pri \| sec \| ghost \| danger` · `size`: `None \| 'sm'` · `icon_only=True` = ปุ่มไอคอนล้วน
+- Button `variant`: `pri \| sec \| ghost \| danger \| danger-sec` · `size`: `None \| 'sm'` · `icon_only=True` = ปุ่มไอคอนล้วน · `block=True` = เต็มความกว้าง (drawer/ฟอร์มแคบ)
+  - `pri` = **ink fill** ตัวขาว · `sec` = ขาว+ขอบ · `ghost` = ตัวเขียว `accent-dk` · `danger` = แดงทึบ (ยืนยันลบจริง) · **`danger-sec`** = ขาว+ขอบ+ตัวแดง (ปฏิเสธ/ยกเลิก ไม่ตะโกน)
+  - ✅ object รับ `href`/`target`/`title`/`mobile_icon` ครบเท่า macro แล้ว (ปิด gap §14 P5, Batch 1 · 2026-07-21)
 - DateRange `preset`: `'' \| today \| 7d \| 4w \| 3m \| 6m \| 12m \| mtd \| qtd \| ytd` · ต้อง include `bb-daterange.js`
 - Combo `options` = list ของ dict `{'value','label'}` · event `bb-combo:change` · Upload event `bb-upload:change`
 - **Slider** `dual=True` = เลือกช่วง (hidden `name_min/name_max`) · `dual=False` = ค่าเดียว (hidden `name`, ค่าเริ่ม `value`) · bubble โชว์ค่าตลอด · ลาก/คีย์บอร์ด/คลิกราง · event `bb-slider:change` (dual `{min,max}` · single `{value}`)
@@ -74,6 +81,7 @@ event ทุกตัวลงท้าย `on_*` → ออกเป็น `dat
 - **bb_filter** (shell macro · ไม่มี Python class — เหมือน `bb_table` shell): `{% call bb_filter(label='ตัวกรอง', align='left') %}…controls…{% endcall %}` — filter button ที่ filter ข้างใน · live (ไม่มี apply) · ออกจาก default = active (badge **dot แดง** + border) · มีแค่ปุ่มล้าง
   - control ที่ JS track (ใส่ใน slot): `<div data-filter-group="key" data-multi>` + ปุ่ม `[data-value]` (active `.is-on`) = เลือกหลายค่า · ไม่มี `data-multi` = เลือกอันเดียว · หรือ `<select name>`/`<input name>`
   - event `bb-filter:change` {detail: state} · ต้อง include `bb-components.js`
+  - ⏸ ยังไม่มี Python class → จะยกเป็น `Filter(body=[...])` แบบ **slot** (เหมือน `Card(body=[...])`) รอบ redesign ถัดไป (guideline §14 P5)
 
 ## Data Display
 
@@ -85,11 +93,19 @@ event ทุกตัวลงท้าย `on_*` → ออกเป็น `dat
 | **Badge** | `Badge(text, variant='neutral', icon=None)` | `Badge('ใหม่', 'accent')` |
 | **Status** | `Status(text, tone='neutral', inline=False, icon=None)` | `Status('อนุมัติแล้ว', 'ok')` · ในตารางใช้ `inline=True` |
 | **Timeline** | `Timeline(items=[TLItem(...)])` | `Timeline([TLItem('จอง', '09:00', state='done'), TLItem('อนุมัติ', '10:30', state='cur'), TLItem('ปิดทริป', state='todo')])` |
+| **DescList** | `DescList(items=[{'label','value','num','stack'}])` | `DescList([{'label':'ผู้โดยสาร','value':'6','num':True}, {'label':'หมายเหตุ','value':'…','stack':True}])` |
+| **Section** | `Section(title='', body='')` | `Section('รายละเอียดคำขอ', desc)` |
 
-- KPI `variant`: `card \| plain` · `delta_dir`: `up \| down \| ''`
+- KPI `variant`: `card \| ghost` · `delta_dir`: `up \| down \| ''`
 - Badge `variant`: `neutral \| accent` · Status `tone`: `ok \| wr \| dg \| info \| neutral`
+  - ⛔ **Status ไม่มีแบบ dot เปล่าแล้ว** (Batch 2 · 2026-07-21) — `ok` เขียวชนกับ accent ต้องมี **icon คู่ label เสมอ** · ไม่ส่ง `icon` = ใช้ icon ประจำ tone (`ok`=check-circle · `wr`=clock · `dg`=x-circle · `info`=info · `neutral`=circle)
+- **DescList** = label ซ้าย / value ขวา — ⛔ **ห้ามใช้ Table แทน** (ไม่มีหัวคอลัมน์ ไม่ sort ไม่ scan ข้ามแถว) · `num=True` = Inter+tnum · `stack=True` = ค่ายาวซ้อนบน-ล่าง
+- **Section** = บล็อกย่อยใน Drawer/Card คั่นด้วย hairline (ไม่ใช่กรอบซ้อนกรอบ) · `body` รับ component/list/str
 - **TLItem** `state`: `done \| cur \| todo`
-- **Column** fields: `key, label, sort='', align='', fmt='', cls='', cell=None`
+- **Column** fields: `key, sub='', label, sort='', align='', fmt='', cls='', cell=None`
+  - `sub` = key ของบรรทัดรองใน cell เดียวกัน (เช่น `รถตู้` / `10 ที่นั่ง`)
+- **row key พิเศษของ Table** (ใส่ใน dict ของ `data` ได้เลย · Batch 3): `_group`/`_group_note`/`_accent` = แถวหัวกลุ่มคั่นกลางตาราง · `_locked` = แถวจางทำ action ไม่ได้ · `_sel` = แถวที่เลือก (tint เขียว)
+  - มีแถว `_group` ปนใน `data` → ต้องส่ง `total=` เอง (นับ `len(data)` จะรวมหัวกลุ่มด้วย)
   - `fmt`: `'money' \| 'num' \| '฿{:,.0f}'` · `align`: `'' \| 'end' \| 'center'`
   - `cell=callable(row)->Component` → render component ต่อแถว (เช่น Status ในคอลัมน์สถานะ)
 
@@ -108,6 +124,7 @@ t.add_column(key='status', label='สถานะ',
 |---|---|---|
 | **Empty** | `Empty(title='', desc='', icon='inbox', action=None)` | `Empty('ยังไม่มีรายการ', 'เพิ่มทริปเพื่อเริ่ม', action=Button('เพิ่มรายการ', 'pri', icon='plus'))` |
 | **Modal** | `Modal(title='', body='', actions=[...], sub='', mid='', on_close='', overlay=True)` | `Modal('ยืนยันลบ?', body='ลบแล้วกู้ไม่ได้', actions=[Button('ยกเลิก','ghost',on_click='close'), Button('ลบ','danger',on_click='del')], on_close='close')` |
+| **Drawer** | `Drawer(title='', body='', eyebrow='', sub='', status=None, actions=None, on_close='', overlay=True)` | `Drawer('VR-001', eyebrow='คำขอใช้รถ', sub='พรุ่งนี้', status=Status('รออนุมัติ','wr'), body=[Section('รายละเอียด', desc)], actions=[Button('อนุมัติ','pri',block=True)])` |
 | **Spinner** | `Spinner(size='', text='')` | `Spinner('sm', 'กำลังโหลด…')` |
 | **Skeleton** | `Skeleton(lines=[...], height='14px')` | `Skeleton(['70%', '90%', '50%'])` |
 | **Callout** | `Callout(text='', tone='info', title='', icon='', dismissible=False)` | `Callout('งบใกล้หมด เหลือ 8%', tone='wr', title='แจ้งเตือน', dismissible=True)` |
@@ -115,6 +132,7 @@ t.add_column(key='status', label='สถานะ',
 | **ToastRegion** | `ToastRegion(flashes=[])` + JS `bbToast({type,title,msg,duration})` | `ToastRegion()` แล้วเรียก `bbToast({type:'ok', title:'บันทึกสำเร็จ'})` |
 
 - Modal `body`/`actions` รับ component/list/str · `overlay=False` = ฝัง inline ไม่มีฉากหลัง
+- **Modal vs Drawer:** ต้องตัดสินใจแล้วจบ = **Modal** (บล็อกทั้งจอ) · ต้อง**เห็น list เบื้องหลัง**ระหว่างดูรายละเอียดทีละใบ = **Drawer** (P2 Workspace/Queue) · Drawer โครง 3 ชั้น head นิ่ง / body scroll / foot นิ่ง → ปุ่ม action ไม่หนีไปกับ scroll
 - Spinner `size`: `'' \| 'sm'` · มี `text` = แบบ inline
 - **Callout** (อยู่กับที่ในหน้า) vs **Toast** (เด้งมุมจอ ตั้ง duration ได้) — คนละตัว · Callout `tone`: `info \| ok \| wr \| dg` · `dismissible` ต้อง include `bb-components.js`
 - **Toast**: วาง `ToastRegion()` 1 ครั้งใน base layout + include `bb-components.js` → ยิงด้วย `bbToast({type, title, msg, duration})` (`duration` ms · 0 = ค้างไว้) · `type`: `ok \| info \| wr \| dg` · flash bridge: `ToastRegion(flashes=[{...}])`
@@ -180,8 +198,8 @@ def fuel():
 
 ---
 
-## รายการครบ (19 component / 28 export)
+## รายการครบ (22 component / 31 export)
 
-`Table·Column · Badge·Status · Button · Card · KPI · Input · Search · Tabs·Tab · Segmented·Seg · Chip·Token · DateRange · Dropdown·MenuItem·MenuLabel·MenuDivider·MenuRich · Pagination · Modal · Timeline·TLItem · Empty · Spinner · Skeleton`
+`Table·Column · Badge·Status · Button · Card · KPI · Input · Search · Tabs·Tab · Segmented·Seg · Chip·Token · DateRange · Dropdown·MenuItem·MenuLabel·MenuDivider·MenuRich · Pagination · Modal · Drawer·Section·DescList · Timeline·TLItem · Empty · Spinner · Skeleton`
 
 import door เดียว: `from components import <ชื่อ>` (re-export ครบใน `__init__.py`)

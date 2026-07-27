@@ -2,7 +2,7 @@
 
 > **Claude: อ่านไฟล์นี้ก่อนเสมอ** เมื่อต้องหา symbol/route/feature แทนการ glob/grep
 > ทุกคอลัมน์ `file:line` คลิกเปิดได้เลย
-> **อัปเดตล่าสุด:** 2026-07-19 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](CHANGELOG.md)
+> **อัปเดตล่าสุด:** 2026-07-27 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](CHANGELOG.md)
 
 ---
 

@@ -12,7 +12,7 @@
 
 **🚦 Vehicle domain — บังคับ:** ก่อนสร้าง/เพิ่ม/แก้ function หรือทำความเข้าใจระบบ vehicle → **อ่าน [vehicle_product_spec.md](docs/notes/vehicle_product_spec.md) ก่อนเสมอ** (North Star: "ระบบบริหารทรัพยากรยานพาหนะ" ไม่ใช่ booking self-service · demand > availability · ห้ามทำลายข้อมูล demand) — ฝ่าฝืน = เสี่ยง scope drift ผิดเจตนา product
 
-**🎨 Design — บังคับ:** ก่อนออกแบบ/แก้ UI · CSS · template ใดๆ → **อ่าน [design_guideline.md](docs/notes/design_guideline.md) ก่อนเสมอ** (canonical เดียว · ของเก่า design_system/dna/zendenta = ลบแล้ว 2026-06-28). ไฟล์นี้เป็น *target spec* (blurple · Sarabun+Inter · rem · soft-shadow) — โค้ดเดิมยังใช้ token เก่าจน migrate; UI ใหม่/redesign ยึด guideline
+**🎨 Design — บังคับ:** ก่อนออกแบบ/แก้ UI · CSS · template ใดๆ → **อ่าน [design_guideline.md](docs/notes/design_guideline.md) ก่อนเสมอ** (canonical เดียว · ของเก่า design_system/dna/zendenta = ลบแล้ว 2026-06-28). **v2.1 (2026-07-21) "ink คือโครง เขียวคือสัญญาณ"** — ฐาน monochrome: **ปุ่มหลัก/active/text = ink `#000000`** · เขียวโผล่แค่ 2 จุด: **พื้น tint `#EAFBF2`** + **ลิงก์/ghost `#0B7A3E`** (`#06C167` = fill ชิ้นเล็กเท่านั้น 2.38:1) · Sarabun+Inter · **px** · เงาดำ · radius binary `8`/`pill` · weight เพดาน 800 · `:root` อยู่ที่ `components.css` ที่เดียว. หน้าเก่าที่ยังไม่ migrate → drift ledger = **guideline §14**; migrate **ทีละหน้า ไม่มี deadline**
 
 **🧩 Component — บังคับ:** ก่อนใช้/เลือก UI component (Python wrapper รอบ macro) → **อ่าน [CHEATSHEET.md](app/components/CHEATSHEET.md) ก่อนเสมอ** (ประตูเดียว · signature + ตัวอย่าง copy-paste 28 export). **ห้าม glob/grep `app/components/`** — เปิด cheatsheet หา component → ถ้าไม่มี = ยังไม่ทำ. gallery มองด้วยตา → `/dev/components`
 
@@ -216,7 +216,9 @@ if (!res.ok || !data.ok) { showToast(data.msg, 'danger'); return; }
 
 **ทุกการออกแบบ/แก้ UI · CSS · template → ยึด [design_guideline.md](docs/notes/design_guideline.md) (canonical เดียว).** ของเก่า (design_system / design_dna_redesign / zendenta_migration) = **ลบแล้ว 2026-06-28**.
 
-> ⚠️ guideline = *target spec* (blurple `#533AFD` · Sarabun+Inter · rem · soft-shadow). โค้ดเดิมยังใช้ `--vc-*` (indigo/no-shadow/px) จน migrate → **UI ใหม่/redesign ยึด guideline · หน้าเก่ายังไม่แตะ = legacy**
+> 🟢 **guideline v2.0 (2026-07-21) = "เขียวคือของจริง"** — accent เขียว `#06C167` · px · เงาดำ · radius binary. โค้ดเดิมยังใช้ `--vc-*` (indigo) + `components.css :root` (น้ำเงิน) จน migrate → **UI ใหม่/redesign ยึด guideline · หน้าเก่ายังไม่แตะ = legacy** · drift ที่ค้าง → guideline §14
+
+**⛔ ผิดบ่อยที่สุด:** `#06C167` contrast บนขาว = **2.38:1** ตกทุกเกณฑ์ → **fill ชิ้นเล็กเท่านั้น** (dot/check). เขียวที่เป็นตัวหนังสือ/ลิงก์/เส้นขอบบนพื้นขาว ต้องใช้ `--bb-accent-dk` `#0B7A3E` (5.43:1) เสมอ · **ปุ่มหลักไม่ใช่เขียวแล้ว ใช้ `--bb-ink`** (v2.1)
 
 **Binary ที่ผิดซ้ำบ่อย (รายละเอียดเต็มใน guideline §8):**
 - ✅ ตาราง `<table class="data-table">` — ❌ ห้าม `table-striped`/`table-hover`/`table-bordered`/`table-light`/`table-dark` · ไม่มี zebra · ไม่มีเส้นแนวตั้ง

@@ -1,0 +1,62 @@
+{#
+  bb_drawer / bb_section / bb_desc — Component Library .bb-* (Batch 3 · 2026-07-21)
+  spec: docs/notes/design_guideline.md §12
+
+  bb_drawer  แผงรายละเอียดฝั่งขวา — ใช้แทน modal เมื่อต้อง "เห็น list เบื้องหลัง"
+             (P2 Workspace/Queue: triage คิวทีละใบโดยไม่หลุด context)
+             โครง 3 ชั้น head นิ่ง / body scroll / foot นิ่ง → ปุ่ม action ไม่หนีไปกับ scroll
+  bb_section บล็อกย่อยใน drawer/card — คั่นด้วย hairline ไม่ใช่กรอบซ้อนกรอบ
+  bb_desc    label ซ้าย / value ขวา — ⛔ ห้ามใช้ <table> (ไม่มีหัวคอลัมน์ ไม่ sort ไม่ scan ข้ามแถว)
+
+  Usage:
+    {% from '_components/bb/drawer.html' import bb_drawer, bb_section, bb_desc %}
+    {% set _body = bb_section('รายละเอียดคำขอ', bb_desc([{'label':'แผนก', 'value':'ปฏิบัติการ'}])) %}
+    {{ bb_drawer('VR-240719-001', _body, eyebrow='คำขอใช้รถ', sub='พรุ่งนี้ · 19 ก.ค.',
+                 status=status_html, actions=actions_html, on_close='close-drawer') }}
+
+  bb_desc item dict: {label, value, num=False, stack=False}
+    num=True   → value เป็นตัวเลข (Inter + tnum)
+    stack=True → ค่ายาว (หมายเหตุ/ที่อยู่) ซ้อนบน-ล่างแทนซ้าย-ขวา
+#}
+
+{% macro bb_desc(items) -%}
+<div class="bb-desc">
+{%- for it in items %}{% if not it.stack %}
+  <div class="bb-desc-label">{{ it.label }}</div>
+  <div class="bb-desc-value{% if it.num %} is-num{% endif %}">{{ it.value }}</div>
+{%- endif %}{% endfor %}
+</div>
+{%- for it in items %}{% if it.stack %}
+<div class="bb-desc is-stack">
+  <div class="bb-desc-label">{{ it.label }}</div>
+  <div class="bb-desc-value">{{ it.value }}</div>
+</div>
+{%- endif %}{% endfor %}
+{%- endmacro %}
+
+
+{% macro bb_section(title='', body='') -%}
+<div class="bb-section">
+{%- if title %}<div class="bb-section-title">{{ title }}</div>{% endif %}
+{{ body }}
+</div>
+{%- endmacro %}
+
+
+{% macro bb_drawer(title='', body='', eyebrow='', sub='', status='', actions='', on_close='', overlay=True, id='') -%}
+{%- if overlay %}<div class="bb-drawer-overlay"{% if on_close %} data-action="{{ on_close }}"{% endif %}>{% endif %}
+<div class="bb-drawer"{% if id %} id="{{ id }}"{% endif %}>
+  <div class="bb-drawer-head">
+    <button type="button" class="bb-drawer-x" aria-label="ปิด"{% if on_close %} data-action="{{ on_close }}"{% endif %}><i data-lucide="x"></i></button>
+    {%- if eyebrow %}<div class="bb-drawer-eyebrow">{{ eyebrow }}</div>{% endif %}
+    <div class="bb-drawer-title-row">
+      <span class="bb-drawer-title">{{ title }}</span>
+      {{ status }}
+    </div>
+    {%- if sub %}<div class="bb-drawer-sub">{{ sub }}</div>{% endif %}
+  </div>
+  <div class="bb-drawer-body">{{ body }}</div>
+  {%- if actions %}<div class="bb-drawer-foot">{{ actions }}</div>{% endif %}
+</div>
+{%- if overlay %}</div>{% endif %}
+{%- endmacro %}

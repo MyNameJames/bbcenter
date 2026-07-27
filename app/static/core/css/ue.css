@@ -8,13 +8,10 @@
    NOTE: prefix .ml2-* = legacy (มาจาก mileage) — rename เป็น .ue-* ได้ทีหลัง (cosmetic)
 ════════════════════════════════════════════════════ */
 
-/* ═══ TOKENS — green palette (เปลี่ยนสีทั้งระบบที่จุดเดียวนี้) ═══ */
-:root{
-  --bb-n0:#ffffff; --bb-n50:#f6f6f6; --bb-n100:#f6f6f6; --bb-n200:#e0e0e0; --bb-n300:#e0e0e0;
-  --bb-mut:#757575; --bb-str:#06060a; --bb-ph:#757575;
-  --bb-accent:#06C167; --bb-accent-i:#06C167; --bb-accent-h:#05a058; --bb-accent-bg:#EAFBF2;
-  --bb-accent-dk:#0B7A3E;
-}
+/* ═══ TOKENS — ย้ายไป components.css :root แล้ว (Batch 0, 2026-07-21) ═══
+   เดิมไฟล์นี้ override token เป็นเขียวทับ components.css (น้ำเงิน) = มี :root 2 ที่ซ้อนกัน
+   ตอนนี้ components.css เป็น canonical ตัวเดียว (ink + เขียว 2 จุด) → ลบ override ทิ้ง
+   ⚠️ ห้ามประกาศ :root token ในไฟล์นี้อีก — แก้สีที่ components.css :root ที่เดียว */
 
 /* ═══ SHELL — frame / body-row / content / page-title ═══ */
 .ml2-frame{ width:100%; min-height:100vh; height:100vh; display:flex; flex-direction:column; background:transparent; }
@@ -43,9 +40,8 @@ h1.page-title{
 /* page entry */
 .ml2-content-inner{ animation: ml2FrameIn .5s cubic-bezier(.2,.8,.2,1) both; }
 
-/* KPI number: mockup 26/800 + bump ตอนค่าเปลี่ยน
-   NOTE: #sumAllCost = mileage-specific — generalize เป็น class (.ue-kpi-num) เมื่อ Phase 2 ต้องใช้หน้าอื่น */
-#sumAllCost{ font-size:26px; font-weight:800; letter-spacing:-.5px; display:inline-block; transition: color .25s ease; }
+/* KPI number bump ตอนค่าเปลี่ยน — ขนาด/weight ให้ template คุม (utility class/inline) ไม่ hardcode ที่นี่แล้ว */
+#sumAllCost{ display:inline-block; transition: color .25s ease; }
 #sumAllCost.is-bump{ animation: ml2Bump .3s ease; }
 
 /* row stagger + dotPop (delay ตั้งจาก JS) — .ml2-rowin เป็น marker generic (element ไหนก็ได้) */
@@ -96,12 +92,11 @@ h1.page-title{
 
 /* ═══ CHIP — Uber-style filter chip (ue_chip macro · JS: bb-components.js initUeChip*) ═══ */
 .ue-chip{ display:inline-flex; align-items:center; gap:8px; white-space:nowrap; flex-shrink:0;
-  height:44px; padding:0 18px; border-radius:999px; border:2px solid var(--bb-n300);
-  background:var(--bb-n0); font-family:inherit; font-size:15px; font-weight:600; color:var(--bb-str);
-  cursor:pointer; transition:border-color .15s ease, color .15s ease, transform .12s ease; }
-.ue-chip:hover{ border-color:var(--bb-mut); }
+  height:44px; padding:0 18px; border-radius:999px; border:2px solid transparent;
+  background:var(--bb-n50); font-family:inherit; font-size:15px; font-weight:600; color:var(--bb-n700);
+  cursor:pointer; transition:background .15s ease, transform .12s ease; }
+.ue-chip:hover{ background:var(--bb-n100); }
 .ue-chip:active{ transform:scale(.97); }
-.ue-chip.is-on{ border-color:var(--bb-accent-dk); color:var(--bb-accent-dk); }
 /* active → icon fill (Material Symbols) */
 .ue-chip.is-on .material-symbols-outlined,
 .ue-chip-dd.is-active > .ue-chip .material-symbols-outlined,
@@ -116,8 +111,7 @@ h1.page-title{
   background:var(--bb-accent-dk); color:#fff; font-size:12px; font-weight:700; }
 
 .ue-chip-dd{ display:inline-block; }
-.ue-chip-dd.is-open > .ue-chip,
-.ue-chip-dd.is-active > .ue-chip{ border-color:var(--bb-accent-dk); color:var(--bb-accent-dk); }
+/* is-active (เลือกค่าไม่ใช่ default) / is-open ไม่เปลี่ยนสี chip — คงสีเดิม (n50/n700) ตามที่ขอ */
 .ue-chip-dd.is-open .ue-chip-chev{ transform:rotate(180deg); }
 
 /* pop = position:fixed (JS ตั้ง top/left จาก getBoundingClientRect + portal ไป body) → escape overflow/transform ancestor */

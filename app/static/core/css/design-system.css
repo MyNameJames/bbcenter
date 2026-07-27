@@ -53,34 +53,7 @@ body {
     background: var(--bb-n50, #F6F9FC);
 }
 
-/* ซ่อน scrollbar ทุกหน้า (global) — scroll ยังทำงานได้ปกติ แค่ไม่โชว์แถบ */
-html, body {
-    scrollbar-width: none;      /* Firefox */
-    -ms-overflow-style: none;   /* IE/Edge legacy */
-}
-html::-webkit-scrollbar, body::-webkit-scrollbar {
-    display: none;              /* Chrome/Safari/Edge Chromium */
-}
-
-/* Reserve scrollbar gutter to prevent layout shift when content height changes */
-/* html {
-    scrollbar-gutter: stable;
-} */
-
-/* Modal × scrollbar-gutter:stable fix —
-   html จอง gutter (~15px) ไว้ตลอด → เปิด modal แล้ว layout ไม่ขยับ
-   พอเปิด modal: BS สั่ง body overflow:hidden + ใส่ body padding-right ชดเชย scrollbar
-   ที่หายไป แต่ gutter เราจองไว้แล้ว → padding นั้นกลายเป็นตัวดันให้เนื้อหา "กระตุก" ขวา
-   แก้: ล้าง padding-right ที่ BS ใส่ทิ้ง (gutter stable คุมความกว้างเองอยู่แล้ว = ไม่ shift);
-   ส่วนแถบขอบขวาให้ backdrop 100vw คลุม (ดูด้านล่าง)
-   global = ทุก modal (ปัจจุบัน + อนาคต) ไม่ต้อง list ID */
-body.modal-open {
-    padding-right: 0 !important;
-}
-.modal-backdrop {
-    width: 100vw;
-    height: 100dvh;
-}
+/* scrollbar-hide + modal-gap fix ย้ายไป single source → tokens.css (import บรรทัด 31) */
 
 .main-content {
     margin-left: var(--sidebar-width);

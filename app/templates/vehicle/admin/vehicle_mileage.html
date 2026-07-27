@@ -6,36 +6,14 @@
 {% block content %}
 {% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
 {% set TH_MONTH_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'] %}
+{% set TH_DAYS = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'] %}
 {% from '_components/bb/table.html' import bb_table %}
 {% from '_components/bb/daterange.html' import bb_daterange %}
-{% from '_components/bb/kpi.html' import bb_kpi %}
 {% include '_shared/tab2.html' %}
 {% from '_shared/tab2.html' import tab2_tabs %}
 {% from '_components/bb/search.html' import bb_search %}
-{% from '_components/bb/combo.html' import bb_combo %}
-{% from '_components/bb/filter.html' import bb_filter %}
-{% from '_components/bb/slider.html' import bb_slider %}
 {% from '_components/bb/button.html' import bb_button %}
-
-{# ── local: filter dropdown (bb-select hint + bb-menu) — ทำงานเป็น filter ผ่าน hidden input
-   เลือก → JS (bindFilterControls) set hidden input + ยิง native change → bb_filter จับ ── #}
-{% macro bb_ml_dd(name, hint, options, value) %}
-{% set ns_l = namespace(label='') %}
-{% for o in options if o.value|string == value|string %}{% set ns_l.label = o.label %}{% endfor %}
-<div class="bb-ml-dd" data-bb-ml-dd>
-    <span class="bb-select" data-bb-ml-dd-trigger role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
-        <span class="bb-select-hint">{{ hint }}</span>
-        <span class="bb-ml-dd-label" data-bb-ml-dd-label>{{ ns_l.label or 'ทั้งหมด' }}</span>
-        <i data-lucide="chevron-down"></i>
-    </span>
-    <div class="bb-menu bb-ml-dd-menu" data-bb-ml-dd-menu hidden>
-        {% for o in options %}
-        <div class="bb-menu-item{% if o.value|string == value|string %} is-on{% endif %}" data-value="{{ o.value }}" data-label="{{ o.label }}">{{ o.label }}</div>
-        {% endfor %}
-    </div>
-    <input type="hidden" name="{{ name }}" value="{{ value }}" data-bb-ml-dd-input>
-</div>
-{% endmacro %}
+{% from '_components/bb/ue_chip.html' import ue_chip_dd, ue_chip_opt %}
 
         {# ── Zone 2: Toolbar (tabs + filter) — ขึ้นก่อน KPI ตามที่ขอ (2026-07-07) ─────────── #}
         <form method="get" action="{{ url_for('vehicle.mileage_log') }}" class="bb-ml-toolbar" id="filterForm">
@@ -44,137 +22,118 @@
                value → data-tab (JS อ่าน dataset.tab) · ทั้งหมด value='' = ไม่กรอง #}
             <div class="pt-3" id="statusTabs" role="tablist" aria-label="กรองสถานะ">
                 {{ tab2_tabs([
-                    {'label':'ทั้งหมด', 'value':'',         'active': not f.status_filter},
-                    {'label':'รอกรอก',  'value':'none',     'active': f.status_filter=='none'},
-                    {'label':'รอกลับ',  'value':'partial',  'active': f.status_filter=='partial'},
-                    {'label':'ครบ',     'value':'complete', 'active': f.status_filter=='complete'},
+                    {'label':'ทั้งหมด',   'value':'',          'active': not f.status_filter},
+                    {'label':'ยังไม่ครบ', 'value':'incomplete', 'active': f.status_filter=='incomplete'},
+                    {'label':'รอกรอก',    'value':'none',       'active': f.status_filter=='none'},
+                    {'label':'รอกลับ',    'value':'partial',    'active': f.status_filter=='partial'},
+                    {'label':'ครบ',       'value':'complete',   'active': f.status_filter=='complete'},
                 ]) }}
             </div>
             <input type="hidden" name="status_filter" id="statusFilter" value="{{ f.status_filter }}">
+            <input type="hidden" name="pending_personal" id="pendingPersonalFilter" value="{{ f.pending_personal }}">
 
             {# Row 2: search · date · export · filter — components (.bb-*) #}
             {# build option lists สำหรับ bb_combo (template-only, ไม่แตะ controller) #}
             {% set veh_opts = [{'value':'', 'label':'ทั้งหมด'}] %}
-            {% for v in vehicles_all %}{% set _ = veh_opts.append({'value': v.id|string, 'label': v.license_plate ~ ' · ' ~ v.brand ~ ' ' ~ v.model}) %}{% endfor %}
+            {% for v in vehicles_all %}{% set _ = veh_opts.append({'value': v.id|string, 'label': v.license_plate}) %}{% endfor %}
             {% set drv_opts = [{'value':'', 'label':'ทั้งหมด'}] %}
             {% for d in drivers_all %}{% set _ = drv_opts.append({'value': d.id|string, 'label': d.name}) %}{% endfor %}
             {% set bud_opts = [{'value':'','label':'ทั้งหมด'},{'value':'central','label':'ส่วนกลาง'},{'value':'department','label':'ส่วนกอง'},{'value':'personal','label':'ส่วนตัว'}] %}
             {% set sub_opts = [{'value':'','label':'ทั้งหมด'}] %}
             {% if f.budget_type in ['central','department'] %}{% for x in budget_subs[f.budget_type] %}{% set _ = sub_opts.append({'value': x.key, 'label': x.label}) %}{% endfor %}{% endif %}
-            {% set bkr_opts = [{'value':'','label':'ทั้งหมด'}] %}
-            {% for u in bookers_all %}{% set _ = bkr_opts.append({'value': (u.full_name or u.username), 'label': (u.full_name or u.username)}) %}{% endfor %}
 
-            {# layout = Bootstrap flex util · search โต (flex-grow) · กลุ่มขวาชิดขวา (ms-auto) จอแคบ wrap ลงบรรทัดใหม่ #}
-            <div class="row g-2 align-items-center pt-4">
+            {# layout = Bootstrap flex util · scroll แนวนอนแทนตัดบรรทัด (bb-ml-toolbar-row, 2026-07-22) #}
+            <div class="row g-2 align-items-center pt-4 flex-nowrap bb-ml-toolbar-row">
+
+                {# Export — ตัวที่ 1 · icon-only + เส้นกั้นขวา (2026-07-22) #}
+                <div class="col-auto bb-ml-toolbar-pin">
+                    {{ bb_button(
+                        variant='sec',
+                        icon='download',
+                        icon_only=True,
+                        href=url_for('vehicle.mileage_export'),
+                        target='_blank',
+                        id='exportLink',
+                        title='ดาวน์โหลด CSV'
+                    ) }}
+                </div>
 
                 {# Search #}
                 <div class="col-auto">
                     <div class="bb-ml-search ">
                         {{ bb_search(
                             name='bbMlSearch',
-                            placeholder='ค้นหา ผู้จอง · ทะเบียน · คนขับ · ปลายทาง…'
+                            placeholder='ค้นหา ผู้จอง · ทะเบียน '
                         ) }}
                     </div>
                 </div>
 
                 {# Date Range #}
                 <div class="col-auto">
-                    <div class="w-100">
-                        {{ bb_daterange(
-                            start=f.date_start,
-                            end=f.date_end,
-                            placeholder='ช่วงวันที่',
-                            align='right'
-                        ) }}
-                    </div>
-                </div>
-
-                {# Export #}
-                <div class="col-auto">
-                    {{ bb_button(
-                        'Export',
-                        'sec',
-                        icon='download',
-                        href=url_for('vehicle.mileage_export'),
-                        target='_blank',
-                        id='exportLink',
-                        title='ดาวน์โหลด CSV',
-                        mobile_icon=True
+                    {{ bb_daterange(
+                        start=f.date_start,
+                        end=f.date_end,
+                        placeholder='ช่วงวันที่',
+                        align='left'
                     ) }}
                 </div>
 
-                {# Filter #}
+                {# รถ / คนขับ / งบ / หมวด-กอง — ย้ายออกมาเป็น chip เดี่ยวใน toolbar เหมือน booker/daterange (เดิมอยู่ใน bb-filter-pop, 2026-07-22) #}
                 <div class="col-auto">
-
-                    {% call bb_filter(label='ตัวกรอง', title='ตัวกรอง', align='right', id='bbMlFilter') %}
-
-                        {# cost_ceiling มาจาก view (_calc_cost_ceiling) — คำนวณจาก booking ทั้งหมด ไม่จำกัดตาม date filter #}
-
-                        <div class="bb-filter-sec">
-                            <div class="bb-filter-sec-label">ค่าน้ำมัน (฿)</div>
-                            <div class="px-3">
-                                {{
-                                    bb_slider(
-                                        name='cost',
-                                        name_min='cost_min',
-                                        name_max='cost_max',
-                                        min=0,
-                                        max=cost_ceiling,
-                                        step=10,
-                                        unit='฿',
-                                        dual=True,
-                                        start=(f.cost_min|int if f.cost_min else 0),
-                                        end=(f.cost_max|int if f.cost_max else cost_ceiling)
-                                    )
-                                }}
-                            </div>
-                        </div>
-
-                        <div class="bb-menu-divider"></div>
-
-                        <div class="bb-filter-sec-label g-0 pb-0">
-                            ผู้จอง
-                        </div>
-
-                        {{ bb_combo(
-                            name='booker_q',
-                            value=f.booker_q,
-                            options=bkr_opts,
-                            placeholder='ทั้งหมด',
-                            id='filterBookerCombo'
-                        ) }}
-
-                        <div class="bb-filter-sec">
-                            {{ bb_ml_dd('vehicle_id','รถ:',veh_opts,(f.vehicle_id or '')|string) }}
-                        </div>
-
-                        <div class="bb-filter-sec">
-                            {{ bb_ml_dd('driver_id','คนขับ:',drv_opts,(f.driver_id or '')|string) }}
-                        </div>
-
-                        <div class="bb-filter-sec">
-                            {{ bb_ml_dd('budget_type','งบ:',bud_opts,(f.budget_type or '')|string) }}
-                        </div>
-
-                        <div class="bb-filter-sec"
-                            id="filterBudgetSubSec"
-                            {% if f.budget_type not in ['central','department'] %}hidden{% endif %}>
-                            {{ bb_ml_dd('budget_sub','หมวด/กอง:',sub_opts,f.budget_sub or '') }}
-                        </div>
-
+                    {% call ue_chip_dd('รถ', id='ddVehicleFilter') %}
+                        {% for o in veh_opts %}
+                        {{ ue_chip_opt(o.label, name='vehicle_id', value=o.value, type='radio', checked=(o.value|string == (f.vehicle_id or '')|string)) }}
+                        {% endfor %}
                     {% endcall %}
+                </div>
 
+                <div class="col-auto">
+                    {% call ue_chip_dd('คนขับ', id='ddDriverFilter') %}
+                        {% for o in drv_opts %}
+                        {{ ue_chip_opt(o.label, name='driver_id', value=o.value, type='radio', checked=(o.value|string == (f.driver_id or '')|string)) }}
+                        {% endfor %}
+                    {% endcall %}
+                </div>
+
+                <div class="col-auto">
+                    {% call ue_chip_dd('งบ', id='ddBudgetTypeFilter') %}
+                        {% for o in bud_opts %}
+                        {{ ue_chip_opt(o.label, name='budget_type', value=o.value, type='radio', checked=(o.value|string == (f.budget_type or '')|string)) }}
+                        {% endfor %}
+                    {% endcall %}
+                </div>
+
+                <div class="col-auto"
+                    id="filterBudgetSubSec"
+                    {% if f.budget_type not in ['central','department'] %}hidden{% endif %}>
+                    {% call ue_chip_dd('หมวด/กอง', id='ddBudgetSubFilter') %}
+                        {% for o in sub_opts %}
+                        {{ ue_chip_opt(o.label, name='budget_sub', value=o.value, type='radio', checked=(o.value|string == (f.budget_sub or '')|string)) }}
+                        {% endfor %}
+                    {% endcall %}
                 </div>
 
             </div>
 
         </form>
 
-        {# ── Zone 1: KPI — ค่าน้ำมันรวม (live, fill โดย calcAllSummary #sumAllCost — เปลี่ยนตาม tab/filter) ── #}
-        {# md+ = 1/3 ของแถว (col-md-4) · < md = เต็มจอ (col-12) #}
-        <div class="row g-0 pt-3 pb-3">
-            <div class="col-12 col-md-3">
-                {{ bb_kpi('ค่าน้ำมันรวม', '<span id="sumAllCost">—</span>'|safe, icon='fuel', den='บาท') }}
+        {# ── Zone 1: Summary header — selection-aware totals (UE-style title+desc, แทน ghost KPI + KPI action cards เดิม)
+           modeAll = ยอด "ที่กรอง" (fill โดย calcAllSummary, เปลี่ยนตาม tab/filter)
+           modeSelected = ยอด "ที่เลือก" (fill โดย recalcSummary เมื่อติ๊ก checkbox)
+           display toggle เป็น inline style (JS เขียนทับ .style.display ตรงๆ) — flex-column/gap ใช้ Bootstrap utility แทน (ไม่ชน JS เพราะ JS แตะแค่ .style.display) ── #}
+        <div class="pt-4 pb-3" id="summaryStrip">
+            <div id="modeAll" class="flex-column" style="display:flex">
+                <span class="fw-bold fs-5 mb-1 bb-text-str"><span id="sumAllCount">0</span> ทริปที่เลือก</span>
+                <span class="fs-6 p-0 m-0 bb-text-mut">ระยะทางรวมทั้งหมด <span id="sumAllDistance">0</span> กม. เป็นค่าน้ำมันทั้งหมด <span id="sumAllCost">0</span> บาท</span>
+            </div>
+            <div id="modeSelected" class="flex-column gap-1" style="display:none">
+                <span class="d-inline-flex align-items-center gap-2">
+                    <span class="fw-bold fs-5 mb-1 bb-text-str"><span id="selCount">0</span> ทริปที่เลือก</span>
+                    <button type="button" class="bb-badge is-neutral border-0 px-2 py-1" style="cursor:pointer" onclick="clearSelection()">
+                        <i data-lucide="x" class="pe-3"></i> ยกเลิกการเลือก
+                    </button>
+                </span>
+                <span class="fs-6 p-0 m-0 bb-text-mut">ระยะทางรวมทั้งหมด <span id="selDistance">0</span> กม. เป็นค่าน้ำมันทั้งหมด <span id="selCost">0</span> บาท</span>
             </div>
         </div>
 
@@ -183,18 +142,19 @@
 
         {% if display_rows %}
 
-        {# ── Desktop table (d-none d-md-block) — ห่อ bb-card + client-side pagination ─── #}
-        <div class="bb-card rounded-0 d-none d-md-block mt-2 p-3 mb-4">
-        <div class="bb-table-scroll">
+        {# ── Desktop table (d-none d-md-block) — flush ไม่มี card frame (ตาม UE reference) + client-side pagination ─── #}
+        <div class="bb-table-scroll d-none d-md-block mt-2 mb-4">
         {% call bb_table([
-            {'cls':'bb-ml-col-check', 'raw':'<span class="bb-check-box" id="checkAll" role="checkbox" aria-checked="false" tabindex="0"><i data-lucide="check"></i></span>'},
-            {'label':'วันที่'},
-            {'label':'ผู้จอง', 'sort':'user'},
-            {'label':'คนขับและรถ', 'sort':'vehicle'},
-            {'label':'ปลายทาง', 'sort':'destination'},
-            {'label':'ไมล์ ออก→กลับ', 'sort':'odo-start', 'align':'end'},
+            {'cls':'bb-ml-col-check', 'raw':'<span class="bb-check-box" id="checkAll" role="checkbox" aria-checked="false" tabindex="0"></span>'},
+            {'label':'Trip ID'},
+            {'label':'ช่วงเวลา'},
+            {'label':'ทะเบียนรถ'},
+            {'label':'คนขับ'},
+            {'label':'จุดขึ้นรถ/สถานที่ไป'},
             {'label':'สถานะ', 'sort':'status', 'align':'center'},
-            {'label':'จัดการ', 'cls':'bb-ml-col-actions'},
+            {'label':'เลขไมล์', 'align':'end'},
+            {'label':'OT', 'align':'center'},
+            {'cls':'bb-ml-col-actions'},
         ], responsive=False) %}
                 {% for dr in display_rows %}
                 {% set r = dr.row %}
@@ -217,35 +177,43 @@
                     data-manual-fuel="{{ m.fuel_cost if m and m.fuel_cost else '' }}"
                     data-plate="{{ b.assigned_vehicle.license_plate if b.assigned_vehicle else '' }}"
                     data-driver="{{ driver_first }}"
+                    data-phone="{{ b.driver.phone if b.driver else '' }}"
                     data-budget-sub="{{ r.budget_sub or '' }}"
+                    data-budget-label="{{ r.budget_label or '' }}"
+                    data-fuel-price="{{ r.fuel_price or '' }}"
+                    data-ot-total="{{ r.ot_total_amount or 0 }}"
+                    data-ot-slots='{{ r.ot_slots | tojson }}'
+                    data-actual-start="{{ m.actual_start.strftime('%Y-%m-%dT%H:%M') if m and m.actual_start else '' }}"
+                    data-actual-end="{{ m.actual_end.strftime('%Y-%m-%dT%H:%M') if m and m.actual_end else '' }}"
                     data-refuel-odo="{{ r.refuel_odo or '' }}">
 
                     <td class="bb-ml-col-check">
                         <span class="bb-check-box bb-ml-row-check{% if r.status_key != 'complete' %} is-disabled{% endif %}"
                               role="checkbox" aria-checked="false" tabindex="0"
-                              {% if r.status_key != 'complete' %}title="เลือกได้เฉพาะที่ครบแล้ว"{% endif %}><i data-lucide="check"></i></span>
+                              {% if r.status_key != 'complete' %}title="เลือกได้เฉพาะที่ครบแล้ว"{% endif %}></span>
                     </td>
                     <td class="bb-ml-dash bb-num">
-                        {{ b.start_datetime.day }} {{ TH_MONTHS[b.start_datetime.month-1] }}
+                        #BK{{ b.id }}{% if is_group %}<span class="bb-badge is-accent bb-ml-group-badge">+{{ dr.count - 1 }}</span>{% endif %}
                     </td>
                     <td>
-                        {% if is_group %}
-                        <span class=" bb-dr-monthtitle ">
-                            <i data-lucide="users" class="me-1"></i>
-                            งานร่วม {{ dr.count }} รายการ
-                        </span>
+                        <div>วัน{{ TH_DAYS[b.start_datetime.weekday()] }}ที่ {{ b.start_datetime.day }} {{ TH_MONTHS[b.start_datetime.month-1] }}</div>
+                        <div class="bb-subtext bb-num">{{ b.start_datetime.strftime('%H:%M') }} – {{ b.end_datetime.strftime('%H:%M') }}</div>
+                    </td>
+                    <td class="bb-num">{% if b.assigned_vehicle %}{{ b.assigned_vehicle.license_plate }}{% else %}<span class="bb-ml-dash">—</span>{% endif %}</td>
+                    <td>{{ driver_first or '—' }}</td>
+                    <td>
+                        <div class="bb-subtext">{{ b.pickup_location or '—' }}</div>
+                        <div>→ {{ b.destination or '—' }}</div>
+                    </td>
+                    <td class="text-center">
+                        {% if r.status_key == 'complete' %}
+                        <span class="bb-status is-ok">เสร็จสิ้น</span>
+                        {% elif r.status_key == 'partial' %}
+                        <span class="bb-status is-wr">รอกรอกเลขไมล์สิ้นสุด</span>
                         {% else %}
-                        {{ b.user.full_name or b.user.username }}
-                        {% endif %}
-                        {% if r.budget_sub %}
-                        <div class="bb-subtext">{{ r.budget_sub }}</div>
+                        <span class="bb-status is-neutral">รอกรอกเลขไมล์เริ่มต้น</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <div>{{ driver_first or '—' }}</div>
-                        <div class="bb-subtext">{% if b.assigned_vehicle %}{{ b.assigned_vehicle.license_plate }}{% else %}—{% endif %}</div>
-                    </td>
-                    <td class="bb-ml-col-dest bb-ml-dash" title="{{ b.destination or '' }}">{{ b.destination or '—' }}</td>
                     <td class="bb-cell-num bb-ml-col-odo">
                         {% if m and m.odometer_start %}
                         {{ '{:,}'.format(m.odometer_start) }} →
@@ -261,32 +229,29 @@
                             </span>
                         </span>
                         {% endif %}
-                        {% if r.distance %}<div class="bb-subtext">{{ '{:,}'.format(r.distance) }} กม.{% if r.fuel_cost %} ({{ '{:,.0f}'.format(r.fuel_cost) }} บาท){% endif %}</div>{% endif %}
+                        {% if r.distance %}<div class="bb-subtext">ระยะทาง {{ '{:,}'.format(r.distance) }} กม.{% if r.fuel_cost %} · {{ '{:,.0f}'.format(r.fuel_cost) }} บาท{% endif %}</div>{% endif %}
                         {% else %}
                         <span class="bb-ml-dash">—</span>
                         {% endif %}
                     </td>
-                    <td>
-                        {% if r.status_key == 'complete' %}
-                        <span class="bb-status is-ok"><span class="bb-dot"></span>ครบ</span>
-                        {% elif r.status_key == 'partial' %}
-                        <span class="bb-status is-wr"><span class="bb-dot"></span>รอกลับ</span>
+                    <td class="text-center">
+                        {% if r.ot_hours %}
+                        <span class="bb-badge is-wr">{{ '{:.2f}'.format(r.ot_hours) }} ชม.</span>
                         {% else %}
-                        <span class="bb-status is-neutral"><span class="bb-dot"></span>รอกรอก</span>
+                        <span class="bb-ml-dash">—</span>
                         {% endif %}
                     </td>
                     <td class="bb-ml-col-actions">
                         <div class="bb-table-actions">
-                            <button type="button" class="bb-btn is-sec is-icon" onclick="openMileage(this)" title="กรอกเลขไมล์">
-                                <i data-lucide="pencil"></i>
-                            </button>
+                            <span class="bb-icon-btn" role="button" tabindex="0" onclick="openMileage(this)" title="เมนู">
+                                <i data-lucide="more-vertical"></i>
+                            </span>
                         </div>
                     </td>
                 </tr>
                 {% endfor %}
         {% endcall %}
         </div>{# /bb-table-scroll #}
-        </div>{# /bb-card #}
 
         {# ── Mobile card list (d-md-none) ─── #}
         <div class="d-md-none mt-2">
@@ -323,7 +288,14 @@
                  data-manual-fuel="{{ m.fuel_cost if m and m.fuel_cost else '' }}"
                  data-plate="{{ b.assigned_vehicle.license_plate if b.assigned_vehicle else '' }}"
                  data-driver="{{ driver_first }}"
+                 data-phone="{{ b.driver.phone if b.driver else '' }}"
                  data-budget-sub="{{ r.budget_sub or '' }}"
+                 data-budget-label="{{ r.budget_label or '' }}"
+                 data-fuel-price="{{ r.fuel_price or '' }}"
+                 data-ot-total="{{ r.ot_total_amount or 0 }}"
+                 data-ot-slots='{{ r.ot_slots | tojson }}'
+                 data-actual-start="{{ m.actual_start.strftime('%Y-%m-%dT%H:%M') if m and m.actual_start else '' }}"
+                 data-actual-end="{{ m.actual_end.strftime('%Y-%m-%dT%H:%M') if m and m.actual_end else '' }}"
                  data-refuel-odo="{{ r.refuel_odo or '' }}">
 
                 <div class="bb-card-body">
@@ -339,11 +311,11 @@
                             <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
                                 <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)">{{ b.start_datetime.strftime('%H:%M') }} – {{ b.end_datetime.strftime('%H:%M') }}</span>
                                 {% if r.status_key == 'complete' %}
-                                <span class="bb-badge" style="background:var(--bb-ok-bg);color:var(--bb-ok-tx)">กรอกเลขไมล์ครบ</span>
+                                <span class="bb-status is-ok"><i data-lucide="check-circle"></i>กรอกเลขไมล์ครบ</span>
                                 {% elif r.status_key == 'partial' %}
-                                <span class="bb-badge" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)">รอกรอกไมล์กลับ</span>
+                                <span class="bb-status is-wr"><i data-lucide="clock"></i>รอกรอกไมล์กลับ</span>
                                 {% else %}
-                                <span class="bb-badge is-neutral">รอกรอกไมล์ออก</span>
+                                <span class="bb-status is-neutral"><i data-lucide="circle"></i>รอกรอกไมล์ออก</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -387,7 +359,7 @@
 
         {% else %}
         <div class="bb-empty mt-3">
-            <div class="bb-empty-icon"><span class="material-symbols-outlined">note_stack</span></div>
+            <div class="bb-empty-icon"><i data-lucide="note-stack"></i></div>
             <div class="bb-empty-title">ไม่พบรายการ</div>
             <div class="bb-empty-desc">ไม่มี booking ที่อนุมัติแล้วตามเงื่อนไขที่กรอง</div>
         </div>
@@ -401,7 +373,7 @@
 <div class="modal fade" id="mileageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="bb-modal-body">
+            <div class="bb-modal-body modal-body">
                 <form id="formMileage" method="POST" action="{{ url_for('vehicle.mileage_log') }}">
                     <input type="hidden" name="booking_id" id="mmFormBookingId">
                     <input type="hidden" name="entry_type" id="mmEntryType" value="start">
@@ -419,17 +391,19 @@
                             </div>
                         </div>
                         <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem" id="mmAvatar">
-                            <i data-lucide="bike" style="width:1.75rem;height:1.75rem"></i>
+                            <i data-lucide="bus" style="width:1.75rem;height:1.75rem"></i>
                         </div>
                     </div>
 
+                    <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-3">
+
                     <div class="bb-timeline">
-                        <div class="bb-tl-item done" style="padding-left:2rem">
-                            <span class="bb-avatar" style="position:absolute;left:0;top:-2px;width:1.5rem;height:1.5rem;background:var(--bb-n200)">
-                                <i data-lucide="user" style="width:.8125rem;height:.8125rem;color:var(--bb-mut)"></i>
-                            </span>
+                        <div class="bb-tl-item done">
+                            <span class="bb-tl-dot"></span>
                             <div class="bb-tl-title" id="mmDriver">—</div>
                             <div class="bb-tl-desc" id="mmPlateDest">—</div>
+                            <div class="bb-tl-desc" id="mmDriverPhone">—</div>
+                            <div class="bb-tl-desc" id="mmBudgetLine">—</div>
 
                             <div class="bg-light rounded-3 p-3 mt-2">
                                 <div class="row g-2">
@@ -460,11 +434,40 @@
                                 </div>
                             </div>
                         </div>
+
+                        {# ── Stop 2/3: เฉพาะทริปที่ปิดแล้ว (state==='complete') — JS toggle display (Case 17 merge, 2026-07-22) ── #}
+                        <div class="bb-tl-item done" id="mmOtStop" style="display:none">
+                            <span class="bb-tl-dot"></span>
+                            <div class="bb-tl-title">ช่วงเวลา / ค่า OT</div>
+                            <div class="bb-tl-desc" id="mmOtTimeRange">—</div>
+                            <div class="bg-light rounded-3 p-3 mt-2">
+                                <div id="mmOtRates"></div>
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between" id="mmOtBarLabels" style="font-size:.6875rem;color:var(--bb-mut)"></div>
+                                    <div class="d-flex mt-1" id="mmOtBar" style="height:.5rem;border-radius:999px;overflow:hidden"></div>
+                                    <div class="d-flex justify-content-between mt-1" style="font-size:.6875rem;color:var(--bb-mut)">
+                                        <span>Regular time</span>
+                                        <span>Overtime</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bb-tl-item done" id="mmCostStop" style="display:none">
+                            <span class="bb-tl-dot"></span>
+                            <div class="bb-tl-title">ค่าใช้จ่ายทั้งหมด</div>
+                            <div class="bb-tl-desc" id="mmCostDistanceLine">—</div>
+                            <div class="bb-tl-desc" id="mmCostFuelInfo">—</div>
+                            <div class="bg-light rounded-3 p-3 mt-2">
+                                <div class="text-muted" style="font-size:.8125rem" id="mmCostBreakdown">—</div>
+                                <div style="font-size:.9375rem;font-weight:700;color:var(--bb-str)" id="mmCostTotal">—</div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 mt-4">
                         <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="submit" class="bb-btn is-pri" id="mmSubmit">บันทึก</button>
+                        <button type="submit" class="bb-btn is-pri" id="mmSubmit">ยืนยัน</button>
                     </div>
                 </form>
             </div>{# /bb-modal-body #}
@@ -484,6 +487,5 @@
     window.BBML_FILTER_SUB = {{ f.budget_sub | tojson }};
 </script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_mileage.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='core/js/bb-daterange.js') }}"></script>
 {% endblock %}

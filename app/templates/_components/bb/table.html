@@ -62,6 +62,7 @@
     id          id ของ wrapper
     columns     [ {key,label,sort,align,cls,fmt,render}, … ]
                   key    = ดึง row[key]
+                  sub    = key ของบรรทัดรองใน cell เดียวกัน (เช่น 'รถตู้' / '10 ที่นั่ง')
                   fmt    = 'money' (฿ 1,234) | 'num' (1,234) | custom format string เช่น '{:,.1f}' / '฿{:,.0f}' | default text
                   render = macro รับ (row) → คืน cell HTML (สำหรับ pill/avatar/ปุ่ม)
                   sort/align/cls = เหมือน bb_table
@@ -71,11 +72,17 @@
     pagination  True → แสดง .bb-pag (ต้องมี limit)
     info        True → แถบ "ทั้งหมด N รายการ"
     empty       ข้อความตอนไม่มีข้อมูล (default 'ไม่พบรายการ')
+
+  row key พิเศษ (Batch 3 · 2026-07-21) — ใส่ใน dict ของ data ได้เลย ไม่ต้องหนีไปใช้ shell:
+    _group / _group_note / _accent  → แถวหัวกลุ่มคั่นกลางตาราง (_accent=True = กลุ่มที่ทำ action ได้)
+    _locked                          → แถวจาง ทำ action ไม่ได้
+    _sel                             → แถวที่เลือกอยู่ (tint เขียว)
     class/wrap_cls/table_cls  extra class
 
   Usage:
     {% raw %}{% from '_components/bb/table.html' import bb_table_v2 %}
-    {% macro render_status(row) %}<span class="bb-status is-ok"><span class="bb-dot"></span>{{ row.status }}</span>{% endmacro %}
+    {% from '_components/bb/badge.html' import bb_status %}
+    {% macro render_status(row) %}{{ bb_status(row.status, 'ok') }}{% endmacro %}
     {{ bb_table_v2({'columns':[…], 'data':rows, 'total':total, 'limit':20, 'page':page, 'pagination':True}) }}{% endraw %}
 #}
 
@@ -93,7 +100,7 @@
 {%- if col.fmt in ['money','num'] or col.align == 'end' %}{% set _ = _cls.append('bb-cell-num') %}{% endif -%}
 {%- if col.align == 'center' %}{% set _ = _cls.append('text-center') %}{% endif -%}
 {%- if col.cls %}{% set _ = _cls.append(col.cls) %}{% endif -%}
-<td{% if _cls %} class="{{ _cls|join(' ') }}"{% endif %}>{% if col.render %}{{ col.render(row) }}{% elif col.key %}{{ _bb_fmt(row[col.key], col.fmt) }}{% endif %}</td>
+<td{% if _cls %} class="{{ _cls|join(' ') }}"{% endif %}>{% if col.render %}{{ col.render(row) }}{% elif col.key %}{{ _bb_fmt(row[col.key], col.fmt) }}{% endif %}{% if col.sub and row[col.sub] %}<span class="bb-cell-sub">{{ row[col.sub] }}</span>{% endif %}</td>
 {%- endmacro -%}
 
 {%- macro _bb_pagination(total, limit, page) -%}
@@ -126,7 +133,10 @@
 {% endfor %}</tr>
 </thead>
 <tbody>
-{% if data %}{% for row in data %}<tr>{% for col in cols %}{{ _bb_cell(col, row) }}{% endfor %}</tr>
+{% if data %}{% for row in data %}
+{%- if row._group %}<tr class="bb-row-group{% if row._accent %} is-accent{% endif %}"><td colspan="{{ cols|length }}">{{ row._group }}{% if row._group_note %}<span class="bb-row-group-note">{{ row._group_note }}</span>{% endif %}</td></tr>
+{%- else %}<tr{% if row._locked %} class="bb-row-locked"{% elif row._sel %} class="is-sel"{% endif %}>{% for col in cols %}{{ _bb_cell(col, row) }}{% endfor %}</tr>
+{%- endif %}
 {% endfor %}{% else %}<tr><td colspan="{{ cols|length }}"><div class="bb-empty"><div class="bb-empty-icon"><i data-lucide="inbox"></i></div><div class="bb-empty-title">{{ cfg.empty or 'ไม่พบรายการ' }}</div></div></td></tr>
 {% endif %}</tbody>
 </table>

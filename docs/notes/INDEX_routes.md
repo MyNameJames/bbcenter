@@ -1,7 +1,7 @@
 # INDEX — Routes
 
 > Part ของ INDEX.md แยก เพื่อ token budget — [กลับ hub](INDEX.md)
-> **อัปเดตล่าสุด:** 2026-07-19
+> **อัปเดตล่าสุด:** 2026-07-27
 
 ---
 
@@ -63,8 +63,8 @@
 | POST | `/vehicle/admin/merge` | [vehicle_admin.py:434](../../app/views/vehicle/vehicle_admin.py#L434) — `admin_merge()` รวมทริป. **2026-06-20:** เพิ่ม conflict guard ก่อน commit. ⚠️ **BUG-3 (พบ Phase 4, 2026-07-19, ยังไม่แก้)**: เซ็ต `booking.status` ตรง ไม่ผ่าน `apply_transition()`/`booking_service.*` เลย — ไม่เคยเรียก `guard_budget()` ต่างจาก approve path อื่นทุกจุด (central/personal merge ได้ `status='approved'` ทันทีไม่เช็คงบ) ดู [masterplan Bug Log](log/2026-07-19_clean_architecture_masterplan.md) |
 | POST | `/vehicle/admin/assign/<id>` | [vehicle_admin.py:517](../../app/views/vehicle/vehicle_admin.py#L517) — `admin_assign()` → `booking_service.assign_resources()`+`approve_from_pending()`/`reject_from_pending()` (**Phase 2/4**). **2026-06-20:** conflict guard เฉพาะทริปอิสระที่ approve; **2026-06-21:** `check_vehicle_active` guard |
 | POST | `/vehicle/admin/edit/<id>` | [vehicle_booking.py:159](../../app/views/vehicle/vehicle_booking.py#L159) | `admin_edit_booking()` — **2026-06-21** AJAX admin แก้ข้อมูลจอง (start/end datetime, destination, purpose, pax, pickup). Block ถ้า status ∈ {in_progress, completed, cancelled}. คืน JSON `{ok, msg}` |
-| GET/POST | `/vehicle/mileage` | [vehicle_mileage.py:336](../../app/views/vehicle/vehicle_mileage.py#L336) — `mileage_log()` (POST branch → `_handle_mileage_post()`, **Phase 5**) |
-| GET | `/vehicle/mileage/export` | [vehicle_mileage.py:506](../../app/views/vehicle/vehicle_mileage.py#L506) — `mileage_export()` Excel export ตาม filter (แตก `_filter_and_calc_mileage_rows`/`_build_mileage_workbook`, **Phase 5**) |
+| GET/POST | `/vehicle/mileage` | [vehicle_mileage.py:338](../../app/views/vehicle/vehicle_mileage.py#L338) — `mileage_log()` (POST branch → `_handle_mileage_post()`, **Phase 5**; POST รองรับ `entry_type='both'` เพิ่มด้วย — ดู INDEX_code.md) |
+| GET | `/vehicle/mileage/export` | [vehicle_mileage.py:502](../../app/views/vehicle/vehicle_mileage.py#L502) — `mileage_export()` Excel export ตาม filter (แตก `_filter_and_calc_mileage_rows`/`_build_mileage_workbook`, **Phase 5**). Query param ที่รับ: `date_start`/`date_end`/`vehicle_id`/`driver_id`/`status_filter` (**ตัด `cost_min`/`cost_max` ออกแล้ว 2026-07-27**) |
 | GET | `/api/admin/bookings` | [vehicle_admin.py:747](../../app/views/vehicle/vehicle_admin.py#L747) — `api_admin_bookings()` |
 | POST | `/api/check-merge` | [vehicle_admin.py:638](../../app/views/vehicle/vehicle_admin.py#L638) — `api_check_merge()` (**DEBT-5** — 75 logic-line เกิน 60, legacy ตั้งใจไม่แตะ) |
 

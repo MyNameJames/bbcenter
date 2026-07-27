@@ -5,8 +5,13 @@ Controller สร้าง Table()/Column() แทนการเขียน co
 
 custom cell (badge/status/ปุ่ม): ใช้ `Column(cell=lambda row: Component)` (Cell Component
 2026-06-29) — map เป็น cfg `render` = callable คืน `.render()`, bb_table_v2 เรียกผ่าน
-`{{ col.render(row) }}` ได้ (Jinja เรียก Python callable ได้). เคส row ซับซ้อนมาก
-(group row, data-* บน <tr>) ยังใช้ shell bb_table ใน template
+`{{ col.render(row) }}` ได้ (Jinja เรียก Python callable ได้).
+
+row key พิเศษ (Batch 3 · 2026-07-21) — ใส่ใน dict ของ data ได้เลย:
+    _group / _group_note / _accent  แถวหัวกลุ่มคั่นกลางตาราง (_accent=True = กลุ่มที่ทำ action ได้)
+    _locked                          แถวจาง ทำ action ไม่ได้
+    _sel                             แถวที่เลือกอยู่ (tint เขียว)
+เคสที่ยังต้องใช้ shell bb_table: ต้องใส่ data-* เอง บน <tr>
 """
 from dataclasses import dataclass
 
@@ -18,6 +23,7 @@ class Column:
     """1 คอลัมน์ของ Table. field ตรงกับ column dict ของ bb_table_v2."""
 
     key: str = ''       # ดึง row[key]
+    sub: str = ''       # key ของบรรทัดรองใน cell เดียวกัน (เช่น 'รถตู้' / '10 ที่นั่ง')
     label: str = ''     # หัวคอลัมน์
     sort: str = ''      # sort key → คอลัมน์กรองได้
     align: str = ''     # '' | 'end' | 'center'

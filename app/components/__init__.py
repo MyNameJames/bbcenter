@@ -34,6 +34,7 @@ from .combo import Combo
 from .upload import Upload
 from .bell import Bell
 from .callout import Callout
+from .drawer import Drawer, Section, DescList
 from .toast import ToastRegion
 from .sidebar import Sidebar
 from .slider import Slider
@@ -47,7 +48,7 @@ __all__ = ['BaseComponent', 'Table', 'Column', 'Badge', 'Status',
            'Empty', 'Spinner', 'Skeleton',
            'WeekStrip', 'DatePicker', 'TimePicker', 'TimeRange',
            'Combo', 'Upload', 'Bell', 'Callout', 'ToastRegion', 'Sidebar',
-           'Slider', 'Calendar',
+           'Slider', 'Calendar', 'Drawer', 'Section', 'DescList',
            'register_components']
 
 

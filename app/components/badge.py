@@ -22,7 +22,9 @@ class Badge(BaseComponent):
 
 class Status(BaseComponent):
     """สถานะ. tone: ok | wr | dg | info | neutral.
-    inline=True → แบบไม่มีพื้น (ใช้ในตาราง), False → pill มีพื้น + dot.
+    inline=True → แบบไม่มีพื้น (ใช้ในตาราง), False → badge มีพื้น.
+    icon=None → ใช้ icon ประจำ tone (ok=check-circle · wr=clock · dg=x-circle · info=info).
+    ⛔ ไม่มีแบบ dot เปล่าอีกแล้ว — ต้องมี icon คู่ label เสมอ (ok เขียวชนกับ accent).
     """
 
     template = '_components/render/_status.html'

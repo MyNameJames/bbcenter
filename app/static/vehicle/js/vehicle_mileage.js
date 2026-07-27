@@ -42,6 +42,103 @@ function clearEndError() {
     mmOdoEndErr.style.display = 'none';
 }
 
+/* ── OT breakdown + segmented bar (Case 17 merge, 2026-07-22) ──
+   โชว์เฉพาะทริปที่ปิดแล้ว (state==='complete') — ข้อมูลมาจาก DriverOT/DriverOTSlot ที่
+   auto_generate_ot()/close_trip() คำนวณ+commit ไปแล้วจริง ไม่ใช่ preview ก่อน submit ── */
+function hmToMin(hm) {
+    const [h, m] = hm.split(':').map(Number);
+    return h * 60 + m;
+}
+
+function buildOtBarSegments(actualStart, actualEnd, slots) {
+    const tStart = hmToMin(actualStart);
+    let tEnd = hmToMin(actualEnd);
+    if (tEnd <= tStart) tEnd += 24 * 60; // ข้ามเที่ยงคืน
+    const total = tEnd - tStart;
+    if (total <= 0) return [];
+
+    const norm = slots.map(s => {
+        let ss = hmToMin(s.start_time);
+        let se = hmToMin(s.end_time);
+        if (ss < tStart) ss += 24 * 60;
+        if (se <= ss) se += 24 * 60;
+        return { ss, se };
+    }).sort((a, b) => a.ss - b.ss);
+
+    const segments = [];
+    let cursor = tStart;
+    norm.forEach(s => {
+        if (s.ss > cursor) segments.push({ pct: (s.ss - cursor) / total * 100, type: 'regular' });
+        segments.push({ pct: (Math.min(s.se, tEnd) - s.ss) / total * 100, type: 'ot' });
+        cursor = Math.max(cursor, s.se);
+    });
+    if (cursor < tEnd) segments.push({ pct: (tEnd - cursor) / total * 100, type: 'regular' });
+    return segments;
+}
+
+function timeOnly(fullDatetime) {
+    // data-actual-start/-end เป็น datetime-local เต็ม (YYYY-MM-DDTHH:MM) ตั้งแต่ 2026-07-22
+    // เพื่อให้ pre-fill hidden field ตอนแก้ไขได้โดยไม่ทับเวลาจริงด้วย now() — ที่นี่เอาแค่ HH:MM มาโชว์
+    return fullDatetime && fullDatetime.includes('T') ? fullDatetime.split('T')[1] : (fullDatetime || '');
+}
+
+function renderOtStop(ds, state) {
+    const stop = document.getElementById('mmOtStop');
+    let slots = [];
+    try { slots = JSON.parse(ds.otSlots || '[]'); } catch (e) { slots = []; }
+
+    if (state !== 'complete' || !slots.length) {
+        stop.style.display = 'none';
+        return;
+    }
+    stop.style.display = '';
+
+    const actualStart = timeOnly(ds.actualStart);
+    const actualEnd   = timeOnly(ds.actualEnd);
+
+    const totalMinutes = slots.reduce((sum, s) => sum + Number(s.hours) * 60, 0);
+    const totalHours   = slots.reduce((sum, s) => sum + Number(s.hours), 0);
+    const otText = totalMinutes < 60 ? `${Math.round(totalMinutes)} นาที` : `${totalHours.toFixed(2)} ชม.`;
+    document.getElementById('mmOtTimeRange').textContent =
+        `${actualStart || '—'} - ${actualEnd || '—'} (OT : ${otText})`;
+
+    document.getElementById('mmOtRates').innerHTML = slots.map(s => `
+        <div class="text-muted" style="font-size:.8125rem">
+            OT rate (${s.label}) : ${fmt(s.rate)} บาท/ชม. (รวมเป็น <b style="color:var(--bb-str)">${fmt(s.amount)} บาท</b>)
+        </div>
+    `).join('');
+
+    if (actualStart && actualEnd) {
+        const segments = buildOtBarSegments(actualStart, actualEnd, slots);
+        document.getElementById('mmOtBar').innerHTML = segments.map(s =>
+            `<div style="width:${s.pct}%;background:var(${s.type === 'ot' ? '--bb-wr' : '--bb-n200'})"></div>`
+        ).join('');
+        const boundaries = [actualStart, ...slots.flatMap(s => [s.start_time, s.end_time]), actualEnd];
+        document.getElementById('mmOtBarLabels').innerHTML =
+            [...new Set(boundaries)].map(t => `<span class="bb-num">${t}</span>`).join('');
+    }
+}
+
+function renderCostStop(ds, state) {
+    const stop = document.getElementById('mmCostStop');
+    if (state !== 'complete') {
+        stop.style.display = 'none';
+        return;
+    }
+    stop.style.display = '';
+
+    const distance = ds.distance ? Number(ds.distance) : 0;
+    const fuelCost = ds.cost     ? Number(ds.cost)      : 0;
+    const otTotal  = ds.otTotal  ? Number(ds.otTotal)   : 0;
+
+    document.getElementById('mmCostDistanceLine').textContent = `ระยะทางทั้งหมด ${fmt(distance)} กม.`;
+    document.getElementById('mmCostFuelInfo').textContent = (ds.fuelPrice && ds.fuelRate)
+        ? `ราคาน้ำมันต่อลิตร ${fmt(ds.fuelPrice)} บาท (${fmt(ds.fuelRate)} กม. ต่อลิตร)`
+        : '—';
+    document.getElementById('mmCostBreakdown').textContent = `ค่าน้ำมัน : ${fmt(fuelCost)} บาท / ค่า OT ${fmt(otTotal)} บาท`;
+    document.getElementById('mmCostTotal').textContent = `รวมทั้งหมด ${fmt(fuelCost + otTotal)} บาท`;
+}
+
 /* ── Modal open ───────────────────────────────── */
 function openMileage(btn) {
     const row = btn.closest('[data-booking]');
@@ -55,6 +152,8 @@ function openMileage(btn) {
     document.getElementById('mmTime').textContent      = ds.time || '—';
     document.getElementById('mmDriver').textContent    = ds.driver || '—';
     document.getElementById('mmPlateDest').textContent = (ds.plate ? ds.plate + ' → ' : '') + (ds.destination || '—');
+    document.getElementById('mmDriverPhone').textContent = (ds.driver && ds.phone) ? `${ds.driver} | โทร ${ds.phone}` : (ds.driver || ds.phone || '—');
+    document.getElementById('mmBudgetLine').textContent  = ds.budgetSub ? `${ds.budgetLabel || ''}-${ds.budgetSub}` : (ds.budgetLabel || '—');
     document.getElementById('mmDistance').textContent  = ds.distance ? fmt(ds.distance) : '-';
     document.getElementById('mmCost').textContent      = ds.cost ? fmt(ds.cost) : '-';
 
@@ -74,29 +173,37 @@ function openMileage(btn) {
 
     const avatar = document.getElementById('mmAvatar');
     avatar.style.background = `var(${bg})`;
-    avatar.querySelector('svg, i').style.color = `var(${AVATAR_ICON_COLOR[state]})`;
+    // <i data-lucide> ถูก ms-icons.js แปลงเป็น <span class="material-symbols-outlined" data-lucide="..."> แล้ว
+    // ('svg, i' เจอ null เพราะ tag เดิมไม่เหลือแล้วหลัง shim ทำงาน)
+    const avatarIcon = avatar.querySelector('svg, i, [data-lucide]');
+    if (avatarIcon) avatarIcon.style.color = `var(${AVATAR_ICON_COLOR[state]})`;
 
     clearEndError();
 
+    // ทั้งสองช่องแก้ได้เสมอ ไม่ผูกกับ state (admin เท่านั้น — 2026-07-22): submit handler
+    // จะตัดสินใจเองว่าค่าไหนถูกกรอกมาบ้าง แล้วเลือก entry_type ให้ตรง
+    mmOdoStart.disabled = false;
+    mmOdoStart.required = false;
+    mmOdoEnd.disabled   = false;
+    mmOdoEnd.required   = false;
+
+    // คง actual_start/actual_end เดิมไว้ถ้ามีอยู่แล้ว (แก้แค่ตัวเลขไมล์ ไม่ควรทับเวลาจริงด้วย
+    // now()) — เติม now() เฉพาะช่องที่ยังไม่เคยมีค่าจริง
+    document.getElementById('mmActualStart').value = ds.actualStart || nowTimestampValue();
+    document.getElementById('mmActualEnd').value   = ds.actualEnd   || '';
+
     if (state === 'none') {
-        mmOdoStart.value    = '';
-        mmOdoStart.disabled = false;
-        mmOdoStart.required = true;
-        mmOdoEnd.value      = '';
-        mmOdoEnd.disabled   = true;
-        mmOdoEnd.required   = false;
-        document.getElementById('mmActualStart').value = nowTimestampValue();
+        mmOdoStart.value = '';
+        mmOdoEnd.value   = '';
         mmEntryType.value = 'start';
     } else {
-        mmOdoStart.value    = odoStart;
-        mmOdoStart.disabled = true;
-        mmOdoStart.required = false;
-        mmOdoEnd.value      = odoEnd || '';
-        mmOdoEnd.disabled   = false;
-        mmOdoEnd.required   = true;
-        document.getElementById('mmActualEnd').value = nowTimestampValue();
+        mmOdoStart.value = odoStart;
+        mmOdoEnd.value   = odoEnd || '';
         mmEntryType.value = 'end';
     }
+
+    renderOtStop(ds, state);
+    renderCostStop(ds, state);
 
     if (!bsModal) bsModal = new bootstrap.Modal($modal);
     bsModal.show();
@@ -105,8 +212,29 @@ function openMileage(btn) {
 mmOdoEnd.addEventListener('input', clearEndError);
 
 formMileage.addEventListener('submit', function (e) {
-    if (mmEntryType.value !== 'end') return;
-    const start = Number(mmOdoStart.value || (currentRow && currentRow.dataset.odoStart) || 0);
+    // เลือก entry_type จากค่าที่กรอกจริงตอน submit ไม่ใช่ state ตอนเปิด modal (ทั้งสองช่อง
+    // แก้ได้เสมอแล้ว — 2026-07-22)
+    const hasStart = mmOdoStart.value.trim() !== '';
+    const hasEnd   = mmOdoEnd.value.trim()   !== '';
+    const priorStart = currentRow ? currentRow.dataset.odoStart : '';
+
+    if (!hasStart && !hasEnd) { e.preventDefault(); return; }
+    // กันกรอกแค่เลขไมล์กลับทั้งที่ยังไม่มีเลขไมล์ออกเลย ทั้งในฟอร์มและในระบบ (สร้าง record
+    // end-only ที่ผิดปกติไม่ได้)
+    if (hasEnd && !hasStart && !priorStart) { e.preventDefault(); return; }
+
+    mmEntryType.value = (hasStart && hasEnd) ? 'both' : (hasEnd ? 'end' : 'start');
+
+    if (!document.getElementById('mmActualStart').value) {
+        document.getElementById('mmActualStart').value = nowTimestampValue();
+    }
+    if ((mmEntryType.value === 'end' || mmEntryType.value === 'both') &&
+        !document.getElementById('mmActualEnd').value) {
+        document.getElementById('mmActualEnd').value = nowTimestampValue();
+    }
+
+    if (mmEntryType.value !== 'end' && mmEntryType.value !== 'both') return;
+    const start = Number(mmOdoStart.value || priorStart || 0);
     const end   = Number(mmOdoEnd.value || 0);
     if (!end || end <= start) {
         e.preventDefault();
@@ -143,153 +271,84 @@ formMileage.addEventListener('submit', function (e) {
     });
 })();
 
-/* ── Filter (bb_filter live) + date range → trigger AJAX ──
-   bb_filter toggle/clear = JS ของ bb-components.js · ที่นี่แค่ผูก trigger
-   bb-filter:change ยิงเมื่อ native input/select ใน filter เปลี่ยน (cost, booker, budget_sub)
-   bb_combo set hidden value แต่ไม่ยิง native change → bridge เป็น native 'change'
-   เพื่อให้ bb_filter จับ (badge is-active + ยิง bb-filter:change ต่อ) → ไหลเข้า runFilter จุดเดียว */
-document.addEventListener('bb-daterange:change', () => runFilter());
-document.addEventListener('bb-filter:change', () => runFilter());
+/* ── KPI action cards: คลิก "งานยังไม่ครบ"/"รอยืนยันจ่ายส่วนตัว" → set filter → runFilter()
+   (ตาม pattern bindStatusTabs — reuse runFilter() เดิม ห้ามเขียน fetch ใหม่) ── */
+(function bindKpiFilters() {
+    function onActivate(el, fn) {
+        el.addEventListener('click', fn);
+        el.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); }
+        });
+    }
 
-/* filter controls: bb_dropdown (menu) + booker combo + budget cascade
-   dropdown (bb-select + .bb-menu) เป็น decorative → wire เอง:
-     เลือก item → set hidden input [name] + native change → bb_filter (bb-components)
-     จับ change → recompute badge + ยิง bb-filter:change → runFilter
-   booker = bb_combo → bridge bb-combo:change → native change (เหมือนเดิม)
-   budget_type เปลี่ยน → rebuild เมนู budget_sub (cascade) */
+    const missingCard = document.querySelector('[data-kpi-filter="incomplete"]');
+    if (missingCard) onActivate(missingCard, () => {
+        // มี tab "ยังไม่ครบ" อยู่แล้ว → จำลองคลิก tab (ได้ทั้ง hidden input + active state + runFilter)
+        const tab = document.querySelector('#statusTabs .tab2-tab[data-tab="incomplete"]');
+        if (tab) { tab.click(); return; }
+        const hidden = document.getElementById('statusFilter');
+        if (hidden) { hidden.value = 'incomplete'; runFilter(); }
+    });
+
+    const pendingCard = document.querySelector('[data-kpi-filter="pending_personal"]');
+    if (pendingCard) onActivate(pendingCard, () => {
+        const hidden = document.getElementById('pendingPersonalFilter');
+        if (!hidden) return;
+        hidden.value = '1';
+        runFilter();
+    });
+})();
+
+/* ── Filter (chip filter + date range) → trigger AJAX ──
+   bb_filter/.bb-filter-btn (cost slider + ล้างการเลือก) ถูกลบออกจากหน้านี้แล้ว (2026-07-22)
+   booker combo (filterBookerCombo) ก็ถูกลบออกจากหน้านี้แล้วเช่นกัน (2026-07-22)
+   — chip filter (vehicle/driver/budget_type/budget_sub) เป็น toolbar chip เดี่ยวทั้งหมด
+   ue-chip:change ยิงเมื่อ chip filter เปลี่ยน (ue_chip_dd, bb-components.js) */
+document.addEventListener('bb-daterange:change', () => runFilter());
+document.addEventListener('ue-chip:change', () => runFilter());
+
+/* chip filter (ue_chip_dd, radio single-select) + budget cascade
+   ue_chip_dd เปิด/ปิด/label sync = JS ของ bb-components.js (initUeChipDd) ทั้งหมด — ที่นี่ผูกแค่ cascade
+   ⚠️ popover ของ ue_chip_dd portal ออกไป document.body ตอนเปิดเสมอ →
+      ต้อง capture reference ของ [data-ue-chip-body] ไว้ตรงๆ ตั้งแต่แรก ห้าม querySelector ซ้ำผ่าน ancestor
+      (ancestor.querySelector หา popover ที่ portal ออกไปแล้วไม่เจอ)
+   budget_type เปลี่ยน → rebuild ตัวเลือก budget_sub (cascade) — คง id="filterBudgetSubSec" ไว้เพื่อ show/hide */
 (function bindFilterControls() {
-    const root = document.getElementById('bbMlFilter');
-    if (!root) return;
     const cats       = window.EXPENSE_CATS || { central: [], department: [] };
     const initialSub = window.BBML_FILTER_SUB || '';
     const subSec     = document.getElementById('filterBudgetSubSec');
-    const dds        = Array.from(root.querySelectorAll('[data-bb-ml-dd]'));
-    const ddByName   = name => dds.find(dd => dd.querySelector('[data-bb-ml-dd-input]').name === name);
 
-    function closeMenus(except) {
-        dds.forEach(dd => {
-            if (dd === except) return;
-            dd.querySelector('[data-bb-ml-dd-menu]').hidden = true;
-            dd.querySelector('[data-bb-ml-dd-trigger]').setAttribute('aria-expanded', 'false');
-        });
+    function ddBody(id) {
+        const dd = document.getElementById(id);
+        return dd ? dd.querySelector('[data-ue-chip-body]') : null;
+    }
+    const budgetTypeBody = ddBody('ddBudgetTypeFilter');
+    const budgetSubBody  = ddBody('ddBudgetSubFilter');
+
+    function optRow(name, value, label, checked) {
+        return `<label class="ue-chip-opt"><span>${label}</span><input type="radio" name="${name}" value="${value}"${checked ? ' checked' : ''}></label>`;
     }
 
-    // set ค่า dropdown (is-on + label + hidden input) · silent = ไม่ยิง change
-    function pick(dd, value, label, silent) {
-        const input = dd.querySelector('[data-bb-ml-dd-input]');
-        const lbl   = dd.querySelector('[data-bb-ml-dd-label]');
-        dd.querySelectorAll('.bb-menu-item').forEach(x =>
-            x.classList.toggle('is-on', (x.dataset.value || '') === (value || '')));
-        input.value = value || '';
-        lbl.textContent = label || 'ทั้งหมด';
-        if (!silent) input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    dds.forEach(dd => {
-        const trigger = dd.querySelector('[data-bb-ml-dd-trigger]');
-        const menu    = dd.querySelector('[data-bb-ml-dd-menu]');
-        const name    = dd.querySelector('[data-bb-ml-dd-input]').name;
-        trigger.addEventListener('click', e => {
-            e.stopPropagation();
-            const willOpen = menu.hidden;
-            closeMenus(dd);
-            menu.hidden = !willOpen;
-            trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-        });
-        menu.addEventListener('click', e => {
-            const opt = e.target.closest('.bb-menu-item');
-            if (!opt) return;
-            menu.hidden = true;
-            trigger.setAttribute('aria-expanded', 'false');
-            if (name === 'budget_type') {
-                pick(dd, opt.dataset.value, opt.dataset.label, true);  // defer change
-                rebuildBudgetSub(opt.dataset.value);                   // sync budget_sub (silent)
-                dd.querySelector('[data-bb-ml-dd-input]').dispatchEvent(new Event('change', { bubbles: true }));
-            } else {
-                pick(dd, opt.dataset.value, opt.dataset.label);
-            }
-        });
-    });
-
-    // budget_type → rebuild เมนู budget_sub (cascade) · pick แบบ silent เสมอ
+    // budget_type → rebuild ตัวเลือก budget_sub (cascade) · เขียน DOM ตรงๆ (ไม่ยิง change ที่นี่ —
+    // ue-chip:change ของ budget_type เองพอสำหรับ trigger runFilter แล้ว)
     function rebuildBudgetSub(type) {
-        const dd = ddByName('budget_sub');
-        if (!dd) return;
-        const menu = dd.querySelector('[data-bb-ml-dd-menu]');
-        if (type !== 'central' && type !== 'department') {
-            if (subSec) subSec.hidden = true;
-            menu.innerHTML = '<div class="bb-menu-item is-on" data-value="" data-label="ทั้งหมด">ทั้งหมด</div>';
-            pick(dd, '', 'ทั้งหมด', true);
-            return;
-        }
-        if (subSec) subSec.hidden = false;
-        const list = cats[type] || [];
-        menu.innerHTML = '<div class="bb-menu-item" data-value="" data-label="ทั้งหมด">ทั้งหมด</div>' +
-            list.map(x => `<div class="bb-menu-item" data-value="${x.key}" data-label="${x.label}">${x.label}</div>`).join('');
+        if (!budgetSubBody) return;
+        const isSub = type === 'central' || type === 'department';
+        if (subSec) subSec.hidden = !isSub;
+        const list = isSub ? (cats[type] || []) : [];
         const keep = list.some(x => x.key === initialSub) ? initialSub : '';
-        const kept = keep ? list.find(x => x.key === keep) : null;
-        pick(dd, keep, kept ? kept.label : 'ทั้งหมด', true);
+        budgetSubBody.innerHTML = optRow('budget_sub', '', 'ทั้งหมด', !keep) +
+            list.map(x => optRow('budget_sub', x.key, x.label, x.key === keep)).join('');
+        // sync label/badge ของ ue_chip_dd (มันจับ 'change' บน body เอง)
+        const checked = budgetSubBody.querySelector('input:checked') || budgetSubBody.querySelector('input');
+        if (checked) checked.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    // booker combo → bridge bb-combo:change → native change (ให้ bb_filter จับ)
-    document.addEventListener('bb-combo:change', e => {
-        const el = e.target;
-        if (!el.classList || !el.classList.contains('bb-combo')) return;
-        const input = el.querySelector('[data-bb-combo-input]');
-        if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-
-    // click ใน filter body นอก dropdown → ปิดเมนูที่เปิดอยู่
-    const body = root.querySelector('[data-bb-filter-body]');
-    if (body) body.addEventListener('click', e => { if (!e.target.closest('[data-bb-ml-dd]')) closeMenus(null); });
-
-    /* ล้างการเลือก — reset controls in-place (ไม่โหลดหน้าใหม่) แล้ว AJAX filter จุดเดียว
-       bb-components clear ใช้ baseline = ค่าที่กรองอยู่ (server-persisted) → reset ผิด ·
-       จึ่ง override: capture + stopImmediatePropagation กัน handler เดิม แล้ว reset เอง */
-    const clearBtn = root.querySelector('[data-bb-filter-clear]');
-    if (clearBtn) clearBtn.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        // dropdowns → 'ทั้งหมด' (silent) · budget_type รีเซ็ต cascade budget_sub ด้วย
-        dds.forEach(dd => {
-            pick(dd, '', 'ทั้งหมด', true);
-            if (dd.querySelector('[data-bb-ml-dd-input]').name === 'budget_type') rebuildBudgetSub('');
+    if (budgetTypeBody) {
+        budgetTypeBody.addEventListener('change', e => {
+            if (e.target.name === 'budget_type') rebuildBudgetSub(e.target.value);
         });
-        // booker combo → placeholder (silent)
-        const combo = root.querySelector('.bb-combo');
-        if (combo) {
-            const cin = combo.querySelector('[data-bb-combo-input]');
-            const clbl = combo.querySelector('[data-bb-combo-label]');
-            if (cin) cin.value = '';
-            if (clbl) { clbl.textContent = 'ทั้งหมด'; clbl.classList.add('is-ph'); }
-            combo.querySelectorAll('.bb-combo-opt').forEach(x => {
-                x.classList.remove('is-on');
-                const c = x.querySelector('[data-lucide="check"]'); if (c) c.remove();
-            });
-        }
-        // cost slider (dual) → เต็มพิสัย (silent render)
-        const slider = root.querySelector('[data-bb-slider]');
-        if (slider) slider.dispatchEvent(new CustomEvent('bb-slider:reset'));
-        // badge off + filter จุดเดียว
-        root.classList.remove('is-active');
-        runFilter();
-    }, true);   // capture: stop ก่อน bubble listener ของ bb-components
-})();
-
-/* cost slider (dual) → debounce → native change ให้ bb_filter จับ (badge + runFilter) */
-(function bindFilterSlider() {
-    const root = document.getElementById('bbMlFilter');
-    if (!root) return;
-    const slider = root.querySelector('[data-bb-slider]');
-    if (!slider) return;
-    let t;
-    slider.addEventListener('bb-slider:change', () => {
-        clearTimeout(t);
-        t = setTimeout(() => {
-            const input = slider.querySelector('[data-bb-slider-input]');
-            if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
-        }, 300);
-    });
+    }
 })();
 
 /* ── Selection / Summary (re-bindable หลัง AJAX swap) ── */
@@ -304,7 +363,7 @@ function recalcSummary() {
     const rows = getRows();
     const selected = rows.filter(r => {
         const cb = r.querySelector('.bb-ml-row-check');
-        return cb && cb.checked;
+        return cb && cb.classList.contains('is-on');
     });
 
     if (selected.length > 0) {
@@ -326,22 +385,15 @@ function recalcSummary() {
     }
 
     if (!$checkAll) return;
+    // $checkAll = bb-check-box (span) ไม่มี native .indeterminate/.checked — ใช้ setCheck() เท่านั้น
+    // indeterminate (บางแถว) ข้าม visual แยก — ไม่มี CSS rule รองรับ (.is-indeterminate) จึงถือเป็น "ไม่ครบ" เหมือน none
     const enabled = rows.filter(r => {
         const cb = r.querySelector('.bb-ml-row-check');
-        return cb && !cb.disabled;
+        return cb && !cb.classList.contains('is-disabled');
     });
-    if (enabled.length === 0) {
-        $checkAll.indeterminate = false;
-        $checkAll.checked = false;
-    } else if (enabled.every(r => r.querySelector('.bb-ml-row-check').checked)) {
-        $checkAll.indeterminate = false;
-        $checkAll.checked = true;
-    } else if (enabled.some(r => r.querySelector('.bb-ml-row-check').checked)) {
-        $checkAll.indeterminate = true;
-    } else {
-        $checkAll.indeterminate = false;
-        $checkAll.checked = false;
-    }
+    const allChecked = enabled.length > 0 &&
+        enabled.every(r => r.querySelector('.bb-ml-row-check').classList.contains('is-on'));
+    setCheck($checkAll, allChecked);
 }
 
 let _sumInit = false, _sumLast = null;
@@ -374,8 +426,10 @@ function calcAllSummary() {
 }
 
 function clearSelection() {
-    document.querySelectorAll('.bb-ml-row-check').forEach(cb => { cb.checked = false; });
-    if ($checkAll) { $checkAll.checked = false; $checkAll.indeterminate = false; }
+    // .bb-ml-row-check เป็น custom checkbox (span + is-on class) ไม่ใช่ <input> จริง — ต้องใช้ setCheck()
+    // เดิม cb.checked = false ไม่มีผลอะไรเลยเพราะ span ไม่มี property .checked
+    document.querySelectorAll('.bb-ml-row-check').forEach(cb => setCheck(cb, false));
+    if ($checkAll) setCheck($checkAll, false);
     recalcSummary();
 }
 
@@ -593,19 +647,23 @@ function bindResults() {
                 const cb = r.querySelector('.bb-ml-row-check');
                 if (cb && !cb.classList.contains('is-disabled')) setCheck(cb, on);
             });
+            recalcSummary();
         });
     }
     document.querySelectorAll('tr.bb-ml-row').forEach(row => {
         row.addEventListener('click', function (e) {
-            if (e.target.closest('button, a')) return;   // span checkbox = ปล่อยให้ toggle
+            // .bb-icon-btn (เมนู ⋮) เป็น span role="button" ไม่ใช่ <button> จริง — เดิมเช็กแค่ 'button, a'
+            // จึงหลุดผ่านมาทำให้คลิกเมนูดันไป toggle เลือกแถวด้วย ทั้งที่ openMileage() เปิด modal ไปแล้ว
+            if (e.target.closest('button, a, [role="button"]')) return;   // span checkbox = ปล่อยให้ toggle
             const cb = row.querySelector('.bb-ml-row-check');
             if (cb && !cb.classList.contains('is-disabled')) setCheck(cb, !cb.classList.contains('is-on'));
+            recalcSummary();
         });
     });
     calcAllSummary();
     if (bbMlQuery) applySearch(bbMlQuery);    // re-apply search หลัง AJAX swap (rows ใหม่)
     bindSortHeaders();                      // re-bind sort + re-apply sortState หลัง swap
-    staggerRows('#bbMlResults', { rows: 'tr.bb-ml-row, .bb-ml-trip-card', dots: '.bb-status .bb-dot, .bb-avatar' });
+    staggerRows('#bbMlResults', { rows: 'tr.bb-ml-row, .bb-ml-trip-card', dots: '.bb-status [data-lucide], .bb-avatar' });
 }
 
 /* toggle bb-check-box (span) — class .is-on + aria */

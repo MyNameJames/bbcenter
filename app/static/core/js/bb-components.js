@@ -28,6 +28,28 @@
     const stop = e => e.stopPropagation();
     const icons = () => { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); };
 
+    /* ── Popover mutual-exclusion (cross-widget · cross-file — bb-daterange.js เป็นไฟล์แยกเรียกผ่าน window เอง)
+       เปิด popover ตัวใหม่ → ปิดตัวที่เปิดค้างอยู่ก่อนเสมอ (combo/ue_chip_dd/filter/daterange) */
+    function bbOpenPopover(closeFn) {
+        if (window.__bbActivePopoverClose && window.__bbActivePopoverClose !== closeFn) window.__bbActivePopoverClose();
+        window.__bbActivePopoverClose = closeFn;
+    }
+    function bbClosePopover(closeFn) {
+        if (window.__bbActivePopoverClose === closeFn) window.__bbActivePopoverClose = null;
+    }
+
+    /* ── กัน popover ล้นขอบจอแนวนอน (ทุกขนาดจอ) — เหมือน clampToViewport ของ bb-daterange.js
+       ใช้กับ popover ที่ position:fixed จาก getBoundingClientRect (ue_chip_dd, combo) ── */
+    function bbClampPopoverX(pop) {
+        pop.style.transform = '';
+        const r = pop.getBoundingClientRect();
+        const vw = window.innerWidth;
+        let shift = 0;
+        if (r.right > vw - 8) shift = r.right - (vw - 8);
+        else if (r.left < 8) shift = r.left - 8;
+        if (shift) pop.style.transform = `translateX(${-shift}px)`;
+    }
+
     function parseISO(v) {
         if (!v) return null;
         const [y, m, d] = String(v).split('-').map(Number);
@@ -247,8 +269,34 @@
             });
             if (emptyEl) emptyEl.hidden = shown > 0;
         }
-        function open() { pop.hidden = false; btn.classList.add('is-active'); btn.setAttribute('aria-expanded', 'true'); search.value = ''; filter(); search.focus(); }
-        function close() { pop.hidden = true; btn.classList.remove('is-active'); btn.setAttribute('aria-expanded', 'false'); }
+        const isRight = root.classList.contains('is-align-right');
+        /* portal ไป document.body ตอนเปิด (escape overflow:auto ของ ancestor เช่น toolbar scroll) —
+           เหมือน ue_chip_dd (ue_chip.html) · คำนวณตำแหน่ง/ความกว้างจาก getBoundingClientRect ของ btn */
+        function place() {
+            const r = btn.getBoundingClientRect();
+            pop.style.position = 'fixed';
+            pop.style.top = `${r.bottom + 6}px`;
+            pop.style.minWidth = `${Math.max(r.width, 208)}px`;   // 208px = floor เดิม (13rem)
+            if (isRight) { pop.style.left = 'auto'; pop.style.right = `${window.innerWidth - r.right}px`; }
+            else { pop.style.left = `${r.left}px`; pop.style.right = 'auto'; }
+        }
+        function open() {
+            document.body.appendChild(pop);
+            pop.hidden = false; btn.classList.add('is-active'); btn.setAttribute('aria-expanded', 'true');
+            search.value = ''; filter(); search.focus();
+            place();
+            requestAnimationFrame(() => bbClampPopoverX(pop));
+            window.addEventListener('scroll', place, true);
+            window.addEventListener('resize', place);
+            bbOpenPopover(close);
+        }
+        function close() {
+            pop.hidden = true; btn.classList.remove('is-active'); btn.setAttribute('aria-expanded', 'false');
+            root.appendChild(pop);
+            window.removeEventListener('scroll', place, true);
+            window.removeEventListener('resize', place);
+            bbClosePopover(close);
+        }
         function choose(o) {
             input.value = o.dataset.value;
             label.textContent = o.dataset.label; label.classList.remove('is-ph');
@@ -261,7 +309,7 @@
         pop.addEventListener('click', stop);
         search.addEventListener('input', filter);
         list.addEventListener('click', e => { const o = e.target.closest('.bb-combo-opt'); if (o) choose(o); });
-        document.addEventListener('click', e => { if (!pop.hidden && !root.contains(e.target)) close(); });
+        document.addEventListener('click', e => { if (!pop.hidden && !root.contains(e.target) && !pop.contains(e.target)) close(); });
     }
 
     /* ────────────────────────────── UPLOAD (dropzone) */
@@ -677,14 +725,17 @@
             document.body.appendChild(pop);          // portal → escape overflow/transform ancestor
             pop.hidden = false; root.classList.add('is-open'); btn.setAttribute('aria-expanded', 'true');
             place();
+            requestAnimationFrame(() => bbClampPopoverX(pop));
             window.addEventListener('scroll', place, true);
             window.addEventListener('resize', place);
+            bbOpenPopover(close);
         }
         function close() {
             pop.hidden = true; root.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false');
             root.appendChild(pop);                   // move กลับเข้า root
             window.removeEventListener('scroll', place, true);
             window.removeEventListener('resize', place);
+            bbClosePopover(close);
         }
         btn.addEventListener('click', function (e) { stop(e); pop.hidden ? open() : close(); });
         pop.addEventListener('click', stop);         // คลิกใน panel = ไม่ปิด (live select)

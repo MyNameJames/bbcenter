@@ -79,6 +79,8 @@
     <a href="#dropdown">Dropdown</a>
     <a href="#pagination">Pagination</a>
     <a href="#modal">Modal</a>
+    <a href="#drawer">Drawer</a>
+    <a href="#desc">DescList</a>
     <a href="#timeline">Timeline</a>
     <a href="#card">Card</a>
     <a href="#kpi">KPI</a>
@@ -99,7 +101,8 @@
 
     <section class="g-sec" id="button">
       <div class="g-sec-head"><h2>Button</h2><span class="g-cls">components.Button</span></div>
-      <p class="g-sec-desc">variant: <code>pri·sec·ghost·danger</code> · <code>size='sm'</code> · <code>icon_only</code> · <code>on_click</code> → data-action</p>
+      <p class="g-sec-desc">variant: <code>pri·sec·ghost·danger·danger-sec</code> · <code>size='sm'</code> · <code>icon_only</code> · <code>block</code> (เต็มแถว) · <code>on_click</code> → data-action<br>
+        <code>pri</code> = ink fill · <code>ghost</code> = ตัวเขียว <code>accent-dk</code> · <code>danger-sec</code> = ขาว+ขอบ+ตัวแดง (ปฏิเสธ/ยกเลิก ไม่ตะโกน)</p>
       <div class="g-block">
         <div class="g-demo">
           {% for b in buttons %}{{ component(b) }}{% endfor %}
@@ -228,6 +231,35 @@
       <pre class="g-py">Modal('ยืนยันการลบ', sub='...', body=Markup('...'), actions=[Button('ยกเลิก','sec'), Button('ลบรายการ','danger')])</pre>
     </section>
 
+    <section class="g-sec" id="drawer">
+      <div class="g-sec-head"><h2>Drawer</h2><span class="g-cls">components.Drawer + Section</span></div>
+      <p class="g-sec-desc">
+        แผงรายละเอียดฝั่งขวา — ใช้แทน <b>Modal</b> เมื่อต้อง <b>เห็น list เบื้องหลัง</b> (P2 Workspace/Queue: triage คิวทีละใบ)<br>
+        โครง 3 ชั้น: <code>head</code> นิ่ง · <code>body</code> scroll · <code>foot</code> นิ่ง → ปุ่ม action ไม่หนีไปกับ scroll ·
+        <code>overlay=False</code> = ฝัง inline (2-pane บนจอกว้าง)
+      </p>
+      <div class="g-block">
+        <div class="g-demo is-block" style="background:var(--bb-n100);justify-content:flex-end">
+          <div style="height:560px;display:flex">{{ component(drawer) }}</div>
+        </div>
+      </div>
+      <pre class="g-py">Drawer('VR-240719-001', eyebrow='คำขอใช้รถ', sub='พรุ่งนี้ · 19 ก.ค.', status=Status('รออนุมัติ','wr'),
+       body=[Section('รายละเอียดคำขอ', desc)], actions=[Button('อนุมัติคำขอ','pri',block=True)])</pre>
+    </section>
+
+    <section class="g-sec" id="desc">
+      <div class="g-sec-head"><h2>DescList</h2><span class="g-cls">components.DescList</span></div>
+      <p class="g-sec-desc">
+        label ซ้าย / value ขวา — <b>⛔ ห้ามใช้ Table</b> (ไม่มีหัวคอลัมน์ ไม่ sort ไม่ scan ข้ามแถว) ·
+        <code>num=True</code> = ตัวเลข Inter+tnum · <code>stack=True</code> = ค่ายาวซ้อนบน-ล่าง
+      </p>
+      <div class="g-block">
+        <div style="max-width:420px">{{ component(desc) }}</div>
+      </div>
+      <pre class="g-py">DescList([{'label':'ผู้โดยสาร', 'value':'6', 'num':True},
+          {'label':'หมายเหตุ', 'value':'...', 'stack':True}])</pre>
+    </section>
+
     <section class="g-sec" id="timeline">
       <div class="g-sec-head"><h2>Timeline</h2><span class="g-cls">components.Timeline + TLItem</span></div>
       <p class="g-sec-desc">state แต่ละ item: <code>done</code> · <code>cur</code> · <code>todo</code> · <code>time</code> เว้น = "—" · <code>desc</code> optional</p>
@@ -259,7 +291,11 @@
 
     <section class="g-sec" id="table">
       <div class="g-sec-head"><h2>Table</h2><span class="g-cls">components.Table + Cell Component</span></div>
-      <p class="g-sec-desc">controller สร้าง <code>Table(data=..., columns=[Column(...)])</code> · คอลัมน์สถานะ = <b>Cell Component</b> render ผ่าน <code>Status</code></p>
+      <p class="g-sec-desc">
+        controller สร้าง <code>Table(data=..., columns=[Column(...)])</code> · คอลัมน์สถานะ = <b>Cell Component</b> render ผ่าน <code>Status</code><br>
+        row key พิเศษ: <code>_group</code>/<code>_group_note</code>/<code>_accent</code> = แถวหัวกลุ่ม · <code>_locked</code> = แถวจางทำ action ไม่ได้ · <code>_sel</code> = แถวที่เลือก ·
+        <code>Column(sub='key')</code> = บรรทัดรองใน cell
+      </p>
       <div class="g-block">
         {{ component(table) }}
       </div>
@@ -279,10 +315,11 @@
 
     <section class="g-sec" id="status">
       <div class="g-sec-head"><h2>Status</h2><span class="g-cls">components.Status</span></div>
-      <p class="g-sec-desc">tone: <code>ok·wr·dg·info·neutral</code> — <code>inline=True</code> สำหรับในตาราง</p>
+      <p class="g-sec-desc">tone: <code>ok·wr·dg·info·neutral</code> — <code>inline=True</code> สำหรับในตาราง ·
+        <b>⛔ ไม่มีแบบ dot เปล่าแล้ว</b> (ok เขียวชนกับ accent → ต้องมี icon คู่ label เสมอ) · ไม่ส่ง <code>icon</code> = ใช้ icon ประจำ tone</p>
       <div class="g-block">
         <div class="g-demo">
-          <span class="g-label">pill (มีพื้น + dot)</span>
+          <span class="g-label">badge (มีพื้น + icon)</span>
           {% for s in statuses %}{{ component(s) }}{% endfor %}
         </div>
         <div class="g-demo" style="margin-top:1rem">

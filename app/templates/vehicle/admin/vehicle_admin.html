@@ -1,62 +1,312 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>อนุมัติการจองรถ - BBCenter</title>
-    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
-    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/components.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/gallery.css') }}">
-    <style>
-        /* ── Page-scoped override (เฉพาะหน้านี้) ──
-           #weekJumpDp เล็กลงเหมือน mockup Case 15 (bootstrap-cases-gallery.html) —
-           ไม่แตะ .bb-dp-trigger กลาง (ยังไม่มีหน้าอื่นใช้ bb_datepicker แต่กันไว้เผื่ออนาคต) ── */
-        #weekJumpDp .bb-dp-trigger {
-            min-width: 0; background: var(--bb-n50); border: none; box-shadow: none;
-            padding: .25rem .625rem; font-size: .8125rem; font-weight: 400; color: var(--bb-mut); gap: .25rem;
-        }
-        #weekJumpDp .bb-dp-trigger [data-lucide] { width: .875rem; height: .875rem; }
-    </style>
-</head>
-<body>
-{% set page_section = 'ผู้ดูแลระบบ' %}
-{% set page_title = 'อนุมัติรถ' %}
+{% extends '_base_ue.html' %}
 
-{# ── Header: mobile/tablet only (xl+ ซ่อน เพราะ sidebar ปรากฏอยู่แล้ว) ── #}
-<div class="d-xl-none">
-    {% include '_shared/header.html' %}
-</div>
+{% block title %}<title>อนุมัติการจองรถ - BBCenter</title>{% endblock %}
+{% block page_title %}อนุมัติรถ{% endblock %}
 
-<div class="container-fluid">
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-    {% set active_menu = 'admin' %}
-    {% include '_shared/sidebar.html' %}
+{% block head %}
+<style>
+    /* ── Page-scoped override (เฉพาะหน้านี้) ──
+       #weekJumpDp เล็กลงเหมือน mockup Case 15 (bootstrap-cases-gallery.html) —
+       ไม่แตะ .bb-dp-trigger กลาง (ยังไม่มีหน้าอื่นใช้ bb_datepicker แต่กันไว้เผื่ออนาคต) ── */
+    #weekJumpDp .bb-dp-trigger {
+        min-width: 0; background: var(--bb-n50); border: none; box-shadow: none;
+        padding: .25rem .625rem; font-size: .8125rem; font-weight: 400; color: var(--bb-mut); gap: .25rem;
+    }
+    #weekJumpDp .bb-dp-trigger [data-lucide] { width: .875rem; height: .875rem; }
 
-    <main class="bb-sidebar-main">
-        <div class="container-xxl px-1 px-md-5">
+    /* NEW — ตาราง preview ไม่มี thead แล้ว border-top ของ .bb-table ดูลอย ตัดออกเฉพาะตัวนี้ */
+    #adminPreviewTable { border-top: none; }
+</style>
+{% endblock %}
 
-            {# ── Desktop page title (xl+ only — แทน header) ── #}
-            <div class="d-none d-xl-block pt-5">
-                <h2 class="m-0 fw-bold pt-3" style="color:var(--bb-accent)">{{ page_title }}</h2>
+{% block content %}
+{% include '_shared/tab2.html' %}
+{% from '_shared/tab2.html' import tab2_tabs %}
+
+            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — calendar weekstrip mockup ตามภาพที่ให้ (ครอบ bb-card)
+               ไม่ใช่ class จริง .bb-ws-* (ทรง/สีต่างจาก component จริงด้านล่างตั้งใจ ตามภาพ) เป็น custom inline style ล้วน hardcode ยังไม่ผูก data/JS ── #}
+            <div class="row g-4 pt-4">
+                <div class="col-12 col-lg-6">
+                    <div class="bb-card p-3">
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="bb-icon-btn flex-shrink-0"><i data-lucide="chevron-left"></i></button>
+                            <div class="d-flex flex-fill" style="min-width:0">
+                                <button type="button" class="text-center rounded-3" style="border:none;font:inherit;cursor:pointer;background:var(--bb-ink);color:#fff;padding:.5rem .25rem;flex:1;min-width:0">
+                                    <div style="font-size:.75rem;opacity:.75">อ</div>
+                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700">21</div>
+                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
+                                        <div style="width:1.05rem;height:.25rem;border-radius:999px;background:#fff"></div>
+                                    </div>
+                                </button>
+                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
+                                    <div style="font-size:.75rem;color:var(--bb-mut)">พ</div>
+                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-str)">22</div>
+                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
+                                        <div style="width:.35rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
+                                    </div>
+                                </button>
+                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
+                                    <div style="font-size:.75rem;color:var(--bb-mut)">พฤ</div>
+                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-str)">23</div>
+                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
+                                        <div style="width:1.75rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
+                                    </div>
+                                </button>
+                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
+                                    <div style="font-size:.75rem;color:var(--bb-mut)">ศ</div>
+                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-str)">24</div>
+                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
+                                        <div style="width:.7rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
+                                    </div>
+                                </button>
+                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
+                                    <div style="font-size:.75rem;color:var(--bb-info)">ส</div>
+                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-info)">25</div>
+                                    <div style="height:.375rem;margin-top:.25rem"></div>
+                                </button>
+                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
+                                    <div style="font-size:.75rem;color:var(--bb-dg)">อา</div>
+                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-dg)">26</div>
+                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
+                                        <div style="width:1.4rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
+                                    </div>
+                                </button>
+                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
+                                    <div style="font-size:.75rem;color:var(--bb-mut)">จ</div>
+                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-str)">27</div>
+                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
+                                        <div style="width:.7rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
+                                    </div>
+                                </button>
+                            </div>
+                            <button type="button" class="bb-icon-btn flex-shrink-0"><i data-lucide="chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {# ── Flash messages ─────────────────────────── #}
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                <div class="mb-3">
-                    {% for category, message in messages %}
-                    {% set _co = {'success':'ok','danger':'dg','warning':'wr','info':'info'}.get(category, 'info') %}
-                    <div class="bb-callout is-{{ _co }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            {% endwith %}
+            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — แบ่ง col-8/col-4: col-8 = tab→table ใหม่ทั้งชุด · col-4 = เอา vehicleList (col-lg-4 เดิม) มาโชว์ตัวอย่างคู่กัน ── #}
+            <div class="row g-4 pt-2">
+            <div class="col-12 col-lg-8">
 
+            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — tab ใต้ h1 ตาม pattern vehicle_mileage.html (tab2_tabs)
+               hardcode label/value ยังไม่ผูก data จริง/JS click handler ── #}
+            <div class="pt-3">
+                {{ tab2_tabs([
+                    {'label':'ทั้งหมด',        'value':'all',              'active': True},
+                    {'label':'รออนุมัติ',       'value':'pending'},
+                    {'label':'ส่งผู้ประสานงาน', 'value':'waiting_approver'},
+                    {'label':'อนุมัติแล้ว',     'value':'approved'},
+                    {'label':'ปฏิเสธ',         'value':'rejected'},
+                ]) }}
+            </div>
+
+            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — action bar ระหว่าง tab กับตาราง preview · ยังไม่ผูก onclick จริง ── #}
+            <div class="d-flex gap-2 pt-4">
+                <button type="button" class="bb-btn" style="background:var(--bb-n50);color:var(--bb-n700);outline:none">
+                    <i data-lucide="merge"></i>
+                    รวมงาน
+                </button>
+                <button type="button" class="bb-btn" style="background:var(--bb-n50);color:var(--bb-n700);outline:none">
+                    แจ้ง Telegram
+                </button>
+            </div>
+
+            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — ตาราง desktop preview · ไม่มี thead ตามที่ขอ
+               data hardcode ตัวอย่าง ยังไม่ผูก bookings จริง/JS · แถว "งานร่วม" โชว์ accordion แบบ expanded ไว้ก่อน ยังไม่ผูก toggle จริง ── #}
+            <div class="bb-table-scroll d-none d-md-block mt-2 mb-4">
+                <table class="bb-table" id="adminPreviewTable">
+                    <tbody>
+                        <tr>
+                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
+                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-n100);color:var(--bb-mut)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
+                            <td>
+                                <div class="fw-semibold" style="color:var(--bb-str)">สมชาย ใจดี</div>
+                                <div class="bb-subtext">อาคารสำนักงานใหญ่ → สนามบินสุวรรณภูมิ</div>
+                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
+                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>6
+                                    <span>|</span>
+                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>09:00–12:00 (3 ชม.)
+                                </div>
+                            </td>
+                            <td>
+                                <div>ส่วนกลาง</div>
+                                <div class="bb-subtext">รับ-ส่งลูกค้า</div>
+                            </td>
+                            <td>
+                                <div>—</div>
+                                <div class="bb-subtext">—</div>
+                            </td>
+                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
+                        </tr>
+
+                        <tr>
+                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
+                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-info-bg);color:var(--bb-info-tx)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
+                            <td>
+                                <div class="fw-semibold" style="color:var(--bb-str)">จันทร์เพ็ญ ศรีสุข</div>
+                                <div class="bb-subtext">อาคารสำนักงานใหญ่ → ธนาคารกรุงเทพ สนญ.</div>
+                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
+                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>2
+                                    <span>|</span>
+                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>10:00–11:30 (1.5 ชม.)
+                                </div>
+                            </td>
+                            <td>
+                                <div>ส่วนกอง</div>
+                                <div class="bb-subtext">ฝ่ายบุคคล</div>
+                            </td>
+                            <td>
+                                <div>—</div>
+                                <div class="bb-subtext">—</div>
+                            </td>
+                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
+                        </tr>
+
+                        <tr>
+                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
+                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg);color:var(--bb-ok-tx)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
+                            <td>
+                                <div class="fw-semibold" style="color:var(--bb-str)">สุภาพร วงศ์ทอง</div>
+                                <div class="bb-subtext">อาคารสำนักงานใหญ่ → ไอคอนสยาม</div>
+                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
+                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>4
+                                    <span>|</span>
+                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>13:00–17:00 (4 ชม.)
+                                </div>
+                            </td>
+                            <td>
+                                <div>ส่วนกลาง</div>
+                                <div class="bb-subtext">รับรองลูกค้า</div>
+                            </td>
+                            <td>
+                                <div>สมศักดิ์ มีชัย</div>
+                                <div class="bb-subtext">1กข 1234</div>
+                            </td>
+                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
+                        </tr>
+
+                        <tr>
+                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
+                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-dg-bg);color:var(--bb-dg-tx)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
+                            <td>
+                                <div class="fw-semibold" style="color:var(--bb-str)">อารีย์ พงษ์ไพบูลย์</div>
+                                <div class="bb-subtext">อาคารสำนักงานใหญ่ → สนามบินดอนเมือง</div>
+                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
+                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>5
+                                    <span>|</span>
+                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>16:00–18:30 (2.5 ชม.)
+                                </div>
+                            </td>
+                            <td>
+                                <div>ส่วนตัว</div>
+                                <div class="bb-subtext">—</div>
+                            </td>
+                            <td>
+                                <div>—</div>
+                                <div class="bb-subtext">—</div>
+                            </td>
+                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
+                        </tr>
+
+                        {# แถวรวมทริป (tripGroup) — คลิกแล้วขยาย accordion ด้านล่าง (โชว์ expanded ไว้ก่อน ยังไม่ผูก JS toggle จริง) #}
+                        <tr style="cursor:pointer">
+                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
+                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-n100);color:var(--bb-mut)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
+                            <td>
+                                <div class="fw-semibold d-flex align-items-center gap-1" style="color:var(--bb-str)">
+                                    <i data-lucide="chevron-down" style="width:.875rem;height:.875rem"></i>
+                                    งานร่วม <span class="bb-badge is-neutral">2</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div>ส่วนกอง</div>
+                                <div class="bb-subtext">ฝ่ายผลิต</div>
+                            </td>
+                            <td>
+                                <div>—</div>
+                                <div class="bb-subtext">—</div>
+                            </td>
+                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
+                        </tr>
+                        <tr style="background:var(--bb-n50)">
+                            <td></td>
+                            <td></td>
+                            <td colspan="4">
+                                <div class="fw-semibold" style="color:var(--bb-str)">ธนพล รุ่งเรือง</div>
+                                <div class="bb-subtext">คลังสินค้า สมุทรปราการ → นิคมฯ บางปู</div>
+                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
+                                    <i data-lucide="directions_run" style="width:.875rem;height:.275rem"></i>2
+                                    <span>|</span>
+                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>14:00–16:00 (2 ชม.)
+                                </div>
+                            </td>
+                        </tr>
+                        <tr style="background:var(--bb-n50)">
+                            <td></td>
+                            <td></td>
+                            <td colspan="4">
+                                <div class="fw-semibold" style="color:var(--bb-str)">มานะ ตั้งใจ</div>
+                                <div class="bb-subtext">คลังสินค้า สมุทรปราการ → นิคมฯ บางปู</div>
+                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
+                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>3
+                                    <span>|</span>
+                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>14:00–16:00 (2 ชม.)
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            </div>{# /col-8 ใหม่ #}
+            <div class="col-12 col-lg-4">
+                {# NEW — คัดลอกโครง col-lg-4/vehicleList เดิมมาโชว์ตัวอย่าง · แค่ 5 คันแรก · ไม่โชว์บรรทัดสถานะ(ว่าง) เหลือแค่เลขไมล์ · hardcode ยังไม่ผูก JS #}
+                <div class="bb-card border-1 shadow-sm rounded-1">
+                    <div class="card-body p-4">
+                        <h3 class="h6 fw-bold mb-3">การใช้รถ</h3>
+                        <hr class="mt-0 mb-3">
+                        <div class="bb-buy-list">
+                            <div class="d-flex gap-3 bb-buy-item">
+                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold">1กข 1234</div>
+                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3 bb-buy-item">
+                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold">4ฉช 3456</div>
+                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3 bb-buy-item">
+                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold">5ญฎ 7788</div>
+                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3 bb-buy-item">
+                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold">2ขค 5678</div>
+                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3 bb-buy-item">
+                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold">3งจ 9012</div>
+                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>{# /row ใหม่ #}
 
             {# ── Main Split (Bootstrap row/col) ───────────── #}
             <div class="row g-4 pt-4">
@@ -81,11 +331,11 @@
                                     <span style="font-size:.8125rem;font-weight:400;color:var(--bb-mut);margin-left:.375rem;" id="beforeCount"></span>
                                 </h3>
                                 <div class="d-inline-flex gap-2" id="beforeHeaderRight">
-                                    <button type="button" class="bb-btn is-sec is-sm" id="btnMerge" onclick="toggleGroupMode()" title="รวมหลายงานในเที่ยวเดียว">
+                                    <button type="button" class="bb-btn is-sec py-2 px-3" id="btnMerge" onclick="toggleGroupMode()" title="รวมหลายงานในเที่ยวเดียว">
                                         <i data-lucide="merge"></i>
                                         รวมงาน
                                     </button>
-                                    <button type="button" class="bb-btn is-sec is-sm" id="btnNotify" onclick="toggleNotifyMode()" title="แจ้งผ่าน Telegram">
+                                    <button type="button" class="bb-btn is-sec py-2 px-3" id="btnNotify" onclick="toggleNotifyMode()" title="แจ้งผ่าน Telegram">
                                         <i data-lucide="send"></i>
                                         แจ้งเตือน
                                     </button>
@@ -128,10 +378,9 @@
 
             </div>{# end main row #}
 
-        </div>{# end container-xxl #}
-    </main>
-</div>
+{% endblock %}
 
+{% block modals %}
 {# ════════════════════════════════════════════════
    MODAL: Approve & Assign Resources
    ════════════════════════════════════════════════ #}
@@ -326,6 +575,10 @@
 {# ── Toast (in-page) ── #}
 {{ component(toast_region) }}
 
+{% include 'vehicle/modals/vehicle_detail.html' %}
+{% endblock %}
+
+{% block scripts %}
 {# ── Data injection ── #}
 <script>
 window.BOOKINGS_DATA = [
@@ -400,11 +653,5 @@ window.FUEL_PRICE = {{ fuel_price }};
 window.SERVER_NOW = {{ now.isoformat() | tojson }};
 </script>
 
-{% include 'vehicle/modals/vehicle_detail.html' %}
-
-<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='core/js/bb-components.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_admin.js') }}"></script>
-</body>
-</html>
+{% endblock %}

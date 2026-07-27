@@ -31,6 +31,13 @@ const STATUS_BADGE = {
     rejected:         { cls:'is-dg',   label:'ปฏิเสธ' },
 };
 
+/* icon ประจำ tone ของ .bb-status — ตรงกับ _BB_TONE_ICON ใน _components/bb/badge.html
+   (Batch 2, 2026-07-21: เลิกใช้ dot เปล่า เพราะ ok เขียวชนกับ accent) */
+const STATUS_TONE_ICON = {
+    'is-ok': 'check-circle', 'is-wr': 'clock', 'is-dg': 'x-circle',
+    'is-info': 'info', 'is-neutral': 'circle',
+};
+
 /* ── State ────────────────────────────────────── */
 const bookings  = [...(window.BOOKINGS_DATA  || [])];
 const vehicles  = [...(window.VEHICLES_DATA  || [])];
@@ -279,7 +286,7 @@ function renderSingleRow(b, idx = 0) {
     const purposeText = esc(b.purpose || '—');
     const destText    = esc(b.dest || '—');
 
-    const statusBadge = `<span class="bb-status ${sb.cls}"><span class="bb-dot"></span>${sb.label}</span>`;
+    const statusBadge = `<span class="bb-status ${sb.cls}"><i data-lucide="${STATUS_TONE_ICON[sb.cls] || 'circle'}"></i>${sb.label}</span>`;
 
     /* badge 1 — ช่วงเวลาเดินทาง */
     const timeText  = b.start ? `${esc(b.start)}${b.end ? `–${esc(b.end)}` : ''}` : '';
@@ -394,7 +401,7 @@ function renderGroupRow(grpName, members, idx = 0) {
     const isGrpNotifySelectable = notifyMode && approvedMembers.length > 0;
     const isGrpNotifySel        = isGrpNotifySelectable && approvedMembers.every(b => notifySel.has(b.id));
 
-    const titleBadge = `<span class="bb-status is-ok"><span class="bb-dot"></span>${members.length} งานรวม</span>`;
+    const titleBadge = `<span class="bb-status is-ok"><i data-lucide="check-circle"></i>${members.length} งานรวม</span>`;
     const grpCheckboxSlot = isGrpNotifySelectable
         ? `<input type="checkbox" class="form-check-input mt-1 flex-shrink-0" ${isGrpNotifySel?'checked':''} onclick="event.stopPropagation();toggleGroupNotifySel('${grpName}')" aria-label="เลือกกลุ่มเพื่อแจ้ง">`
         : '';
@@ -1077,9 +1084,9 @@ function openSwapModal(bookingId) {
     } else {
         listEl.innerHTML = swappable.map(v => {
             const isCurrent = v.id === b?.vehicleId;
-            const statusLabel = isCurrent ? '<span class="bb-status is-info"><span class="bb-dot"></span>ปัจจุบัน</span>'
-                              : usedIds.has(v.id) ? '<span class="bb-status is-neutral"><span class="bb-dot"></span>จองแล้ว</span>'
-                              : '<span class="bb-status is-ok"><span class="bb-dot"></span>ว่าง</span>';
+            const statusLabel = isCurrent ? '<span class="bb-status is-info"><i data-lucide="info"></i>ปัจจุบัน</span>'
+                              : usedIds.has(v.id) ? '<span class="bb-status is-neutral"><i data-lucide="circle"></i>จองแล้ว</span>'
+                              : '<span class="bb-status is-ok"><i data-lucide="check-circle"></i>ว่าง</span>';
             const style = isCurrent ? 'border-color:var(--bb-accent-i);background:var(--bb-accent-bg);' : 'border-color:var(--bb-n200);';
             return `<div data-swap-item class="d-flex align-items-center gap-2 p-2 mb-2" style="border:1px solid;${style}border-radius:var(--bb-r-md);cursor:pointer" onclick="selectSwapVehicle(${v.id},this)">
                 <span class="bb-avatar flex-shrink-0" style="width:2rem;height:2rem;background:var(--bb-n100)"><i data-lucide="car" style="width:.875rem;height:.875rem;color:var(--bb-mut)"></i></span>

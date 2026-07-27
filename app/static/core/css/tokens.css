@@ -10,13 +10,27 @@
             +icon/sidebar tokens, font-mono → Manrope; เดิม 2026-05-16 Phase 5.1)
    ============================================================ */
 
-/* ซ่อน scrollbar ทุกหน้า (global) — scroll ยังทำงานได้ปกติ แค่ไม่โชว์แถบ */
+/* ซ่อน scrollbar ทุกหน้า (global, single source — ไฟล์อื่น import จากที่นี่ ห้ามก็อปซ้ำ)
+   scroll ยังทำงานได้ปกติ แค่ไม่โชว์แถบ */
 html, body {
     scrollbar-width: none;      /* Firefox */
     -ms-overflow-style: none;   /* IE/Edge legacy */
 }
 html::-webkit-scrollbar, body::-webkit-scrollbar {
     display: none;              /* Chrome/Safari/Edge Chromium */
+}
+
+/* Modal × scrollbar-hidden fix — scrollbar ถูกซ่อนไปแล้วด้านบน (width 0 เสมอ)
+   แต่ Bootstrap ยังคำนวณ + เติม body padding-right ชดเชย scrollbar ตอนเปิด modal
+   ทั้งที่ไม่มี scrollbar ให้ชดเชยตั้งแต่แรก → เห็นเป็นช่องว่างขวาจอ ล้างทิ้งแทน;
+   ขอบขวาที่ backdrop อาจไม่คลุมสุดจอ ให้กว้าง 100vw ชดเชย
+   global = ทุก modal ทุกหน้า (ปัจจุบัน + อนาคต) ไม่ต้อง list ID */
+body.modal-open {
+    padding-right: 0 !important;
+}
+.modal-backdrop {
+    width: 100vw;
+    height: 100dvh;
 }
 
 :root {

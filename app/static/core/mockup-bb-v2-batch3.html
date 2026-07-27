@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BB v2 · Batch 3 — Drawer</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/components.css">
+
+<style>
+/* ══════════════════════════════════════════════════════════════
+   Batch 3 · DRAWER — proposal (ยังไม่ลง components.css)
+   ★ ใหม่ทั้งหมด: .bb-drawer · .bb-desc · .bb-section
+   ปรับ: .bb-timeline (sub + สี dot) · .bb-callout (radius/สี/icon)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── ★ DRAWER ───────────────────────────────────────────────── */
+.b3 .bb-drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1040; }
+.b3 .bb-drawer {
+  display: flex; flex-direction: column;
+  width: 420px; max-width: 100%; background: #fff;
+  border-left: 1px solid var(--bb-n200); box-shadow: var(--bb-shadow-lg);
+}
+/* หัว — ไม่ scroll ไปกับเนื้อ */
+.b3 .bb-drawer-head { flex-shrink: 0; padding: 24px 24px 20px; border-bottom: 1px solid var(--bb-n200); position: relative; }
+.b3 .bb-drawer-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--bb-n500); margin-bottom: 8px; }
+.b3 .bb-drawer-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.b3 .bb-drawer-title { font-size: 22px; font-weight: 700; color: var(--bb-ink); font-family: var(--bb-num-font); }
+.b3 .bb-drawer-sub { font-size: 15px; font-weight: 600; color: var(--bb-accent-dk); margin-top: 8px; }
+.b3 .bb-drawer-x { position: absolute; top: 18px; right: 18px; width: 36px; height: 36px; border: none; background: none; color: var(--bb-mut); border-radius: var(--bb-r-pill); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.b3 .bb-drawer-x:hover { background: var(--bb-n100); color: var(--bb-ink); }
+/* เนื้อ — scroll เฉพาะตรงนี้ */
+.b3 .bb-drawer-body { flex: 1; overflow-y: auto; padding: 4px 24px 24px; }
+/* ท้าย — action ติดล่าง (ทางเลือก: ใส่ actions ใน body ก็ได้) */
+.b3 .bb-drawer-foot { flex-shrink: 0; padding: 16px 24px; border-top: 1px solid var(--bb-n200); display: flex; flex-direction: column; gap: 10px; }
+
+/* ── ★ SECTION (ใน drawer / card) ───────────────────────────── */
+.b3 .bb-section { padding: 20px 0; border-bottom: 1px solid var(--bb-n200); }
+.b3 .bb-section:last-child { border-bottom: none; }
+.b3 .bb-section-title { font-size: 16px; font-weight: 700; color: var(--bb-ink); margin-bottom: 12px; }
+
+/* ── ★ DESC LIST (label ซ้าย / value ขวา) ───────────────────── */
+.b3 .bb-desc { display: grid; grid-template-columns: minmax(90px, auto) 1fr; column-gap: 16px; row-gap: 0; }
+.b3 .bb-desc-label { font-size: 15px; color: var(--bb-mut); padding: 8px 0; }
+.b3 .bb-desc-value { font-size: 15px; font-weight: 600; color: var(--bb-ink); padding: 8px 0; text-align: right; }
+.b3 .bb-desc-value.is-num { font-family: var(--bb-num-font); }
+/* แนวตั้ง (จอแคบ / ค่ายาว) */
+.b3 .bb-desc.is-stack { grid-template-columns: 1fr; }
+.b3 .bb-desc.is-stack .bb-desc-label { padding-bottom: 0; }
+.b3 .bb-desc.is-stack .bb-desc-value { text-align: left; padding-top: 2px; }
+
+/* ── TIMELINE (ปรับ) ────────────────────────────────────────── */
+.b3 .bb-timeline { position: relative; padding-left: 2px; }
+.b3 .bb-tl-item { position: relative; padding: 0 0 20px 26px; }
+.b3 .bb-tl-item::before { content: ''; position: absolute; left: 6px; top: 16px; bottom: 0; width: 2px; background: var(--bb-n200); }
+.b3 .bb-tl-dot { position: absolute; left: 0; top: 3px; width: 14px; height: 14px; border-radius: 50%; border: none; box-shadow: none; background: var(--bb-n300); }
+.b3 .bb-tl-item.done .bb-tl-dot { background: var(--bb-accent); }   /* fill ชิ้นเล็ก = เขียวได้ */
+.b3 .bb-tl-item.cur  .bb-tl-dot { background: var(--bb-ink); }
+.b3 .bb-tl-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.b3 .bb-tl-title { font-size: 15px; font-weight: 600; color: var(--bb-ink); }
+.b3 .bb-tl-item.todo .bb-tl-title { color: var(--bb-n400); font-weight: 500; }
+.b3 .bb-tl-time { font-family: var(--bb-num-font); font-size: 13px; color: var(--bb-mut); white-space: nowrap; }
+/* ★ บรรทัดรอง (by ใคร) */
+.b3 .bb-tl-sub { font-size: 13px; color: var(--bb-mut); text-align: right; margin-top: 2px; }
+
+/* ── CALLOUT (ปรับ) ─────────────────────────────────────────── */
+.b3 .bb-callout { gap: 10px; border-radius: var(--bb-r-surface); padding: 14px 16px; font-size: 14px; line-height: 1.7; margin-bottom: 0; }
+.b3 .bb-callout.is-ok { background: var(--bb-accent-bg); color: var(--bb-accent-dk); }
+.b3 .bb-callout-title { font-weight: 600; margin-bottom: 2px; }
+.b3 .bb-callout .material-symbols-outlined { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+
+/* ── mockup chrome ──────────────────────────────────────────── */
+body { background: #FAFAFA; font-family: 'Sarabun', system-ui, sans-serif; color: #000; }
+.mk { max-width: 1400px; margin: 0 auto; padding: 40px 48px 80px; }
+.mk h1 { font-size: 38px; font-weight: 800; letter-spacing: -.5px; margin: 0 0 4px; }
+.mk .mk-sub { font-size: 15px; color: #757575; margin-bottom: 32px; line-height: 1.7; }
+.mk h2 { font-size: 20px; font-weight: 700; margin: 44px 0 4px; }
+.mk .mk-note { font-size: 13px; color: #757575; margin-bottom: 16px; line-height: 1.7; }
+.mk-panel { background: #fff; border: 1px solid #E8E8E8; border-radius: 8px; padding: 24px; }
+.mk-stage { background: #F3F3F3; border: 1px solid #E8E8E8; border-radius: 8px; padding: 24px; display: flex; justify-content: flex-end; }
+.mk-cap { font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase;
+          color: #9E9E9E; margin: 24px 0 10px; }
+.mk-cap:first-child { margin-top: 0; }
+.material-symbols-outlined { font-size: 20px; line-height: 1; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="mk">
+
+  <h1>Batch 3 · Drawer</h1>
+  <div class="mk-sub">
+    แผงรายละเอียดฝั่งขวา — ชิ้นที่ใหญ่ที่สุดที่ระบบยังไม่มี · ประกอบจาก 3 component ใหม่ + 2 ตัวที่ปรับ<br>
+    <b>ทำไมต้อง Drawer ไม่ใช่ Modal:</b> เปิดแล้วยัง<b>เห็นตารางเบื้องหลัง</b> — triage คิวทีละใบโดยไม่หลุด context (P2 Workspace/Queue)
+  </div>
+
+  <!-- ══════════════════════════ 1 · DRAWER เต็ม ══════════════════════════ -->
+  <h2>1 · Drawer เต็มใบ</h2>
+  <div class="mk-note">
+    <code>.bb-drawer</code> = flex column 3 ชั้น: <b>head นิ่ง</b> · <b>body scroll</b> · <b>foot นิ่ง</b> —
+    ปุ่ม action อยู่ล่างเสมอ ไม่ต้อง scroll ตามหา
+  </div>
+  <div class="mk-stage b3">
+    <div class="bb-drawer" style="height:720px">
+
+      <div class="bb-drawer-head">
+        <button class="bb-drawer-x"><i data-lucide="x"></i></button>
+        <div class="bb-drawer-eyebrow">คำขอใช้รถ</div>
+        <div class="bb-drawer-title-row">
+          <span class="bb-drawer-title">VR-240719-001</span>
+          <span class="bb-status is-wr"><i data-lucide="clock"></i>รออนุมัติ</span>
+        </div>
+        <div class="bb-drawer-sub">พรุ่งนี้ · 19 ก.ค. 2569</div>
+      </div>
+
+      <div class="bb-drawer-body">
+        <div class="bb-section">
+          <div class="bb-section-title">รายละเอียดคำขอ</div>
+          <div class="bb-desc">
+            <div class="bb-desc-label">แผนก</div>            <div class="bb-desc-value">ปฏิบัติการ</div>
+            <div class="bb-desc-label">ผู้ขอ</div>             <div class="bb-desc-value">สมชาย ใจดี</div>
+            <div class="bb-desc-label">ติดต่อ</div>            <div class="bb-desc-value is-num">081 234 5678</div>
+            <div class="bb-desc-label">ผู้โดยสาร</div>        <div class="bb-desc-value is-num">6</div>
+            <div class="bb-desc-label">เวลารับ</div>          <div class="bb-desc-value is-num">09:00</div>
+            <div class="bb-desc-label">จุดรับ</div>            <div class="bb-desc-value">สำนักงานใหญ่</div>
+            <div class="bb-desc-label">ปลายทาง</div>        <div class="bb-desc-value">สนามบินสุวรรณภูมิ</div>
+            <div class="bb-desc-label">ประเภทรถ</div>      <div class="bb-desc-value">รถตู้ (10 ที่นั่ง)</div>
+          </div>
+          <div class="bb-desc is-stack" style="margin-top:8px">
+            <div class="bb-desc-label">หมายเหตุ</div>
+            <div class="bb-desc-value">กรุณามารับก่อนเวลา 10 นาที และรอที่จุดจอดหน้าอาคาร A</div>
+          </div>
+        </div>
+
+        <div class="bb-section">
+          <div class="bb-section-title">ไทม์ไลน์</div>
+          <div class="bb-timeline">
+            <div class="bb-tl-item done">
+              <span class="bb-tl-dot"></span>
+              <div class="bb-tl-row"><span class="bb-tl-title">ยื่นคำขอ</span><span class="bb-tl-time">18 ก.ค. 10:15</span></div>
+              <div class="bb-tl-sub">โดย สมชาย ใจดี</div>
+            </div>
+            <div class="bb-tl-item cur">
+              <span class="bb-tl-dot"></span>
+              <div class="bb-tl-row"><span class="bb-tl-title">รอผู้อนุมัติ</span><span class="bb-tl-time">—</span></div>
+            </div>
+            <div class="bb-tl-item todo">
+              <span class="bb-tl-dot"></span>
+              <div class="bb-tl-row"><span class="bb-tl-title">อนุมัติ</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bb-section">
+          <div class="bb-callout is-ok">
+            <i data-lucide="lock"></i>
+            <div class="bb-callout-body">
+              <div class="bb-callout-title">อนุมัติได้เฉพาะของพรุ่งนี้</div>
+              คำขอของวันที่ 19 ก.ค. เท่านั้นที่กดอนุมัติหรือปฏิเสธได้ในตอนนี้
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bb-drawer-foot">
+        <button class="bb-btn is-pri is-block">อนุมัติคำขอ</button>
+        <button class="bb-btn is-danger-sec is-block">ปฏิเสธคำขอ</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 2 · DESC LIST ══════════════════════════ -->
+  <h2>2 · DescList</h2>
+  <div class="mk-note">
+    grid 2 คอลัมน์ — <b>ไม่ใช่ <code>&lt;table&gt;</code></b> (ไม่ใช่ข้อมูลตาราง ไม่มีหัวคอลัมน์ ไม่ sort ไม่ scan ข้ามแถว)<br>
+    label เทา ซ้าย / value ดำหนา ขวา · <code>.is-stack</code> = ซ้อนบน-ล่างสำหรับค่ายาว (หมายเหตุ/ที่อยู่)
+  </div>
+  <div class="mk-panel b3" style="max-width:560px">
+    <div class="bb-desc">
+      <div class="bb-desc-label">ทะเบียน</div>       <div class="bb-desc-value is-num">กข-1234</div>
+      <div class="bb-desc-label">ระยะทาง</div>       <div class="bb-desc-value is-num">128 กม.</div>
+      <div class="bb-desc-label">ค่าน้ำมัน</div>       <div class="bb-desc-value is-num">฿1,280</div>
+      <div class="bb-desc-label">สถานะ</div>
+      <div class="bb-desc-value" style="text-align:right"><span class="bb-status is-ok"><i data-lucide="check-circle"></i>ปิดงาน</span></div>
+    </div>
+    <div class="mk-cap">.is-stack</div>
+    <div class="bb-desc is-stack">
+      <div class="bb-desc-label">หมายเหตุ</div>
+      <div class="bb-desc-value">เติมน้ำมันที่ปั๊มระหว่างทาง ใบเสร็จแนบในระบบแล้ว</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 3 · TIMELINE ══════════════════════════ -->
+  <h2>3 · Timeline (ปรับ)</h2>
+  <div class="mk-note">
+    dot: เดิม border ขาว 3px + ring — ตัดทิ้งเหลือวงกลมตัน · <b>done = เขียว</b> (fill ชิ้นเล็ก) · <b>cur = ink</b> · todo = n300<br>
+    ★ เพิ่ม <code>.bb-tl-row</code> (title ซ้าย / เวลาขวา) + <code>.bb-tl-sub</code> (บรรทัด "โดยใคร")
+  </div>
+  <div class="mk-panel b3" style="max-width:460px">
+    <div class="bb-timeline">
+      <div class="bb-tl-item done"><span class="bb-tl-dot"></span>
+        <div class="bb-tl-row"><span class="bb-tl-title">ยื่นคำขอ</span><span class="bb-tl-time">18 ก.ค. 10:15</span></div>
+        <div class="bb-tl-sub">โดย สมชาย ใจดี</div></div>
+      <div class="bb-tl-item done"><span class="bb-tl-dot"></span>
+        <div class="bb-tl-row"><span class="bb-tl-title">หัวหน้าแผนกอนุมัติ</span><span class="bb-tl-time">18 ก.ค. 14:02</span></div>
+        <div class="bb-tl-sub">โดย มานี รักเรียน</div></div>
+      <div class="bb-tl-item cur"><span class="bb-tl-dot"></span>
+        <div class="bb-tl-row"><span class="bb-tl-title">รอฝ่ายยานพาหนะ</span><span class="bb-tl-time">—</span></div></div>
+      <div class="bb-tl-item todo"><span class="bb-tl-dot"></span>
+        <div class="bb-tl-row"><span class="bb-tl-title">ปิดทริป</span></div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 4 · CALLOUT ══════════════════════════ -->
+  <h2>4 · Callout (ปรับ)</h2>
+  <div class="mk-note">
+    radius <code>8</code> · pad 14/16 · font 14 · line-height 1.7 (ไทย) ·
+    <code>is-info</code> เดิมใช้ <code>accent-bg</code>+<code>accent-h</code> = เขียวจาง 3.4:1 <b>ตก AA</b> → แยกเป็น
+    <code>is-info</code> = น้ำเงิน (semantic) · <code>is-ok</code> = เขียว tint + <code>accent-dk</code>
+  </div>
+  <div class="mk-panel b3" style="max-width:620px;display:flex;flex-direction:column;gap:12px">
+    <div class="bb-callout is-ok"><i data-lucide="lock"></i>
+      <div class="bb-callout-body"><div class="bb-callout-title">อนุมัติได้เฉพาะของพรุ่งนี้</div>
+      คำขอของวันที่ 19 ก.ค. เท่านั้นที่กดอนุมัติหรือปฏิเสธได้ในตอนนี้</div></div>
+    <div class="bb-callout is-wr"><i data-lucide="alert-triangle"></i>
+      <div class="bb-callout-body"><div class="bb-callout-title">งบใกล้หมด</div>เหลืองบประมาณ 8% ของเดือนนี้</div></div>
+    <div class="bb-callout is-info"><i data-lucide="info"></i>
+      <div class="bb-callout-body">ระบบจะปิดปรับปรุงวันเสาร์ 22:00–24:00</div></div>
+  </div>
+
+  <!-- ══════════════════════════ 5 · diff ══════════════════════════ -->
+  <h2>5 · diff ที่จะลงจริง</h2>
+  <div class="mk-panel b3">
+    <table class="bb-table">
+      <thead><tr><th>selector</th><th>เดิม</th><th>ใหม่</th></tr></thead>
+      <tbody>
+        <tr><td class="bb-cell-strong">.bb-drawer + -overlay</td><td class="bb-cell-muted">— ไม่มี</td><td>★ แผงขวา 420px · flex 3 ชั้น</td></tr>
+        <tr><td class="bb-cell-strong">.bb-drawer-head / -body / -foot</td><td class="bb-cell-muted">— ไม่มี</td><td>★ head+foot นิ่ง · body scroll</td></tr>
+        <tr><td class="bb-cell-strong">.bb-drawer-eyebrow / -title / -sub / -x</td><td class="bb-cell-muted">— ไม่มี</td><td>★ caps label · 22/700 · ลิงก์เขียว · ปุ่มปิด</td></tr>
+        <tr><td class="bb-cell-strong">.bb-section + -title</td><td class="bb-cell-muted">— ไม่มี</td><td>★ บล็อกคั่น hairline · title 16/700</td></tr>
+        <tr><td class="bb-cell-strong">.bb-desc + -label + -value</td><td class="bb-cell-muted">— ไม่มี</td><td>★ grid 2 คอลัมน์ (+.is-stack)</td></tr>
+        <tr><td class="bb-cell-strong">.bb-tl-dot</td><td class="bb-cell-muted">border ขาว 3px + ring</td><td>วงกลมตัน · done เขียว · cur ink</td></tr>
+        <tr><td class="bb-cell-strong">.bb-tl-row / .bb-tl-sub</td><td class="bb-cell-muted">— ไม่มี</td><td>★ title|เวลา คนละฝั่ง + บรรทัดรอง</td></tr>
+        <tr><td class="bb-cell-strong">.bb-callout</td><td class="bb-cell-muted">radius 8 (r-md) · .8125rem · lh 1.55</td><td>14px · lh 1.7 · pad 14/16</td></tr>
+        <tr><td class="bb-cell-strong">.bb-callout.is-info</td><td class="bb-cell-muted">accent-bg + accent-h (3.4:1 ตก)</td><td>info-bg + info-tx</td></tr>
+        <tr><td class="bb-cell-strong">.bb-callout.is-ok</td><td class="bb-cell-muted">ok-bg + ok-tx</td><td>accent-bg + accent-dk</td></tr>
+        <tr><td class="bb-cell-strong">.bb-callout-x:hover</td><td class="bb-cell-muted">rgba(10,37,64,.06) น้ำเงินค้าง</td><td>rgba(0,0,0,.06)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>window.lucide = { createIcons(){}, icons:{} };</script>
+<script src="./js/ms-icons.js"></script>
+</body>
+</html>

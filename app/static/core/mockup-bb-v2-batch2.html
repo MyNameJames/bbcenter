@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BB v2 · Batch 2 — Data</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/components.css">
+
+<style>
+/* ══════════════════════════════════════════════════════════════
+   Batch 2 · DATA — proposal (ยังไม่ลง components.css)
+   scope = .b2 · Table + Column · Status · Pagination
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 9 · TABLE ──────────────────────────────────────────────── */
+/* ตารางเปลือย — ไม่มีกรอบ มีแค่เส้นบน/ล่าง + hairline คั่นแถว · ที่ว่างแนวตั้งเป็นตัวแบ่งแทนเส้น */
+.b2 .bb-table { border-top: 1px solid var(--bb-n200); border-bottom: 1px solid var(--bb-n200); }
+.b2 .bb-table thead tr { background: transparent; }
+.b2 .bb-table thead th {
+  font-size: 14px; font-weight: 500; color: var(--bb-mut);   /* ← เดิม accent-i (แย่ง attention) */
+  text-align: left; padding: 18px 16px; white-space: nowrap;
+  border-bottom: 1px solid var(--bb-n200);
+}
+.b2 .bb-table tbody td {
+  padding: 24px 16px; border-bottom: 1px solid var(--bb-n200);
+  font-size: 15px; color: var(--bb-body); vertical-align: middle;
+}
+.b2 .bb-table tbody tr:last-child td { border-bottom: none; }
+.b2 .bb-table tbody tr:hover td { background: var(--bb-n50); }
+.b2 .bb-cell-id     { color: var(--bb-mut); font-family: var(--bb-num-font); font-size: 14px; }
+.b2 .bb-cell-strong { font-weight: 600; color: var(--bb-ink); }
+.b2 .bb-cell-num    { font-family: var(--bb-num-font); font-weight: 400; text-align: right; color: var(--bb-ink); }
+.b2 .bb-cell-muted  { color: var(--bb-mut); }
+/* ★ ใหม่ — cell 2 บรรทัด (Van / 10 ที่นั่ง) */
+.b2 .bb-cell-sub { display: block; font-size: 13px; color: var(--bb-mut); margin-top: 2px; }
+/* ★ ใหม่ — แถวหัวกลุ่ม (คั่นกลางตาราง) */
+.b2 .bb-row-group td {
+  padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--bb-ink);
+  background: var(--bb-n100); border-bottom: 1px solid var(--bb-n200);
+}
+.b2 .bb-row-group.is-accent td { background: var(--bb-accent-bg); color: var(--bb-accent-dk); }
+.b2 .bb-row-group .bb-row-group-note { font-weight: 400; color: var(--bb-mut); margin-left: 8px; }
+.b2 .bb-row-group.is-accent .bb-row-group-note { color: var(--bb-accent-dk); opacity: .8; }
+/* ★ ใหม่ — แถวที่ทำอะไรไม่ได้ */
+.b2 .bb-row-locked td { color: var(--bb-n400); background: #fff; }
+.b2 .bb-row-locked:hover td { background: #fff; }
+.b2 .bb-row-locked .bb-cell-strong, .b2 .bb-row-locked .bb-cell-num { color: var(--bb-n400); font-weight: 500; }
+.b2 .bb-row-lock-note { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--bb-n400); }
+/* ★ ใหม่ — แถวที่ถูกเลือก (tint เขียว — 1 ใน 2 จุดที่เขียวได้โผล่) */
+.b2 .bb-table tbody tr.is-sel td { background: var(--bb-accent-bg); }
+/* action ในแถว = ปุ่ม text
+   ⛔ ห้าม display:flex บน <td> — cell จะหลุดจาก table layout ทำให้เส้นคั่นแถวเหลื่อม
+   ใช้ text-align + inline-flex ที่ตัวปุ่มแทน */
+.b2 .bb-table-actions { text-align: right; white-space: nowrap; }
+.b2 .bb-cell-link { display: inline-flex; align-items: center; font-size: 15px; font-weight: 600; color: var(--bb-accent-dk); background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: var(--bb-r-pill); }
+.b2 .bb-cell-link + .bb-cell-link { margin-left: 4px; }
+.b2 .bb-cell-link:hover { background: var(--bb-accent-bg); }
+.b2 .bb-cell-link.is-danger { color: var(--bb-dg-tx); }
+.b2 .bb-cell-link.is-danger:hover { background: var(--bb-dg-bg); }
+/* wrap = scroll แนวนอนบนจอแคบเท่านั้น — ไม่มีกรอบ ไม่มี radius */
+.b2 .bb-table-wrap { overflow-x: auto; background: #fff; }
+
+/* ── 11 · STATUS ────────────────────────────────────────────── */
+/* badge (radius 8) ไม่ใช่ pill — status กดไม่ได้ ตามกฎ binary radius */
+.b2 .bb-status {
+  font-size: 13px; font-weight: 600; padding: 6px 10px; gap: 6px;
+  border-radius: var(--bb-r-surface); display: inline-flex; align-items: center;
+}
+.b2 .bb-status .material-symbols-outlined { font-size: 15px; }
+.b2 .bb-status-inline { font-size: 15px; font-weight: 500; gap: 6px; }
+.b2 .bb-status-inline .material-symbols-outlined { font-size: 18px; }
+
+/* ── 12 · PAGINATION ────────────────────────────────────────── */
+.b2 .bb-pag { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-top: 16px; }
+.b2 .bb-pag-info { font-size: 14px; color: var(--bb-mut); }
+.b2 .bb-pag-info b { font-family: var(--bb-num-font); font-weight: 600; color: var(--bb-ink); }
+.b2 .bb-pag-right { display: flex; align-items: center; gap: 16px; }
+.b2 .bb-pag-nav { display: flex; gap: 4px; }
+.b2 .bb-pg {
+  min-width: 36px; height: 36px; padding: 0 10px;
+  border-radius: var(--bb-r-pill); border: 1px solid var(--bb-n300); background: #fff;
+  font-family: var(--bb-num-font); font-size: 14px; color: var(--bb-ink); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.b2 .bb-pg:hover { border-color: var(--bb-ink); }
+.b2 .bb-pg.is-on { background: var(--bb-ink); border-color: var(--bb-ink); color: #fff; font-weight: 600; }
+.b2 .bb-pg.is-disabled { color: var(--bb-n400); border-color: var(--bb-n200); cursor: not-allowed; }
+.b2 .bb-pg.is-gap { border: none; background: none; cursor: default; }
+.b2 .bb-pg .material-symbols-outlined { font-size: 18px; }
+/* ★ ใหม่ — จำนวนแถวต่อหน้า */
+.b2 .bb-pag-size { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--bb-mut); }
+
+/* ── mockup chrome ──────────────────────────────────────────── */
+body { background: #FAFAFA; font-family: 'Sarabun', system-ui, sans-serif; color: #000; }
+.mk { max-width: 1400px; margin: 0 auto; padding: 40px 48px 80px; }
+.mk h1 { font-size: 38px; font-weight: 800; letter-spacing: -.5px; margin: 0 0 4px; }
+.mk .mk-sub { font-size: 15px; color: #757575; margin-bottom: 32px; line-height: 1.7; }
+.mk h2 { font-size: 20px; font-weight: 700; margin: 44px 0 4px; }
+.mk .mk-note { font-size: 13px; color: #757575; margin-bottom: 16px; line-height: 1.7; }
+.mk-panel { background: #fff; border: 1px solid #E8E8E8; border-radius: 8px; padding: 24px; }
+.mk-tag { display: inline-flex; font-size: 12px; font-weight: 600; letter-spacing: .04em;
+          text-transform: uppercase; padding: 3px 10px; border-radius: 999px; margin-bottom: 16px; }
+.mk-tag.old { background: #F3F3F3; color: #757575; }
+.mk-tag.new { background: #EAFBF2; color: #0B7A3E; }
+.mk-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.mk-row:last-child { margin-bottom: 0; }
+.mk-cap { font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase;
+          color: #9E9E9E; margin: 24px 0 10px; }
+.mk-cap:first-child { margin-top: 0; }
+.material-symbols-outlined { font-size: 20px; line-height: 1; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="mk">
+
+  <h1>Batch 2 · Data</h1>
+  <div class="mk-sub">
+    Table + Column · Status · Pagination — โจทย์หลักมาจากภาพหน้า Requests:
+    ตารางเดียวที่มี <b>2 กลุ่ม</b> (วันที่อนุมัติได้ / วันอื่นอ่านอย่างเดียว) · <b>แถวที่ล็อก</b> · <b>cell 2 บรรทัด</b> · <b>action เป็นลิงก์ในแถว</b>
+  </div>
+
+  <!-- ══════════════════════════ 1 · STATUS ══════════════════════════ -->
+  <h2>1 · Status</h2>
+  <div class="mk-note">
+    <b><code>ok</code> = เขียว <code>#16A34A</code> คงเดิม</b> — ตั้งใจให้สำเร็จเป็นเขียว ไม่ย้ายไปน้ำเงิน<br>
+    ⛔ แต่ต้อง <b>ห้าม dot เปล่า</b> — เขียว ok อยู่ใกล้ accent มาก ถ้าใช้สีอย่างเดียวผู้ใช้แยก "สำเร็จ" กับ "กดได้" ไม่ออก
+    → เปลี่ยน dot เป็น <b>icon</b> ทุกตัว (สื่อ 2 ทาง: รูปทรง + สี)<br>
+    ขนาด 13px · pad <b>6/10</b> · <b>badge radius 8</b> (ไม่ใช่ pill — status กดไม่ได้ ตามกฎ binary radius)
+  </div>
+  <div class="mk-panel b2">
+    <div class="mk-cap">pill (นอกตาราง)</div>
+    <div class="mk-row">
+      <span class="bb-status is-wr"><i data-lucide="clock"></i>รออนุมัติ</span>
+      <span class="bb-status is-info"><i data-lucide="check"></i>อนุมัติแล้ว</span>
+      <span class="bb-status is-ok"><i data-lucide="check-circle"></i>ปิดงาน</span>
+      <span class="bb-status is-dg"><i data-lucide="x-circle"></i>ยกเลิก</span>
+      <span class="bb-status is-neutral"><i data-lucide="file-text"></i>ร่าง</span>
+    </div>
+    <div class="mk-cap">inline (ในตาราง — ไม่มีพื้น)</div>
+    <div class="mk-row">
+      <span class="bb-status-inline is-wr"><i data-lucide="clock"></i>รออนุมัติ</span>
+      <span class="bb-status-inline is-info"><i data-lucide="check"></i>อนุมัติแล้ว</span>
+      <span class="bb-status-inline is-ok"><i data-lucide="check-circle"></i>ปิดงาน</span>
+      <span class="bb-status-inline is-dg"><i data-lucide="x-circle"></i>ยกเลิก</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 2 · TABLE ══════════════════════════ -->
+  <h2>2 · Table</h2>
+  <div class="mk-note">
+    <b>ตารางเปลือย</b> — ตัดกรอบ+radius ทิ้ง เหลือ <b>เส้นบน/ล่าง</b> ของตาราง + hairline คั่นแถว ·
+    thead ไม่มีพื้นเทาแล้ว · <b>row py 24 / thead py 18</b> (ที่ว่างเป็นตัวแบ่ง ไม่ใช่เส้น)<br>
+    หัวตาราง <code>accent-i</code> → <b><code>mut</code></b> (หัวตารางไม่ควรแย่ง attention กับข้อมูล) · font 15px ·
+    hover <code>#FBFCFE</code> (น้ำเงินจางค้างจากยุค cool) → <b><code>n50</code></b><br>
+    ★ เพิ่ม 5 อย่าง: <code>.bb-row-group</code> · <code>.bb-row-locked</code> + <code>.bb-row-lock-note</code> ·
+    <code>.bb-cell-sub</code> · <code>.bb-cell-link</code> · <code>tr.is-sel</code>
+  </div>
+  <div class="mk-panel b2">
+    <div class="bb-table-wrap">
+      <table class="bb-table">
+        <thead>
+          <tr>
+            <th style="width:150px">เลขที่</th><th>แผนก</th><th>ผู้ขอ</th>
+            <th style="width:90px">เวลา</th><th>ปลายทาง</th><th style="width:120px">ประเภทรถ</th>
+            <th style="width:130px">สถานะ</th><th style="width:170px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="bb-row-group is-accent">
+            <td colspan="8">พรุ่งนี้ · 19 ก.ค. <span class="bb-row-group-note">อนุมัติได้</span></td>
+          </tr>
+          <tr class="is-sel">
+            <td class="bb-cell-id">VR-240719-001</td><td>ปฏิบัติการ</td><td class="bb-cell-strong">สมชาย ใจดี</td>
+            <td class="bb-cell-num">09:00</td><td>สนามบินสุวรรณภูมิ</td>
+            <td>รถตู้<span class="bb-cell-sub">10 ที่นั่ง</span></td>
+            <td><span class="bb-status is-wr"><i data-lucide="clock"></i>รออนุมัติ</span></td>
+            <td class="bb-table-actions">
+              <button class="bb-cell-link">อนุมัติ</button>
+              <button class="bb-cell-link is-danger">ปฏิเสธ</button>
+            </td>
+          </tr>
+          <tr>
+            <td class="bb-cell-id">VR-240719-002</td><td>การตลาด</td><td class="bb-cell-strong">มานี รักเรียน</td>
+            <td class="bb-cell-num">10:30</td><td>เซ็นทรัลเวิลด์</td>
+            <td>เก๋ง<span class="bb-cell-sub">4 ที่นั่ง</span></td>
+            <td><span class="bb-status is-wr"><i data-lucide="clock"></i>รออนุมัติ</span></td>
+            <td class="bb-table-actions">
+              <button class="bb-cell-link">อนุมัติ</button>
+              <button class="bb-cell-link is-danger">ปฏิเสธ</button>
+            </td>
+          </tr>
+          <tr>
+            <td class="bb-cell-id">VR-240719-003</td><td>การเงิน</td><td class="bb-cell-strong">ปิติ ชูใจ</td>
+            <td class="bb-cell-num">14:00</td><td>ธนาคารกรุงเทพ สำนักงานใหญ่</td>
+            <td>เก๋ง<span class="bb-cell-sub">4 ที่นั่ง</span></td>
+            <td><span class="bb-status is-wr"><i data-lucide="clock"></i>รออนุมัติ</span></td>
+            <td class="bb-table-actions">
+              <button class="bb-cell-link">อนุมัติ</button>
+              <button class="bb-cell-link is-danger">ปฏิเสธ</button>
+            </td>
+          </tr>
+
+          <tr class="bb-row-group">
+            <td colspan="8">วันอื่น <span class="bb-row-group-note">อ่านอย่างเดียว</span></td>
+          </tr>
+          <tr class="bb-row-locked">
+            <td class="bb-cell-id">VR-240718-025</td><td>ปฏิบัติการ</td><td class="bb-cell-strong">วีระ ตั้งใจ</td>
+            <td class="bb-cell-num">09:00</td><td>สนามบินสุวรรณภูมิ</td>
+            <td>รถตู้<span class="bb-cell-sub">10 ที่นั่ง</span></td>
+            <td><span class="bb-status is-wr"><i data-lucide="clock"></i>รออนุมัติ</span></td>
+            <td><span class="bb-row-lock-note"><i data-lucide="lock"></i>อนุมัติได้เฉพาะพรุ่งนี้</span></td>
+          </tr>
+          <tr class="bb-row-locked">
+            <td class="bb-cell-id">VR-240720-011</td><td>การตลาด</td><td class="bb-cell-strong">อรุณ แสงทอง</td>
+            <td class="bb-cell-num">11:00</td><td>ไอคอนสยาม</td>
+            <td>เก๋ง<span class="bb-cell-sub">4 ที่นั่ง</span></td>
+            <td><span class="bb-status is-wr"><i data-lucide="clock"></i>รออนุมัติ</span></td>
+            <td><span class="bb-row-lock-note"><i data-lucide="lock"></i>อนุมัติได้เฉพาะพรุ่งนี้</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════ 3 · PAGINATION ══════════════════════════ -->
+    <div class="bb-pag">
+      <div class="bb-pag-info">แสดง <b>1–8</b> จาก <b>24</b> รายการ</div>
+      <div class="bb-pag-right">
+        <div class="bb-pag-size">
+          แถวต่อหน้า
+          <button class="bb-select" style="height:36px;font-size:14px">25 <i data-lucide="chevron-down"></i></button>
+        </div>
+        <div class="bb-pag-nav">
+          <button class="bb-pg is-disabled"><i data-lucide="chevron-left"></i></button>
+          <button class="bb-pg is-on">1</button>
+          <button class="bb-pg">2</button>
+          <button class="bb-pg">3</button>
+          <span class="bb-pg is-gap">…</span>
+          <button class="bb-pg">9</button>
+          <button class="bb-pg"><i data-lucide="chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 4 · diff ══════════════════════════ -->
+  <h2>3 · diff ที่จะลงจริง</h2>
+  <div class="mk-panel b2">
+    <div class="bb-table-wrap">
+      <table class="bb-table">
+        <thead><tr><th>selector</th><th>เดิม</th><th>ใหม่</th></tr></thead>
+        <tbody>
+          <tr><td class="bb-cell-strong">.bb-table</td><td class="bb-cell-muted">ไม่มีเส้นกรอบ (กรอบอยู่ที่ wrap)</td><td>border-top + border-bottom เท่านั้น</td></tr>
+          <tr><td class="bb-cell-strong">.bb-table thead th</td><td class="bb-cell-muted">color accent-i · .875rem · พื้น n50</td><td>color mut · 14px · pad 18/16 · พื้นใส</td></tr>
+          <tr><td class="bb-cell-strong">.bb-table tbody td</td><td class="bb-cell-muted">.875rem · pad .9375rem</td><td>15px · color body · <b>pad 24/16</b></td></tr>
+          <tr><td class="bb-cell-strong">tr:hover td</td><td class="bb-cell-muted">#FBFCFE (น้ำเงินจาง)</td><td>n50</td></tr>
+          <tr><td class="bb-cell-strong">.bb-cell-sub</td><td class="bb-cell-muted">— ไม่มี</td><td>★ บรรทัดรองใน cell</td></tr>
+          <tr><td class="bb-cell-strong">.bb-row-group</td><td class="bb-cell-muted">— ไม่มี</td><td>★ แถวหัวกลุ่ม (+.is-accent)</td></tr>
+          <tr><td class="bb-cell-strong">.bb-row-locked</td><td class="bb-cell-muted">— ไม่มี</td><td>★ แถวที่ทำอะไรไม่ได้ + lock note</td></tr>
+          <tr><td class="bb-cell-strong">tr.is-sel</td><td class="bb-cell-muted">— ไม่มี</td><td>★ tint เขียว = แถวที่เลือก</td></tr>
+          <tr><td class="bb-cell-strong">.bb-cell-link</td><td class="bb-cell-muted">— ไม่มี</td><td>★ action ในแถว (เขียว/แดง)</td></tr>
+          <tr><td class="bb-cell-strong">.bb-table-wrap</td><td class="bb-cell-muted">— ไม่มี</td><td>★ scroll แนวนอนบนจอแคบ (ไม่มีกรอบ)</td></tr>
+          <tr><td class="bb-cell-strong">.bb-status</td><td class="bb-cell-muted">dot + .75rem + pill</td><td>icon + 13px + pad 6/10 + <b>radius 8</b> · ⛔ เลิกใช้ dot</td></tr>
+          <tr><td class="bb-cell-strong">.bb-status-inline</td><td class="bb-cell-muted">.875rem</td><td>15px · icon 18</td></tr>
+          <tr><td class="bb-cell-strong">.bb-pg</td><td class="bb-cell-muted">radius 8 · 2rem · border n200</td><td>pill · 36px · border n300</td></tr>
+          <tr><td class="bb-cell-strong">.bb-pg.is-on</td><td class="bb-cell-muted">accent-i fill</td><td>ink fill</td></tr>
+          <tr><td class="bb-cell-strong">.bb-pag-info</td><td class="bb-cell-muted">.8125rem</td><td>14px · เลขเป็น Inter 600</td></tr>
+          <tr><td class="bb-cell-strong">.bb-pag-size</td><td class="bb-cell-muted">— ไม่มี</td><td>★ แถวต่อหน้า</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>window.lucide = { createIcons(){}, icons:{} };</script>
+<script src="./js/ms-icons.js"></script>
+</body>
+</html>

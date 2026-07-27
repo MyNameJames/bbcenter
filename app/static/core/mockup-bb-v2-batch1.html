@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BB v2 · Batch 1 — Control</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/components.css">
+
+<style>
+/* ══════════════════════════════════════════════════════════════
+   Batch 1 · CONTROL — proposal (ยังไม่ลง components.css)
+   scope = .b1 เท่านั้น · ซ้ายในหน้า = ของจริงตอนนี้ · ขวา = ข้อเสนอ
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1 · BUTTON ─────────────────────────────────────────────── */
+.b1 .bb-btn {
+  font-family: 'Sarabun', system-ui, sans-serif;
+  font-size: 15px; font-weight: 600; line-height: 1;
+  height: 40px; padding: 0 20px; gap: 8px;
+  border-radius: var(--bb-r-pill);          /* ← binary: กดได้ = pill */
+  border: 1px solid transparent;
+  box-shadow: none;                          /* ← ปุ่มไม่ลอย = ไม่มีเงา */
+  transition: background .12s, border-color .12s, color .12s, transform .08s;
+}
+.b1 .bb-btn:active { transform: scale(.97); }
+.b1 .bb-btn.is-pri      { background: var(--bb-ink); color: #fff; }
+.b1 .bb-btn.is-pri:hover{ background: var(--bb-ink-h); }
+.b1 .bb-btn.is-sec      { background: #fff; color: var(--bb-ink); border-color: var(--bb-n300); }
+.b1 .bb-btn.is-sec:hover{ background: var(--bb-n50); border-color: var(--bb-ink); }
+.b1 .bb-btn.is-ghost      { background: transparent; color: var(--bb-accent-dk); }
+.b1 .bb-btn.is-ghost:hover{ background: var(--bb-accent-bg); }
+.b1 .bb-btn.is-danger      { background: var(--bb-dg); color: #fff; }
+.b1 .bb-btn.is-danger:hover{ background: var(--bb-dg-tx); }
+/* ★ ใหม่ — ปุ่มลบ/ปฏิเสธแบบไม่ตะโกน (ตามภาพ drawer: Reject request) */
+.b1 .bb-btn.is-danger-sec      { background: #fff; color: var(--bb-dg-tx); border-color: var(--bb-n300); }
+.b1 .bb-btn.is-danger-sec:hover{ background: var(--bb-dg-bg); border-color: var(--bb-dg); }
+.b1 .bb-btn.is-sm   { height: 32px; padding: 0 14px; font-size: 14px; }
+.b1 .bb-btn.is-icon { width: 40px; height: 40px; padding: 0; justify-content: center; }
+.b1 .bb-btn.is-icon.is-sm { width: 32px; height: 32px; }
+.b1 .bb-btn.is-block { width: 100%; justify-content: center; }
+.b1 .bb-btn:disabled, .b1 .bb-btn.is-disabled { opacity: 1; background: var(--bb-n100); color: var(--bb-n400); border-color: transparent; cursor: not-allowed; }
+.b1 .bb-btn .material-symbols-outlined { font-size: 18px; }
+
+/* ── 2 · SEARCH ─────────────────────────────────────────────── */
+.b1 .bb-search {
+  width: 40px; height: 40px; border-radius: var(--bb-r-pill);
+  border: 1px solid var(--bb-n300); box-shadow: none;
+}
+.b1 .bb-search:hover { border-color: var(--bb-ink); }
+.b1 .bb-search.is-expanded { max-width: 320px; border-color: var(--bb-ink); box-shadow: var(--bb-shadow-sm); }
+.b1 .bb-search input { font-size: 15px; }
+.b1 .bb-search .material-symbols-outlined { font-size: 20px; color: var(--bb-mut); }
+
+/* ── 3 · TABS ───────────────────────────────────────────────── */
+.b1 .bb-tabs { gap: 0; border-bottom: 1px solid var(--bb-n200); }
+.b1 .bb-tab {
+  font-size: 15px; font-weight: 500; color: var(--bb-mut);
+  height: 44px; padding: 0 2px; margin: 0 24px 0 0;
+  border-bottom: 2px solid transparent; gap: 8px;
+}
+.b1 .bb-tab:hover { color: var(--bb-ink); }
+.b1 .bb-tab.is-on { color: var(--bb-ink); border-bottom-color: var(--bb-ink); font-weight: 700; }
+.b1 .bb-tab-count {
+  font-family: var(--bb-num-font); font-size: 12px; font-weight: 600;
+  background: var(--bb-n100); color: var(--bb-mut);
+  border-radius: var(--bb-r-pill); padding: 2px 8px; min-width: 22px; text-align: center;
+}
+.b1 .bb-tab.is-on .bb-tab-count { background: var(--bb-ink); color: #fff; }
+
+/* ── 4 · DROPDOWN ───────────────────────────────────────────── */
+.b1 .bb-select {
+  font-size: 15px; font-weight: 500; color: var(--bb-ink);
+  height: 40px; padding: 0 14px 0 16px; gap: 6px;
+  background: #fff; border: 1px solid var(--bb-n300); border-radius: var(--bb-r-pill);
+  box-shadow: none; transition: border-color .15s, background .15s;
+}
+.b1 .bb-select:hover { border-color: var(--bb-ink); }
+.b1 .bb-select.is-active { border-color: var(--bb-ink); background: var(--bb-ink); color: #fff; font-weight: 600; }
+.b1 .bb-select.is-active .material-symbols-outlined { color: #fff; }
+.b1 .bb-select .bb-select-hint { color: var(--bb-mut); font-weight: 400; font-size: 15px; }
+.b1 .bb-select .material-symbols-outlined { font-size: 20px; color: var(--bb-mut); }
+.b1 .bb-select-lead { color: var(--bb-mut); font-weight: 400; }
+
+.b1 .bb-menu {
+  min-width: 240px; background: #fff; padding: 6px;
+  border: 1px solid var(--bb-n200); border-radius: var(--bb-r-surface);
+  box-shadow: var(--bb-shadow-lg);
+}
+.b1 .bb-menu-item {
+  font-size: 15px; font-weight: 500; color: var(--bb-ink);
+  padding: 10px 12px; border-radius: var(--bb-r-surface); gap: 12px;
+}
+.b1 .bb-menu-item:hover { background: var(--bb-n50); }
+.b1 .bb-menu-item.is-on { background: var(--bb-accent-bg); color: var(--bb-accent-dk); font-weight: 600; }
+.b1 .bb-menu-item.is-on .material-symbols-outlined { color: var(--bb-accent-dk); font-size: 18px; }
+/* ★ ใหม่ — สถานะล็อก (ตามภาพ: Locked / Active) */
+.b1 .bb-menu-item.is-locked { color: var(--bb-n400); cursor: not-allowed; }
+.b1 .bb-menu-item.is-locked:hover { background: transparent; }
+.b1 .bb-menu-note { font-size: 13px; font-weight: 500; color: var(--bb-n400); margin-left: auto; }
+.b1 .bb-menu-item.is-on .bb-menu-note { color: var(--bb-accent-dk); }
+.b1 .bb-menu-label {
+  font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--bb-n500); padding: 10px 12px 6px;
+}
+.b1 .bb-menu-divider { height: 1px; background: var(--bb-n200); margin: 6px 4px; }
+/* ★ ใหม่ — แถว action ท้าย menu (ตามภาพ: Choose a date) */
+.b1 .bb-menu-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 15px; font-weight: 600; color: var(--bb-ink);
+  padding: 10px 12px; margin-top: 6px; border-top: 1px solid var(--bb-n200); cursor: pointer;
+}
+.b1 .bb-menu-foot:hover { background: var(--bb-n50); }
+
+/* ── mockup chrome ──────────────────────────────────────────── */
+body { background: #FAFAFA; font-family: 'Sarabun', system-ui, sans-serif; color: #000; }
+.mk { max-width: 1400px; margin: 0 auto; padding: 40px 48px 80px; }
+.mk h1 { font-size: 38px; font-weight: 800; letter-spacing: -.5px; margin: 0 0 4px; }
+.mk .mk-sub { font-size: 15px; color: #757575; margin-bottom: 32px; line-height: 1.7; }
+.mk h2 { font-size: 20px; font-weight: 700; margin: 44px 0 4px; }
+.mk .mk-note { font-size: 13px; color: #757575; margin-bottom: 16px; line-height: 1.7; }
+.mk-panel { background: #fff; border: 1px solid #E8E8E8; border-radius: 8px; padding: 24px; }
+.mk-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 991px) { .mk-split { grid-template-columns: 1fr; } }
+.mk-tag { display: inline-flex; font-size: 12px; font-weight: 600; letter-spacing: .04em;
+          text-transform: uppercase; padding: 3px 10px; border-radius: 999px; margin-bottom: 16px; }
+.mk-tag.old { background: #F3F3F3; color: #757575; }
+.mk-tag.new { background: #EAFBF2; color: #0B7A3E; }
+.mk-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.mk-row:last-child { margin-bottom: 0; }
+.mk-cap { font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase;
+          color: #9E9E9E; margin: 24px 0 10px; }
+.mk-cap:first-child { margin-top: 0; }
+.material-symbols-outlined { font-size: 20px; line-height: 1; vertical-align: middle; }
+.mk-drawer { width: 340px; border: 1px solid #E8E8E8; border-radius: 8px; padding: 20px; background: #fff; }
+</style>
+</head>
+<body>
+<div class="mk">
+
+  <h1>Batch 1 · Control</h1>
+  <div class="mk-sub">
+    Button · Search · Tabs · Dropdown — ซ้าย = <b>ของจริงตอนนี้</b> (components.css หลังลง Batch 0) · ขวา = <b>ข้อเสนอ</b><br>
+    Batch 0 แก้แค่ค่าสี — batch นี้แก้ <b>รูปทรง</b> (radius binary) · <b>ขนาด</b> (px + สูง 40) · <b>บทบาทสี</b> (ink vs เขียว)
+  </div>
+
+  <!-- ══════════════════════════ 1 · BUTTON ══════════════════════════ -->
+  <h2>1 · Button</h2>
+  <div class="mk-note">
+    radius <code>6px</code> → <b>pill</b> · font <code>.875rem</code> → <b>15px</b> · สูงไม่คงที่ → <b>40px (sm 32px)</b> ·
+    <b>ตัดเงาทิ้ง</b> (ปุ่มไม่ใช่ของลอย) · ghost ชี้ไป <code>accent-dk</code> · เพิ่ม <code>is-danger-sec</code> + <code>is-block</code> ·
+    disabled เปลี่ยนจาก opacity เป็นพื้นเทา (opacity ทำให้ตัวหนังสือจางจนอ่านไม่ออก)
+  </div>
+  <div class="mk-panel mk-split">
+    <div>
+      <span class="mk-tag old">ตอนนี้</span>
+      <div class="mk-row">
+        <button class="bb-btn is-pri"><i data-lucide="check"></i> อนุมัติ</button>
+        <button class="bb-btn is-sec">ยกเลิก</button>
+        <button class="bb-btn is-ghost">ดูรายละเอียด</button>
+        <button class="bb-btn is-danger">ลบ</button>
+      </div>
+      <div class="mk-row">
+        <button class="bb-btn is-pri is-sm">เล็ก</button>
+        <button class="bb-btn is-sec is-icon"><i data-lucide="search"></i></button>
+        <button class="bb-btn is-pri" disabled>ปิดใช้งาน</button>
+      </div>
+    </div>
+    <div class="b1">
+      <span class="mk-tag new">ข้อเสนอ</span>
+      <div class="mk-row">
+        <button class="bb-btn is-pri"><i data-lucide="check"></i> อนุมัติ</button>
+        <button class="bb-btn is-sec">ยกเลิก</button>
+        <button class="bb-btn is-ghost">ดูรายละเอียด</button>
+        <button class="bb-btn is-danger">ลบ</button>
+      </div>
+      <div class="mk-row">
+        <button class="bb-btn is-pri is-sm">เล็ก</button>
+        <button class="bb-btn is-sec is-icon"><i data-lucide="search"></i></button>
+        <button class="bb-btn is-sec is-icon is-sm"><i data-lucide="x"></i></button>
+        <button class="bb-btn is-pri" disabled>ปิดใช้งาน</button>
+      </div>
+      <div class="mk-cap">★ ใหม่ — is-danger-sec + is-block (ตามภาพ drawer)</div>
+      <div class="mk-drawer">
+        <button class="bb-btn is-pri is-block" style="margin-bottom:10px">อนุมัติคำขอ</button>
+        <button class="bb-btn is-danger-sec is-block">ปฏิเสธคำขอ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 2 · SEARCH ══════════════════════════ -->
+  <h2>2 · Search</h2>
+  <div class="mk-note">
+    border <code>2px</code> → <b>1px</b> (2px หนาผิดที่ — ไม่มี control ตัวอื่นในระบบใช้ 2px) ·
+    focus = border ink + <code>shadow-sm</code> (spec ให้เงาเฉพาะ search wrapper กับ nav) · font 15px
+  </div>
+  <div class="mk-panel mk-split">
+    <div>
+      <span class="mk-tag old">ตอนนี้</span>
+      <div class="mk-row">
+        <div class="bb-search"><i data-lucide="search"></i><input placeholder="ค้นหา…"></div>
+        <div class="bb-search is-expanded"><i data-lucide="search"></i><input placeholder="ค้นหาทะเบียน…"></div>
+      </div>
+    </div>
+    <div class="b1">
+      <span class="mk-tag new">ข้อเสนอ</span>
+      <div class="mk-row">
+        <div class="bb-search"><i data-lucide="search"></i><input placeholder="ค้นหา…"></div>
+        <div class="bb-search is-expanded"><i data-lucide="search"></i><input placeholder="ค้นหาทะเบียน…"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 3 · TABS ══════════════════════════ -->
+  <h2>3 · Tabs</h2>
+  <div class="mk-note">
+    active เดิม = <code>accent-i</code> (เขียวสว่าง 2.38:1) → <b>ink</b> · count active เดิม = tint เขียว → <b>ink fill ตัวขาว</b> ·
+    สูง 44px · gap ระหว่าง tab 24px · เส้นใต้ 2px ชนขอบ container
+  </div>
+  <div class="mk-panel mk-split">
+    <div>
+      <span class="mk-tag old">ตอนนี้</span>
+      <div class="bb-tabs" style="border-bottom:1px solid var(--bb-n200)">
+        <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">24</span></button>
+        <button class="bb-tab">รออนุมัติ <span class="bb-tab-count">8</span></button>
+        <button class="bb-tab">อนุมัติแล้ว</button>
+        <button class="bb-tab">ปฏิเสธ</button>
+      </div>
+    </div>
+    <div class="b1">
+      <span class="mk-tag new">ข้อเสนอ</span>
+      <div class="bb-tabs">
+        <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">24</span></button>
+        <button class="bb-tab">รออนุมัติ <span class="bb-tab-count">8</span></button>
+        <button class="bb-tab">อนุมัติแล้ว</button>
+        <button class="bb-tab">ปฏิเสธ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 4 · DROPDOWN ══════════════════════════ -->
+  <h2>4 · Dropdown</h2>
+  <div class="mk-note">
+    trigger: border <code>2px</code> → <b>1px</b> · สูง 40 · <b>active = ink fill ตัวขาว</b> (เดิม = border เขียว — บนขาวอ่านยาก และแยกจาก hover ไม่ออก)<br>
+    menu: radius <code>12</code> → <b>8</b> · เงา cool-tint → ดำ · item <code>.is-on</code> = tint เขียว + <code>accent-dk</code> (จุดที่เขียวได้โผล่)<br>
+    ★ เพิ่ม 3 อย่างจากภาพ: <b>label หัวกลุ่ม</b> · <b><code>.is-locked</code> + <code>.bb-menu-note</code></b> (Locked / Active) · <b><code>.bb-menu-foot</code></b> (Choose a date)
+  </div>
+  <div class="mk-panel mk-split">
+    <div>
+      <span class="mk-tag old">ตอนนี้</span>
+      <div class="mk-row">
+        <button class="bb-select">แผนก <i data-lucide="chevron-down"></i></button>
+        <button class="bb-select is-active">ประเภทรถ: รถตู้ <i data-lucide="chevron-down"></i></button>
+      </div>
+      <div class="bb-menu" style="width:240px">
+        <div class="bb-menu-label">เลือกวันที่</div>
+        <div class="bb-menu-item">วันนี้ 18 ก.ค.</div>
+        <div class="bb-menu-item is-on">พรุ่งนี้ 19 ก.ค. <i data-lucide="check"></i></div>
+        <div class="bb-menu-item">อาทิตย์ 20 ก.ค.</div>
+        <div class="bb-menu-divider"></div>
+        <div class="bb-menu-item">เลือกวันเอง</div>
+      </div>
+    </div>
+    <div class="b1">
+      <span class="mk-tag new">ข้อเสนอ</span>
+      <div class="mk-row">
+        <button class="bb-select">แผนก <i data-lucide="chevron-down"></i></button>
+        <button class="bb-select"><span class="bb-select-lead">สถานะ:</span> ทั้งหมด <i data-lucide="chevron-down"></i></button>
+        <button class="bb-select is-active">ประเภทรถ: รถตู้ <i data-lucide="chevron-down"></i></button>
+      </div>
+      <div class="bb-menu" style="width:280px">
+        <div class="bb-menu-label">เลือกวันที่</div>
+        <div class="bb-menu-item is-locked">วันนี้ 18 ก.ค. <span class="bb-menu-note">ล็อก</span></div>
+        <div class="bb-menu-item is-on">พรุ่งนี้ 19 ก.ค. <span class="bb-menu-note">อนุมัติได้</span> <i data-lucide="check"></i></div>
+        <div class="bb-menu-item is-locked">อาทิตย์ 20 ก.ค. <span class="bb-menu-note">ล็อก</span></div>
+        <div class="bb-menu-item is-locked">จันทร์ 21 ก.ค. <span class="bb-menu-note">ล็อก</span></div>
+        <div class="bb-menu-foot">เลือกวันเอง <i data-lucide="calendar"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 5 · toolbar จริง ══════════════════════════ -->
+  <h2>5 · ประกอบเป็น toolbar จริง</h2>
+  <div class="mk-note">4 ตัวรวมกัน — เช็กว่าความสูงตรงกันหมด (ทุก control = 40px) และ hierarchy อ่านออก</div>
+  <div class="mk-panel b1">
+    <div class="bb-tabs" style="margin-bottom:20px">
+      <button class="bb-tab is-on">ทั้งหมด <span class="bb-tab-count">24</span></button>
+      <button class="bb-tab">รออนุมัติ <span class="bb-tab-count">8</span></button>
+      <button class="bb-tab">อนุมัติแล้ว</button>
+      <button class="bb-tab">ปฏิเสธ</button>
+    </div>
+    <div class="mk-row" style="margin-bottom:0">
+      <button class="bb-select is-active"><i data-lucide="calendar"></i> พรุ่งนี้ 19 ก.ค. <i data-lucide="chevron-down"></i></button>
+      <button class="bb-select">แผนก <i data-lucide="chevron-down"></i></button>
+      <button class="bb-select">ประเภทรถ <i data-lucide="chevron-down"></i></button>
+      <button class="bb-select"><span class="bb-select-lead">สถานะ:</span> ทั้งหมด <i data-lucide="chevron-down"></i></button>
+      <div class="bb-search"><i data-lucide="search"></i><input placeholder="ค้นหา…"></div>
+      <div style="flex:1"></div>
+      <button class="bb-btn is-sec"><i data-lucide="download"></i> ส่งออก</button>
+      <button class="bb-btn is-pri"><i data-lucide="plus"></i> เพิ่มคำขอ</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ 6 · diff ══════════════════════════ -->
+  <h2>6 · diff ที่จะลงจริง</h2>
+  <div class="mk-panel">
+    <table class="bb-table">
+      <thead><tr><th>selector</th><th>เดิม</th><th>ใหม่</th></tr></thead>
+      <tbody>
+        <tr><td class="bb-cell-strong">.bb-btn</td><td class="bb-cell-id">radius 0 · .875rem · padding เป็น rem</td><td>pill · 15px · h40 pad-x 20 · ไม่มีเงา</td></tr>
+        <tr><td class="bb-cell-strong">.bb-btn.is-pri</td><td class="bb-cell-id">accent-i + เงาสี</td><td>ink fill · ไม่มีเงา</td></tr>
+        <tr><td class="bb-cell-strong">.bb-btn.is-sec</td><td class="bb-cell-id">border n200 + เงา</td><td>border n300 · hover border ink</td></tr>
+        <tr><td class="bb-cell-strong">.bb-btn.is-ghost</td><td class="bb-cell-id">color accent-i (= ink)</td><td>color accent-dk ★</td></tr>
+        <tr><td class="bb-cell-strong">.bb-btn.is-danger-sec</td><td class="bb-cell-id">— ไม่มี</td><td>★ ใหม่ — ขาว + border + ตัวแดง</td></tr>
+        <tr><td class="bb-cell-strong">.bb-btn.is-block</td><td class="bb-cell-id">— ไม่มี</td><td>★ ใหม่ — เต็มความกว้าง (drawer)</td></tr>
+        <tr><td class="bb-cell-strong">.bb-btn:disabled</td><td class="bb-cell-id">opacity .45</td><td>พื้น n100 + ตัว n400</td></tr>
+        <tr><td class="bb-cell-strong">.bb-btn.is-icon</td><td class="bb-cell-id">34px</td><td>40px (sm 32px)</td></tr>
+        <tr><td class="bb-cell-strong">.bb-search</td><td class="bb-cell-id">border 2px n300</td><td>1px n300 · focus ink + shadow-sm</td></tr>
+        <tr><td class="bb-cell-strong">.bb-tab</td><td class="bb-cell-id">1rem · margin-right 1.125rem</td><td>15px · h44 · gap 24</td></tr>
+        <tr><td class="bb-cell-strong">.bb-tab.is-on</td><td class="bb-cell-id">accent-i (= ink แล้ว)</td><td>ink ชัดเจน + weight 700</td></tr>
+        <tr><td class="bb-cell-strong">.bb-tab-count active</td><td class="bb-cell-id">tint accent-bg + accent-h</td><td>ink fill + ตัวขาว ★</td></tr>
+        <tr><td class="bb-cell-strong">.bb-select</td><td class="bb-cell-id">border 2px · .875rem</td><td>1px · 15px · h40</td></tr>
+        <tr><td class="bb-cell-strong">.bb-select.is-active</td><td class="bb-cell-id">border+text เขียว</td><td>ink fill + ตัวขาว ★</td></tr>
+        <tr><td class="bb-cell-strong">.bb-menu</td><td class="bb-cell-id">radius 12 · เงา cool · ไม่มี border</td><td>radius 8 · เงาดำ · border n200</td></tr>
+        <tr><td class="bb-cell-strong">.bb-menu-item.is-on</td><td class="bb-cell-id">พื้น n50</td><td>tint accent-bg + accent-dk ★</td></tr>
+        <tr><td class="bb-cell-strong">.bb-menu-item.is-locked</td><td class="bb-cell-id">— ไม่มี</td><td>★ ใหม่ — n400 + ไม่มี hover</td></tr>
+        <tr><td class="bb-cell-strong">.bb-menu-note</td><td class="bb-cell-id">— ไม่มี</td><td>★ ใหม่ — หมายเหตุท้ายแถว</td></tr>
+        <tr><td class="bb-cell-strong">.bb-menu-foot</td><td class="bb-cell-id">— ไม่มี</td><td>★ ใหม่ — แถว action ท้าย menu</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>window.lucide = { createIcons(){}, icons:{} };</script>
+<script src="./js/ms-icons.js"></script>
+</body>
+</html>

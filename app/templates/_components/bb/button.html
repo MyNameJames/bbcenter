@@ -1,8 +1,10 @@
 {#
   bb_button — Component Library .bb-btn
 
-  variant: pri | sec | ghost | danger   ·   size: '' | 'sm'
-  icon=lucide name · icon_only=True → .is-icon (ไม่มี text)
+  variant: pri | sec | ghost | danger | danger-sec   ·   size: '' | 'sm'
+    pri = ink fill ตัวขาว · sec = ขาว+ขอบ · ghost = ตัวเขียว accent-dk
+    danger = แดงทึบ (ยืนยันลบจริง) · danger-sec = ขาว+ขอบ+ตัวแดง (ปฏิเสธ/ยกเลิก ไม่ตะโกน)
+  icon=lucide name · icon_only=True → .is-icon (ไม่มี text) · block=True → เต็มความกว้าง (drawer/ฟอร์ม)
   on_click → data-action (event convention กลาง — JS delegated listener)
   href → render <a> (ลิงก์/ดาวน์โหลด — ปกติ = <button>) · target/id/title = attr ตรง
   mobile_icon=True → .is-mobile-icon (จอ ≤575px เหลือเฉพาะ icon · text = .bb-btn-text)
@@ -16,8 +18,8 @@
 #}
 {% macro bb_button(text='', variant='pri', size='', icon=none, icon_only=false,
                    disabled=false, on_click='', type='button',
-                   href='', target='', id='', title='', mobile_icon=false) -%}
-{%- set _cls = 'bb-btn is-' ~ variant ~ (' is-sm' if size == 'sm' else '') ~ (' is-icon' if icon_only else '') ~ (' is-mobile-icon' if mobile_icon else '') -%}
+                   href='', target='', id='', title='', mobile_icon=false, block=false) -%}
+{%- set _cls = 'bb-btn is-' ~ variant ~ (' is-sm' if size == 'sm' else '') ~ (' is-icon' if icon_only else '') ~ (' is-block' if block else '') ~ (' is-mobile-icon' if mobile_icon else '') -%}
 {%- set _inner %}{% if icon %}<i data-lucide="{{ icon }}"></i>{% endif %}{% if not icon_only %}<span class="bb-btn-text">{{ text }}</span>{% endif %}{% endset -%}
 {%- if href -%}
 <a href="{{ href }}" class="{{ _cls }}"{% if id %} id="{{ id }}"{% endif %}{% if target %} target="{{ target }}"{% endif %}{% if title %} title="{{ title }}"{% endif %}{% if on_click %} data-action="{{ on_click }}"{% endif %}>{{ _inner }}</a>

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup — Uber Eats marketing (จาก ubereats.design.md)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   mockup-ubereats-marketing.html
+   ──────────────────────────────────────────────────────────────
+   render จาก docs/notes/ubereats.design.md (2026-07-21) แบบตรงสเปก
+   scope = หน้า marketing ubereats.com @1440px — ไม่ใช่ UE Manager
+   ⚠️ REFERENCE ONLY — ไม่ใช่ design ของ BBCenter
+      ปะทะ design_guideline.md 4 จุด: weight 700 · เงาดำล้วน · px ไม่ใช่ rem · ไม่มี semantic color
+
+   ค่าที่ "ไม่ตรงสเปก" มี 4 จุด — mark ด้วย [OFF-SPEC] ทุกจุด:
+     1. font  — UberMove/UberMoveText เป็น proprietary → ใช้ Inter ตาม §Note on Font Substitutes
+     2. photo — spec บอก "photography is load-bearing" แต่ extraction ไม่มีไฟล์รูป
+                → จำลองด้วย CSS gradient โทน amber (ตำแหน่ง/สัดส่วนตามสเปก)
+     3. hero left column — spec เขียน 240px ซึ่ง h1 52px ลงไม่ได้ (น่าจะเป็น extraction artifact)
+                → ใช้ 560px, คง structure "left column + full-bleed photo right" ไว้
+     4. responsive — spec ไม่มี breakpoint เลย (Known Gaps ยอมรับเอง)
+                → ใส่ reflow ขั้นต่ำเพื่อให้เปิดดูบนจอเล็กได้
+═══════════════════════════════════════════════════════════════ */
+
+/* ═══ TOKENS — colors (12 token · ทั้งระบบมี 4 ค่าจริง) ═══ */
+:root{
+  --ink:        #000000;   /* freq 997 — text 483 / border 483 / shadow 28 / bg 3 */
+  --canvas:     #ffffff;   /* freq 36 */
+  --surface-1:  #f3f3f3;   /* freq 5  — section band */
+  --surface-2:  #e8e8e8;   /* freq 3  — map tile เท่านั้น */
+  --ink-muted:  #000000;   /* ⚠️ ค่าซ้ำ --ink เป๊ะ (extraction artifact ในสเปก) */
+
+  /* rounded — binary: pill สำหรับ interactive · 8px สำหรับ surface */
+  --r-none: 0px;
+  --r-sm:   8px;
+  --r-pill: 500px;
+  --r-full: 9999px;
+
+  /* spacing — base 8, module 16 */
+  --sp-xs:      8px;
+  --sp-sm:      12px;
+  --sp-base:    16px;
+  --sp-lg:      24px;
+  --sp-xl:      40px;
+  --sp-2xl:     64px;
+  --sp-section: 72px;
+
+  /* [OFF-SPEC] font stack — UberMove/UberMoveText proprietary
+     §Note on Font Substitutes: UberMove 700 → Geist Bold / Inter Black · UberMoveText → Inter 400/500
+     คง fontWeight ตาม token เดิม (700) ไม่ดัน 900 */
+  --font-display: 'UberMove', 'Inter', sans-serif;
+  --font-text:    'UberMoveText', 'Inter', system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+*{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+body{
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  /* body-md — 16 / 400 / lh 24 */
+  font-family: var(--font-text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+}
+a{ color: var(--ink); text-decoration: none; }
+a:hover{ text-decoration: underline; }
+img{ max-width: 100%; display: block; }
+
+/* ═══ TYPOGRAPHY — 11 token ═══ */
+.t-display-xl     { font-family: var(--font-display); font-size: 52px; font-weight: 700; line-height: 64px; letter-spacing: 0; }
+.t-display-md     { font-family: var(--font-display); font-size: 36px; font-weight: 700; line-height: 44px; letter-spacing: 0; }
+.t-display-sm     { font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 36px; letter-spacing: 0; }
+.t-body-lg        { font-family: var(--font-text); font-size: 18px; font-weight: 500; line-height: 24px; }
+.t-body-md        { font-family: var(--font-text); font-size: 16px; font-weight: 400; line-height: 24px; }
+.t-body-md-medium { font-family: var(--font-text); font-size: 16px; font-weight: 500; line-height: 20px; }
+.t-body-sm        { font-family: var(--font-text); font-size: 14px; font-weight: 400; line-height: 20px; }
+.t-label-md       { font-family: var(--font-text); font-size: 14px; font-weight: 500; line-height: 16px; }
+.t-nav-link       { font-family: var(--font-text); font-size: 18px; font-weight: 500; line-height: 24px; }
+.t-button-md      { font-family: var(--font-text); font-size: 14px; font-weight: 500; line-height: 16px; }
+.t-caption        { font-family: var(--font-text); font-size: 14px; font-weight: 400; line-height: 20px; }
+
+/* ═══════════════════════════════════════════════════
+   COMPONENTS (15 ตัวตามสเปก)
+═══════════════════════════════════════════════════ */
+
+/* 1 · button-primary — ink fill / canvas text / pill / pad 12 / h 36 */
+.button-primary{
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-xs);
+  background: var(--ink); color: var(--canvas);
+  font-family: var(--font-text); font-size: 14px; font-weight: 500; line-height: 16px;
+  border: 1px solid var(--ink); border-radius: var(--r-pill);
+  padding: 12px; height: 36px;
+  cursor: pointer; white-space: nowrap;
+  transition: opacity .15s ease;
+}
+.button-primary:hover{ opacity: .82; text-decoration: none; }
+
+/* 2 · button-secondary — canvas fill / ink text / ink border / pill */
+.button-secondary{
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-xs);
+  background: var(--canvas); color: var(--ink);
+  font-family: var(--font-text); font-size: 14px; font-weight: 500; line-height: 16px;
+  border: 1px solid var(--ink); border-radius: var(--r-pill);
+  padding: 12px; height: 36px;
+  cursor: pointer; white-space: nowrap;
+  transition: background .15s ease;
+}
+.button-secondary:hover{ background: var(--surface-1); text-decoration: none; }
+
+/* 3 · top-nav — canvas / h 72 / pad 0 40 / ไม่มี border-bottom, ไม่มีเงา */
+.top-nav{
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--canvas); color: var(--ink);
+  height: 72px; padding: 0 var(--sp-xl);
+  border-radius: var(--r-none);
+  position: sticky; top: 0; z-index: 20;
+}
+.top-nav-left{ display: flex; align-items: center; gap: var(--sp-lg); }
+.top-nav-right{ display: flex; align-items: center; gap: var(--sp-base); }
+.wordmark{
+  font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1;
+  display: flex; align-items: baseline; gap: 6px;
+}
+.wordmark .eats{ font-family: var(--font-text); font-weight: 500; font-size: 22px; }
+.nav-text-link{
+  font-family: var(--font-text); font-size: 18px; font-weight: 500; line-height: 24px;
+  padding: 12px var(--sp-base);
+}
+
+/* 4 · nav-link — ink bg / canvas text / radius 8 / pad 12 16
+   หมายเหตุสเปก: อันเดียวในหน้าที่ radius 8 แต่เป็น interactive (ปุ่ม "Sign up" ใน nav) */
+.nav-link{
+  display: inline-flex; align-items: center;
+  background: var(--ink); color: var(--canvas);
+  font-family: var(--font-text); font-size: 18px; font-weight: 500; line-height: 24px;
+  border-radius: var(--r-sm);
+  padding: 12px var(--sp-base);
+  transition: opacity .15s ease;
+}
+.nav-link:hover{ opacity: .82; text-decoration: none; }
+
+/* ═══ HERO — left column + full-bleed photography ขวา ═══ */
+.hero{
+  display: grid;
+  grid-template-columns: 560px 1fr;  /* [OFF-SPEC] spec เขียน 240px — h1 52px ลงไม่ได้ */
+  align-items: center;
+  gap: var(--sp-2xl);
+  padding: var(--sp-section) 0 88px var(--sp-xl);  /* 72 บน / 88 ล่าง = ช่วงที่กว้างสุดในระบบ */
+  background: var(--canvas);
+}
+
+/* 5 · hero-heading — display-xl / ink / transparent */
+.hero-heading{
+  font-family: var(--font-display); font-size: 52px; font-weight: 700; line-height: 64px;
+  color: var(--ink); background: transparent; margin: 0 0 var(--sp-lg);
+}
+
+/* 9 · search-wrapper — canvas / radius 8 / pad 12 16 / h 56 = interaction หลักของหน้า */
+.search-wrapper{
+  display: flex; align-items: center; gap: var(--sp-sm);
+  background: var(--canvas); color: var(--ink);
+  border-radius: var(--r-sm);
+  padding: 12px var(--sp-base);
+  height: 56px;
+  border: 1px solid var(--surface-2);
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);  /* เงาดำ low-opacity ตาม §Elevation (28 occurrence) */
+}
+.search-pin{ flex: 0 0 auto; width: 20px; height: 20px; }
+
+/* 8 · text-input — canvas / radius 0 / ไม่มี border / h 40 */
+.text-input{
+  flex: 1 1 auto; min-width: 0;
+  background: var(--canvas); color: var(--ink);
+  font-family: var(--font-text); font-size: 16px; font-weight: 400; line-height: 24px;
+  border: none; border-radius: var(--r-none);
+  padding: 0; height: 40px;
+  outline: none;
+}
+.text-input::placeholder{ color: var(--ink); opacity: .55; }
+
+.search-divider{ width: 1px; height: 24px; background: var(--surface-2); flex: 0 0 auto; }
+.search-when{
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-text); font-size: 16px; font-weight: 500; line-height: 20px;
+  white-space: nowrap; cursor: pointer;
+}
+.hero-alt{ margin-top: var(--sp-base); }
+.hero-alt a{ font-weight: 500; text-decoration: underline; }
+
+/* [OFF-SPEC] hero photography — จำลองด้วย gradient
+   §Overview: "the photography is load-bearing, not decorative"
+   ถ้าเอา band นี้ออก หน้าจะเหลือ black-on-white directory ทันที (สเปกเตือนเองใน Do ข้อ 1) */
+.hero-photo{
+  position: relative;
+  height: 420px;
+  border-radius: var(--r-none);
+  background:
+    radial-gradient(38% 46% at 26% 34%, #F2A03D 0%, rgba(242,160,61,0) 68%),
+    radial-gradient(30% 38% at 62% 24%, #E4562B 0%, rgba(228,86,43,0) 66%),
+    radial-gradient(34% 42% at 74% 68%, #C9361F 0%, rgba(201,54,31,0) 70%),
+    radial-gradient(28% 34% at 40% 78%, #F6C453 0%, rgba(246,196,83,0) 66%),
+    linear-gradient(135deg, #F7D08A 0%, #E8873C 52%, #B8421E 100%);
+  overflow: hidden;
+}
+.hero-photo::after{
+  content: 'photo placeholder — สีอบอุ่นทั้งหมดในหน้านี้มาจากรูป ไม่ใช่ token';
+  position: absolute; left: var(--sp-base); bottom: var(--sp-base);
+  font-family: var(--font-text); font-size: 12px; font-weight: 500;
+  color: var(--canvas); background: rgba(0,0,0,.42);
+  padding: 6px 10px; border-radius: var(--r-pill);
+}
+
+/* 13 · section-band — surface-1 / full-width / pad 72 0 88 */
+.section-band{
+  background: var(--surface-1); color: var(--ink);
+  padding: var(--sp-section) 0 88px;
+}
+.container{ max-width: 1280px; margin: 0 auto; padding: 0 var(--sp-xl); }
+
+/* 6 · section-heading — display-md / ink */
+.section-heading{
+  font-family: var(--font-display); font-size: 36px; font-weight: 700; line-height: 44px;
+  color: var(--ink); background: transparent; margin: 0 0 var(--sp-xl);
+}
+.subsection-heading{
+  font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 36px;
+  color: var(--ink); margin: 0 0 var(--sp-xs);
+}
+
+/* 7 · body-paragraph — body-md-medium 16/500 (หนักกว่า default 400) */
+.body-paragraph{
+  font-family: var(--font-text); font-size: 16px; font-weight: 500; line-height: 20px;
+  color: var(--ink); background: transparent; padding: 0; margin: 0;
+}
+
+/* 11 · feature-card — canvas / radius 0 / pad 16 · 3-col equal grid */
+.feature-row{
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-lg);
+}
+.feature-card{
+  background: var(--canvas); color: var(--ink);
+  border-radius: var(--r-none);
+  padding: var(--sp-base);
+  display: flex; flex-direction: column; gap: var(--sp-sm);
+}
+.feature-thumb{
+  height: 180px; border-radius: var(--r-none);
+  background: linear-gradient(140deg, #E6E0D6 0%, #CDBEA8 100%);  /* [OFF-SPEC] photo thumb */
+}
+.feature-thumb.t2{ background: linear-gradient(140deg, #DCD9D2 0%, #A9A29A 100%); }
+.feature-thumb.t3{ background: linear-gradient(140deg, #E2DED7 0%, #B4AEA4 100%); }
+.feature-link{
+  font-family: var(--font-text); font-size: 16px; font-weight: 500; line-height: 20px;
+  text-decoration: underline; margin-top: auto;
+}
+
+/* 10 · card — canvas / radius 8 / pad 16 (base card ของ feature section) */
+.card{
+  background: var(--canvas); color: var(--ink);
+  font-family: var(--font-text); font-size: 16px; font-weight: 400; line-height: 24px;
+  border-radius: var(--r-sm);
+  padding: var(--sp-base);
+}
+
+/* 15 · map-tile — surface-2 / full-width / radius 0 / pad 16 */
+.map-tile{
+  background: var(--surface-2); color: var(--ink);
+  border-radius: var(--r-none);
+  padding: var(--sp-base);
+  min-height: 320px;
+  display: flex; align-items: flex-end;
+  position: relative; overflow: hidden;
+}
+.map-tile svg{ position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-tile-label{
+  position: relative;
+  font-family: var(--font-display); font-size: 36px; font-weight: 700; line-height: 44px;
+}
+
+/* 12 · city-link — transparent / ink / body-md · grid หนาแน่นสุดในระบบ */
+.link-grid{
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  column-gap: var(--sp-lg); row-gap: var(--sp-sm);
+}
+.link-grid.cols-5{ grid-template-columns: repeat(5, 1fr); }
+.city-link{
+  background: transparent; color: var(--ink);
+  font-family: var(--font-text); font-size: 16px; font-weight: 400; line-height: 24px;
+  padding: 0;
+}
+
+/* 14 · footer — canvas / caption / pad 40 · ไม่มี surface contrast */
+.footer{
+  background: var(--canvas); color: var(--ink);
+  font-family: var(--font-text); font-size: 14px; font-weight: 400; line-height: 20px;
+  padding: var(--sp-xl);
+  border-top: 1px solid var(--surface-2);
+}
+.footer-top{
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--sp-xl); margin-bottom: var(--sp-xl);
+}
+.footer-cols{
+  display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: var(--sp-xl);
+}
+.footer-col-head{
+  font-family: var(--font-text); font-size: 16px; font-weight: 500; line-height: 20px;
+  margin: 0 0 var(--sp-sm);
+}
+.footer-list{ list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-xs); }
+.footer-bottom{
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-base); padding-top: var(--sp-lg);
+  border-top: 1px solid var(--surface-2);
+}
+.store-badges{ display: flex; gap: var(--sp-sm); }
+
+/* badge/chip — ทุกตัวใช้ pill 500px ตาม §Shapes */
+.chip{
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--ink); border-radius: var(--r-pill);
+  padding: 8px var(--sp-base);
+  font-family: var(--font-text); font-size: 14px; font-weight: 500; line-height: 16px;
+  background: var(--canvas); cursor: pointer;
+}
+.chip.is-on{ background: var(--ink); color: var(--canvas); }
+.chip-row{ display: flex; flex-wrap: wrap; gap: var(--sp-sm); margin-bottom: var(--sp-xl); }
+
+/* icon-only circular — rounded.full 9999 */
+.icon-circle{
+  width: 36px; height: 36px; border-radius: var(--r-full);
+  border: 1px solid var(--ink); background: var(--canvas);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+
+.section-white{ padding: var(--sp-section) 0 88px; background: var(--canvas); }
+
+/* [OFF-SPEC] responsive — spec ไม่มี breakpoint (Known Gaps) · ใส่ขั้นต่ำให้เปิดจอเล็กได้ */
+@media (max-width: 1100px){
+  .hero{ grid-template-columns: 1fr; padding: var(--sp-xl) var(--sp-xl) var(--sp-2xl); gap: var(--sp-xl); }
+  .hero-photo{ height: 300px; }
+  .feature-row{ grid-template-columns: 1fr; }
+  .link-grid, .link-grid.cols-5{ grid-template-columns: repeat(3, 1fr); }
+  .footer-cols{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 680px){
+  .top-nav{ padding: 0 var(--sp-base); }
+  .container{ padding: 0 var(--sp-base); }
+  .hero{ padding: var(--sp-lg) var(--sp-base) var(--sp-xl); }
+  .hero-heading{ font-size: 36px; line-height: 44px; }
+  .search-wrapper{ height: auto; flex-wrap: wrap; }
+  .search-divider, .search-when{ display: none; }
+  .link-grid, .link-grid.cols-5{ grid-template-columns: repeat(2, 1fr); }
+  .nav-text-link{ display: none; }
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ 3 · top-nav ═══ -->
+<nav class="top-nav">
+  <div class="top-nav-left">
+    <button class="icon-circle" aria-label="Open menu">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <span class="wordmark">Uber<span class="eats">Eats</span></span>
+  </div>
+  <div class="top-nav-right">
+    <!-- ปุ่ม pill 500px = interactive affordance -->
+    <a href="#" class="button-secondary">Deliver with Uber Eats</a>
+    <a href="#" class="nav-text-link">Sign in</a>
+    <!-- 4 · nav-link : filled dark, radius 8 — action ที่แนะนำหนึ่งเดียวในหน้า -->
+    <a href="#" class="nav-link">Sign up</a>
+  </div>
+</nav>
+
+<!-- ═══ HERO — address search เป็น primary action ไม่ใช่ปุ่ม Browse ═══ -->
+<header class="hero">
+  <div>
+    <!-- 5 · hero-heading : display-xl 52/700 -->
+    <h1 class="hero-heading">Order delivery near you</h1>
+
+    <!-- 9 · search-wrapper > 8 · text-input + 1 · button-primary -->
+    <div class="search-wrapper">
+      <svg class="search-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+      </svg>
+      <input class="text-input" type="text" placeholder="Enter delivery address" aria-label="Delivery address">
+      <span class="search-divider"></span>
+      <span class="search-when">
+        Deliver now
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </span>
+      <button class="button-primary" type="button">Find Food</button>
+    </div>
+
+    <p class="hero-alt t-body-md">Or <a href="#">sign in</a> · <a href="#">Order pickup</a></p>
+  </div>
+
+  <!-- [OFF-SPEC] photography band -->
+  <div class="hero-photo" role="img" aria-label="Food photography placeholder"></div>
+</header>
+
+<!-- ═══ 13 · section-band + 11 · feature-card (3-col equal grid) ═══ -->
+<section class="section-band">
+  <div class="container">
+    <h2 class="section-heading">There's more to love in the app</h2>
+
+    <div class="feature-row">
+      <article class="feature-card">
+        <div class="feature-thumb"></div>
+        <h3 class="subsection-heading">Feed your employees</h3>
+        <p class="body-paragraph">Create a business account and set up meal programs your team actually uses.</p>
+        <a href="#" class="feature-link">Create a business account</a>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-thumb t2"></div>
+        <h3 class="subsection-heading">Your restaurant, delivered</h3>
+        <p class="body-paragraph">Add your restaurant and reach more customers than ever before.</p>
+        <a href="#" class="feature-link">Sign up your restaurant</a>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-thumb t3"></div>
+        <h3 class="subsection-heading">Deliver with Uber Eats</h3>
+        <p class="body-paragraph">Set your own schedule and earn on your terms, wherever you are.</p>
+        <a href="#" class="feature-link">Sign up to deliver</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 15 · map-tile + 12 · city-link grid ═══ -->
+<section class="section-white">
+  <div class="container">
+    <!-- chip ทุกตัว = pill 500px : shape signature ของระบบ -->
+    <div class="chip-row">
+      <button class="chip is-on">Delivery</button>
+      <button class="chip">Pickup</button>
+      <button class="chip">Grocery</button>
+      <button class="chip">Convenience</button>
+      <button class="chip">Alcohol</button>
+      <button class="chip">Pharmacy</button>
+    </div>
+
+    <div class="map-tile">
+      <svg viewBox="0 0 1200 360" aria-hidden="true" fill="none">
+        <path d="M60 210 L140 150 L250 130 L360 90 L520 80 L660 100 L800 90 L940 120 L1060 170 L1140 230 L1060 300 L880 320 L660 310 L440 320 L240 300 Z"
+              fill="#dcdcdc" stroke="#cfcfcf" stroke-width="2"/>
+        <g fill="#000000">
+          <circle cx="300" cy="180" r="5"/><circle cx="470" cy="150" r="5"/><circle cx="640" cy="200" r="5"/>
+          <circle cx="810" cy="165" r="5"/><circle cx="960" cy="215" r="5"/><circle cx="380" cy="255" r="5"/>
+          <circle cx="720" cy="270" r="5"/>
+        </g>
+      </svg>
+      <span class="map-tile-label">Cities near me</span>
+    </div>
+  </div>
+</section>
+
+<section class="section-white" style="padding-top:0">
+  <div class="container">
+    <h2 class="section-heading">Cities near me</h2>
+    <div class="link-grid">
+      <a class="city-link" href="#">Atlanta</a>
+      <a class="city-link" href="#">Austin</a>
+      <a class="city-link" href="#">Baltimore</a>
+      <a class="city-link" href="#">Boston</a>
+      <a class="city-link" href="#">Charlotte</a>
+      <a class="city-link" href="#">Chicago</a>
+      <a class="city-link" href="#">Cleveland</a>
+      <a class="city-link" href="#">Columbus</a>
+      <a class="city-link" href="#">Dallas</a>
+      <a class="city-link" href="#">Denver</a>
+      <a class="city-link" href="#">Detroit</a>
+      <a class="city-link" href="#">Fort Worth</a>
+      <a class="city-link" href="#">Fresno</a>
+      <a class="city-link" href="#">Houston</a>
+      <a class="city-link" href="#">Indianapolis</a>
+      <a class="city-link" href="#">Jacksonville</a>
+      <a class="city-link" href="#">Kansas City</a>
+      <a class="city-link" href="#">Las Vegas</a>
+      <a class="city-link" href="#">Los Angeles</a>
+      <a class="city-link" href="#">Louisville</a>
+      <a class="city-link" href="#">Memphis</a>
+      <a class="city-link" href="#">Miami</a>
+      <a class="city-link" href="#">Milwaukee</a>
+      <a class="city-link" href="#">Minneapolis</a>
+      <a class="city-link" href="#">Nashville</a>
+      <a class="city-link" href="#">New Orleans</a>
+      <a class="city-link" href="#">New York City</a>
+      <a class="city-link" href="#">Oklahoma City</a>
+      <a class="city-link" href="#">Philadelphia</a>
+      <a class="city-link" href="#">Phoenix</a>
+      <a class="city-link" href="#">Pittsburgh</a>
+      <a class="city-link" href="#">Portland</a>
+      <a class="city-link" href="#">Sacramento</a>
+      <a class="city-link" href="#">San Antonio</a>
+      <a class="city-link" href="#">San Diego</a>
+      <a class="city-link" href="#">San Francisco</a>
+      <a class="city-link" href="#">San Jose</a>
+      <a class="city-link" href="#">Seattle</a>
+      <a class="city-link" href="#">Tampa</a>
+      <a class="city-link" href="#">Tucson</a>
+      <a class="city-link" href="#">Washington DC</a>
+      <a class="city-link" href="#">View all cities</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ country grid — surface-1 band ═══ -->
+<section class="section-band">
+  <div class="container">
+    <h2 class="section-heading">Countries with Uber Eats</h2>
+    <div class="link-grid cols-5">
+      <a class="city-link" href="#">Australia</a>
+      <a class="city-link" href="#">Belgium</a>
+      <a class="city-link" href="#">Canada</a>
+      <a class="city-link" href="#">Chile</a>
+      <a class="city-link" href="#">Costa Rica</a>
+      <a class="city-link" href="#">Dominican Republic</a>
+      <a class="city-link" href="#">Ecuador</a>
+      <a class="city-link" href="#">El Salvador</a>
+      <a class="city-link" href="#">France</a>
+      <a class="city-link" href="#">Germany</a>
+      <a class="city-link" href="#">Guatemala</a>
+      <a class="city-link" href="#">Ireland</a>
+      <a class="city-link" href="#">Italy</a>
+      <a class="city-link" href="#">Japan</a>
+      <a class="city-link" href="#">Kenya</a>
+      <a class="city-link" href="#">Mexico</a>
+      <a class="city-link" href="#">Netherlands</a>
+      <a class="city-link" href="#">New Zealand</a>
+      <a class="city-link" href="#">Panama</a>
+      <a class="city-link" href="#">Peru</a>
+      <a class="city-link" href="#">Poland</a>
+      <a class="city-link" href="#">Portugal</a>
+      <a class="city-link" href="#">South Africa</a>
+      <a class="city-link" href="#">Spain</a>
+      <a class="city-link" href="#">Sri Lanka</a>
+      <a class="city-link" href="#">Sweden</a>
+      <a class="city-link" href="#">Switzerland</a>
+      <a class="city-link" href="#">Taiwan</a>
+      <a class="city-link" href="#">United Kingdom</a>
+      <a class="city-link" href="#">United States</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 10 · card — base card (radius 8) ═══ -->
+<section class="section-white" style="padding-block:var(--sp-2xl)">
+  <div class="container">
+    <div class="card" style="border:1px solid var(--surface-2)">
+      <h3 class="t-body-md-medium" style="margin:0 0 var(--sp-xs)">Get the Uber Eats app</h3>
+      <p class="t-body-md" style="margin:0 0 var(--sp-base)">Track your order in real time and get it delivered to your door.</p>
+      <div style="display:flex; gap:var(--sp-sm); flex-wrap:wrap">
+        <a href="#" class="button-primary">Download iOS app</a>
+        <a href="#" class="button-secondary">Download Android app</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 14 · footer ═══ -->
+<footer class="footer">
+  <div class="container" style="padding:0">
+    <div class="footer-top">
+      <span class="wordmark">Uber<span class="eats">Eats</span></span>
+      <div class="store-badges">
+        <a href="#" class="button-secondary">App Store</a>
+        <a href="#" class="button-secondary">Google Play</a>
+      </div>
+    </div>
+
+    <div class="footer-cols">
+      <div>
+        <p class="footer-col-head">Uber Eats</p>
+        <ul class="footer-list">
+          <li><a href="#" class="t-caption">About Uber Eats</a></li>
+          <li><a href="#" class="t-caption">Read our blog</a></li>
+          <li><a href="#" class="t-caption">Buy gift cards</a></li>
+          <li><a href="#" class="t-caption">Create a business account</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-col-head">Restaurants</p>
+        <ul class="footer-list">
+          <li><a href="#" class="t-caption">Add your restaurant</a></li>
+          <li><a href="#" class="t-caption">Sign up to deliver</a></li>
+          <li><a href="#" class="t-caption">Merchant support</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-col-head">Get help</p>
+        <ul class="footer-list">
+          <li><a href="#" class="t-caption">Help centre</a></li>
+          <li><a href="#" class="t-caption">Promotions</a></li>
+          <li><a href="#" class="t-caption">Restaurants near me</a></li>
+          <li><a href="#" class="t-caption">View all cities</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-col-head">Legal</p>
+        <ul class="footer-list">
+          <li><a href="#" class="t-caption">Privacy policy</a></li>
+          <li><a href="#" class="t-caption">Terms of use</a></li>
+          <li><a href="#" class="t-caption">Pricing</a></li>
+          <li><a href="#" class="t-caption">Accessibility</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span class="t-caption">© 2026 Uber Technologies Inc. — mockup เท่านั้น ไม่ใช่หน้าจริง</span>
+      <span class="t-caption">English · $ USD</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
