@@ -1,9 +1,9 @@
-from flask import render_template, request, redirect, url_for, flash, session, current_app
+from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import (db, get_bkk_time, Vehicle, VehicleBooking, Driver, VehicleMileage,
                     VehicleBudget, FuelBill, DriverOT)
 from sqlalchemy import extract
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 from views.core.notification_service import (
     notify_mileage_started      as _n_mileage_start,
     notify_mileage_ended        as _n_mileage_end,
@@ -11,9 +11,7 @@ from views.core.notification_service import (
 import os, time
 from werkzeug.utils import secure_filename
 from views.vehicle.vehicle_common import (
-    vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
-    is_vehicle_admin, _lookup_budget_for_booking,
-    _fmt_date_th, _build_budget_subs,
+    vehicle_bp, is_vehicle_admin, _build_budget_subs,
     get_fuel_price, calc_fuel_cost,
 )
 import services.vehicle.mileage_service as mileage_svc

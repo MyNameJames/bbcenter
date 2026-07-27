@@ -23,64 +23,13 @@
 {% include '_shared/tab2.html' %}
 {% from '_shared/tab2.html' import tab2_tabs %}
 
-            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — calendar weekstrip mockup ตามภาพที่ให้ (ครอบ bb-card)
-               ไม่ใช่ class จริง .bb-ws-* (ทรง/สีต่างจาก component จริงด้านล่างตั้งใจ ตามภาพ) เป็น custom inline style ล้วน hardcode ยังไม่ผูก data/JS ── #}
+            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — sync กับ component WeekStrip ของจริง ใช้งานได้จริง (ไม่ hardcode แล้ว)
+               ใช้ตัวแปร `weekstrip` เดียวกับที่ควบคุม booking list จริงด้านล่าง (ผ่าน document listener 'bb-weekstrip:change'
+               ใน vehicle_admin.js) — กดวันที่นี่จะ sync กับของเดิมใน #adminWeekStripWrap ด้วย (ตัวแปรเดียวกัน คนละตำแหน่งบนหน้า) ── #}
             <div class="row g-4 pt-4">
                 <div class="col-12 col-lg-6">
                     <div class="bb-card p-3">
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="bb-icon-btn flex-shrink-0"><i data-lucide="chevron-left"></i></button>
-                            <div class="d-flex flex-fill" style="min-width:0">
-                                <button type="button" class="text-center rounded-3" style="border:none;font:inherit;cursor:pointer;background:var(--bb-ink);color:#fff;padding:.5rem .25rem;flex:1;min-width:0">
-                                    <div style="font-size:.75rem;opacity:.75">อ</div>
-                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700">21</div>
-                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
-                                        <div style="width:1.05rem;height:.25rem;border-radius:999px;background:#fff"></div>
-                                    </div>
-                                </button>
-                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
-                                    <div style="font-size:.75rem;color:var(--bb-mut)">พ</div>
-                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-str)">22</div>
-                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
-                                        <div style="width:.35rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
-                                    </div>
-                                </button>
-                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
-                                    <div style="font-size:.75rem;color:var(--bb-mut)">พฤ</div>
-                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-str)">23</div>
-                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
-                                        <div style="width:1.75rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
-                                    </div>
-                                </button>
-                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
-                                    <div style="font-size:.75rem;color:var(--bb-mut)">ศ</div>
-                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-str)">24</div>
-                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
-                                        <div style="width:.7rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
-                                    </div>
-                                </button>
-                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
-                                    <div style="font-size:.75rem;color:var(--bb-info)">ส</div>
-                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-info)">25</div>
-                                    <div style="height:.375rem;margin-top:.25rem"></div>
-                                </button>
-                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
-                                    <div style="font-size:.75rem;color:var(--bb-dg)">อา</div>
-                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-dg)">26</div>
-                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
-                                        <div style="width:1.4rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
-                                    </div>
-                                </button>
-                                <button type="button" class="text-center" style="border:none;background:transparent;font:inherit;cursor:pointer;padding:.5rem .25rem;flex:1;min-width:0">
-                                    <div style="font-size:.75rem;color:var(--bb-mut)">จ</div>
-                                    <div class="bb-num" style="font-size:1.0625rem;font-weight:700;color:var(--bb-str)">27</div>
-                                    <div class="d-flex justify-content-center" style="height:.375rem;margin-top:.25rem">
-                                        <div style="width:.7rem;height:.25rem;border-radius:999px;background:var(--bb-ink)"></div>
-                                    </div>
-                                </button>
-                            </div>
-                            <button type="button" class="bb-icon-btn flex-shrink-0"><i data-lucide="chevron-right"></i></button>
-                        </div>
+                        {{ component(weekstrip) }}
                     </div>
                 </div>
             </div>
