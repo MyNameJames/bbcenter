@@ -1,30 +1,46 @@
 {# templates/_shared/tab2.html
    Tabs ที่ port มาจาก app/static/core/mockup-orders.html แบบตรงตัว (.tabs/.tab) (2026-07-07)
    ⚠️ ใช้แทน bb_tabs ใน vehicle_mileage.html แล้ว (statusTabs) — เพจอื่นยังใช้ bb_tabs เดิม
-   - underline หนา 5px, active = สีดำ (ink), ไม่ active = เทา (gray-500)
-   - macro นี้แค่ render markup+CSS — ไม่มี JS ในตัว (หน้าเจ้าของ data ต้องผูก click handler เอง
+   - underline = ink สไลด์ (2026-07-27) — ไม่ใช่ border ต่อ tab แบบเดิมแล้ว
+   - จอแคบกว่าความกว้างรวม tab → scroll แนวนอนแทนบีบ (2026-07-27)
+   - macro นี้แค่ render markup+CSS — ไม่มี JS filter ในตัว (หน้าเจ้าของ data ต้องผูก click handler เอง
      เพราะแต่ละหน้ามี logic filter/สลับ panel ต่างกัน — ดู vehicle_mileage.js bindStatusTabs())
+     ส่วน underline slide เป็น JS กลางท้ายไฟล์นี้ ใช้ได้กับทุกหน้าที่ include ไฟล์นี้ ไม่ต้องผูกเอง
    tabs = list ของ dict: {label, value, active}
 #}
 <style>
 .tab2-tabs{
+  position:relative;
   display:flex;
   gap:28px;
   border-bottom:1px solid #e0e0e0;
+  overflow-x:auto;
+  overflow-y:hidden;
 }
 .tab2-tab{
+  flex-shrink:0;
+  white-space:nowrap;
   padding:10px 2px 14px;
   font-size:15px;
   font-weight:600;
   color:#757575;
   cursor:pointer;
-  border-bottom:5px solid transparent;
-  transition: color .18s ease, border-color .25s ease;
+  border:none;
+  background:none;
+  font-family:inherit;
+  transition: color .18s ease;
 }
 .tab2-tab:hover{ color:#06060a; }
 .tab2-tab.active{
   color:#06060a;
-  border-bottom-color:#06060a;
+}
+.tab2-ink{
+  position:absolute;
+  bottom:-1px;
+  height:3px;
+  border-radius:2px;
+  background:#06060a;
+  transition:left .32s cubic-bezier(.2,.8,.2,1), width .32s cubic-bezier(.2,.8,.2,1);
 }
 </style>
 
@@ -33,3 +49,30 @@
 {%- for t in tabs %}<div class="tab2-tab{% if t.active %} active{% endif %}"{% if t.value %} data-tab="{{ t.value }}"{% endif %}>{{ t.label }}</div>{% endfor %}
 </div>
 {%- endmacro %}
+
+<script>
+/* underline slide — ใช้ได้กับทุก .tab2-tabs ในหน้า ไม่ต้องผูกเองต่อหน้า (2026-07-27) */
+(function () {
+    function initTab2(root) {
+        var ink = document.createElement('span');
+        ink.className = 'tab2-ink';
+        root.appendChild(ink);
+        function move(tab) {
+            if (!tab) return;
+            ink.style.left = tab.offsetLeft + 'px';
+            ink.style.width = tab.offsetWidth + 'px';
+        }
+        function sync() { move(root.querySelector('.tab2-tab.active') || root.querySelector('.tab2-tab')); }
+        root.addEventListener('click', function (e) {
+            var tab = e.target.closest('.tab2-tab');
+            if (tab) move(tab);
+        });
+        window.addEventListener('resize', sync);
+        window.addEventListener('load', sync);
+        sync();
+    }
+    function start() { document.querySelectorAll('.tab2-tabs').forEach(initTab2); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+    else start();
+})();
+</script>

@@ -352,6 +352,141 @@ def test_auto_generate_ot_notify_false_suppresses_notification(session):
 
 
 # ──────────────────────────────────────────────────────────────
+# 3c. sync_ot_for_trip() — คำนวณ OT ใหม่เมื่อเวลาทริปถูกแก้ (2026-07-27)
+#     เดิม auto_generate_ot() idempotent ต่อ booking → แก้เวลาทริปทีหลังแล้วเงินไม่ขยับ
+#     เคสจริง: ทริป 15:59-16:00 (1 นาที) แต่ OT ค้างที่ 11 ชม. = 220 บาท
+#     ทุก test pin เวลา 08:00 กัน flaky ข้ามเที่ยงคืน (เหตุผลเดียวกับ 3b)
+# ──────────────────────────────────────────────────────────────
+def _ot_trip(session, *, hours=8):
+    """booking (need_driver) + rate config ทั้งวัน + mileage เริ่ม 08:00 → (admin, bk, m)"""
+    admin = _user(session, role='admin')
+    v = _vehicle(session)
+    d = _driver(session)
+    _ot_rate_config(session)
+    bk = _booking(session, admin.id, v, need_driver=True, driver_id=d.id)
+    bk.start_datetime = bk.start_datetime.replace(hour=8, minute=0, second=0, microsecond=0)
+    session.commit()
+    m = _mileage(session, bk, actual_end=bk.start_datetime + timedelta(hours=hours))
+    return admin, bk, m
+
+
+def _retime(session, m, *, start_hm, end_hm):
+    """ย้ายเวลาทริปเป็น HH:MM ใหม่ (วันเดิม) — จำลองแอดมินแก้เวลาหลังปิดงาน"""
+    sh, sm = start_hm
+    eh, em = end_hm
+    m.actual_start = m.actual_start.replace(hour=sh, minute=sm)
+    m.actual_end   = m.actual_end.replace(hour=eh, minute=em,
+                                          year=m.actual_start.year,
+                                          month=m.actual_start.month,
+                                          day=m.actual_start.day)
+    session.commit()
+    return m
+
+
+def test_sync_creates_ot_when_none_exists(session):
+    """ยังไม่มี OT → สร้างใหม่ (พฤติกรรมเดิมของ auto_generate_ot)"""
+    admin, bk, m = _ot_trip(session)
+    msgs = ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+    assert msgs == []
+    assert DriverOT.query.filter_by(booking_id=bk.id).count() == 1
+
+
+def test_sync_is_noop_when_ot_still_matches_trip(session):
+    """เรียกซ้ำโดยเวลาทริปไม่เปลี่ยน → ไม่แตะอะไร ไม่สร้างซ้ำ"""
+    admin, bk, m = _ot_trip(session)
+    ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+    ot = DriverOT.query.filter_by(booking_id=bk.id).first()
+    amount_before = float(ot.total_amount)
+
+    assert ms.sync_ot_for_trip(bk, m, actor_id=admin.id) == []
+    assert DriverOT.query.filter_by(booking_id=bk.id).count() == 1
+    assert float(ot.total_amount) == amount_before
+
+
+def test_sync_recomputes_when_trip_time_shrinks(session):
+    """แก้เวลาทริป 08:00-16:00 → 09:00-11:00 แล้วเงินต้องลดตาม (8 ชม. → 2 ชม.)"""
+    admin, bk, m = _ot_trip(session)
+    ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+    ot = DriverOT.query.filter_by(booking_id=bk.id).first()
+    assert float(ot.total_hours) == 8.0
+
+    _retime(session, m, start_hm=(9, 0), end_hm=(11, 0))
+    msgs = ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+
+    assert float(ot.total_hours) == 2.0
+    assert float(ot.total_amount) == 200        # 2 ชม. × 100
+    assert len(msgs) == 1 and msgs[0][1] == 'info'
+
+
+def test_sync_soft_deletes_when_trip_drops_below_threshold(session):
+    """แก้เวลาเหลือ 1 นาที → ไม่เข้าเกณฑ์ OT แล้ว ต้อง soft-delete + เตือน
+    (เคสจริงที่ทำให้ตั้งกฎ 30 นาที: ทริป 15:59-16:00 เคยค้างที่ 11 ชม. = 220 บาท)"""
+    admin, bk, m = _ot_trip(session)
+    ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+    ot = DriverOT.query.filter_by(booking_id=bk.id).first()
+
+    _retime(session, m, start_hm=(15, 59), end_hm=(16, 0))
+    msgs = ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+
+    assert ot.is_deleted is True
+    assert ot.deleted_at is not None
+    assert len(msgs) == 1 and msgs[0][1] == 'warning'
+
+
+def test_sync_never_touches_paid_ot(session):
+    """OT จ่ายไปแล้ว → ห้ามแก้เงินเงียบๆ คืนคำเตือนให้คนตรวจแทน"""
+    admin, bk, m = _ot_trip(session)
+    ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+    ot = DriverOT.query.filter_by(booking_id=bk.id).first()
+    ot.status = 'paid'
+    session.commit()
+    amount_before = float(ot.total_amount)
+
+    _retime(session, m, start_hm=(9, 0), end_hm=(11, 0))
+    msgs = ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+
+    assert float(ot.total_amount) == amount_before
+    assert len(msgs) == 1 and msgs[0][1] == 'warning'
+    assert 'จ่ายไปแล้ว' in msgs[0][0]
+
+
+def test_sync_never_overwrites_manually_edited_ot(session):
+    """is_manual=True (แอดมินแก้เองที่หน้าค่าใช้จ่ายคนขับ) → ห้ามคำนวณทับ"""
+    admin, bk, m = _ot_trip(session)
+    ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+    ot = DriverOT.query.filter_by(booking_id=bk.id).first()
+    ot.is_manual = True
+    session.commit()
+    amount_before = float(ot.total_amount)
+
+    _retime(session, m, start_hm=(9, 0), end_hm=(11, 0))
+    msgs = ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+
+    assert float(ot.total_amount) == amount_before
+    assert len(msgs) == 1 and msgs[0][1] == 'warning'
+    assert 'แก้ด้วยมือ' in msgs[0][0]
+
+
+def test_short_trip_generates_no_ot_at_all(session):
+    """ทริป 20 นาที ตั้งแต่แรก → ไม่สร้าง OT เลย (กติกา 30 นาที)"""
+    admin, bk, m = _ot_trip(session)
+    _retime(session, m, start_hm=(8, 0), end_hm=(8, 20))
+    assert ms.sync_ot_for_trip(bk, m, actor_id=admin.id) == []
+    assert DriverOT.query.filter_by(booking_id=bk.id).count() == 0
+
+
+def test_ot_matches_trip_flags_stale_record(session):
+    """helper ที่ dashboard ใช้ติด badge เตือน — slot กว้างกว่าทริป = ไม่ตรง"""
+    admin, bk, m = _ot_trip(session)
+    ms.sync_ot_for_trip(bk, m, actor_id=admin.id)
+    ot = DriverOT.query.filter_by(booking_id=bk.id).first()
+    assert ms.ot_matches_trip(ot, m) is True
+
+    _retime(session, m, start_hm=(15, 59), end_hm=(16, 0))
+    assert ms.ot_matches_trip(ot, m) is False
+
+
+# ──────────────────────────────────────────────────────────────
 # 4. override_fuel_cost() — สร้างครั้งแรกไม่ได้ / rededuct เมื่อเคยหักแล้ว
 #    (behavior เดิมจาก views/vehicle/vehicle_cost.py::override_fuel())
 # ──────────────────────────────────────────────────────────────

@@ -20,6 +20,7 @@
     const TH_DOW = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
     const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
                     'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const TH_DOW_FULL = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
 
     const pad2  = n => String(n).padStart(2, '0');
     const toISO = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -66,6 +67,7 @@
         return (dt.getMonth() === mm - 1 && dt.getDate() === dd) ? dt : null;
     }
     const fmtInput = d => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear() + 543}`;
+    const fmtTHFull = d => `วัน${TH_DOW_FULL[d.getDay()]}ที่ ${d.getDate()} ${TH_MON_FULL[d.getMonth()]} พ.ศ. ${d.getFullYear() + 543}`;
     const today0 = () => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; };
     const once = (el, flag) => { if (el.dataset[flag]) return false; el.dataset[flag] = '1'; return true; };
 
@@ -85,13 +87,14 @@
             for (let i = 0; i < 7; i++) {
                 const d = new Date(start); d.setDate(start.getDate() + i);
                 const on = sameDay(d, sel), isTd = sameDay(d, td), c = counts[toISO(d)] || 0;
-                const ind = c === 0 ? '' : c === 1 ? '<span class="bb-ws-ind-dot"></span>' : c <= 5 ? '<span class="bb-ws-ind-bar is-wr"></span>' : '<span class="bb-ws-ind-bar is-dg"></span>';
-                const dnum = on ? `<div class="bb-ws-dnum-active bb-num">${d.getDate()}</div>` : `<div class="bb-ws-dnum bb-num">${d.getDate()}</div>`;
                 const wd = i === 0 ? ' is-sun' : i === 6 ? ' is-sat' : '';
-                h += `<div class="bb-ws-day${wd}${on ? ' is-on' : ''}${isTd && !on ? ' is-today' : ''}" data-iso="${toISO(d)}">` +
+                /* indicator: บาร์ดำ (ขาวถ้า active) ยาวตามจำนวนงาน เต็มแถบที่ 5 งาน · ไม่มีงาน = ว่าง ไม่โชว์ */
+                const fillW = (Math.min(c, 5) * 0.35).toFixed(2);
+                const ind = c === 0 ? '' : `<div class="bb-ws-ind-fill" style="width:${fillW}rem"></div>`;
+                h += `<button type="button" class="bb-ws-day${wd}${on ? ' is-on' : ''}${isTd && !on ? ' is-today' : ''}" data-iso="${toISO(d)}">` +
                      `<div class="bb-ws-dow">${TH_DOW[i]}</div>` +
-                     `<div class="bb-ws-dnum-wrap">${dnum}</div>` +
-                     `<div class="bb-ws-ind">${ind}</div></div>`;
+                     `<div class="bb-ws-dnum bb-num">${d.getDate()}</div>` +
+                     `<div class="bb-ws-ind">${ind}</div></button>`;
             }
             strip.innerHTML = h;
         }
@@ -248,6 +251,148 @@
             onMinutePick: () => { end.close(); fire(); }
         });
         applyWarn(start); applyWarn(end);
+    }
+
+    /* ────────────────────────────── DATE FIELD (inline calendar, no popover-apply step)
+       ต่างจาก DATE PICKER ด้านบน: ปฏิทินโชว์ใต้ trigger ตรงๆ, เลือกวันแล้ว commit ทันที
+       ไม่มีช่องพิมพ์วันที่เอง/ปุ่มยืนยัน — เก็บ __bbSetValue/__bbClear ให้หน้าเรียกจาก JS ภายนอกได้
+       (เช่น modal เดียวใช้ซ้ำหลาย record — เปิด edit ต้อง prefill ค่าใหม่ทับของเดิม) */
+    function initDateField(root) {
+        if (!once(root, 'bbDfInit')) return;
+        const trigger = root.querySelector('[data-bb-df-trigger]');
+        const display = root.querySelector('[data-bb-df-display]');
+        const valueInput = root.querySelector('[data-bb-df-value]');
+        const panel = root.querySelector('[data-bb-df-panel]');
+        const monthEl = root.querySelector('[data-bb-df-month]');
+        const grid = root.querySelector('[data-bb-df-grid]');
+        let picked = parseISO(root.dataset.value);
+        let view = picked ? new Date(picked) : today0();
+
+        function renderGrid() {
+            monthEl.textContent = `${TH_MON_FULL[view.getMonth()]} ${view.getFullYear() + 543}`;
+            const firstDow = new Date(view.getFullYear(), view.getMonth(), 1).getDay();
+            const totalDays = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+            const start = firstDow === 0 ? 6 : firstDow - 1;   // สัปดาห์เริ่มจันทร์
+            const td = today0();
+            let h = '';
+            for (let i = 0; i < start; i++) h += '<button type="button" class="bb-df-day is-muted" tabindex="-1"></button>';
+            for (let d = 1; d <= totalDays; d++) {
+                const cur = new Date(view.getFullYear(), view.getMonth(), d);
+                const isPast = cur < td;
+                const isSel = picked && sameDay(cur, picked);
+                h += `<button type="button" class="bb-df-day${isSel ? ' is-active' : ''}${isPast ? ' is-disabled' : ''}" data-day="${d}"${isPast ? ' disabled' : ''}>${d}</button>`;
+            }
+            grid.innerHTML = h;
+        }
+        function setPicked(d) {
+            picked = d; view = new Date(d);
+            display.value = fmtTHFull(d);
+            valueInput.value = toISO(d);
+            renderGrid();
+            root.dispatchEvent(new CustomEvent('bb-datefield:change', { detail: { date: valueInput.value }, bubbles: true }));
+        }
+        function clearPicked() {
+            picked = null;
+            display.value = '';
+            valueInput.value = '';
+            renderGrid();
+        }
+        function open() { panel.hidden = false; trigger.classList.add('is-active'); renderGrid(); }
+        function close() { panel.hidden = true; trigger.classList.remove('is-active'); }
+
+        trigger.addEventListener('click', e => { stop(e); panel.hidden ? open() : close(); });
+        panel.addEventListener('click', stop);
+        grid.addEventListener('click', e => {
+            const b = e.target.closest('[data-day]');
+            if (!b || b.disabled) return;
+            setPicked(new Date(view.getFullYear(), view.getMonth(), +b.dataset.day));
+            close();
+        });
+        root.querySelector('[data-bb-df-prev]').addEventListener('click', e => { stop(e); view = new Date(view.getFullYear(), view.getMonth() - 1, 1); renderGrid(); });
+        root.querySelector('[data-bb-df-next]').addEventListener('click', e => { stop(e); view = new Date(view.getFullYear(), view.getMonth() + 1, 1); renderGrid(); });
+        document.addEventListener('click', e => { if (!panel.hidden && !root.contains(e.target)) close(); });
+
+        if (picked) display.value = fmtTHFull(picked);
+        root.__bbSetValue = iso => { const d = parseISO(iso); if (d) setPicked(d); else clearPicked(); };
+        root.__bbClear = clearPicked;
+        root.__bbGetValue = () => valueInput.value;
+    }
+
+    /* ────────────────────────────── TIME RANGE FIELD (flat scrollable list, ไม่ใช่ column ชม./นาที)
+       ต่างจาก TIME RANGE ด้านบน: dropdown เป็น list เวลาแบนตาม step เดียว (เช่น 15 นาที) เลือกครั้งเดียวจบ
+       ไม่ต้องเลือกชม.แล้วนาทีแยก 2 ขั้น — __bbSetRange ให้หน้าเรียกจากภายนอก prefill ได้เหมือน DATE FIELD */
+    function buildFlatTimes(step) {
+        const arr = [];
+        for (let h = 0; h < 24; h++) for (let m = 0; m < 60; m += step) arr.push(`${pad2(h)}:${pad2(m)}`);
+        return arr;
+    }
+    function initTimeRangeField(root) {
+        if (!once(root, 'bbTrfInit')) return;
+        const step = +(root.dataset.step || 15);
+        const TIMES = buildFlatTimes(step);
+        const idx = t => TIMES.indexOf(t);
+        const durEl = root.querySelector('[data-bb-trf-duration]');
+
+        const units = [...root.querySelectorAll('[data-bb-trf-unit]')].map(el => ({
+            el,
+            role: el.dataset.bbTrfUnit,
+            display: el.querySelector('[data-bb-trf-display]'),
+            pop: el.querySelector('[data-bb-trf-pop]'),
+        }));
+        const startU = units.find(u => u.role === 'start');
+        const endU   = units.find(u => u.role === 'end');
+        const startInput = root.querySelector('[data-bb-trf-value="start"]');
+        const endInput   = root.querySelector('[data-bb-trf-value="end"]');
+
+        function updateDuration() {
+            if (!durEl) return;
+            const sI = idx(startInput.value), eI = idx(endInput.value);
+            if (sI < 0 || eI < 0) { durEl.textContent = ''; return; }
+            let diff = (eI - sI) * step;
+            if (diff < 0) diff += 24 * 60;
+            const h = Math.floor(diff / 60), m = diff % 60;
+            durEl.textContent = m === 0 ? `${h} ชม.` : `${h} ชม. ${m} นาที`;
+        }
+        function closeAll() { units.forEach(u => u.pop.classList.remove('is-open')); }
+        function buildList(u) {
+            const isStart = u.role === 'start';
+            const minI = isStart ? 0 : idx(startInput.value);
+            const maxI = isStart ? idx(endInput.value) : TIMES.length - 1;
+            u.pop.innerHTML = TIMES.map((t, i) => {
+                if (i < minI || i > maxI) return '';
+                const cur = (isStart ? startInput.value : endInput.value) === t;
+                return `<div class="bb-trf-opt${cur ? ' is-active' : ''}" data-t="${t}"><span>${t}</span>${cur ? '<span class="material-symbols-rounded">check</span>' : ''}</div>`;
+            }).join('');
+        }
+        function selectTime(u, t) {
+            const inputEl = u.role === 'start' ? startInput : endInput;
+            inputEl.value = t; u.display.value = t;
+            if (u.role === 'start' && (idx(endInput.value) < idx(t))) { endInput.value = t; endU.display.value = t; }
+            if (u.role === 'end'   && (idx(startInput.value) > idx(t))) { startInput.value = t; startU.display.value = t; }
+            closeAll(); updateDuration();
+            root.dispatchEvent(new CustomEvent('bb-timerangefield:change', { detail: { start: startInput.value, end: endInput.value }, bubbles: true }));
+        }
+        units.forEach(u => {
+            u.el.addEventListener('click', e => {
+                stop(e);
+                const willOpen = !u.pop.classList.contains('is-open');
+                closeAll();
+                if (willOpen) { buildList(u); u.pop.classList.add('is-open'); }
+            });
+            u.pop.addEventListener('click', e => {
+                const opt = e.target.closest('[data-t]');
+                if (opt) selectTime(u, opt.dataset.t);
+            });
+        });
+        document.addEventListener('click', e => { if (!root.contains(e.target)) closeAll(); });
+
+        updateDuration();
+        root.__bbSetRange = (start, end) => {
+            if (start) { startInput.value = start; startU.display.value = start; }
+            if (end)   { endInput.value = end; endU.display.value = end; }
+            updateDuration();
+        };
+        root.__bbGetRange = () => ({ start: startInput.value, end: endInput.value });
     }
 
     /* ────────────────────────────── COMBO (searchable dropdown) */
@@ -680,6 +825,20 @@
         const labelEl = btn.querySelector('.ue-chip-label');
         const origLabel = labelEl ? labelEl.textContent : '';
 
+        /* popover portal ออก document.body ตอนเปิด → input หลุดออกจาก <form> ทำให้
+           new FormData(form) เก็บค่าไม่ได้ = filter ที่เลือกตอน panel เปิดอยู่หายเงียบๆ
+           (เคสจริง 2026-07-28: chip รถ/คนขับ หน้า mileage กดแล้วข้อมูลไม่ถูกกรอง)
+           แก้ด้วย attribute form="<id>" — HTML spec ถือเป็น form owner ไม่ขึ้นกับตำแหน่ง DOM */
+        const ownerForm = root.closest('form');
+        const ownerFormId = ownerForm ? ownerForm.id : '';
+        function bindFormOwner() {
+            if (!ownerFormId) return;
+            body.querySelectorAll('[name]').forEach(function (el) {
+                el.setAttribute('form', ownerFormId);
+            });
+        }
+        bindFormOwner();
+
         function snap() {
             const st = {};
             body.querySelectorAll('[name]').forEach(function (el) {
@@ -698,8 +857,8 @@
         }
         function recompute() {
             const changed = JSON.stringify(snap()) !== initial;
-            root.classList.toggle('is-active', changed);
             if (body.querySelector('input[type="radio"]')) {
+                root.classList.toggle('is-active', changed);
                 // radio → เอา label ที่เลือกมาใส่ chip (ยกเว้น default = คืน label เดิม) · ไม่ใช้ badge
                 const checked = body.querySelector('input[type="radio"]:checked');
                 if (labelEl) {
@@ -709,8 +868,11 @@
                 }
                 if (badge) badge.classList.remove('is-show');
             } else {
-                // checkbox → badge นับ เฉพาะเมื่อเปลี่ยนจาก default
-                const c = changed ? selectedCount() : 0;
+                /* checkbox → is-active/badge ยึด "ติ๊กจริงกี่อัน" ไม่ใช่ diff กับ snapshot ตอน init
+                   (2026-07-28: option ที่ JS rebuild ทีหลัง เช่น cascade budget_sub ทำให้ snapshot
+                   ต่างจาก initial ทั้งที่ยังไม่ได้ติ๊กอะไร → chip ติดเขียวหลอก) */
+                const c = selectedCount();
+                root.classList.toggle('is-active', c > 0);
                 if (badge) { badge.textContent = c > 0 ? c : ''; badge.classList.toggle('is-show', c > 0); }
             }
             root.dispatchEvent(new CustomEvent('ue-chip:change', { detail: snap(), bubbles: true }));
@@ -722,6 +884,7 @@
             else { pop.style.left = r.left + 'px'; pop.style.right = 'auto'; }
         }
         function open() {
+            bindFormOwner();                         // option ที่ JS หน้าอื่น rebuild ทีหลังก็ต้องผูก form ด้วย
             document.body.appendChild(pop);          // portal → escape overflow/transform ancestor
             pop.hidden = false; root.classList.add('is-open'); btn.setAttribute('aria-expanded', 'true');
             place();
@@ -764,6 +927,8 @@
         r.querySelectorAll('[data-bb-datepicker]').forEach(initDatePicker);
         r.querySelectorAll('[data-bb-timepicker]').forEach(initTimePicker);
         r.querySelectorAll('[data-bb-timerange]').forEach(initTimeRange);
+        r.querySelectorAll('[data-bb-datefield]').forEach(initDateField);
+        r.querySelectorAll('[data-bb-timerangefield]').forEach(initTimeRangeField);
         r.querySelectorAll('[data-bb-combo]').forEach(initCombo);
         r.querySelectorAll('[data-bb-search]').forEach(initSearch);
         r.querySelectorAll('[data-bb-upload]').forEach(initUpload);

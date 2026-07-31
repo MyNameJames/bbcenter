@@ -11,10 +11,11 @@
     {{ bb_input('budget', label='งบประมาณ', value='-500', error='ต้องมากกว่า 0') }}
 #}
 {% macro bb_input(name, label='', value='', placeholder='', icon=none, hint='',
-                  error='', type='text', disabled=false, required=false) -%}
+                  error='', type='text', disabled=false, required=false,
+                  id=none, class_name='', min=none, max=none, pattern=none, inputmode=none) -%}
 <div class="bb-field">
-{%- if label %}<label class="bb-label" for="{{ name }}">{{ label }}</label>{% endif %}
-{%- set _input %}<input id="{{ name }}" name="{{ name }}" type="{{ type }}" class="bb-input{% if error %} is-error{% endif %}" value="{{ value }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if disabled %} disabled{% endif %}{% if required %} required{% endif %}>{% endset %}
+{%- if label %}<label class="bb-label" for="{{ id or name }}">{{ label }}</label>{% endif %}
+{%- set _input %}<input id="{{ id or name }}" name="{{ name }}" type="{{ type }}" class="bb-input{% if class_name %} {{ class_name }}{% endif %}{% if error %} is-error{% endif %}" value="{{ value }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if disabled %} disabled{% endif %}{% if required %} required{% endif %}{% if min is not none %} min="{{ min }}"{% endif %}{% if max is not none %} max="{{ max }}"{% endif %}{% if pattern %} pattern="{{ pattern }}"{% endif %}{% if inputmode %} inputmode="{{ inputmode }}"{% endif %}>{% endset %}
 {%- if icon %}<div class="bb-input-wrap"><i data-lucide="{{ icon }}"></i>{{ _input }}</div>{% else %}{{ _input }}{% endif %}
 {%- if error %}<div class="bb-hint is-error">{{ error }}</div>{% elif hint %}<div class="bb-hint">{{ hint }}</div>{% endif %}
 </div>

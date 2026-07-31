@@ -17,6 +17,7 @@ from flask_login import current_user
 from models import (
     db, VehicleBudget, VehicleBudgetLog, VehicleMileage,
     VehicleBooking, BudgetType, VehicleDepartment, get_bkk_time,
+    VehicleBudgetYearlyPlan,
 )
 
 D0 = Decimal('0')
@@ -156,6 +157,51 @@ def set_active(budget: VehicleBudget, active: bool, *, note: str = ''):
         change_amount=D0,
         note=note or f'{event} by admin',
     )
+
+
+def set_yearly_plan(plan_id, fiscal_year: int, total_amount, central_allocation,
+                     start_date, end_date, *,
+                     central_allocated_sum=0, dept_allocated_sum=0):
+    """สร้าง/แก้ไข VehicleBudgetYearlyPlan (v2.26 — upsert ตาม plan_id ตรงๆ แทน fiscal_year ที่เลิก
+    unique แล้ว. plan_id=None → สร้างแถวใหม่เสมอ; มีค่า → แก้ไขแถวเดิม).
+    start_date/end_date เป็นช่วงเวลาของ plan เอง (เดิม implicit มี.ค.-ก.พ. ตอนนี้ admin เลือกเอง).
+    dept_allocation คำนวณเป็น total - central เสมอ (ไม่ใช่ column, ดู model). บล็อกถ้าลดเพดาน
+    ต่ำกว่าที่จัดสรรไปแล้วในงบย่อย (central_allocated_sum/dept_allocated_sum ส่งมาจาก view — filter
+    VehicleBudget.yearly_plan_id ตรงๆ — กันเลขติดลบ/เข้าใจผิดเรื่องเงินที่จัดสรรไปแล้ว, ตกลงกับผู้ใช้
+    2026-07-31). ไม่มี ledger table แยก (ต่างจาก VehicleBudget) เพราะเป็นค่าตั้งเป้าระดับปี ไม่ใช่
+    transaction — ไม่มี note param"""
+    total_amount       = Decimal(str(total_amount))
+    central_allocation = Decimal(str(central_allocation))
+    if total_amount < 0 or central_allocation < 0:
+        raise ValueError('จำนวนเงินต้องไม่ติดลบ')
+    if central_allocation > total_amount:
+        raise ValueError('ส่วนกลางต้องไม่เกินเงินก้อนทั้งปี')
+    if end_date <= start_date:
+        raise ValueError('วันสิ้นสุดต้องหลังวันเริ่มต้น')
+
+    dept_allocation = total_amount - central_allocation
+    if central_allocation < Decimal(str(central_allocated_sum)):
+        raise ValueError(f'ส่วนกลางต้องไม่น้อยกว่า {float(central_allocated_sum):,.0f} บาท (จัดสรรไปแล้วในงบย่อย)')
+    if dept_allocation < Decimal(str(dept_allocated_sum)):
+        raise ValueError(f'ส่วนกองต้องไม่น้อยกว่า {float(dept_allocated_sum):,.0f} บาท (จัดสรรไปแล้วในงบย่อย)')
+
+    plan = VehicleBudgetYearlyPlan.query.get(plan_id) if plan_id else None
+    if plan:
+        plan.total_amount       = total_amount
+        plan.central_allocation = central_allocation
+        plan.start_date         = start_date
+        plan.end_date           = end_date
+        plan.fiscal_year        = fiscal_year
+    else:
+        plan = VehicleBudgetYearlyPlan(
+            fiscal_year=fiscal_year,
+            total_amount=total_amount,
+            central_allocation=central_allocation,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        db.session.add(plan)
+    return plan
 
 
 # ──────────────────────────────────────────────────────────────

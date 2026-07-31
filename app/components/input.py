@@ -11,7 +11,8 @@ class Input(BaseComponent):
     template = '_components/render/_input.html'
 
     def __init__(self, name, label='', value='', placeholder='', icon=None,
-                 hint='', error='', type='text', disabled=False, required=False, **kw):
+                 hint='', error='', type='text', disabled=False, required=False,
+                 min=None, max=None, pattern=None, inputmode=None, **kw):
         super().__init__(**kw)
         self.name = name
         self.label = label
@@ -23,9 +24,16 @@ class Input(BaseComponent):
         self.type = type
         self.disabled = disabled
         self.required = required
+        self.min = min
+        self.max = max
+        self.pattern = pattern
+        self.inputmode = inputmode
 
     def context(self):
-        return {'name': self.name, 'label': self.label, 'value': self.value,
+        return {'id': self.id, 'class_name': self.class_name,
+                'name': self.name, 'label': self.label, 'value': self.value,
                 'placeholder': self.placeholder, 'icon': self.icon,
                 'hint': self.hint, 'error': self.error, 'type': self.type,
-                'disabled': self.disabled, 'required': self.required}
+                'disabled': self.disabled, 'required': self.required,
+                'min': self.min, 'max': self.max,
+                'pattern': self.pattern, 'inputmode': self.inputmode}

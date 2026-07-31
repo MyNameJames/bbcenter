@@ -113,7 +113,6 @@
 .cal-month-label {
     min-width: 150px;
     text-align: center;
-    font-size: 16px;
     font-variant-numeric: tabular-nums;
     margin: 0;
 }

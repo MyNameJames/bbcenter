@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from models import (db, get_bkk_time, Vehicle, VehicleBooking, Driver,
                     VehicleBudget, DeptApprover, OTRateConfig)
 from datetime import datetime, date
+from components import DateField, TimeRangeField
 from views.core.notification_service import (
     notify_booking_created      as _n_booking_created,
     notify_admin_deleted        as _n_admin_deleted,
@@ -32,6 +33,11 @@ def index():
         for c in OTRateConfig.query.filter_by(is_active=True)
                                    .order_by(OTRateConfig.sort_order).all()
     ]
+    date_field = DateField('date', label='วันที่เดินทาง :',
+                            placeholder='เลือกวันที่เดินทาง', id='bk_date_field')
+    time_range_field = TimeRangeField(start='08:00', end='17:00', step=15,
+                                       label='ช่วงเวลาเดินทาง', show_duration=True,
+                                       id='bk_timerange_field')
     return render_template(
         'vehicle/vehicle.html',
         bookings=bookings,
@@ -45,6 +51,8 @@ def index():
         # Phase 9 (2026-05-22) — `canCancel` gating needs admin + now
         now=get_bkk_time(),
         is_vehicle_admin=is_vehicle_admin(),
+        date_field=date_field,
+        time_range_field=time_range_field,
     )
 
 

@@ -47,7 +47,8 @@ from components import (register_components, Table, Column, Badge, Status,
                         Segmented, Seg, Chip, Token, DateRange,
                         Dropdown, MenuItem, MenuLabel, MenuDivider, MenuRich,
                         Pagination, Modal, Timeline, TLItem,
-                        Callout, Drawer, Section, DescList)
+                        Callout, Drawer, Section, DescList,
+                        DateField, TimeRangeField)
 from markupsafe import Markup
 register_components(app)
 
@@ -141,6 +142,9 @@ def dev_components():
                                                icon='lock'))],
                     actions=[Button('อนุมัติคำขอ', 'pri', block=True),
                              Button('ปฏิเสธคำขอ', 'danger-sec', block=True)])
+    date_field = DateField('demo_date', label='วันที่เดินทาง :', id='demo_date_field')
+    time_range_field = TimeRangeField(label='ช่วงเวลาเดินทาง', show_duration=True,
+                                       id='demo_timerange_field')
     return render_template('dev/components.html', table=table, badges=badges,
                            statuses=statuses, inline_statuses=inline_statuses,
                            buttons=buttons, card=card, kpis=kpis, inputs=inputs,
@@ -148,7 +152,8 @@ def dev_components():
                            chips=chips, tokens=tokens, daterange=daterange,
                            dropdown=dropdown, pagination=pagination,
                            modal=modal, timeline=timeline,
-                           drawer=drawer, desc=desc)
+                           drawer=drawer, desc=desc,
+                           date_field=date_field, time_range_field=time_range_field)
 
 # ตั้งค่า Login Manager
 login_manager = LoginManager()

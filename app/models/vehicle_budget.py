@@ -48,6 +48,11 @@ class VehicleBudget(db.Model):
     approver_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # สำหรับ department budget เท่านั้น
     approver       = db.relationship('User', foreign_keys=[approver_id])
 
+    # ผูกกับ "เงินก้อนประจำปี" ต้นทาง (2026-07-31) — nullable: งบเก่าก่อน feature นี้ไม่ backfill
+    # (admin จะปิดใช้งาน/is_active=False เอง); งบใหม่ตั้งแต่นี้ไปเลือกจาก dropdown ปี งบเสมอ
+    yearly_plan_id = db.Column(db.Integer, db.ForeignKey('vehicle_budget_yearly_plan.id'), nullable=True)
+    yearly_plan    = db.relationship('VehicleBudgetYearlyPlan', foreign_keys=[yearly_plan_id])
+
     start_date     = db.Column(db.Date, nullable=True)   # วันเริ่มใช้งบ (ถ้า null = ทั้งเดือน)
     end_date       = db.Column(db.Date, nullable=True)   # วันสิ้นสุดงบ
 
@@ -118,3 +123,34 @@ class VehicleBudgetLog(db.Model):
         db.Index('ix_vbl_booking', 'booking_id'),
         db.Index('ix_vbl_mileage', 'mileage_id'),
     )
+
+
+# ==========================================
+# 28. ตาราง VehicleBudgetYearlyPlan (เงินก้อนประจำปี — ชั้นเหนือ VehicleBudget)
+# v2.24 (2026-07-30): เพดานเงินก้อนใหญ่ทั้งปีที่องค์กรได้รับ + แบ่งส่วนกลาง/ส่วนกอง
+# ==========================================
+class VehicleBudgetYearlyPlan(db.Model):
+    __tablename__ = 'vehicle_budget_yearly_plan'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # ปีงบเป็น ค.ศ. — เดิม ('unique=True') เคยเป็น key เดียวที่บอกช่วงเวลา (ผูกกับสูตร hardcode
+    # "เริ่มมี.ค. จบก.พ.ปีถัดไป" ใน views/vehicle/vehicle_budget.py). ตอนนี้เป็นแค่ label แสดงผล
+    # ตัวตนจริงของ plan คือ start_date/end_date ด้านล่าง — ไม่ unique แล้ว เผื่อ plan ถูกแก้/แตกช่วงในอนาคต
+    fiscal_year = db.Column(db.Integer, nullable=False)
+
+    total_amount        = db.Column(db.Numeric(12, 2), nullable=False, default=0)  # เงินทั้งปีที่ได้รับ
+    central_allocation  = db.Column(db.Numeric(12, 2), nullable=False, default=0)  # เพดานส่วนกลาง
+
+    # ช่วงเวลาที่ plan มีผล (2026-07-31) — explicit แทนสูตร march-hardcode เดิม; ปกติ ~12 เดือน
+    # แต่ DB ไม่บังคับ (ไม่มี check constraint) เผื่อ org แก้ปฏิทินงบในอนาคต
+    start_date = db.Column(db.Date, nullable=False)
+    end_date   = db.Column(db.Date, nullable=False)
+
+    created_at = db.Column(db.DateTime, default=get_bkk_time)
+    updated_at = db.Column(db.DateTime, default=get_bkk_time, onupdate=get_bkk_time)
+
+    @property
+    def dept_allocation(self):
+        # ห้ามเก็บเป็น column แยก — บังคับ total = central + dept เสมอ กันข้อมูลไม่ตรงกัน
+        return float(self.total_amount) - float(self.central_allocation)

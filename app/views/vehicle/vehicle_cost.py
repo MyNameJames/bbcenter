@@ -5,6 +5,7 @@ from models import (db, get_bkk_time, Vehicle, Driver, VehicleMileage, VehicleBo
 from sqlalchemy import extract, func
 from datetime import datetime, date
 from components import Table, Column
+from domain.vehicle.ot import build_slot
 import services.vehicle.budget_service as budget_svc
 import services.vehicle.mileage_service as mileage_svc
 from views.vehicle.vehicle_common import (
@@ -30,7 +31,11 @@ def _apply_budget_filter(q, f_budget_type, f_budget_sub):
 
 def _parse_ot_slots(form):
     """แปลง slot_cfg[]/slot_start[]/slot_end[] จากฟอร์ม modal → list[DriverOTSlot]
-    (derive label/rate จาก OTRateConfig — snapshot ลง slot). ใช้ร่วม ot_create + ot_edit"""
+    (derive label/rate จาก OTRateConfig — snapshot ลง slot). ใช้ร่วม ot_create + ot_edit
+
+    เงิน/ชั่วโมงคิดที่ domain/vehicle/ot.py::build_slot() ตัวเดียวกับที่ระบบใช้ตอนปิดทริป
+    (2026-07-28) — ห้าม inline สูตรที่นี่ กติกาเดียวกับค่าน้ำมันที่ทุกทางเรียก calc_fuel_cost()
+    """
     slot_cfgids = form.getlist('slot_cfg[]')
     slot_starts = form.getlist('slot_start[]')
     slot_ends   = form.getlist('slot_end[]')
@@ -42,17 +47,13 @@ def _parse_ot_slots(form):
             cfg    = OTRateConfig.query.get(cfg_id) if cfg_id else None
             if not cfg or not start or not end:
                 continue
-            rate   = float(cfg.rate)
-            sh, sm = map(int, start.split(':'))
-            eh, em = map(int, end.split(':'))
-            mins   = max(0, (eh * 60 + em) - (sh * 60 + sm))
-            hrs    = round(mins / 60, 2)
-            # day_of_week config = flat daily rate (ไม่คูณชั่วโมง)
-            amount = rate if cfg.day_of_week is not None else round(hrs * rate, 2)
+            spec = build_slot(cfg.label, start, end, float(cfg.rate), cfg_id)
+            if not spec:
+                continue
             slots.append(DriverOTSlot(
-                rate_config_id=cfg_id, slot_label=cfg.label,
-                start_time=start, end_time=end,
-                hours=hrs, rate=rate, amount=amount,
+                rate_config_id=spec['config_id'], slot_label=spec['label'],
+                start_time=spec['start_time'], end_time=spec['end_time'],
+                hours=spec['hours'], rate=spec['rate'], amount=spec['amount'],
             ))
         except (ValueError, IndexError):
             continue
@@ -342,6 +343,7 @@ def ot_create():
         date         =ot_date,
         note         =request.form.get('note', '').strip() or None,
         status       ='unpaid',
+        is_manual    =True,                      # แอดมินกรอกเอง — sync_ot_for_trip() ห้ามทับ (2026-07-27)
         total_hours  =round(sum(float(s.hours)  for s in new_slots), 2),
         total_amount =round(sum(float(s.amount) for s in new_slots), 2),
         created_at   =get_bkk_time(),
@@ -372,6 +374,7 @@ def ot_edit(ot_id):
     ot.slots        = new_slots
     ot.total_hours  = round(sum(float(s.hours)  for s in new_slots), 2)
     ot.total_amount = round(sum(float(s.amount) for s in new_slots), 2)
+    ot.is_manual    = True   # แก้ด้วยมือแล้ว — sync_ot_for_trip() ห้ามคำนวณทับ (2026-07-27)
     db.session.commit()
     if _wants_json():
         return jsonify(ok=True)

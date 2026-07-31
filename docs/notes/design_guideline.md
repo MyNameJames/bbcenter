@@ -232,6 +232,8 @@ merge: `ue.css` ให้ค่าหัว-ท้าย · UE marketing ให�
 > ที่มา: Uber Eats Manager reference (`mockup-orders.html` → `header2.html`/`sidebar2.html`, Phase 1 2026-07-11) → promote เป็น icon system เดียวทั้งระบบ 2026-07-21
 >
 > **กลไก migrate (สำคัญ — อ่านก่อนแตะ icon):** markup ยังเขียน `data-lucide="ชื่อ-lucide"` เหมือนเดิมทุกที่ (component/template **ไม่ต้อง rewrite**) — หน้าที่ใช้ Material Symbols แค่ stub `window.lucide={createIcons(){},icons:{}}` (กัน Lucide จริง render แข่ง) + โหลด [`ms-icons.js`](../../app/static/core/js/ms-icons.js) แทน → `MutationObserver` แปลง `[data-lucide]` → `<span class="material-symbols-outlined">` runtime ผ่าน `MAP` (lucide-name → material-symbols-name) ครอบคลุมทั้ง static + dynamic (toast/combo/sort). **ชื่อไอคอนใหม่ที่ `MAP` ยังไม่มี** → fallback แปลง `-`→`_` ตรงๆ (เดา, อาจไม่ตรง glyph จริง) → เจอไอคอนใหม่ต้องเพิ่มเข้า `MAP` เสมอ อย่าปล่อย fallback เดา
+>
+> **⭐ เขียนตรงๆ ดีกว่า (2026-07-28 — target ใหม่ของโค้ดใหม่):** โค้ด/หน้าใหม่ **ให้เขียน `<span class="material-symbols-outlined">ชื่อ_material</span>` ตรงๆ** ไม่ต้องผ่าน `data-lucide` + `MAP` อีก — ชื่อ Google เป็น source of truth ตัวเดียว, ไม่มีชั้นแปล, ไม่มีโอกาสหลุด `MAP` แล้ว render เป็นตัวหนังสือดิบ. `ms-icons.js` **ยังต้องอยู่** เพราะ shared macro (`_components/bb/*.html`) กับหน้าเก่ายังเขียน `data-lucide` — shim แปลงให้ ทั้งสองแบบอยู่ร่วมกันได้ปกติ (glyph ปลายทางเดียวกัน). หน้าแรกที่ migrate ครบ = `vehicle_admin.{html,js}` (2026-07-28, 0 `data-lucide` เหลือ, 36 `<span class="material-symbols-outlined">` รวม 2 ไฟล์). ⚠️ ตอนแปลง **ห้ามยก inline `width`/`height` มาด้วย** — MS เป็น font ใช้ `font-size` (ขนาดจริงมาจาก `ue.css` ตาม context อยู่แล้ว); `[data-lucide]` selector ที่ตั้ง width/height ใน `components.css` = dead สำหรับหน้า MS มาตั้งแต่แรก
 
 - font: `Material Symbols Outlined` (Google Fonts) · variation default `FILL 0, wght 400, GRAD 0, opsz 24`
 - ขนาด (สืบทอด scale เดิมจาก Lucide era): `icon-sm` 16px (ตารางแน่น) · `icon-md` 20px (**default** ปุ่ม/ฟอร์ม/nav) · `icon-lg` 24px (primary/header) — คุมด้วย `font-size` ตาม context (ไม่มี stroke-width แบบ Lucide). ⚠️ prototype ปัจจุบัน (`sidebar2`/`header2`) ใช้ 18/20/22px ยังไม่ตรง scale เป๊ะ — ปรับให้ตรง sm/md/lg ตอน migrate หน้าอื่นต่อ
@@ -431,9 +433,25 @@ sidebar→drawer · ตารางกว้าง 3 กลยุทธ์ (hori
 | หน้า | shell | component | token |
 |---|---|---|---|
 | mileage | `_base_ue.html` ✅ | `.bb-*` + `.ue-chip` ✅ | เขียว ✅ |
+| manage-fleet | `_base_ue.html` ✅ (2026-07-29) | legacy `.vc-*` (reskin modal/table เฟสถัดไป) | `--bb-*` เฉพาะ `vehicle_fleet.css` ✅ — `design-system.css`/`vehicle_admin.css`/`vehicle_fuel.css` ยังโหลดชั่วคราว |
 | ที่เหลือทั้งหมด | `_shared/sidebar.html`+`header.html` | legacy `--vc-*`/`.zen-*` | น้ำเงิน/indigo |
 
 **ลำดับที่แนะนำเวลาแตะหน้าใหม่:** shell → token → component → density. อย่าทำครึ่งๆ ในหน้าเดียว (เช่นเปลี่ยน token แต่ไม่เปลี่ยน shell) — จะได้หน้าที่ไม่ใช่ทั้งเก่าทั้งใหม่
+
+---
+
+## 13b. Modal ฟอร์มมาตรฐาน (reference — 2026-07-30)
+
+> เมื่อต้องสร้าง modal ที่มีฟอร์มซับซ้อน (หลาย field · มี date/time picker · ต้อง validate) → **ใช้ [`vehicle/modals/vehicle_book.html`](../../app/templates/vehicle/modals/vehicle_book.html) (`#bookingModal`) เป็นต้นแบบ** ไม่ต้องคิดโครงใหม่
+
+**โครงที่ยึดได้:**
+- **header** — eyebrow (เช่น `#แบบฟอร์มจองรถ`) + ชื่อใหญ่ + context ย่อย (สังกัด/แผนก) + avatar ขวา (pattern เดียวกับ `assignModal` ใน `vehicle_admin.html`) — ไม่มีปุ่มปิด X (ปิดผ่านปุ่ม "ยกเลิก"/backdrop เท่านั้น)
+- **date/time field** — `{{ component(date_field) }}`/`{{ component(time_range_field) }}` (`DateField`/`TimeRangeField`, ดู [INDEX_ui.md § Design System](INDEX_ui.md)) แทนเขียน calendar/time-dropdown เอง
+- **text field ที่มี icon** — `.bb-field-box` (icon + input แถวเดียว คลิกได้ทั้งกล่อง) แทน `.bb-input-wrap` (icon overlay ทับ input) — ใช้เมื่อกล่องต้องเป็น trigger ของ picker ได้ด้วย
+- **validation** — required field ว่างตอน submit → ring แดงที่**กรอบนอก** `.bb-field-box` (ผ่าน `.was-validated` + `:has(input:invalid)`, ดู `components.css` §2b) **ไม่ใช่** ไอคอน/glow ในตัว input เอง — native/Bootstrap default ต้อง reset ทิ้งเสมอ (`background-image:none` + specificity ชน `.form-control:invalid` ให้ชนะ)
+- **footer** — `border-top-0` (ไม่มีเส้นคั่นกับ body — ต่างจาก `.bb-modal-foot` มาตรฐานใน §12 ที่มี border-top + พื้น n50)
+
+**ไม่ใช่ standard (debt เฉพาะไฟล์นี้ ไม่ใช่ pattern ให้ทำตาม):** field "หมายเหตุ" (`id="travelDate"`) ยังเป็น mockup ค้าง ไม่มี `name`/backend รองรับ · global unscoped `.material-symbols-rounded{font-variation-settings:'wght' 300}` ใน `<style>` ของไฟล์ — รายละเอียด → [INDEX_ui.md § Templates](INDEX_ui.md)
 
 ---
 

@@ -66,29 +66,29 @@ h1.page-title{
 
 /* ═══ ICON-SIZING — Material Symbols (bb-* เดิม size ผ่าน `svg`; MS เป็น span ใช้ font-size) ═══
    chrome (.sidebar2-scope/.hdr2-scope) มี rule เฉพาะ specificity สูงกว่า → base นี้ไม่กระทบ chrome */
-.material-symbols-outlined{ font-size:1.25rem; line-height:1; vertical-align:middle;
+.material-symbols-rounded{ font-size:1.25rem; line-height:1; vertical-align:middle;
   font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
-.bb-btn .material-symbols-outlined,
-.bb-icon-btn .material-symbols-outlined{ font-size:1.15rem; }
-.bb-status .material-symbols-outlined,
-.bb-badge .material-symbols-outlined{ font-size:1rem; }
-.bb-sort-icon .material-symbols-outlined{ font-size:1.05rem; }
-.bb-select .material-symbols-outlined,
-.bb-search .material-symbols-outlined,
-.bb-menu .material-symbols-outlined,
-.bb-tab2 .material-symbols-outlined{ font-size:1.15rem; }
-.bb-check-box .material-symbols-outlined{ font-size:1rem; }
-.bb-kpi .material-symbols-outlined{ font-size:1.5rem; }
-.bb-avatar .material-symbols-outlined{ font-size:1.6rem; }
-.bb-empty-icon .material-symbols-outlined{ font-size:1.9rem; }
-.bb-timeline .material-symbols-outlined{ font-size:1rem; }
-.bb-tl-desc .material-symbols-outlined,
-.bb-subtext .material-symbols-outlined{ font-size:.95rem; }
-.bb-filter-btn .material-symbols-outlined{ font-size:1.1rem; }
-.bb-filter-clear .material-symbols-outlined{ font-size:1rem; }
-.bb-daterange .material-symbols-outlined,
-.bb-combo .material-symbols-outlined,
-.bb-tooltip .material-symbols-outlined{ font-size:1.1rem; }
+.bb-btn .material-symbols-rounded,
+.bb-icon-btn .material-symbols-rounded{ font-size:1.15rem; }
+.bb-status .material-symbols-rounded,
+.bb-badge .material-symbols-rounded{ font-size:1rem; }
+.bb-sort-icon .material-symbols-rounded{ font-size:1.05rem; }
+.bb-select .material-symbols-rounded,
+.bb-search .material-symbols-rounded,
+.bb-menu .material-symbols-rounded,
+.bb-tab2 .material-symbols-rounded{ font-size:1.15rem; }
+.bb-check-box .material-symbols-rounded{ font-size:1rem; }
+.bb-kpi .material-symbols-rounded{ font-size:1.5rem; }
+.bb-avatar .material-symbols-rounded{ font-size:1.6rem; }
+.bb-empty-icon .material-symbols-rounded{ font-size:1.9rem; }
+.bb-timeline .material-symbols-rounded{ font-size:1rem; }
+.bb-tl-desc .material-symbols-rounded,
+.bb-subtext .material-symbols-rounded{ font-size:.95rem; }
+.bb-filter-btn .material-symbols-rounded{ font-size:1.1rem; }
+.bb-filter-clear .material-symbols-rounded{ font-size:1rem; }
+.bb-daterange .material-symbols-rounded,
+.bb-combo .material-symbols-rounded,
+.bb-tooltip .material-symbols-rounded{ font-size:1.1rem; }
 
 /* ═══ CHIP — Uber-style filter chip (ue_chip macro · JS: bb-components.js initUeChip*) ═══ */
 .ue-chip{ display:inline-flex; align-items:center; gap:8px; white-space:nowrap; flex-shrink:0;
@@ -97,11 +97,18 @@ h1.page-title{
   cursor:pointer; transition:background .15s ease, transform .12s ease; }
 .ue-chip:hover{ background:var(--bb-n100); }
 .ue-chip:active{ transform:scale(.97); }
+/* on = outline เขียวเข้มบนพื้นขาว (border + text + icon ชุดเดียวกัน) · off คงเดิม n50/n700
+   ใช้ --bb-accent-dk 5.43:1 ไม่ใช่ #06C167 (2.38:1 ตกทุกเกณฑ์เมื่อเป็นเส้น/ตัวอักษร)
+   off มี border:2px transparent อยู่แล้ว → สลับสีขอบไม่ทำ layout ขยับ (2026-07-28) */
+.ue-chip.is-on,
+.ue-chip-dd.is-active > .ue-chip{ background:var(--bb-n0); border-color:var(--bb-accent-dk); color:var(--bb-accent-dk); }
+.ue-chip.is-on:hover,
+.ue-chip-dd.is-active > .ue-chip:hover{ background:var(--bb-accent-bg); }
 /* active → icon fill (Material Symbols) */
-.ue-chip.is-on .material-symbols-outlined,
-.ue-chip-dd.is-active > .ue-chip .material-symbols-outlined,
-.ue-chip-dd.is-open > .ue-chip .material-symbols-outlined{ font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24; }
-.ue-chip .material-symbols-outlined,
+.ue-chip.is-on .material-symbols-rounded,
+.ue-chip-dd.is-active > .ue-chip .material-symbols-rounded,
+.ue-chip-dd.is-open > .ue-chip .material-symbols-rounded{ font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24; }
+.ue-chip .material-symbols-rounded,
 .ue-chip i{ font-size:1.15rem; }
 .ue-chip-chev{ transition:transform .2s ease; }
 
@@ -111,7 +118,8 @@ h1.page-title{
   background:var(--bb-accent-dk); color:#fff; font-size:12px; font-weight:700; }
 
 .ue-chip-dd{ display:inline-block; }
-/* is-active (เลือกค่าไม่ใช่ default) / is-open ไม่เปลี่ยนสี chip — คงสีเดิม (n50/n700) ตามที่ขอ */
+/* is-active (เลือกค่าไม่ใช่ default) ใช้ outline เขียวชุดเดียวกับ .is-on (ดูบล็อกด้านบน)
+   is-open เฉยๆ (เปิด panel แต่ยังไม่เลือก) ไม่เปลี่ยนสี — กันสับสนกับ "เลือกแล้ว" */
 .ue-chip-dd.is-open .ue-chip-chev{ transform:rotate(180deg); }
 
 /* pop = position:fixed (JS ตั้ง top/left จาก getBoundingClientRect + portal ไป body) → escape overflow/transform ancestor */

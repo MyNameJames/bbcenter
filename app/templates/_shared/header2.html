@@ -8,7 +8,7 @@
    - resource loads ท้ายไฟล์ (font/Lucide/notification.css-js/main.css/vercel.css) copy มาจาก
      _shared/header.html เดิมทั้งหมด — ต้องคงไว้ ไม่งั้น icon/notification ที่เหลือในหน้าจะพัง
 #}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
 <style>
 .hdr2-scope{
   --hdr2-green:#06C167;
@@ -40,7 +40,7 @@
   background:var(--hdr2-ink); transition:width .2s ease;
 }
 .hdr2-link-btn:hover::after{ width:100%; }
-.hdr2-scope .material-symbols-outlined{
+.hdr2-scope .material-symbols-rounded{
   font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
   font-size:20px; line-height:1;
 }
@@ -57,7 +57,7 @@
 <header class="hdr2-topbar hdr2-scope" id="topHeader">
   <div class="hdr2-topbar-left">
     <button type="button" class="hdr2-icon-btn rounded-circle d-xl-none" data-bb-sidebar-open title="เมนู" aria-label="เมนู">
-      <span class="material-symbols-outlined">menu</span>
+      <span class="material-symbols-rounded">menu</span>
     </button>
     <div class="hdr2-brand">BB- <span class="hdr2-accent">Center</span></div>
   </div>
@@ -66,7 +66,7 @@
     {% include '_shared/notification_panel.html' %}
     <a class="hdr2-link-btn d-none d-md-inline-flex" href="{{ url_for('auth.logout') }}">ออกจากระบบ</a>
     <a class="hdr2-icon-btn rounded-circle d-md-none" href="{{ url_for('auth.logout') }}">
-      <span class="material-symbols-outlined">logout</span>
+      <span class="material-symbols-rounded">logout</span>
     </a>
   </div>
 </header>
@@ -85,6 +85,6 @@
 
 {# D2 (2026-07-11) — หน้านี้ไม่โหลด Lucide จริง; ใช้ Material Symbols ผ่าน ms-icons.js transform
    stub กัน .createIcons() ของ bb-components/notification/vehicle_mileage error (no-op ทุกที่)
-   ms-icons.js แปลง <i data-lucide> → <span material-symbols-outlined> (static + dynamic) #}
+   ms-icons.js แปลง <i data-lucide> → <span material-symbols-rounded> (static + dynamic) #}
 <script>window.lucide = { createIcons: function(){}, icons: {} };</script>
 <script src="{{ url_for('static', filename='core/js/ms-icons.js') }}"></script>

@@ -93,9 +93,11 @@ function recomputeScope(container) {
             hint.classList.add('is-invalid');
             return;
         }
+        // สูตรเดียวกับ domain/vehicle/ot.py::build_slot() — คูณจากนาทีจริง ปัดเป็นบาทเต็ม
+        // (hrs ใช้แสดงผลอย่างเดียว ห้ามเอาไปคูณ เดิมคูณจาก hrs ที่ปัดแล้ว → ยอดเกินจริง)
         const hrs = Math.round(mins / 60 * 100) / 100;
-        const amt = Math.round(hrs * rate * 100) / 100;
-        hint.textContent = `${hrs} ชม. × ฿${rate} = ฿${amt.toLocaleString()}`;
+        const amt = Math.round(mins / 60 * rate);
+        hint.textContent = `${hrs} ชม. × ฿${rate}/ชม. = ฿${amt.toLocaleString()}`;
         totalHrs += hrs;
         totalAmt += amt;
     });

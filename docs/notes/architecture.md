@@ -46,7 +46,8 @@ BBCenter V2 = Internal Portal ขององค์กร, Flask monolithic, 4 �
 │   → notify (booking/mileage/budget_svc) │
 │ domain/vehicle/*.py — pure logic:       │
 │   workflow.py state machine,            │
-│   fuel.py calc_fuel_cost — ห้าม import   │
+│   fuel.py calc_fuel_cost,               │
+│   ot.py กติกา OT — ห้าม import           │
 │   flask หรือ query ORM เด็ดขาด            │
 └──────────────────┬──────────────────────┘
                    │ SQLAlchemy ORM
@@ -245,11 +246,12 @@ bbcenter/
 │   ├── domain/                  ← pure logic, ห้าม import flask (Clean Architecture, Phase 0-1, 2026-07-19)
 │   │   └── vehicle/
 │   │       ├── workflow.py      ← ALLOWED_TRANSITIONS/guard_budget/apply_transition (state machine กลาง)
-│   │       └── fuel.py          ← calc_fuel_cost() (pure — get_fuel_price() ไม่ pure ย้ายไป services/ แล้ว)
+│   │       ├── fuel.py          ← calc_fuel_cost() (pure — get_fuel_price() ไม่ pure ย้ายไป services/ แล้ว)
+│   │       └── ot.py            ← build_slot/build_ot_specs/slots_match_trip/calc_slot_amount/calc_slot_hours (กติกา OT: เกณฑ์ 30 นาที, เงินเต็มบาท, slot ตรงเวลาทริป — 2026-07-27; `build_slot` = จุดเดียวคิดเงิน OT เทียบเท่า `fuel.py::calc_fuel_cost` — 2026-07-28)
 │   ├── services/                ← use-case orchestration: guard → state change → notify (Phase 0-4, 2026-07-19)
 │   │   └── vehicle/
 │   │       ├── booking_service.py   ← approve/reject/cancel/revert/assign (gateway เดียวของ VehicleBooking.status)
-│   │       ├── mileage_service.py   ← close_trip/auto_generate_ot/override_fuel_cost (gateway เดียวของ mileage flow)
+│   │       ├── mileage_service.py   ← close_trip/sync_ot_for_trip/override_fuel_cost (gateway เดียวของ mileage flow)
 │   │       └── budget_service.py    ← deduct/refund/top_up/manual_adjust (gateway เดียวของ VehicleBudget mutation)
 │   ├── instance/portal.db       ← SQLite (gitignored)
 │   ├── migrations/              ← manual .sql + migrations-index.md
@@ -332,14 +334,16 @@ config ทั้งหมดอ่านจาก `app/.env` (gitignored) ผ่
 
 pytest + in-memory SQLite — รัน: `.venv/bin/python -m pytest` (deps: `requirements-dev.txt`)
 
-**อัปเดต Phase 6, 2026-07-19** — Clean Architecture refactor (Phase 0-5) ขยาย test suite จาก 1 ไฟล์/13 case เป็น 8 ไฟล์/97 case (path เดิมของตารางนี้ก็ชี้ผิดไปแล้วด้วย — `vehicle_budget_service.py` ไม่มีอยู่จริงตั้งแต่ Phase 1):
+**อัปเดต Phase 6, 2026-07-19** — Clean Architecture refactor (Phase 0-5) ขยาย test suite จาก 1 ไฟล์/13 case เป็น 8 ไฟล์/97 case (**2026-07-27: 10 ไฟล์/129 case** — เพิ่ม `test_ot_domain.py` + section 3c ของ `test_mileage_service.py`; **2026-07-28: 11 ไฟล์/148 case** — เพิ่ม `test_mileage_filters.py` + ขยาย `test_ot_domain.py` ตอนรวมสูตรเงิน OT ไว้ที่ `build_slot()`) (path เดิมของตารางนี้ก็ชี้ผิดไปแล้วด้วย — `vehicle_budget_service.py` ไม่มีอยู่จริงตั้งแต่ Phase 1):
 
 | ไฟล์ | คลุม | case |
 |------|------|------|
 | `tests/conftest.py` | fixtures: in-memory DB + request context (current_user=anonymous) + factory `make_budget`/`make_mileage`; route-level fixtures `route_app`/`client`/`login` (StaticPool SQLite, monkeypatch telegram `_send`) |
 | `tests/test_budget_service.py` | `services/vehicle/budget_service.py` — deduct(+idempotency), refund(+no-double), rededuct, set_budget, manual_adjust, set_active, verify_cache_integrity + invariant `used_amount == SUM(log≠set_budget)` | 13 |
 | `tests/test_booking_service.py` | `services/vehicle/booking_service.py` (Phase 2) — approve(central/dept/personal+budget/conflict guard)/reject/approver approve-reject/cancel(guard+role+un-merge)/revert/assign_resources/ungroup + Phase 4 notify consolidation (notify=True/False lock) | 31 |
-| `tests/test_mileage_service.py` | `services/vehicle/mileage_service.py` (Phase 3) — close_trip(+idempotency)/auto_generate_ot(+notify flag, Phase 5)/override_fuel_cost/get_fuel_price/get_distance_cap_km | 15 |
+| `tests/test_mileage_service.py` | `services/vehicle/mileage_service.py` (Phase 3) — close_trip(+idempotency)/auto_generate_ot(+notify flag, Phase 5)/override_fuel_cost/get_fuel_price/get_distance_cap_km + **§3c `sync_ot_for_trip()` (2026-07-27)**: สร้าง/no-op/recompute เมื่อเวลาทริปเปลี่ยน/soft-delete เมื่อต่ำกว่าเกณฑ์ 30 นาที/กัน `status=paid`/กัน `is_manual` | 23 |
+| `tests/test_ot_domain.py` | `domain/vehicle/ot.py` (2026-07-27, pure ไม่แตะ DB) — เกณฑ์ 30 นาที (boundary 29/30/31), เงินจำนวนเต็มบาท, `slots_match_trip()` จับ slot หลุดกรอบทริป, helper hm↔min. **2026-07-28:** เพิ่มเคสยืนยันว่า `build_slot()` คูณเงินจาก**นาทีจริง**ไม่ใช่ชั่วโมงที่ปัดแล้ว (`hours` = display-only), rate เป็น**ต่อชั่วโมงเสมอ**ไม่ว่า config เป็น `day_of_week` หรือไม่, ปฏิเสธช่วงเวลาย้อนกลับ, รับ `24:00` = เที่ยงคืน | 27 |
+| `tests/test_mileage_filters.py` | `views/vehicle/vehicle_mileage.py::_query_mileage_bookings()` (2026-07-28, ยิง SQL จริงกับ in-memory DB เพราะ `strftime('%w')` เป็น syntax ของ SQLite) — filter วันในสัปดาห์ (0=อาทิตย์), "มี OT" (ไม่นับที่ soft-delete), chip multi-select (`.in_()`), หมวด/กอง OR ข้าม 2 column | 13 |
 | `tests/test_booking_workflow.py` | `domain/vehicle/workflow.py` state machine (ALLOWED_TRANSITIONS/apply_transition, unit) + `admin_assign()` route-level (central/personal/reject) | 13 |
 | `tests/test_booking_cancel_guards.py` | route-level guard: owner/admin cancel ตาม status, delete, revert, `budget_manage` action `cancel_booking` | 11 |
 | `tests/test_auto_reject_cron.py` | `notification_cron.auto_reject_overdue_bookings()` — auto-reject เลยกำหนด + idempotent (ปิด DEBT-4, Phase 4) | 6 |

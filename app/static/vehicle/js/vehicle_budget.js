@@ -89,8 +89,7 @@ if (setBudgetModal) {
         document.getElementById('sbBudgetType').value = type;
         document.getElementById('sbDept').value       = deptName;
         document.getElementById('sbAmount').value     = amount;
-        document.getElementById('sbStartDate').value  = (btn && btn.dataset.start)  || '';
-        document.getElementById('sbEndDate').value    = (btn && btn.dataset.end)    || '';
+        document.getElementById('sbYearlyPlan').value = (btn && btn.dataset.planId) || '';
 
         const activeList = document.getElementById('sbDeptListActive');
         const srcList    = document.getElementById(isCentral ? 'sbDeptListCentral' : 'sbDeptListDept');
@@ -157,33 +156,101 @@ document.addEventListener('click', function (e) {
     });
 });
 
-// ── Main tabs (2026-06-15): ตารางรวม / ส่วนกลาง / ส่วนกอง / ส่วนตัว / งบไม่ใช้แล้ว
+// ── Main tabs (2026-07-29): ตารางรวม / กำลังใช้งาน / ไม่ได้ใช้งานแล้ว / ร่วมบุญส่วนตัว
+//    tab2 component (.tab2-tab + data-tab, ดู _shared/tab2.html) แทน .bb-tabs เดิม —
 //    client-side switch (data set render มาครบแล้ว). default = pivot.
-//    (toolbar filter/add ถูกลบออก 2026-06-16 ตามคำสั่งผู้ใช้)
 (function initBudgetTabs() {
-    const tabs   = Array.from(document.querySelectorAll('[data-budget-tab]'));
-    const panels = Array.from(document.querySelectorAll('[data-budget-panel]'));
+    const wrap    = document.getElementById('budgetTab2Wrap');
+    const tabs    = wrap ? Array.from(wrap.querySelectorAll('.tab2-tab')) : [];
+    const panels  = Array.from(document.querySelectorAll('[data-budget-panel]'));
+    const toolbar = document.getElementById('budgetToolbar');
     if (!tabs.length) return;
 
     function activate(name) {
         tabs.forEach(function (t) {
-            const on = t.dataset.budgetTab === name;
-            t.classList.toggle('is-on', on);
-            t.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.classList.toggle('active', t.dataset.tab === name);
         });
         panels.forEach(function (p) {
-            const on = p.dataset.budgetPanel === name;
-            p.hidden = !on;
+            p.classList.toggle('d-none', p.dataset.budgetPanel !== name);
         });
+        // toolbar (เดือน + ตั้งงบ) โชว์เฉพาะ tab "กำลังใช้งาน"
+        if (toolbar) toolbar.classList.toggle('d-none', name !== 'active');
     }
 
     tabs.forEach(function (t) {
-        t.addEventListener('click', function () { activate(t.dataset.budgetTab); });
+        t.addEventListener('click', function () { activate(t.dataset.tab); });
     });
 
-    // sync toolbar/add กับ tab ที่ active อยู่ตอน load (default = pivot → toolbar ซ่อน)
-    const current = tabs.find(function (t) { return t.classList.contains('is-on'); }) || tabs[0];
-    activate(current.dataset.budgetTab);
+    // sync panel กับ tab ที่ active อยู่ตอน load (default = pivot)
+    const current = tabs.find(function (t) { return t.classList.contains('active'); }) || tabs[0];
+    activate(current.dataset.tab);
+})();
+
+// ── Yearly plan chip (v2.26 — เดิม "ปีงบ" ผูก year=<ค.ศ.>&month=3 ตอนนี้เลือก plan ตรงๆ
+//    ผ่าน ?plan_id= แทน เพราะ plan มีช่วงเวลาของตัวเอง ไม่ผูกกับเดือนมี.ค.แล้ว):
+//    ue_chip_dd (_components/bb/ue_chip.html) radio ไม่ auto-navigate เอง (mechanism ออกแบบไว้
+//    เก็บ state ใน form filter เท่านั้น) → ฟัง 'ue-chip:change' ที่ .ue-chip-dd แล้วสั่ง navigate เอง
+(function initYearlyPlanChip() {
+    const dd = document.getElementById('ddYearlyPlan');
+    if (!dd) return;
+    dd.addEventListener('ue-chip:change', function () {
+        const radio = dd.querySelector('input[type="radio"]:checked');
+        if (!radio || !radio.value) return;
+        const url = new URL(window.location.href);
+        url.searchParams.set('plan_id', radio.value);
+        window.location.href = url.toString();
+    });
+})();
+
+// ── Pivot filter: ประเภทงบ + กอง (2026-07-29) — กรองเฉพาะตารางปีงบ (#pivotMockupTable,
+//    เดิมกรอง #pivotAllDetails ก่อนตารางนั้นถูกลบ 2026-07-31)
+//    ไม่แตะ tab อื่น (ตกลงกันไว้). ue_chip_dd ทั้ง 2 ตัวเป็น checkbox multi-select ปกติ
+//    (ไม่ติ๊ก = ทั้งหมด) filter client-side ล้วน — ข้อมูล render มาครบแล้วในหน้าไม่ต้อง reload.
+//    "กอง" กรองเฉพาะแถวใน tbody ประเภท dept เท่านั้น ไม่กระทบ central · แถวรวมท้ายตาราง (tbody
+//    ไม่มี data-budget-type) ไม่ถูกฟิลเตอร์ — โชว์ grand total เสมอไม่ว่าจะกรองอะไรอยู่
+(function initPivotFilter() {
+    const ddType = document.getElementById('ddPivotBudgetType');
+    const ddDept = document.getElementById('ddPivotDept');
+    const table  = document.getElementById('pivotMockupTable');
+    if (!table || (!ddType && !ddDept)) return;
+
+    function checkedValues(dd) {
+        if (!dd) return [];
+        return Array.from(dd.querySelectorAll('input[type="checkbox"]:checked')).map(function (el) { return el.value; });
+    }
+
+    function apply() {
+        const types = checkedValues(ddType);
+        const depts = checkedValues(ddDept);
+        table.querySelectorAll('tbody[data-budget-type]').forEach(function (tbody) {
+            const type = tbody.dataset.budgetType;
+            const typeMatch = types.length === 0 || types.includes(type);
+            tbody.hidden = !typeMatch;
+            if (!typeMatch || type !== 'dept') return;
+            tbody.querySelectorAll('tr[data-dept-name]').forEach(function (tr) {
+                tr.hidden = !(depts.length === 0 || depts.includes(tr.dataset.deptName));
+            });
+        });
+    }
+
+    if (ddType) ddType.addEventListener('ue-chip:change', apply);
+    if (ddDept) ddDept.addEventListener('ue-chip:change', apply);
+})();
+
+// ── Yearly plan modal: preview ส่วนกอง = ทั้งปี − ส่วนกลาง (2026-07-31) ──
+(function initYearlyPlanPreview() {
+    const total   = document.getElementById('ypTotal');
+    const central = document.getElementById('ypCentral');
+    const preview = document.getElementById('ypDeptPreview');
+    if (!total || !central || !preview) return;
+
+    function update() {
+        const dept = (Number(total.value) || 0) - (Number(central.value) || 0);
+        preview.textContent = '฿' + dept.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    }
+    total.addEventListener('input', update);
+    central.addEventListener('input', update);
+    update();
 })();
 
 // ── Phase 2E (2026-05-22): ยืนยันรับเงินส่วนตัวจากผู้จอง (AJAX)

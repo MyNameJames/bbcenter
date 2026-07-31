@@ -13,6 +13,7 @@ class Vehicle(db.Model):
     license_plate = db.Column(db.String(20), unique=True, nullable=False) # ทะเบียนรถ (ห้ามซ้ำ)
     capacity = db.Column(db.Integer, nullable=False)       # จำนวนที่นั่งสูงสุด
     status = db.Column(db.String(20), default='active')    # สถานะ: active, maintenance
+    vehicle_type = db.Column(db.String(20), nullable=True)  # ประเภทรถ: pickup, van, truck6 (2026-07-31, addVehicleModal redesign)
     fuel_rate = db.Column(db.Numeric(6, 2), default=10.0)
     next_service_date = db.Column(db.Date, nullable=True)
     next_service_km   = db.Column(db.Integer, nullable=True)

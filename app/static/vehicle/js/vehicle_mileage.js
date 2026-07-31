@@ -57,23 +57,50 @@ function buildOtBarSegments(actualStart, actualEnd, slots) {
     const total = tEnd - tStart;
     if (total <= 0) return [];
 
+    // slot กว้างกว่า/เริ่มก่อนช่วงทริปได้จริง (OT band มาจากเวลาทำงาน ไม่ใช่เวลาปิดทริป —
+    // เช่น slot 08:53-19:53 กับทริป 15:59-16:00) จึง **clip เข้าช่วงทริป** แล้วตัดตัวที่ไม่ทับทิ้ง
+    // เดิมเลื่อน slot ที่เริ่มก่อน tStart ไปวันถัดไป (+24h) โดยเหมาเอาว่าเป็นการข้ามเที่ยงคืน
+    // → เคสข้างต้นได้ segment width 101400% กับตัวถัดไปติดลบ
     const norm = slots.map(s => {
         let ss = hmToMin(s.start_time);
         let se = hmToMin(s.end_time);
-        if (ss < tStart) ss += 24 * 60;
-        if (se <= ss) se += 24 * 60;
-        return { ss, se };
-    }).sort((a, b) => a.ss - b.ss);
+        if (se <= ss) se += 24 * 60;              // slot ข้ามเที่ยงคืนในตัวมันเอง
+        if (se <= tStart) { ss += 24 * 60; se += 24 * 60; }  // slot จบก่อนทริปเริ่ม = ของรอบถัดไป
+        return { ss: Math.max(ss, tStart), se: Math.min(se, tEnd) };
+    }).filter(s => s.se > s.ss)                   // ไม่ทับช่วงทริปเลย → ไม่ต้องวาด
+      .sort((a, b) => a.ss - b.ss);
 
     const segments = [];
     let cursor = tStart;
     norm.forEach(s => {
         if (s.ss > cursor) segments.push({ pct: (s.ss - cursor) / total * 100, type: 'regular' });
-        segments.push({ pct: (Math.min(s.se, tEnd) - s.ss) / total * 100, type: 'ot' });
+        if (s.se > cursor) segments.push({ pct: (s.se - Math.max(s.ss, cursor)) / total * 100, type: 'ot' });
         cursor = Math.max(cursor, s.se);
     });
     if (cursor < tEnd) segments.push({ pct: (tEnd - cursor) / total * 100, type: 'regular' });
     return segments;
+}
+
+/* สี + คำอธิบายต่อชนิด segment ของ bar OT — ใช้ร่วมกันระหว่างตัว bar กับ legend
+   เพื่อไม่ให้สองที่หลุดจากกัน (เดิม legend เป็น static text ใน template) */
+const SEG_STYLE = {
+    regular: { varName: '--bb-n200', label: 'ช่วงที่ไม่คิด OT' },
+    ot:      { varName: '--bb-wr',   label: 'ช่วงที่คิด OT'    },
+};
+
+function renderOtBarLegend(segments, slots) {
+    // เรียงตามลำดับที่ segment ปรากฏจริงบน bar และตัดชนิดซ้ำออก — ทริปที่เป็น OT ล้วน
+    // จะเหลือ legend เดียว ไม่โชว์ช่วงที่ไม่มีอยู่บน bar
+    // ช่วงเวลา OT ต่อท้าย label ตรงนี้ (ไม่ใช่บนแถบ) — บนแถบเหลือแค่เวลาทริป เพื่อไม่ให้
+    // เวลาสองความหมายมาปนกันจนอ่านแล้วขัดกัน (2026-07-27)
+    const otRanges = slots.map(s => `${s.start_time}–${s.end_time}`).join(', ');
+    const types    = [...new Set(segments.filter(s => s.pct > 0).map(s => s.type))];
+    document.getElementById('mmOtBarLegend').innerHTML = types.map(t => `
+        <span class="d-inline-flex align-items-center gap-1">
+            <span style="width:.75rem;height:.375rem;border-radius:999px;background:var(${SEG_STYLE[t].varName})"></span>
+            ${SEG_STYLE[t].label}${t === 'ot' && otRanges ? ` <span class="bb-num">${otRanges}</span>` : ''}
+        </span>
+    `).join('');
 }
 
 function timeOnly(fullDatetime) {
@@ -108,15 +135,36 @@ function renderOtStop(ds, state) {
         </div>
     `).join('');
 
+    renderOtMismatch(ds, slots, actualStart, actualEnd);
+
     if (actualStart && actualEnd) {
         const segments = buildOtBarSegments(actualStart, actualEnd, slots);
         document.getElementById('mmOtBar').innerHTML = segments.map(s =>
-            `<div style="width:${s.pct}%;background:var(${s.type === 'ot' ? '--bb-wr' : '--bb-n200'})"></div>`
+            `<div style="width:${s.pct}%;background:var(${SEG_STYLE[s.type].varName})"></div>`
         ).join('');
-        const boundaries = [actualStart, ...slots.flatMap(s => [s.start_time, s.end_time]), actualEnd];
+        // ป้ายบนแถบ = ปลายทั้งสองของทริปเท่านั้น — เดิมยัดขอบ slot OT ปนเข้ามาด้วย
+        // ทำให้เวลาไม่เรียงซ้าย→ขวา (15:59 · 08:53 · 19:53 · 16:00) (2026-07-27)
         document.getElementById('mmOtBarLabels').innerHTML =
-            [...new Set(boundaries)].map(t => `<span class="bb-num">${t}</span>`).join('');
+            `<span>เริ่มทริป <span class="bb-num">${actualStart}</span></span>` +
+            `<span>จบทริป <span class="bb-num">${actualEnd}</span></span>`;
+        renderOtBarLegend(segments, slots);
     }
+}
+
+function renderOtMismatch(ds, slots, actualStart, actualEnd) {
+    // ช่วง OT หลุดกรอบเวลาทริป → ค่า OT คำนวณจากเวลาชุดเก่า (ทริปถูกแก้ทีหลัง แต่ OT
+    // ที่จ่ายแล้ว/แอดมินแก้มือ ระบบไม่คำนวณทับให้) — flag มาจาก server ผ่าน data-ot-mismatch
+    const box = document.getElementById('mmOtMismatch');
+    if (ds.otMismatch !== '1' || !slots.length) {
+        box.style.display = 'none';
+        return;
+    }
+    box.style.display = '';
+    const ranges = slots.map(s => `${s.start_time}–${s.end_time}`).join(', ');
+    document.getElementById('mmOtMismatchDetail').innerHTML =
+        `ทริปจริง <b class="bb-num">${actualStart}–${actualEnd}</b> ` +
+        `แต่ค่า OT คิดจากช่วง <b class="bb-num">${ranges}</b> — ` +
+        `ตัวเลขนี้มาจากเวลาทริปชุดก่อนแก้ กรุณาตรวจสอบก่อนจ่าย`;
 }
 
 function renderCostStop(ds, state) {
@@ -173,7 +221,7 @@ function openMileage(btn) {
 
     const avatar = document.getElementById('mmAvatar');
     avatar.style.background = `var(${bg})`;
-    // <i data-lucide> ถูก ms-icons.js แปลงเป็น <span class="material-symbols-outlined" data-lucide="..."> แล้ว
+    // <i data-lucide> ถูก ms-icons.js แปลงเป็น <span class="material-symbols-rounded" data-lucide="..."> แล้ว
     // ('svg, i' เจอ null เพราะ tag เดิมไม่เหลือแล้วหลัง shim ทำงาน)
     const avatarIcon = avatar.querySelector('svg, i, [data-lucide]');
     if (avatarIcon) avatarIcon.style.color = `var(${AVATAR_ICON_COLOR[state]})`;
@@ -306,17 +354,19 @@ formMileage.addEventListener('submit', function (e) {
    ue-chip:change ยิงเมื่อ chip filter เปลี่ยน (ue_chip_dd, bb-components.js) */
 document.addEventListener('bb-daterange:change', () => runFilter());
 document.addEventListener('ue-chip:change', () => runFilter());
+// toggle chip ("มี OT") — กดติด/ดับแล้วกรองทันที ไม่ต้องเปิด panel (2026-07-28)
+document.addEventListener('ue-chip-toggle:change', () => runFilter());
 
-/* chip filter (ue_chip_dd, radio single-select) + budget cascade
+/* chip filter (ue_chip_dd, checkbox multi-select ทุกตัวตั้งแต่ 2026-07-28) + budget cascade
    ue_chip_dd เปิด/ปิด/label sync = JS ของ bb-components.js (initUeChipDd) ทั้งหมด — ที่นี่ผูกแค่ cascade
    ⚠️ popover ของ ue_chip_dd portal ออกไป document.body ตอนเปิดเสมอ →
       ต้อง capture reference ของ [data-ue-chip-body] ไว้ตรงๆ ตั้งแต่แรก ห้าม querySelector ซ้ำผ่าน ancestor
       (ancestor.querySelector หา popover ที่ portal ออกไปแล้วไม่เจอ)
    budget_type เปลี่ยน → rebuild ตัวเลือก budget_sub (cascade) — คง id="filterBudgetSubSec" ไว้เพื่อ show/hide */
 (function bindFilterControls() {
-    const cats       = window.EXPENSE_CATS || { central: [], department: [] };
-    const initialSub = window.BBML_FILTER_SUB || '';
-    const subSec     = document.getElementById('filterBudgetSubSec');
+    const cats        = window.EXPENSE_CATS || { central: [], department: [] };
+    const initialSubs = window.BBML_FILTER_SUB || [];
+    const subSec      = document.getElementById('filterBudgetSubSec');
 
     function ddBody(id) {
         const dd = document.getElementById(id);
@@ -326,27 +376,37 @@ document.addEventListener('ue-chip:change', () => runFilter());
     const budgetSubBody  = ddBody('ddBudgetSubFilter');
 
     function optRow(name, value, label, checked) {
-        return `<label class="ue-chip-opt"><span>${label}</span><input type="radio" name="${name}" value="${value}"${checked ? ' checked' : ''}></label>`;
+        return `<label class="ue-chip-opt"><span>${label}</span><input type="checkbox" name="${name}" value="${value}"${checked ? ' checked' : ''}></label>`;
     }
 
-    // budget_type → rebuild ตัวเลือก budget_sub (cascade) · เขียน DOM ตรงๆ (ไม่ยิง change ที่นี่ —
-    // ue-chip:change ของ budget_type เองพอสำหรับ trigger runFilter แล้ว)
-    function rebuildBudgetSub(type) {
+    function checkedBudgetTypes() {
+        if (!budgetTypeBody) return [];
+        return Array.from(budgetTypeBody.querySelectorAll('input[name="budget_type"]:checked'))
+                    .map(el => el.value);
+    }
+
+    /* budget_type → rebuild ตัวเลือก budget_sub (cascade) · เขียน DOM ตรงๆ (ไม่ยิง change ที่นี่ —
+       ue-chip:change ของ budget_type เองพอสำหรับ trigger runFilter แล้ว)
+       multi-select: ติ๊ก central + department พร้อมกัน → รวมหมวดของทั้งสองไว้ใน panel เดียว
+       ไม่มีตัวเลือก "ทั้งหมด" แล้ว — ไม่ติ๊กอะไร = ไม่กรอง */
+    function rebuildBudgetSub(types) {
         if (!budgetSubBody) return;
-        const isSub = type === 'central' || type === 'department';
-        if (subSec) subSec.hidden = !isSub;
-        const list = isSub ? (cats[type] || []) : [];
-        const keep = list.some(x => x.key === initialSub) ? initialSub : '';
-        budgetSubBody.innerHTML = optRow('budget_sub', '', 'ทั้งหมด', !keep) +
-            list.map(x => optRow('budget_sub', x.key, x.label, x.key === keep)).join('');
-        // sync label/badge ของ ue_chip_dd (มันจับ 'change' บน body เอง)
-        const checked = budgetSubBody.querySelector('input:checked') || budgetSubBody.querySelector('input');
-        if (checked) checked.dispatchEvent(new Event('change', { bubbles: true }));
+        const list = [];
+        ['central', 'department'].forEach(t => {
+            if (types.indexOf(t) !== -1) list.push(...(cats[t] || []));
+        });
+        if (subSec) subSec.hidden = list.length === 0;
+        budgetSubBody.innerHTML = list
+            .map(x => optRow('budget_sub', x.key, x.label, initialSubs.indexOf(x.key) !== -1))
+            .join('');
+        // sync is-active/badge ของ ue_chip_dd (มันจับ 'change' บน body เอง)
+        const first = budgetSubBody.querySelector('input');
+        if (first) first.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     if (budgetTypeBody) {
         budgetTypeBody.addEventListener('change', e => {
-            if (e.target.name === 'budget_type') rebuildBudgetSub(e.target.value);
+            if (e.target.name === 'budget_type') rebuildBudgetSub(checkedBudgetTypes());
         });
     }
 })();
@@ -591,7 +651,7 @@ const _MS_SORT = { 'arrow-up': 'arrow_upward', 'arrow-down': 'arrow_downward', '
 function updateSortIcons() {
     document.querySelectorAll('.bb-table th[data-sort]').forEach(th => {
         const col = th.dataset.sort;
-        const iconEl = th.querySelector('.bb-sort-icon [data-lucide], .bb-sort-icon .material-symbols-outlined');
+        const iconEl = th.querySelector('.bb-sort-icon [data-lucide], .bb-sort-icon .material-symbols-rounded');
         if (sortState.col === col) {
             th.setAttribute('aria-sort', sortState.dir === 1 ? 'ascending' : 'descending');
         } else {
@@ -603,7 +663,7 @@ function updateSortIcons() {
             : 'chevrons-up-down';
         iconEl.setAttribute('data-lucide', name);
         // MS span → set ligature ตรงๆ (deterministic, ไม่พึ่ง observer); Lucide เดิม → createIcons
-        if (iconEl.classList.contains('material-symbols-outlined')) {
+        if (iconEl.classList.contains('material-symbols-rounded')) {
             iconEl.textContent = _MS_SORT[name] || name.replace(/-/g, '_');
         } else {
             bbMlInitIcons(th);

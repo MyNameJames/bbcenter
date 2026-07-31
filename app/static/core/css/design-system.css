@@ -48,9 +48,7 @@
    --bb-* fallback กันหน้าที่ไม่โหลด components.css (มีแต่ --vc-*) */
 body {
     margin: 0;
-    font-family: var(--vc-font-sans);
     color: var(--bb-str, #0A2540);
-    background: var(--bb-n50, #F6F9FC);
 }
 
 /* scrollbar-hide + modal-gap fix ย้ายไป single source → tokens.css (import บรรทัด 31) */

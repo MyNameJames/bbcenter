@@ -1,7 +1,7 @@
 # INDEX — Routes
 
 > Part ของ INDEX.md แยก เพื่อ token budget — [กลับ hub](INDEX.md)
-> **อัปเดตล่าสุด:** 2026-07-27
+> **อัปเดตล่าสุด:** 2026-07-31
 
 ---
 
@@ -56,15 +56,15 @@
 |--------|------|-----------|
 | GET | `/vehicle/admin` | [vehicle_admin.py:248](../../app/views/vehicle/vehicle_admin.py#L248) — `admin_trips()` |
 | POST | `/vehicle/admin/booking/<id>/notify` | [vehicle_admin.py:344](../../app/views/vehicle/vehicle_admin.py#L344) — `admin_notify_booking()` manual re-send ปุ่มเดียว ไม่มี service รองรับ (out of scope Clean Architecture refactor — narrow scope ที่ตกลงกัน Phase 4) |
-| POST | `/vehicle/admin/booking/<id>/revert` | [vehicle_admin.py:361](../../app/views/vehicle/vehicle_admin.py#L361) — `admin_revert_booking()` → `booking_service.revert()` (**Phase 2**). Guard: ห้ามถ้ามี `mileage.budget_deducted_at`; source ∈ {approved, waiting_approver, rejected} เท่านั้น; เคลียร์ reject_reason + set updated_by; คืน JSON `{ok, msg}` |
+| POST | `/vehicle/admin/booking/<id>/revert` | [vehicle_admin.py:349](../../app/views/vehicle/vehicle_admin.py#L349) — `admin_revert_booking()` → `booking_service.revert()` (**Phase 2**). Guard: ห้ามถ้ามี `mileage.budget_deducted_at`; ห้ามถ้า `trip_group` set (**2026-07-31** — ไปทาง `ungroup()` แทน); source ∈ {approved, waiting_approver, rejected} เท่านั้น; เคลียร์ reject_reason + **`assigned_vehicle_id`/`driver_id`** (**2026-07-31**, เดิมเปลี่ยนแค่ status) + set updated_by; คืน JSON `{ok, msg}`. UI trigger: ปุ่ม ghost ใน `#assignModal` (`vehicle_admin.js::triggerRevertFromModal()`, **2026-07-31** — เดิม route มีแต่ไม่มีปุ่มเรียก) |
 | POST | `/vehicle/admin/vehicle/<id>/repair` | [vehicle_admin.py:378](../../app/views/vehicle/vehicle_admin.py#L378) — `admin_vehicle_repair()` |
 | POST | `/vehicle/admin/vehicle/<id>/fix-done` | [vehicle_admin.py:392](../../app/views/vehicle/vehicle_admin.py#L392) — `admin_vehicle_fix_done()` |
 | POST | `/vehicle/admin/booking/<id>/swap` | [vehicle_admin.py:409](../../app/views/vehicle/vehicle_admin.py#L409) — `admin_swap_vehicle()`. **2026-06-20:** เพิ่ม `check_vehicle_conflict` guard (block 400 ถ้ารถทับช่วงเวลา) |
-| POST | `/vehicle/admin/merge` | [vehicle_admin.py:434](../../app/views/vehicle/vehicle_admin.py#L434) — `admin_merge()` รวมทริป. **2026-06-20:** เพิ่ม conflict guard ก่อน commit. ⚠️ **BUG-3 (พบ Phase 4, 2026-07-19, ยังไม่แก้)**: เซ็ต `booking.status` ตรง ไม่ผ่าน `apply_transition()`/`booking_service.*` เลย — ไม่เคยเรียก `guard_budget()` ต่างจาก approve path อื่นทุกจุด (central/personal merge ได้ `status='approved'` ทันทีไม่เช็คงบ) ดู [masterplan Bug Log](log/2026-07-19_clean_architecture_masterplan.md) |
+| POST | `/vehicle/admin/merge` | [vehicle_admin.py:423](../../app/views/vehicle/vehicle_admin.py#L423) — `admin_merge()` รวมทริป. **2026-06-20:** เพิ่ม conflict guard ก่อน commit. **2026-07-31:** แยก 2 ทางด้วย `new_ids` (id ที่ยังไม่ใช่สมาชิก `trip_group` เดิม) — มี id ใหม่จริง + กลุ่มเดิมมีสมาชิกอยู่แล้ว → `booking_svc.merge_into_group()` (งานเดิมไม่ถูกแตะ, ผ่าน `guard_budget()`/`apply_transition()` จริง); ไม่งั้น = ทาง "รวมทริปใหม่/แก้ไขกลุ่มเดิม" เดิม (ไม่ถูกแตะ). ⚠️ **BUG-3 (พบ Phase 4, 2026-07-19, ยังไม่แก้ — เฉพาะทาง "รวมทริปใหม่" เดิมเท่านั้น)**: เซ็ต `booking.status` ตรง ไม่ผ่าน `apply_transition()`/`booking_service.*` เลย — ไม่เคยเรียก `guard_budget()` ต่างจาก approve path อื่นทุกจุด (central/personal merge ได้ `status='approved'` ทันทีไม่เช็คงบ) ดู [masterplan Bug Log](log/2026-07-19_clean_architecture_masterplan.md) |
 | POST | `/vehicle/admin/assign/<id>` | [vehicle_admin.py:517](../../app/views/vehicle/vehicle_admin.py#L517) — `admin_assign()` → `booking_service.assign_resources()`+`approve_from_pending()`/`reject_from_pending()` (**Phase 2/4**). **2026-06-20:** conflict guard เฉพาะทริปอิสระที่ approve; **2026-06-21:** `check_vehicle_active` guard |
 | POST | `/vehicle/admin/edit/<id>` | [vehicle_booking.py:159](../../app/views/vehicle/vehicle_booking.py#L159) | `admin_edit_booking()` — **2026-06-21** AJAX admin แก้ข้อมูลจอง (start/end datetime, destination, purpose, pax, pickup). Block ถ้า status ∈ {in_progress, completed, cancelled}. คืน JSON `{ok, msg}` |
-| GET/POST | `/vehicle/mileage` | [vehicle_mileage.py:338](../../app/views/vehicle/vehicle_mileage.py#L338) — `mileage_log()` (POST branch → `_handle_mileage_post()`, **Phase 5**; POST รองรับ `entry_type='both'` เพิ่มด้วย — ดู INDEX_code.md) |
-| GET | `/vehicle/mileage/export` | [vehicle_mileage.py:502](../../app/views/vehicle/vehicle_mileage.py#L502) — `mileage_export()` Excel export ตาม filter (แตก `_filter_and_calc_mileage_rows`/`_build_mileage_workbook`, **Phase 5**). Query param ที่รับ: `date_start`/`date_end`/`vehicle_id`/`driver_id`/`status_filter` (**ตัด `cost_min`/`cost_max` ออกแล้ว 2026-07-27**) |
+| GET/POST | `/vehicle/mileage` | [vehicle_mileage.py:344](../../app/views/vehicle/vehicle_mileage.py#L344) — `mileage_log()` (POST branch → `_handle_mileage_post()`, **Phase 5**; POST รองรับ `entry_type='both'` เพิ่มด้วย — ดู INDEX_code.md) |
+| GET | `/vehicle/mileage/export` | [vehicle_mileage.py:508](../../app/views/vehicle/vehicle_mileage.py#L508) — `mileage_export()` Excel export ตาม filter (แตก `_filter_and_calc_mileage_rows`/`_build_mileage_workbook`, **Phase 5**). Query param ที่รับ: `date_start`/`date_end`/`vehicle_id`/`driver_id`/`status_filter` (**ตัด `cost_min`/`cost_max` ออกแล้ว 2026-07-27**) |
 | GET | `/api/admin/bookings` | [vehicle_admin.py:747](../../app/views/vehicle/vehicle_admin.py#L747) — `api_admin_bookings()` |
 | POST | `/api/check-merge` | [vehicle_admin.py:638](../../app/views/vehicle/vehicle_admin.py#L638) — `api_check_merge()` (**DEBT-5** — 75 logic-line เกิน 60, legacy ตั้งใจไม่แตะ) |
 
@@ -82,11 +82,11 @@
 ### admincost
 | Method | Path | File:Line |
 |--------|------|-----------|
-| POST | `/vehicle/mileage/override-fuel` | [vehicle_cost.py:69](../../app/views/vehicle/vehicle_cost.py#L69) |
+| POST | `/vehicle/mileage/override-fuel` | [vehicle_cost.py:72](../../app/views/vehicle/vehicle_cost.py#L72) |
 | GET | `/admin/cost` | [vehicle_cost.py:198](../../app/views/vehicle/vehicle_cost.py#L198) — tab `''`(live)/unpaid/paid/self_paid/deleted + KPI ยอดรวม/ยังไม่จ่าย/จ่ายแล้ว (ไม่นับ deleted) + col งบ per row. **2026-06-14:** query param `budget_type`/`budget_sub` → filter งบ (derive จาก booking ผ่าน `_apply_budget_filter`, กระทบทั้ง KPI + table) (**DEBT-5** — 61 logic-line เกิน 60, legacy ตั้งใจไม่แตะ) |
 | POST | `/admin/ot/<id>/mark_paid` | [vehicle_cost.py:274](../../app/views/vehicle/vehicle_cost.py#L274) — toggle จ่าย/ไม่จ่าย |
 | POST | `/admin/ot/<id>/toggle_no_receipt` | [vehicle_cost.py:299](../../app/views/vehicle/vehicle_cost.py#L299) — tab ผู้ใช้จ่ายเอง |
-| POST | `/admin/ot/create` | [vehicle_cost.py:316](../../app/views/vehicle/vehicle_cost.py#L316) — manual standalone OT (booking_id=None, ไม่หักงบ) |
+| POST | `/admin/ot/create` | [vehicle_cost.py:319](../../app/views/vehicle/vehicle_cost.py#L319) — manual standalone OT (booking_id=None, ไม่หักงบ) |
 | POST | `/admin/ot/<id>/edit` | [vehicle_cost.py:361](../../app/views/vehicle/vehicle_cost.py#L361) |
 | POST | `/admin/ot/<id>/delete` | [vehicle_cost.py:385](../../app/views/vehicle/vehicle_cost.py#L385) — soft delete |
 | POST | `/admin/ot/<id>/restore` | [vehicle_cost.py:403](../../app/views/vehicle/vehicle_cost.py#L403) — กู้คืนจาก tab ลบ |
@@ -99,7 +99,7 @@
 | GET | `/driver` | [vehicle_driver.py:22](../../app/views/vehicle/vehicle_driver.py#L22) — `driver_home()` ส่ง `latest_odo` (MAX odometer ต่อรถ) เข้า template |
 | POST | `/driver/ad-hoc-trip` | [vehicle_driver.py:130](../../app/views/vehicle/vehicle_driver.py#L130) — `driver_ad_hoc_trip()` งานนอกระบบ driver สร้างเอง (collapse UI, strict contact_user_id) + บันทึกเลขไมล์ออกทันที (แตก `_create_ad_hoc_booking`/`_create_ad_hoc_mileage_start`, **Phase 5**) |
 | POST | `/driver/change-vehicle` | [vehicle_driver.py:174](../../app/views/vehicle/vehicle_driver.py#L174) — `driver_change_vehicle()` เปลี่ยนรถฉุกเฉินก่อนออก (swap + เช็ก active + ไม่ชนคิว approved; block ถ้าบันทึกไมล์ออกแล้ว) |
-| POST | `/driver/mileage` | [vehicle_driver.py:281](../../app/views/vehicle/vehicle_driver.py#L281) — `driver_mileage()` (POST branch → `mileage_svc.close_trip`/`auto_generate_ot`, notify อยู่ใน service แล้ว **Phase 3/4**) |
+| POST | `/driver/mileage` | [vehicle_driver.py:281](../../app/views/vehicle/vehicle_driver.py#L281) — `driver_mileage()` (POST branch → `mileage_svc.close_trip`/`sync_ot_for_trip`, notify อยู่ใน service แล้ว **Phase 3/4**) |
 
 ### room
 | Method | Path | File:Line |

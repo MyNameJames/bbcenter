@@ -230,12 +230,12 @@
 }
 
 .popover.vc-cal-pop {
-    background: var(--vc-bg);
-    border: 1px solid var(--vc-border);
-    border-radius: var(--vc-radius-md);
-    box-shadow: none;
-    width: 240px;
-    max-width: 240px;
+    background: #fff;
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    box-shadow: 0 16px 32px rgba(0,0,0,.22), 0 4px 10px rgba(0,0,0,.12);
+    width: 200px;
+    max-width: 200px;
 }
 .popover.vc-cal-pop .popover-header { display: none; }
 .popover.vc-cal-pop .popover-body {
@@ -243,8 +243,32 @@
     max-height: 320px;
     overflow-y: auto;
 }
-.popover.vc-cal-pop .popover-arrow::before { border-color: var(--vc-border) !important; }
-.popover.vc-cal-pop .popover-arrow::after  { border-color: var(--vc-bg) !important;    }
+.popover.vc-cal-pop .popover-arrow::before { border-color: var(--bb-n200) !important; }
+.popover.vc-cal-pop .popover-arrow::after  { border-color: #fff !important; }
+
+/* arrow ทรงกล่องคำพูด (สี่เหลี่ยมหมุน 45° + shadow ตัวเอง) แทน triangle เดิม — เฉพาะ
+   placement=top (ทิศเดียวที่ใช้จริง สั่งจาก JS ตรงๆ ไม่ใช้ auto แล้ว) */
+.popover.vc-cal-pop.bs-popover-top > .popover-arrow,
+.popover.vc-cal-pop[data-popper-placement^="top"] > .popover-arrow {
+    width: 14px !important;
+    height: 14px !important;
+    bottom: -7px !important;
+}
+.popover.vc-cal-pop.bs-popover-top > .popover-arrow::before,
+.popover.vc-cal-pop[data-popper-placement^="top"] > .popover-arrow::before {
+    display: none !important;
+}
+.popover.vc-cal-pop.bs-popover-top > .popover-arrow::after,
+.popover.vc-cal-pop[data-popper-placement^="top"] > .popover-arrow::after {
+    top: 0 !important; left: 0 !important; bottom: auto !important;
+    width: 14px !important; height: 14px !important;
+    border: none !important;
+    border-right: 1px solid var(--bb-n200) !important;
+    border-bottom: 1px solid var(--bb-n200) !important;
+    background: #fff !important;
+    transform: rotate(45deg) !important;
+    box-shadow: 4px 4px 8px -2px rgba(0,0,0,.14) !important;
+}
 
 .vc-cal-pop-row {
     display: grid;

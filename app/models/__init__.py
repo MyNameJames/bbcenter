@@ -25,6 +25,7 @@ from .vehicle_budget import (
     VehicleBudget,
     DeptApprover,
     VehicleBudgetLog,
+    VehicleBudgetYearlyPlan,
 )
 from .vehicle_ot import OTRateConfig, DriverOT, DriverOTSlot
 from .vehicle_fuel import (
@@ -45,7 +46,7 @@ __all__ = [
     'Vehicle', 'Driver', 'VehicleBooking', 'VehicleMileage',
     'VehicleServiceLog', 'TripExpenseItem',
     'BudgetType', 'VehicleDepartment', 'VehicleBudget',
-    'DeptApprover', 'VehicleBudgetLog',
+    'DeptApprover', 'VehicleBudgetLog', 'VehicleBudgetYearlyPlan',
     'OTRateConfig', 'DriverOT', 'DriverOTSlot',
     'FuelBill', 'FuelReimbursement', 'FuelPrice',
     'FuelReserveConfig', 'FuelReserveLog',

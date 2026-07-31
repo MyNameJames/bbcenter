@@ -56,6 +56,7 @@ from views.core.notification_service import (
     notify_approver_approved     as _n_approver_approved,
     notify_rejected              as _n_rejected,
     notify_user_cancelled        as _n_user_cancelled,
+    notify_merged_into_group     as _n_merged,
 )
 
 
@@ -262,6 +263,80 @@ def ungroup(booking):
 
 
 # ──────────────────────────────────────────────────────────────
+# Merge เข้ากลุ่มที่มีอยู่แล้ว — งานเดิมเป็นหลักเสมอ ไม่ถูกแตะ (2026-07-31)
+# ──────────────────────────────────────────────────────────────
+def merge_into_group(trip_group, new_booking_ids, *, vehicle_id, driver_id=None,
+                      expense_type=None, central_category=None, trip_department=None):
+    """เพิ่ม booking(s) ใหม่ (new_booking_ids) เข้ากลุ่มทริปที่มีสมาชิกอยู่แล้ว (trip_group)
+    งานเดิมในกลุ่มเป็นหลักเสมอ — ไม่ถูกแตะ (คง status/vehicle/driver/expense_type เดิมไว้ทั้งหมด)
+    งานใหม่รับ vehicle/driver/expense_type ตามที่ส่งมา แล้ว transition
+    pending → waiting_approver(department)/approved(central,personal) เหมือน merge ทั่วไป —
+    ต่างจาก admin_merge() เดิม (ทาง "รวมทริปใหม่" — ยังไม่แตะ, BUG-3 เดิมยังอยู่) ตรงที่ path นี้
+    เดินผ่าน guard_budget()/apply_transition() จริงตาม ADR 0001
+
+    guard: ต้องมีสมาชิกอยู่ก่อนแล้ว (ไม่งั้นใช้ทาง "รวมทริปใหม่" แทน) · ห้ามถ้าสมาชิกเดิมคนใด
+    ออกรถแล้ว (odometer_start ไม่ None — กันรถ/คนขับของทริปที่เริ่มแล้วถูกแก้ กรณีนี้ไม่เคยเกิดกับ
+    admin_merge() เดิมเพราะทางนั้นรวมได้แค่ booking pending ล้วนซึ่งไม่มีไมล์อยู่แล้ว) · vehicle
+    active/conflict + driver conflict ครอบทั้งกลุ่ม (เดิม+ใหม่) เหมือน merge เดิม
+
+    คืน (ok: bool, msg: str|None)
+    """
+    existing = VehicleBooking.query.filter(VehicleBooking.trip_group == trip_group).all()
+    if not existing:
+        return False, f'ไม่พบกลุ่มทริป {trip_group}'
+    existing_ids = {b.id for b in existing}
+    if any(m.odometer_start is not None for gb in existing for m in gb.mileage):
+        return False, 'ทริปนี้มีการบันทึกไมล์เริ่มแล้ว รถออกแล้ว — เพิ่มงานเข้ากลุ่มไม่ได้'
+
+    new_bookings = [b for b in (VehicleBooking.query.get(int(bid)) for bid in new_booking_ids)
+                     if b and b.id not in existing_ids]
+    if not new_bookings:
+        return False, 'ไม่พบรายการที่จะเพิ่ม'
+
+    if not check_vehicle_active(vehicle_id):
+        return False, 'รถคันนี้ไม่พร้อมใช้งาน (maintenance/inactive)'
+
+    all_ids = list(existing_ids) + [b.id for b in new_bookings]
+    starts  = [b.start_datetime for b in existing + new_bookings]
+    ends    = [b.end_datetime   for b in existing + new_bookings]
+    vconf = check_vehicle_conflict(vehicle_id, min(starts), max(ends), all_ids)
+    if vconf:
+        return False, f'รถถูกใช้ทับช่วงนี้แล้ว (#{vconf.id})'
+    if driver_id:
+        dconf = check_driver_conflict(driver_id, min(starts), max(ends), all_ids)
+        if dconf:
+            return False, f'คนขับมีทริปทับช่วงนี้ (#{dconf.id})'
+
+    for b in new_bookings:
+        b.assigned_vehicle_id = int(vehicle_id)
+        if driver_id:
+            b.driver_id = int(driver_id)
+        b.trip_group      = trip_group
+        b.expense_type     = expense_type
+        b.central_category = central_category
+        b.trip_department  = trip_department or (b.user.department if b.user else None)
+        if b.trip_department:
+            dept_obj = VehicleDepartment.query.filter_by(name=b.trip_department).first()
+            if dept_obj:
+                b.trip_department_id = dept_obj.id
+        ok, err = guard_budget(b)
+        if not ok:
+            return False, err
+
+    to_status = 'waiting_approver' if expense_type == 'department' else 'approved'
+    for b in new_bookings:
+        ok, msg = apply_transition(b, to_status)
+        if not ok:
+            return False, msg
+
+    db.session.flush()
+    for b in new_bookings:
+        _n_merged(b, trip_group)
+        _n_forwarded(b) if to_status == 'waiting_approver' else _n_admin_approved(b)
+    return True, None
+
+
+# ──────────────────────────────────────────────────────────────
 # Cancel — set updated_by เสมอ (ตาม behavior เดิม)
 # ──────────────────────────────────────────────────────────────
 def _build_cancel_recipients(booking, is_admin, is_owner, prev_status, trip_mate_user_ids,
@@ -397,14 +472,24 @@ def cancel(booking, *, actor_id, is_owner, is_admin, notify=True):
 # ──────────────────────────────────────────────────────────────
 def revert(booking, *, actor_id):
     """approved/waiting_approver/rejected → pending
-    guard: ห้ามถ้ามีการหักงบแล้ว (ป้องกัน ledger เพี้ยน)
+    guard: ห้ามถ้ามีการหักงบแล้ว (ป้องกัน ledger เพี้ยน) · ห้ามถ้าอยู่ในกลุ่มทริป (trip_group
+    set — ไปทาง ungroup() แทน เพราะต้อง cascade ทั้งกลุ่ม revert ตัวเดียวจะทิ้ง trip_group
+    ค้างให้เพื่อนร่วมทริปที่เหลือชี้มาที่กลุ่มที่มีสมาชิก pending ปนอยู่)
+
+    เคลียร์ assigned_vehicle_id/driver_id ด้วย (2026-07-31) — เดิมเปลี่ยนแค่ status ทำให้ DB
+    ไม่ตรงกับที่ frontend patch (vehicle_admin.js submitRevert) คาดหวังไว้อยู่แล้ว
+
     คืน (ok: bool, msg: str|None)
     """
     if any(m.budget_deducted_at for m in booking.mileage):
         return False, 'revert ไม่ได้ — มีการหักงบแล้ว'
+    if booking.trip_group:
+        return False, 'revert ไม่ได้ — booking นี้อยู่ในกลุ่มทริป กรุณาแยกกลุ่มก่อน'
     if booking.status not in ('approved', 'waiting_approver', 'rejected'):
         return False, f'revert ไม่ได้จากสถานะ {booking.status}'
     ok, msg = apply_transition(booking, 'pending', actor_id)
     if ok:
         booking.reject_reason = None
+        booking.assigned_vehicle_id = None
+        booking.driver_id = None
     return ok, msg

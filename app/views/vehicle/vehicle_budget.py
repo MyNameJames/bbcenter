@@ -2,9 +2,9 @@ from flask import render_template, request, redirect, url_for, flash, jsonify, s
 from flask_login import login_required, current_user
 from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, VehicleMileage,
                     SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment,
-                    BudgetType, Notification)
+                    BudgetType, Notification, VehicleBudgetYearlyPlan)
 from sqlalchemy import and_, extract, or_
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from calendar import monthrange
 from views.core.notification_service import (
     notify_payment_confirmed    as _n_payment_confirmed,
@@ -20,14 +20,21 @@ from views.vehicle.vehicle_common import (
 
 
 def _handle_set_budget():
+    """v2.26: เลิกให้ admin เลือกช่วงเวลาของงบย่อยเอง — เลือก "ก้อนงบ" (yearly_plan_id) แทน
+    แล้ว year/month (anchor) + start_date/end_date inherit จาก plan อัตโนมัติ (ดู ADR/schema v2.26).
+    Uniqueness lookup เปลี่ยนจาก (dept, year, month, type) เป็น (dept, yearly_plan_id, type)"""
     dept        = request.form.get('department', '').strip()
-    year        = int(request.form.get('year'))
-    month       = int(request.form.get('month'))
+    plan_id     = request.form.get('yearly_plan_id')
     amount      = float(request.form.get('budget_amount', 0))
     budget_type = request.form.get('budget_type', 'department')
     approver_id = request.form.get('approver_id') or None
     if approver_id:
         approver_id = int(approver_id)
+
+    plan = VehicleBudgetYearlyPlan.query.get(int(plan_id)) if plan_id else None
+    if not plan:
+        flash('กรุณาเลือกก้อนงบที่จะแตกงบย่อยนี้ออกมา', 'danger')
+        return
 
     bt_obj = BudgetType.query.filter_by(name=budget_type).first()
     if not bt_obj:
@@ -45,39 +52,34 @@ def _handle_set_budget():
             return
 
     budget = VehicleBudget.query.filter_by(
-        department_id=dept_obj.id, year=year, month=month, budget_type_id=bt_obj.id
+        department_id=dept_obj.id, yearly_plan_id=plan.id, budget_type_id=bt_obj.id
     ).first()
-
-    start_date_str = request.form.get('start_date', '').strip()
-    end_date_str   = request.form.get('end_date', '').strip()
-    start_date = date.fromisoformat(start_date_str) if start_date_str else None
-    end_date   = date.fromisoformat(end_date_str)   if end_date_str   else None
 
     if budget:
         budget_svc.set_budget_amount(
             budget, amount,
-            note=f'admin {current_user.username}: update budget {budget_type} {dept} {year}-{month:02d} → {amount}',
+            note=f'admin {current_user.username}: update budget {budget_type} {dept} plan#{plan.id} → {amount}',
         )
-        budget.start_date = start_date
-        budget.end_date   = end_date
         if budget_type == 'department':
             budget.approver_id = approver_id
     else:
         budget = VehicleBudget(
-            department_id=dept_obj.id, year=year, month=month,
-            budget_amount=amount, budget_type_id=bt_obj.id,
+            department_id=dept_obj.id, budget_type_id=bt_obj.id,
+            yearly_plan_id=plan.id,
+            year=plan.start_date.year, month=plan.start_date.month,
+            start_date=plan.start_date, end_date=plan.end_date,
+            budget_amount=amount,
             approver_id=approver_id if budget_type == 'department' else None,
-            start_date=start_date, end_date=end_date
         )
         db.session.add(budget)
         db.session.flush()
         budget_svc.set_budget_amount(
             budget, amount,
-            note=f'admin {current_user.username}: create budget {budget_type} {dept} {year}-{month:02d} = {amount}',
+            note=f'admin {current_user.username}: create budget {budget_type} {dept} plan#{plan.id} = {amount}',
         )
     db.session.commit()
     type_label = "ส่วนกลาง" if budget_type == 'central' else "งานกอง"
-    flash(f'ตั้งงบ{type_label} "{dept}" เดือน {month}/{year} = {amount:,.0f} บาท เรียบร้อย', 'success')
+    flash(f'ตั้งงบ{type_label} "{dept}" (ก้อนงบ {plan.fiscal_year + 543}) = {amount:,.0f} บาท เรียบร้อย', 'success')
 
 
 def _handle_top_up():
@@ -221,6 +223,52 @@ def _handle_cancel_booking():
         flash('ยกเลิก booking ไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
 
 
+def _handle_set_yearly_plan():
+    """ตั้ง/แก้ไข VehicleBudgetYearlyPlan (v2.26 — plan มีช่วงเวลาของตัวเอง admin เลือกเอง
+    แทน implicit มี.ค.-ก.พ. เดิม) — เชื่อม modal #yearlyPlanModal. plan_id ว่าง = สร้างใหม่,
+    มีค่า = แก้ไข allocated-so-far หาโดย filter VehicleBudget.yearly_plan_id ตรงๆ (ง่ายกว่า
+    pivot(fiscal_year) เดิมที่ต้อง compute ช่วงเดือนจาก march-hardcode)"""
+    try:
+        plan_id             = request.form.get('plan_id') or None
+        start_date_str      = (request.form.get('start_date') or '').strip()
+        end_date_str        = (request.form.get('end_date') or '').strip()
+        total_amount        = float(request.form.get('total_amount', 0))
+        central_allocation  = float(request.form.get('central_allocation', 0))
+        if not start_date_str or not end_date_str:
+            raise ValueError('ต้องระบุช่วงเวลาของเงินก้อนนี้')
+        start_date = date.fromisoformat(start_date_str)
+        end_date   = date.fromisoformat(end_date_str)
+        fiscal_year = start_date.year
+
+        central_allocated_sum = dept_allocated_sum = 0.0
+        if plan_id:
+            cap_rows = (db.session.query(VehicleBudget.budget_amount, BudgetType.name)
+                        .join(BudgetType, VehicleBudget.budget_type_id == BudgetType.id)
+                        .filter(VehicleBudget.yearly_plan_id == int(plan_id))
+                        .all())
+            for amt, btname in cap_rows:
+                if btname == 'central':
+                    central_allocated_sum += float(amt or 0)
+                elif btname == 'department':
+                    dept_allocated_sum += float(amt or 0)
+
+        budget_svc.set_yearly_plan(
+            int(plan_id) if plan_id else None,
+            fiscal_year, total_amount, central_allocation, start_date, end_date,
+            central_allocated_sum=central_allocated_sum,
+            dept_allocated_sum=dept_allocated_sum,
+        )
+        db.session.commit()
+        flash(f'ตั้งเงินก้อนประจำปี {fiscal_year + 543} เรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'บันทึกไม่สำเร็จ: {e}', 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:set_yearly_plan failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
+
+
 def _build_pending_count_map(pending_bookings):
     """นับ pending booking (ยังไม่หักงบ) ต่อแผนก — key = trip_department_id (extract จาก
     _load_budget_rows ตอน Phase 5, logic เดิม 100%)"""
@@ -266,9 +314,10 @@ def _budget_row_dict(b, month_start, month_end, pending_count_map):
         'end_date':      b.end_date.isoformat()   if b.end_date   else '',
         'start_date_th': _fmt_date_th(b.start_date) if b.start_date else '',
         'end_date_th':   _fmt_date_th(b.end_date)   if b.end_date   else '',
-        'pending_count': pending_count_map.get(pkey, 0),
-        'is_active':     b.is_active,
-        'status_reason': status_reason,
+        'pending_count':   pending_count_map.get(pkey, 0),
+        'is_active':       b.is_active,
+        'status_reason':   status_reason,
+        'yearly_plan_id':  b.yearly_plan_id,  # v2.26 — ให้ปุ่ม "แก้ไข" ใน setBudgetModal preselect ก้อนงบเดิม
     }
     return row, active_for_month
 
@@ -444,12 +493,13 @@ def budget_manage():
     if request.method == 'POST':
         action = request.form.get('action')
         _POST_HANDLERS = {
-            'set_budget':     _handle_set_budget,
-            'top_up':         _handle_top_up,
-            'manual_adjust':  _handle_manual_adjust,
-            'toggle_active':  _handle_toggle_active,
-            'extend_period':  _handle_extend_period,
-            'cancel_booking': _handle_cancel_booking,
+            'set_budget':      _handle_set_budget,
+            'top_up':          _handle_top_up,
+            'manual_adjust':   _handle_manual_adjust,
+            'toggle_active':   _handle_toggle_active,
+            'extend_period':   _handle_extend_period,
+            'cancel_booking':  _handle_cancel_booking,
+            'set_yearly_plan': _handle_set_yearly_plan,
         }
         handler = _POST_HANDLERS.get(action)
         if handler:
@@ -478,12 +528,55 @@ def budget_manage():
                           .order_by(VehicleDepartment.name).all()]
     eligible_approvers = User.query.order_by(User.full_name).all()
 
-    fiscal_year_start_ad = sel_year if sel_month >= 3 else sel_year - 1
-    pivot = _build_budget_pivot(fiscal_year_start_ad)
+    # "ก้อนงบ" ที่กำลังดู (v2.26 — เลิก compute fiscal_year_start_ad จาก sel_year/sel_month แบบ
+    # march-hardcode แล้ว) — เลือกผ่าน ?plan_id= ตรงๆ, ไม่ระบุ = plan ที่ครอบคลุมวันนี้, ถ้าไม่มีเลย
+    # (เช่นยังไม่เคยตั้ง หรือกำลังอยู่ระหว่างช่วงที่ไม่มี plan ครอบคลุม) = plan ล่าสุดที่มี
+    plan_id = request.args.get('plan_id', type=int)
+    if plan_id:
+        yearly_plan = VehicleBudgetYearlyPlan.query.get(plan_id)
+    else:
+        today = now.date()
+        yearly_plan = (VehicleBudgetYearlyPlan.query
+                       .filter(VehicleBudgetYearlyPlan.start_date <= today,
+                               VehicleBudgetYearlyPlan.end_date   >= today)
+                       .first())
+    if not yearly_plan:
+        yearly_plan = (VehicleBudgetYearlyPlan.query
+                       .order_by(VehicleBudgetYearlyPlan.start_date.desc()).first())
+
+    # รายการ plan ทั้งหมด (สำหรับ chip "เลือกก้อนงบ" เหนือตารางรวม — แทน "ปีงบ" chip เดิม, v2.26)
+    plan_options = VehicleBudgetYearlyPlan.query.order_by(VehicleBudgetYearlyPlan.start_date.desc()).all()
+
+    if yearly_plan:
+        pivot    = _build_budget_pivot(yearly_plan)
+        forecast = _calc_budget_forecast(pivot, central_budgets, dept_budgets, yearly_plan, now)
+    else:
+        # ยังไม่เคยตั้งก้อนงบเลยสักตัวในระบบ — ให้ zone ด้านบนแสดง empty state ล้วน ไม่มี pivot/forecast
+        pivot = {
+            'central': {}, 'central_labels': {}, 'central_max': 0,
+            'dept': {}, 'dept_labels': {}, 'dept_max': 0,
+            'personal': {}, 'personal_max': 0, 'personal_by_user': {}, 'personal_user_labels': {},
+            'fiscal_months': [],
+            'summary': {
+                'central':  {'budget': 0, 'used': 0, 'pct': 0, 'count': 0},
+                'dept':     {'budget': 0, 'used': 0, 'pct': 0, 'count': 0},
+                'personal': {'used': 0},
+            },
+        }
+        forecast = {
+            'total_spent': 0, 'total_allocated': 0, 'spent_pct': 0, 'remaining_to_use': 0,
+            'peak_month_label': None, 'peak_month_amount': None,
+            'is_current_fy': False, 'compare_amount': 0, 'is_over': False, 'over_under_amount': 0,
+            'exhaust_month_label': None, 'risk_count': 0, 'has_spending': False,
+        }
+
+    # fallback label ให้ modal "ตั้งงบใหม่" ตอนยังไม่มี plan เลยสักตัว (ปีปัจจุบันตามปฏิทิน)
+    fallback_fiscal_year = now.year if now.month >= 3 else now.year - 1
 
     _TH_MONTHS = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
     return render_template('vehicle/admin/vehicle_budget.html',
+                           forecast=forecast,
                            central_budgets=central_budgets,
                            dept_budgets=dept_budgets,
                            archived_budgets=archived_budgets,
@@ -497,7 +590,9 @@ def budget_manage():
                            month_label=f"{_TH_MONTHS[sel_month]} {sel_year+543}",
                            TH_MONTHS=_TH_MONTHS,
                            pivot=pivot,
-                           fiscal_year_start_ad=fiscal_year_start_ad,
+                           yearly_plan=yearly_plan,
+                           plan_options=plan_options,
+                           fallback_fiscal_year=fallback_fiscal_year,
                            now=now)
 
 
@@ -574,28 +669,26 @@ def _build_personal_pivot(fy_start, fy_end):
     return personal, personal_by_user, personal_user_labels, max_p
 
 
-def _build_pivot_summary(central, dept, personal, fiscal_months):
+def _build_pivot_summary(central, dept, personal, plan):
     """Fiscal-year summary per category (2026-06-08 redesign): default pivot view = 3 สรุปแถว
     (ส่วนกลาง/กอง/ส่วนตัว) เพดานรวม + ใช้ไป% — used = sum ยอดหักจริงต่อเดือนทั้งปีงบ (จาก
-    cells ที่ build แล้ว) · budget = sum เพดานของ VehicleBudget ที่ (year, month) อยู่ในปีงบนี้
-    ตามประเภท (extract จาก _build_budget_pivot ตอน Phase 5, logic เดิม 100%)"""
+    cells ที่ build แล้ว) · budget = sum เพดานของ VehicleBudget ที่ผูก yearly_plan_id นี้ตรงๆ
+    (v2.26 — เดิม match (year,month) เข้าชุดปีงบที่ compute จาก march-hardcode, ตอนนี้ filter FK
+    ตรงๆ ง่ายและถูกต้องกว่า)"""
     central_used_fy = sum(v for row in central.values() for v in row.values())
     dept_used_fy    = sum(v for row in dept.values()    for v in row.values())
     personal_used_fy = sum(personal.values())
 
-    fy_set = set(fiscal_months)  # {(month, year_ad), ...}
-    cap_rows = (db.session.query(VehicleBudget.budget_amount,
-                                 VehicleBudget.year, VehicleBudget.month,
-                                 BudgetType.name)
+    cap_rows = (db.session.query(VehicleBudget.budget_amount, BudgetType.name)
                 .join(BudgetType, VehicleBudget.budget_type_id == BudgetType.id)
+                .filter(VehicleBudget.yearly_plan_id == plan.id)
                 .all())
     central_cap_fy = dept_cap_fy = 0.0
-    for amt, yr, mo, btname in cap_rows:
-        if (mo, yr) in fy_set:
-            if btname == 'central':
-                central_cap_fy += float(amt or 0)
-            elif btname == 'department':
-                dept_cap_fy += float(amt or 0)
+    for amt, btname in cap_rows:
+        if btname == 'central':
+            central_cap_fy += float(amt or 0)
+        elif btname == 'department':
+            dept_cap_fy += float(amt or 0)
 
     return {
         'central': {
@@ -616,20 +709,18 @@ def _build_pivot_summary(central, dept, personal, fiscal_months):
     }
 
 
-def _build_budget_pivot(fiscal_year_start_ad):
-    """Build fiscal-year (Mar→Feb) pivot for budget_manage page.
-
-    Phase 7 (2026-05-22). Fiscal year = months [3..12] of `fiscal_year_start_ad`
-    + months [1..2] of `fiscal_year_start_ad + 1`. Filter `is_active=True` only
-    (inactive budgets excluded from pivot per design intent).
+def _build_budget_pivot(plan):
+    """Build pivot for one VehicleBudgetYearlyPlan's period (was: hardcoded Mar→Feb window
+    derived from a `fiscal_year_start_ad` int — v2.26 moved the period onto the plan itself,
+    so this now walks `plan.start_date`..`plan.end_date` month by month, whatever length that
+    actually is, instead of always assuming exactly 12 months starting in March).
 
     Phase 2 (2026-05-22, redesign continuation): เพิ่ม `personal` row —
     sum fuel_cost ของ VehicleMileage ที่ expense_type='personal' + personal_status=1
-    (admin ยืนยันรับเงินแล้ว) ภายใน fiscal year. Aggregate ตาม personal_paid_at.
+    (admin ยืนยันรับเงินแล้ว) ภายใน plan period. Aggregate ตาม personal_paid_at.
 
     Phase 5 (2026-07-19): แตกเป็น 3 helper ตาม sub-concern (central/dept จาก ledger,
     personal จาก mileage, summary aggregate) — ฟังก์ชันนี้เหลือแค่ orchestrate + ประกอบ dict
-    ผลลัพธ์ logic เดิม 100% ทุกจุด
 
     Returns dict:
       {
@@ -639,24 +730,31 @@ def _build_budget_pivot(fiscal_year_start_ad):
         'dept':           { dept_id: { month_num: used_amount } },
         'dept_labels':    { dept_id: dept_name },
         'dept_max':       float,
-        'personal':       { month_num: total_received },   # 1 row across fiscal year
+        'personal':       { month_num: total_received },   # 1 row across the plan period
         'personal_max':   float,
-        'fiscal_months':  [(month, year_ad), ...],  # ordered Mar→Feb (12 tuples)
+        'fiscal_months':  [(month, year_ad), ...],  # ordered plan.start_date → plan.end_date
         'summary': {                                 # 2026-06-08: default pivot view
-          'central':  {'budget','used','pct','count'},   # เพดาน+ใช้ไป รวมทั้งปีงบ
+          'central':  {'budget','used','pct','count'},   # เพดาน+ใช้ไป รวมทั้ง plan
           'dept':     {'budget','used','pct','count'},
           'personal': {'used'},                          # ไม่มีเพดาน
         }
       }
     """
-    fiscal_months = [(m, fiscal_year_start_ad) for m in range(3, 13)] \
-                  + [(m, fiscal_year_start_ad + 1) for m in (1, 2)]
-    fy_start = datetime(fiscal_year_start_ad,     3, 1)
-    fy_end   = datetime(fiscal_year_start_ad + 1, 3, 1)
+    fy_start = datetime.combine(plan.start_date, datetime.min.time())
+    fy_end   = datetime.combine(plan.end_date,   datetime.min.time()) + timedelta(days=1)
+
+    fiscal_months = []
+    y, m = plan.start_date.year, plan.start_date.month
+    end_y, end_m = plan.end_date.year, plan.end_date.month
+    while (y, m) <= (end_y, end_m):
+        fiscal_months.append((m, y))
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
 
     central, dept, labels_c, labels_d, max_c, max_d = _build_central_dept_pivot(fy_start, fy_end)
     personal, personal_by_user, personal_user_labels, max_p = _build_personal_pivot(fy_start, fy_end)
-    summary = _build_pivot_summary(central, dept, personal, fiscal_months)
+    summary = _build_pivot_summary(central, dept, personal, plan)
 
     return {
         'central':        central,
@@ -671,6 +769,68 @@ def _build_budget_pivot(fiscal_year_start_ad):
         'personal_user_labels': personal_user_labels,
         'fiscal_months':        fiscal_months,
         'summary':              summary,
+    }
+
+
+def _calc_budget_forecast(pivot, central_budgets, dept_budgets, plan, now):
+    """สรุป "ใช้ไปแล้ว" + คาดการณ์สิ้น plan สำหรับ UE mockup zone (เชื่อมของจริง 2026-07-30;
+    v2.26: เทียบกับ plan.start_date/end_date ของ plan เอง แทน fiscal_year_start_ad + march-hardcode
+    เดิม — รองรับ plan ที่ช่วงเวลาไม่ใช่ 12 เดือนพอดีด้วย ใช้ len(pivot['fiscal_months']) แทนคูณ 12 ตรงๆ).
+    เทียบ run-rate กับ "จัดสรรแล้ว" (sum budget_amount ทั้ง plan) ไม่ใช่เงินก้อนทั้งปี — ต่อเนื่องกับ
+    % ที่ใช้ใน section เงินก้อนประจำปีด้านบน (ตกลงกับผู้ใช้แล้ว). งบเสี่ยง = ใช้ไปแล้ว >80% ของ cap
+    ตัวเอง ณ ตอนนี้ (ไม่ project รายงบ — ตกลงเลือกเกณฑ์ง่ายกว่าเพื่อลด false-positive)."""
+    total_spent      = pivot['summary']['central']['used']   + pivot['summary']['dept']['used']
+    total_allocated  = pivot['summary']['central']['budget'] + pivot['summary']['dept']['budget']
+    spent_pct        = (total_spent / total_allocated * 100) if total_allocated > 0 else 0
+    remaining_to_use = total_allocated - total_spent
+
+    monthly_totals = {}
+    for row in list(pivot['central'].values()) + list(pivot['dept'].values()):
+        for mo, amt in row.items():
+            monthly_totals[mo] = monthly_totals.get(mo, 0.0) + amt
+    if monthly_totals:
+        peak_month        = max(monthly_totals, key=monthly_totals.get)
+        peak_month_label   = TH_MONTHS[peak_month]
+        peak_month_amount  = monthly_totals[peak_month]
+    else:
+        peak_month_label = peak_month_amount = None
+
+    today         = now.date()
+    is_current_fy = (plan.start_date <= today <= plan.end_date)
+    total_months  = len(pivot['fiscal_months']) or 12
+
+    compare_amount = total_spent  # plan เก่า/อนาคต: เทียบยอดใช้จริงทั้ง plan (ไม่ project)
+    exhaust_month_label = None
+    if is_current_fy:
+        elapsed_months = (today.year - plan.start_date.year) * 12 + (today.month - plan.start_date.month) + 1
+        run_rate       = total_spent / elapsed_months if elapsed_months > 0 else 0
+        compare_amount = run_rate * total_months  # plan ปัจจุบัน: project จบ plan จาก run-rate
+        if run_rate > 0 and remaining_to_use > 0:
+            months_left    = remaining_to_use / run_rate
+            idx0            = (today.month - 1) + int(months_left)
+            exhaust_month_label = TH_MONTHS[(idx0 % 12) + 1]
+        elif run_rate > 0 and remaining_to_use <= 0:
+            exhaust_month_label = 'แล้ว'
+
+    is_over          = compare_amount > total_allocated
+    over_under_amount = abs(compare_amount - total_allocated)
+
+    risk_count = sum(1 for b in (central_budgets + dept_budgets) if b['is_active'] and b['pct'] > 80)
+
+    return {
+        'total_spent':          total_spent,
+        'total_allocated':      total_allocated,
+        'spent_pct':            spent_pct,
+        'remaining_to_use':     remaining_to_use,
+        'peak_month_label':     peak_month_label,
+        'peak_month_amount':    peak_month_amount,
+        'is_current_fy':        is_current_fy,
+        'compare_amount':       compare_amount,
+        'is_over':              is_over,
+        'over_under_amount':    over_under_amount,
+        'exhaust_month_label':  exhaust_month_label,
+        'risk_count':           risk_count,
+        'has_spending':         total_spent > 0,
     }
 
 

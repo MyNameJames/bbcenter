@@ -1,187 +1,55 @@
 /* ============================================================
-   Manage Fleet — Vercel UI + Emil-flavored micro-interactions
+   Manage Fleet — Emil-flavored micro-interactions
    ─────────────────────────────────────────────────────────────
-   Scope: .vc-scope .mf-* on this page only.
-   Tokens จาก design-system.css (--vc-*)
+   Scope: .mf-* on this page only (page-exclusive, not shared).
+   Tokens จาก components.css (--bb-*) — migrated 2026-07-29,
+   ดู docs/notes/log/2026-07-29_vehicle-fleet-shell-token.md
    ============================================================ */
 
 /* ─────────────────────────────────────────────
-   Custom easings (Emil)
+   2. CHIP helpers (username/dept — ใช้ใน approver list + driverDetailModal)
+   (section 1 "GRID" ลบแล้ว 2026-07-29 — .mf-grid/.mf-col-right
+   .mf-plate/.mf-name-line/.mf-cap/.mf-odo-unit ลบแล้ว 2026-07-30 — vehicle table
+   ย้ายไป bb-table จริง (vehicle_fleet.html) เลิกใช้ .mf-* cell helpers)
 ───────────────────────────────────────────── */
-.vc-scope {
-    --mf-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    --mf-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-}
-
-/* ─────────────────────────────────────────────
-   1. PAGE HEADER
-───────────────────────────────────────────── */
-.mf-header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--vc-space-4);
-    flex-wrap: wrap;
-    padding-bottom: var(--vc-space-5);
-    margin-bottom: var(--vc-space-5);
-    border-bottom: 1px solid var(--vc-border);
-}
-
-.mf-title {
-    font-size: var(--vc-text-xl);
-    font-weight: 600;
-    letter-spacing: var(--vc-tracking-tight);
-    color: var(--vc-fg);
-    line-height: 1.2;
-    margin: 0;
-}
-
-.mf-subtitle {
-    font-size: var(--vc-text-sm);
-    color: var(--vc-fg-muted);
-    margin: 6px 0 0 0;
-    line-height: 1.4;
-}
-
-/* ─────────────────────────────────────────────
-   2. GRID — col-8 / col-4
-───────────────────────────────────────────── */
-.mf-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-    gap: var(--vc-space-4);
-    align-items: start;
-}
-
-.mf-col-right {
-    display: flex;
-    flex-direction: column;
-    gap: var(--vc-space-4);
-}
-
-@media (max-width: 1199.98px) {
-    .mf-grid { grid-template-columns: 1fr; }
-}
-
-/* ─────────────────────────────────────────────
-   3. PLATE / NAME cell helpers (table content)
-───────────────────────────────────────────── */
-.mf-plate {
-    font-weight: 600;
-    letter-spacing: .01em;
-    color: var(--vc-fg);
-}
-
-.mf-name-line {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.25;
-}
-.mf-name-primary { font-weight: 500; color: var(--vc-fg); }
-.mf-name-sub     { font-size: var(--vc-text-xs); color: var(--vc-fg-muted); }
-
-.mf-cap {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--vc-fg-muted);
-}
-
-.mf-cap .vc-icon-sm { color: var(--vc-fg-subtle); }
-
-.mf-odo-unit {
-    font-size: var(--vc-text-xs);
-    color: var(--vc-fg-subtle);
-    margin-left: 2px;
-    letter-spacing: 0;
-}
-
 .mf-username-chip {
     display: inline-flex;
     align-items: center;
-    font-family: var(--vc-font-mono);
+    font-family: 'Inter', 'Sarabun', sans-serif;
     font-size: 11px;
-    color: var(--vc-fg-muted);
-    background: var(--vc-bg-subtle);
-    border: 1px solid var(--vc-border);
+    color: var(--bb-mut);
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
     padding: 1px 6px;
-    border-radius: var(--vc-radius-xs);
+    border-radius: var(--bb-r-pill);
     line-height: 1.4;
 }
 
 .mf-dept-chip {
     display: inline-flex;
     align-items: center;
-    font-size: var(--vc-text-xs);
-    color: var(--vc-fg-muted);
-    background: var(--vc-bg-subtle);
-    border: 1px solid var(--vc-border);
+    font-size: 12px;
+    color: var(--bb-mut);
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
     padding: 1px 8px;
-    border-radius: var(--vc-radius-xs);
+    border-radius: var(--bb-r-pill);
 }
 
-/* ─────────────────────────────────────────────
-   4. ACTION BUTTONS (row icons)
-   Emil: scale(0.97) on :active, 160ms ease-out
-───────────────────────────────────────────── */
-.mf-actions {
-    display: inline-flex;
-    gap: 4px;
-    justify-content: flex-end;
-}
-
-.mf-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 1px solid var(--vc-border);
-    background: var(--vc-bg);
-    color: var(--vc-fg-muted);
-    border-radius: var(--vc-radius-xs);
-    cursor: pointer;
-    transition:
-        background 140ms var(--mf-ease-out),
-        border-color 140ms var(--mf-ease-out),
-        color 140ms var(--mf-ease-out),
-        transform 140ms var(--mf-ease-out);
-}
-
-.mf-icon-btn:hover {
-    background: var(--vc-bg-subtle);
-    border-color: var(--vc-border-hover);
-    color: var(--vc-fg);
-}
-
-.mf-icon-btn:active {
-    transform: scale(0.94);
-    transition-duration: 80ms;
-}
-
-.mf-icon-btn:focus-visible {
-    outline: 2px solid var(--vc-fg);
-    outline-offset: 1px;
-}
-
-.mf-icon-btn--danger:hover {
-    color: var(--vc-red);
-    border-color: var(--vc-red-border);
-    background: var(--vc-bg);
-}
+/* section 3 "ACTION BUTTONS" (.mf-actions/.mf-icon-btn) ลบแล้ว 2026-07-30 — row action
+   ทั้งรถ/คนขับย้ายไป .bb-btn.is-sec.is-icon (bb-table จริง) แทน .mf-icon-btn เดิม */
 
 /* primary buttons inherit vc-btn scale-press */
 .vc-btn { transition:
-    background 140ms var(--mf-ease-out),
-    border-color 140ms var(--mf-ease-out),
-    color 140ms var(--mf-ease-out),
-    transform 140ms var(--mf-ease-out);
+    background 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .vc-btn:active { transform: scale(0.97); transition-duration: 80ms; }
 
 /* ─────────────────────────────────────────────
-   5. ROW STAGGER (Emil: 40ms between rows, ease-out)
+   4. ROW STAGGER (Emil: 40ms between rows, ease-out)
    - Only first paint; never blocks interaction
 ───────────────────────────────────────────── */
 @keyframes mfRowIn {
@@ -192,7 +60,7 @@
 .mf-stagger tbody tr,
 .mf-stagger > .vc-list-item {
     opacity: 0;
-    animation: mfRowIn 280ms var(--mf-ease-out) forwards;
+    animation: mfRowIn 280ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 
 .mf-stagger tbody tr:nth-child(1),
@@ -213,64 +81,18 @@
 .mf-stagger > .vc-list-item:nth-child(n+8) { animation-delay: 280ms; }
 
 /* ─────────────────────────────────────────────
-   6. RIGHT-COLUMN DRIVER LIST
+   5. AVATAR (วงกลม รูป/ตัวอักษรย่อ) — ใช้ใน driverDetailModal เท่านั้น
+   (.mf-driver-row/-main/-name/-meta/-jobs/-side ลบแล้ว 2026-07-30 — driver list
+   ย้ายไป bb-table จริง, vehicle_fleet.html ใช้ .bb-avatar/.bb-cell-strong แทน)
 ───────────────────────────────────────────── */
-.mf-driver-row {
-    padding: var(--vc-space-3) var(--vc-space-4);
-    display: flex;
-    align-items: center;
-    gap: var(--vc-space-3);
-    transition: background 140ms var(--mf-ease-out);
-}
-.mf-driver-row:hover { background: var(--vc-bg-subtle); }
-
-.mf-driver-main { flex: 1; min-width: 0; }
-
-.mf-driver-name {
-    font-size: var(--vc-text-sm);
-    font-weight: 500;
-    color: var(--vc-fg);
-    line-height: 1.3;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mf-driver-meta {
-    font-size: var(--vc-text-xs);
-    color: var(--vc-fg-muted);
-    margin-top: 2px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    line-height: 1.3;
-}
-
-.mf-driver-jobs {
-    flex-shrink: 0;
-    font-size: var(--vc-text-xs);
-    font-family: var(--vc-font-mono);
-    color: var(--vc-fg-muted);
-    text-align: right;
-    min-width: 56px;
-}
-.mf-driver-jobs strong {
-    font-family: inherit;
-    color: var(--vc-fg);
-    font-weight: 600;
-}
-
-/* avatar (วงกลม รูป/ตัวอักษรย่อ) */
 .mf-avatar {
     flex-shrink: 0;
     width: 40px;
     height: 40px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--vc-bg-subtle);
-    border: 1px solid var(--vc-border);
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -282,48 +104,36 @@
     display: block;
 }
 .mf-avatar-initials {
-    font-size: var(--vc-text-sm);
+    font-size: 13px;
     font-weight: 600;
-    color: var(--vc-fg-muted);
+    color: var(--bb-mut);
     text-transform: uppercase;
     line-height: 1;
 }
-
-/* right side: status badge + jobs (stacked) */
-.mf-driver-side {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    text-align: right;
-}
-.mf-driver-side .mf-driver-jobs {
-    min-width: 0;
-    margin: 0;
-}
+/* placeholder icon เมื่อไม่มีรูปจริง (เช่น รูปรถ — ยังไม่มี field เก็บรูปใน DB, mockup ก่อน) */
+.mf-avatar .vc-icon-sm { color: var(--bb-mut); }
 
 /* ─────────────────────────────────────────────
-   6b. DRIVER DETAIL MODAL
+   5b. DRIVER DETAIL MODAL
 ───────────────────────────────────────────── */
 .mf-detail-head {
     display: flex;
     align-items: center;
-    gap: var(--vc-space-3);
-    padding-bottom: var(--vc-space-4);
-    margin-bottom: var(--vc-space-4);
-    border-bottom: 1px solid var(--vc-border);
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--bb-n200);
 }
 .mf-avatar-lg {
     width: 64px;
     height: 64px;
 }
-.mf-avatar-lg .mf-avatar-initials { font-size: var(--vc-text-lg); }
+.mf-avatar-lg .mf-avatar-initials { font-size: 18px; }
 .mf-detail-headinfo { flex: 1; min-width: 0; }
 .mf-detail-name {
-    font-size: var(--vc-text-md);
+    font-size: 16px;
     font-weight: 600;
-    color: var(--vc-fg);
+    color: var(--bb-str);
     margin: 0 0 6px;
 }
 .mf-detail-headmeta {
@@ -335,74 +145,74 @@
 .mf-detail-jobs {
     flex-shrink: 0;
     text-align: center;
-    font-size: var(--vc-text-xs);
-    color: var(--vc-fg-muted);
+    font-size: 12px;
+    color: var(--bb-mut);
 }
 .mf-detail-jobs strong {
     display: block;
-    font-size: var(--vc-text-lg);
+    font-size: 18px;
     font-weight: 700;
-    color: var(--vc-fg);
+    color: var(--bb-str);
     line-height: 1.1;
 }
 .mf-detail-grid { margin: 0; }
 .mf-detail-idcard {
-    margin-top: var(--vc-space-4);
-    padding-top: var(--vc-space-4);
-    border-top: 1px solid var(--vc-border);
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--bb-n200);
 }
 .mf-detail-idcard img {
     max-width: 100%;
     max-height: 280px;
-    border-radius: var(--vc-radius-sm);
-    border: 1px solid var(--vc-border);
+    border-radius: var(--bb-r-surface);
+    border: 1px solid var(--bb-n200);
     display: block;
 }
 
 /* ─────────────────────────────────────────────
-   6c. MODAL FORM — section heading + current-file link
+   5c. MODAL FORM — section heading + current-file link
 ───────────────────────────────────────────── */
 .mf-form-section {
-    margin-top: var(--vc-space-4);
-    padding-top: var(--vc-space-4);
-    border-top: 1px solid var(--vc-border);
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--bb-n200);
 }
 .mf-form-section-title {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: var(--vc-text-xs);
+    font-size: 12px;
     font-weight: 600;
-    color: var(--vc-fg-muted);
+    color: var(--bb-mut);
     text-transform: uppercase;
-    letter-spacing: var(--vc-tracking-wide);
-    margin: 0 0 var(--vc-space-3);
+    letter-spacing: 0.04em;
+    margin: 0 0 12px;
 }
-.mf-form-section-title .vc-icon-sm { color: var(--vc-fg-subtle); }
+.mf-form-section-title .vc-icon-sm { color: var(--bb-n500); }
 .mf-current-file {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     margin-top: 6px;
-    font-size: var(--vc-text-xs);
-    color: var(--vc-accent);
+    font-size: 12px;
+    color: var(--bb-accent-dk);
     text-decoration: none;
 }
 .mf-current-file:hover { text-decoration: underline; }
 
 /* ─────────────────────────────────────────────
-   7. APPROVER LIST (compact)
+   6. APPROVER LIST (compact)
 ───────────────────────────────────────────── */
 .mf-approver-row {
-    padding: var(--vc-space-3) var(--vc-space-4);
-    border-bottom: 1px solid var(--vc-border);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--bb-n200);
 }
 .mf-approver-row:last-child { border-bottom: none; }
 
 .mf-approver-name {
-    font-size: var(--vc-text-sm);
+    font-size: 13px;
     font-weight: 500;
-    color: var(--vc-fg);
+    color: var(--bb-str);
     line-height: 1.3;
     margin: 0 0 4px 0;
 }
@@ -412,33 +222,33 @@
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
-    font-size: var(--vc-text-xs);
-    color: var(--vc-fg-muted);
+    font-size: 12px;
+    color: var(--bb-mut);
 }
 
 /* ─────────────────────────────────────────────
-   8. READ-ONLY NOTE (approver section)
+   7. READ-ONLY NOTE (approver section)
 ───────────────────────────────────────────── */
 .mf-readonly-note {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: var(--vc-text-xs);
-    color: var(--vc-fg-muted);
-    background: var(--vc-bg-subtle);
-    border: 1px solid var(--vc-border);
-    border-radius: var(--vc-radius-xs);
+    font-size: 12px;
+    color: var(--bb-mut);
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-pill);
     padding: 2px 8px;
 }
-.mf-readonly-note .vc-icon-sm { color: var(--vc-fg-subtle); }
+.mf-readonly-note .vc-icon-sm { color: var(--bb-n500); }
 
 /* ─────────────────────────────────────────────
-   9. MODAL ENTRY (Emil: never scale(0), origin = center for modals)
+   8. MODAL ENTRY (Emil: never scale(0), origin = center for modals)
 ───────────────────────────────────────────── */
 .vc-modal .modal-dialog {
     transition:
-        transform 200ms var(--mf-ease-out),
-        opacity 200ms var(--mf-ease-out);
+        transform 200ms cubic-bezier(0.23, 1, 0.32, 1),
+        opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
     transform-origin: center;
 }
 .vc-modal.fade .modal-dialog {
@@ -451,7 +261,7 @@
 }
 
 /* close button — scale press */
-.vc-modal .btn-close { transition: opacity 140ms var(--mf-ease-out), background 140ms var(--mf-ease-out), transform 140ms var(--mf-ease-out); }
+.vc-modal .btn-close { transition: opacity 140ms cubic-bezier(0.23, 1, 0.32, 1), background 140ms cubic-bezier(0.23, 1, 0.32, 1), transform 140ms cubic-bezier(0.23, 1, 0.32, 1); }
 .vc-modal .btn-close:active { transform: scale(0.92); transition-duration: 80ms; }
 
 /* form switch (driver active toggle) */
@@ -459,10 +269,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--vc-space-3);
-    border: 1px solid var(--vc-border);
-    border-radius: var(--vc-radius-sm);
-    background: var(--vc-bg);
+    padding: 12px;
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    background: var(--bb-n0);
 }
 .mf-switch-row .form-check-input {
     width: 2.4em;
@@ -470,41 +280,41 @@
     cursor: pointer;
 }
 .mf-switch-row .form-check-input:checked {
-    background-color: var(--vc-fg);
-    border-color: var(--vc-fg);
+    background-color: var(--bb-str);
+    border-color: var(--bb-str);
 }
 
 /* ─────────────────────────────────────────────
-   10. HISTORY MODAL — total card + spinner
+   9. HISTORY MODAL — total card + spinner
 ───────────────────────────────────────────── */
 .mf-hist-total {
     display: flex;
     align-items: baseline;
     justify-content: center;
-    gap: var(--vc-space-2);
-    padding: var(--vc-space-4);
-    background: var(--vc-bg-subtle);
-    border: 1px solid var(--vc-border);
-    border-radius: var(--vc-radius-sm);
-    margin-bottom: var(--vc-space-4);
+    gap: 8px;
+    padding: 16px;
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    margin-bottom: 16px;
 }
 .mf-hist-total-label {
-    font-size: var(--vc-text-xs);
-    color: var(--vc-fg-muted);
+    font-size: 12px;
+    color: var(--bb-mut);
     text-transform: uppercase;
-    letter-spacing: var(--vc-tracking-wide);
+    letter-spacing: 0.04em;
     margin: 0;
 }
 .mf-hist-total-value {
-    font-size: var(--vc-text-lg);
+    font-size: 18px;
     font-weight: 600;
-    color: var(--vc-fg);
-    font-family: var(--vc-font-mono);
+    color: var(--bb-str);
+    font-family: 'Inter', 'Sarabun', sans-serif;
     margin: 0;
 }
 .mf-hist-total-unit {
-    font-size: var(--vc-text-sm);
-    color: var(--vc-fg-muted);
+    font-size: 13px;
+    color: var(--bb-mut);
     margin-left: 2px;
 }
 
@@ -518,19 +328,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--vc-space-2);
-    padding: var(--vc-space-6);
-    color: var(--vc-fg-muted);
-    font-size: var(--vc-text-sm);
+    gap: 8px;
+    padding: 24px;
+    color: var(--bb-mut);
+    font-size: 13px;
 }
 
 .mf-distance-pos {
-    color: var(--vc-fg);
+    color: var(--bb-str);
     font-weight: 500;
 }
 
 /* ─────────────────────────────────────────────
-   11. REDUCED MOTION (a11y)
+   10. REDUCED MOTION (a11y)
 ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
     .mf-stagger tbody tr,
@@ -544,6 +354,5 @@
         transition: opacity 120ms ease;
         transform: none;
     }
-    .vc-btn:active,
-    .mf-icon-btn:active { transform: none; }
+    .vc-btn:active { transform: none; }
 }

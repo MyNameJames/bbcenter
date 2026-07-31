@@ -2,7 +2,7 @@
 
 > **Claude: อ่านไฟล์นี้ก่อนเสมอ** เมื่อต้องหา symbol/route/feature แทนการ glob/grep
 > ทุกคอลัมน์ `file:line` คลิกเปิดได้เลย
-> **อัปเดตล่าสุด:** 2026-07-27 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](CHANGELOG.md)
+> **อัปเดตล่าสุด:** 2026-07-31 · ประวัติ phase/changelog ทั้งหมด → [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -14,6 +14,7 @@
 | **Routes ทุก path** | [INDEX_routes.md](INDEX_routes.md) |
 | **Key Functions + Database Models** | [INDEX_code.md](INDEX_code.md) |
 | **Templates + Design System** | [INDEX_ui.md](INDEX_ui.md) |
+| ประวัติ template/CSS ย้อนหลัง | [INDEX_ui_history.md](INDEX_ui_history.md) (เปิดเฉพาะตอนต้องรู้ "ทำไมถึงเป็นแบบนี้") |
 | System flow / architecture | [architecture.md](architecture.md) |
 | งานที่ทำแล้ว / กำลังทำ | [doc/](doc/) · [log/](log/) |
 | Feature backlog | [future_features.md](future_features.md) |
@@ -33,6 +34,7 @@ app/
   domain/vehicle/           pure logic, ห้าม import flask (Clean Architecture Phase 0-1, 2026-07-19):
                             workflow.py (ALLOWED_TRANSITIONS/guard_budget/apply_transition)
                             fuel.py (calc_fuel_cost — pure)
+                            ot.py (build_ot_specs/slots_match_trip — กติกา OT 30 นาที + เงินเต็มบาท, 2026-07-27)
   services/vehicle/         use-case orchestration: guard→state change→notify (Phase 0-4, 2026-07-19):
                             booking_service.py · mileage_service.py · budget_service.py
   .env (gitignored) · .env.example (template — env vars: architecture.md § Configuration)
@@ -50,7 +52,7 @@ app/
 tools/
   git-hooks/pre-commit      secret guard (enable: git config core.hooksPath tools/git-hooks)
   doc-stats.sh              token budget check
-tests/                      pytest — 8 ไฟล์ + conftest.py, 97 case (run: .venv/bin/python -m pytest) — รายละเอียด → architecture.md § Testing
+tests/                      pytest — 11 ไฟล์ + conftest.py, 148 case (run: .venv/bin/python -m pytest) — รายละเอียด → architecture.md § Testing
 pytest.ini · requirements-dev.txt   (root — pythonpath=app, pytest)
 docs/notes/
   INDEX.md (ไฟล์นี้, hub) · INDEX_routes.md · INDEX_code.md · INDEX_ui.md
@@ -90,10 +92,11 @@ docs/notes/
 > | admin_fuel/reimbursement/bill/price | `vehicle_fuel.py` |
 > | helpers: is_vehicle_admin / require_vehicle_admin / EXPENSE_CATEGORIES / TH_MONTHS | `vehicle_common.py` (ห้ามเพิ่ม logic ใหม่ — Phase 5) |
 > | approve/reject/cancel/revert/assign gateway | `services/vehicle/booking_service.py` |
-> | close_trip/auto_generate_ot/override_fuel_cost/get_fuel_price gateway | `services/vehicle/mileage_service.py` |
+> | close_trip/sync_ot_for_trip/override_fuel_cost/get_fuel_price gateway | `services/vehicle/mileage_service.py` |
 > | deduct/refund/top_up/manual_adjust gateway + `_lookup_budget_for_booking` | `services/vehicle/budget_service.py` |
 > | state machine: ALLOWED_TRANSITIONS / guard_budget / apply_transition | `domain/vehicle/workflow.py` |
 > | pure logic: calc_fuel_cost | `domain/vehicle/fuel.py` |
+> | pure logic: กติกา OT (เกณฑ์ 30 นาที / เงินเต็มบาท / slot ตรงเวลาทริป) | `domain/vehicle/ot.py` |
 
 ---
 

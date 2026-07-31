@@ -1,6 +1,6 @@
 # Database Schema
 
-> **Snapshot ของ models ณ 2026-06-20** — 25 tables (table list ครบ; v2.21 ลบ `trip_passenger`)
+> **Snapshot ของ models ณ 2026-07-31** — 26 tables (table list ครบ; v2.21 ลบ `trip_passenger`, v2.24 เพิ่ม `vehicle_budget_yearly_plan`, v2.25 เพิ่ม column `vehicle.vehicle_type`, v2.26 เพิ่ม `vehicle_budget_yearly_plan.start_date`/`end_date` + drop unique บน `fiscal_year` + `vehicle_budget.yearly_plan_id` FK)
 > 🗂️ **2026-06-07: `models.py` แตกเป็น package [`models/`](../../../app/models/) ตาม domain** (base/user/common/repair/maintenance/room/vehicle/vehicle_budget/vehicle_ot/vehicle_fuel). path `models.py` ในหัวข้อ ### ทั้งหมดด้านล่าง **ตายแล้ว** — class ย้ายไปไฟล์ domain (ดู mapping ที่ [INDEX.md §Database Models](../INDEX.md#-database-models)). โครง schema/column **ไม่เปลี่ยน** (refactor ย้าย class ล้วน ไม่แตะ DB)
 > ⚠️ **DRIFT (ตรวจ 2026-06-02):** line-ref `models.py:NNN` ในหัวข้อ ### **ผิด 17/27 tables** ตั้งแต่ก่อน refactor + ตอนนี้ path เปลี่ยนเป็น package ด้วย → **ต้อง full re-sync (db-helper) ก่อนเชื่อ line ในไฟล์นี้** — table names + column + ภาพรวมยังถูก
 > ส่วนบน = ตารางปัจจุบัน · ส่วนล่าง = ประวัติ + เหตุผลทุก version
@@ -113,6 +113,7 @@
 | `license_plate` | String(20) unique | |
 | `capacity` | Integer | ที่นั่งสูงสุด |
 | `status` | String(20) | `active` / `maintenance` |
+| `vehicle_type` | String(20) nullable | ประเภทรถ: `pickup` / `van` / `truck6` — chip selector ใน addVehicleModal (v2.25, 2026-07-31); ไม่ enforce ที่ DB, ไม่ backfill รถเดิม |
 | `fuel_rate` | Numeric(6,2) | default 10.0 (กม./ลิตร) |
 | `next_service_date` | Date | sync จาก service_log |
 | `next_service_km` | Integer | sync จาก service_log |
@@ -203,8 +204,10 @@
 | `start_date` | Date nullable | **v2.13: active period** — วันเริ่มที่งบเปิดใช้ (เคยเป็น metadata; ตอนนี้กำหนดการแสดง + หักงบ) |
 | `end_date` | Date nullable | **v2.13: active period** — วันสิ้นสุด. งบ active = `is_active=True AND start_date <= วันที่ <= end_date` |
 | `is_active` | Boolean NOT NULL default True | False → block approve_booking + top_up/manual_adjust; KPI ไม่นับ; mileage deduct/refund ไม่ block (v2.9) |
+| `yearly_plan_id` | FK → vehicle_budget_yearly_plan nullable | **v2.26** — ผูกงบย่อยนี้กับ "เงินก้อนประจำปี" ต้นทางแบบ FK ชัดเจน (แทนการอิงแค่ `fiscal_year` เท่ากันแบบหลวมๆ). งบเก่าก่อน feature นี้ = NULL ไม่ backfill (admin ปิดใช้งานเอง); งบใหม่ตั้ง FK นี้เสมอตอนสร้าง (เลือกจาก dropdown ปีงบ) |
 
 **Constraint:** `UNIQUE(budget_type_id, department_id, year, month)`
+**Index:** `ix_vb_yearly_plan(yearly_plan_id)` (v2.26)
 **Props:** `.remaining`, `.percent_used`
 
 > ตั้งแต่ v2.8: `used_amount` เป็น **cache** ของ `SUM(vehicle_budget_log.change_amount)` — ทุก mutation ต้องผ่าน `BudgetService` ที่ append row ใน `vehicle_budget_log` (ห้าม mutate `used_amount` ตรง)
@@ -230,6 +233,22 @@
 
 **Indexes:** `ix_vbl_budget(budget_id)`, `ix_vbl_booking(booking_id)`, `ix_vbl_mileage(mileage_id)`
 **Pattern:** เลียน `fuel_reserve_log` — append-only ledger; `vehicle_budget.used_amount` = cache ของ SUM(change_amount)
+
+### `vehicle_budget_yearly_plan` — [models/vehicle_budget.py](../../../app/models/vehicle_budget.py) (v2.24, period+FK v2.26)
+| Field | Type | Note |
+|-------|------|------|
+| `id` | Integer PK | ตัวตนจริงของ plan (v2.26 — ไม่ใช่ `fiscal_year` อีกต่อไป) |
+| `fiscal_year` | Integer **NOT NULL** | **v2.26: ไม่ unique แล้ว** — เหลือเป็น display label เท่านั้น (ปกติ = `start_date.year`) ตัวตนจริงของ plan คือ `id` + ช่วง `start_date`–`end_date` |
+| `total_amount` | Numeric(12,2) default 0 | เงินทั้งปีที่องค์กรได้รับ (ก้อนใหญ่สุด) |
+| `central_allocation` | Numeric(12,2) default 0 | เพดานที่แบ่งให้ "ส่วนกลาง" (budget_type=central) จากเงินก้อนใหญ่ |
+| `start_date` | Date **NOT NULL** | **v2.26** — วันเริ่มของ plan แบบ explicit (เดิม implicit เสมอ = 1 มี.ค. ของ `fiscal_year` ผ่านสูตร hardcode ใน `views/vehicle/vehicle_budget.py`) |
+| `end_date` | Date **NOT NULL** | **v2.26** — วันสิ้นสุดของ plan แบบ explicit (เดิม implicit เสมอ = 28/29 ก.พ. ของ `fiscal_year+1`); ปกติคาดว่า ~12 เดือน แต่ DB ไม่บังคับ |
+| `created_at` | DateTime | |
+| `updated_at` | DateTime onupdate | |
+
+**Props:** `.dept_allocation` = `total_amount - central_allocation` (คำนวณเสมอ **ไม่เก็บเป็น column** — บังคับ total = central + dept ตลอดเวลา กันข้อมูลไม่ตรงกัน)
+**FK มาจาก `vehicle_budget`:** `vehicle_budget.yearly_plan_id` ชี้มาที่ตารางนี้ (v2.26 — เดิมไม่มี FK เชื่อมกันด้วย `fiscal_year` value เฉยๆ)
+**สถานะ:** มี mutation logic เต็มแล้ว — `budget_service.set_yearly_plan()` + modal `yearlyPlanModal` ใน `vehicle_budget.html` (เพิ่มก่อน v2.26 นี้อีกที่ 2026-07-31 — โน้ต "query-only" เดิมของ v2.24 ล้าสมัยแล้ว)
 
 ### `vehicle_service_log` — [models.py:382](../../../app/models.py#L382)
 | Field | Type | Note |
@@ -306,6 +325,7 @@
 | `paid_by_id` | FK → user nullable | |
 | `paid_at` | DateTime nullable | |
 | `no_receipt` | Boolean default False | True = OT ไม่ต้องออกใบเสร็จ (tab "ผู้ใช้จ่ายเอง") (v2.15) |
+| `is_manual` | Boolean default False | True = แอดมินสร้าง/แก้เอง → `sync_ot_for_trip()` ห้ามคำนวณทับ (เตือนให้คนตรวจแทน) (v2.23) |
 | `is_deleted` | Boolean default False | soft delete → tab "ลบ" (v2.15) |
 | `deleted_at` | DateTime nullable | (v2.15) |
 | `note` | String(500) nullable | |
@@ -476,6 +496,8 @@ vehicle_mileage  ──< vehicle_budget_log
 vehicle_mileage  ──> vehicle_budget_log (last_budget_log_id, idempotency)
 vehicle_budget_log ──< vehicle_budget_log (reverses_log_id, self-ref)
 
+vehicle_budget_yearly_plan  ──< vehicle_budget (yearly_plan_id, v2.26 — เดิมเชื่อมด้วย fiscal_year เท่านั้น ไม่ผูก schema)
+
 driver      ──< driver_ot
 driver_ot   ──< driver_ot_slot (CASCADE)
 ot_rate_config ──< driver_ot_slot
@@ -533,6 +555,10 @@ INSERT INTO budget_type (id, name) VALUES (1, 'central'), (2, 'department');
 | v2.20 | 2026-06-16 | 26 | `notification` + `title` — freeze title ตอนสร้าง notif (เดิม compute จาก event_key → แยก case ไม่ได้) |
 | v2.21 | 2026-06-20 | 25 | `trip_passenger` table **DROPPED** — feature "ขอติดรถ" ตัดออก (ไม่มี UI/route ใช้งานจริง); ทดแทนด้วย trip_group linking ที่ admin จัดผ่าน `admin_merge` |
 | v2.22 | 2026-07-19 | 25 | `vehicle_mileage` + `mileage_open_reminder_at` — guard กันแจ้งซ้ำ cron เตือน driver ปิดไมล์ค้างข้ามวัน (Phase 3.5 REQ-3, clean architecture masterplan) |
+| v2.23 | 2026-07-27 | 25 | `driver_ot` + `is_manual` — guard กัน `sync_ot_for_trip()` (recompute OT เมื่อเวลาทริปเปลี่ยน) คำนวณทับ OT ที่แอดมินสร้าง/แก้เอง |
+| v2.24 | 2026-07-30 | 26 | `vehicle_budget_yearly_plan` new table — เพดานเงินก้อนใหญ่ทั้งปี (`total_amount`) + แบ่งส่วนกลาง (`central_allocation`) รองรับ UI "เงินก้อนประจำปี" ใน `vehicle_budget.html` (query-only รอบนี้ ยังไม่มี mutation) |
+| v2.25 | 2026-07-31 | 26 | `vehicle` + `vehicle_type` — ประเภทรถ (`pickup`/`van`/`truck6`) รองรับ chip selector ใน addVehicleModal redesign (`vehicle_fleet.html`) |
+| v2.26 | 2026-07-31 | 26 | `vehicle_budget_yearly_plan` + explicit `start_date`/`end_date` (drop UNIQUE บน `fiscal_year`); `vehicle_budget` + `yearly_plan_id` FK — เลิก hardcode ปีงบเริ่ม มี.ค. ในโค้ด, ผูกงบย่อยกับ plan ต้นทางด้วย FK ตรงๆ |
 
 ---
 
@@ -716,6 +742,7 @@ UNIQUE(budget_type_id, department_id, year, month)
 | `approved_by_id`, `approved_at` | **legacy** — audit trail การอนุมัติ; เลิกใช้ v2.15 (ไม่ลบ คอลัมน์เก็บประวัติเก่า) |
 | `paid_by_id`, `paid_at` | audit trail การจ่ายเงิน |
 | `no_receipt` | v2.15 — OT ที่ไม่ต้องออกใบเสร็จ (tab "ผู้ใช้จ่ายเอง") |
+| `is_manual` | v2.23 — แยก OT ที่คนตั้งค่าเอง ออกจาก OT ที่ระบบคำนวณให้ → `sync_ot_for_trip()` คำนวณใหม่ได้เฉพาะตัว auto |
 | `is_deleted`, `deleted_at` | v2.15 — soft delete (tab "ลบ") กู้คืนได้ |
 | `created_by_id`, `created_at` | audit trail การสร้าง record |
 
@@ -1064,6 +1091,97 @@ App: `vehicle_cost.py` — route `ot_create` (POST `/admin/ot/create`, standalon
 | `mileage_open_reminder_at` DateTime nullable | guard กันแจ้งเตือนซ้ำสำหรับ cron ใหม่ที่เตือน driver เมื่อเปิดจดไมล์ทริปแล้วยังไม่ปิด ข้ามวันไปแล้ว **แยกจาก `last_reminder_at` โดยเจตนา** — field นั้นเป็น guard ของ `check_payment_escalation()` (เตือนจ่ายเงินส่วนตัว, v2.2) คนละ concern กัน ใช้ field ร่วมกันจะทำให้ cron หนึ่งเขียนทับ timestamp ของอีก cron หนึ่ง (แจ้งซ้ำผิดจังหวะ/พลาดแจ้งเตือน) Semantics: `NULL` = ยังไม่เคยแจ้งเตือนเรื่องนี้, มีค่า = timestamp แจ้งเตือนล่าสุด — cron เช็กค่านี้ก่อนส่งแจ้งเตือนซ้ำในวันเดียวกัน (pattern เดียวกับ `last_reminder_at`) |
 
 **หมายเหตุ:** migration นี้เพิ่มเฉพาะ column — ยังไม่มี cron function ที่ใช้ field นี้จริง (cron job ของ REQ-3 เป็นงานถัดไปที่จะตามมาแยกต่างหาก)
+
+---
+
+## v2.23 — DriverOT is_manual guard (2026-07-27)
+
+*Migration: [2026-07-27_driver-ot-is-manual.sql](../../../app/migrations/2026-07-27_driver-ot-is-manual.sql)*
+
+**บริบทธุรกิจ:** ค่า OT ถูกสร้างอัตโนมัติตอนปิดทริป (`auto_generate_ot`) และเดิม **idempotent ต่อ booking** คือถ้า booking นั้นมี OT อยู่แล้วก็ข้ามไปเลย → เมื่อแอดมินแก้เวลาทริปทีหลัง ค่า OT **ไม่เคยถูกคำนวณใหม่** เกิดเคสจริง: ทริป 15:59–16:00 (1 นาที) แต่ค่า OT ค้างอยู่ที่ 11 ชม. = 220 บาท
+
+2026-07-27 จึงเพิ่ม `sync_ot_for_trip()` ใน [services/vehicle/mileage_service.py](../../../app/services/vehicle/mileage_service.py) ให้คำนวณ OT ใหม่เมื่อเวลาทริปเปลี่ยน — แต่การ recompute อัตโนมัติจะไปทับค่าที่แอดมินตั้งเอง จึงต้องมี flag แยกว่า record ไหน "ระบบคำนวณให้" (แก้ทับได้) vs "คนตั้งเอง" (ห้ามแตะ)
+
+### `driver_ot` + 1 field
+
+| Field | เหตุผล |
+|-------|--------|
+| `is_manual` Boolean default False | guard ของ `sync_ot_for_trip()` — OT ที่แอดมินสร้างเอง (`ot_create`) หรือแก้เอง (`ot_edit`) ที่ [views/vehicle/vehicle_cost.py](../../../app/views/vehicle/vehicle_cost.py) จะถูกตั้ง `True` → recompute **จะไม่คำนวณทับ** แต่ขึ้นคำเตือนให้คนตรวจแทน (พฤติกรรมเดียวกับ OT ที่ `status='paid'`) เจตนาคือรักษาข้อมูลที่คนตัดสินใจไว้แล้วเสมอ ระบบแก้ให้ได้เฉพาะค่าที่ระบบเองเป็นคนสร้าง |
+
+**Backfill:** แถวเดิมทั้งหมด → `0` (False) โดยเจตนา — ถือว่า OT ที่มีอยู่ทุกใบเป็น auto-generated เพื่อให้ logic recompute เข้าไปแก้ข้อมูลที่ผิดอยู่ (เช่นเคส 1 นาที = 220 บาท) ได้ทันที ถ้า backfill เป็น `1` ข้อมูลเสียเดิมจะถูกล็อกไว้ถาวรและ `sync_ot_for_trip()` จะไม่มีอะไรให้แก้เลย
+
+**Note:** table count คงที่ 25 · ไม่มี index ใหม่ (field นี้ถูกอ่านตอน recompute ทีละ record ผ่าน `booking_id` ที่มี index อยู่แล้ว ไม่ได้ใช้เป็นเงื่อนไข filter รายการ)
+
+---
+
+## v2.24 — VehicleBudgetYearlyPlan new table (2026-07-30)
+
+*Migration: [2026-07-30_add-vehicle-budget-yearly-plan.sql](../../../app/migrations/2026-07-30_add-vehicle-budget-yearly-plan.sql)*
+
+**บริบทธุรกิจ:** หน้า `vehicle_budget.html` เพิ่ม UI mockup "เงินก้อนประจำปี" — องค์กรได้รับเงินก้อนใหญ่มาครั้งเดียวต่อปีงบ (ตัวอย่าง requirement จริงในรอบนี้: "ได้เงินกลางมา 300,000 แบ่งส่วนกลาง 180,000 ที่เหลือส่วนกอง") แล้วค่อยแตกเป็นงบย่อยรายเดือน/รายแผนกใน `vehicle_budget` เดิม เดิมระบบไม่มีชั้นเก็บเพดานก้อนใหญ่นี้เลย — ตั้งงบย่อยใน `vehicle_budget` เท่าไหร่ก็ได้โดยไม่มีอะไรเช็กว่ารวมกันเกินเงินที่มีจริงหรือไม่ `vehicle_budget_yearly_plan` จึงเป็นชั้นเพดานอ้างอิงเหนือ `vehicle_budget` (คนละ granularity — ไม่ผูก FK กัน เชื่อมกันด้วย `fiscal_year` เท่านั้น)
+
+### `vehicle_budget_yearly_plan` — new table
+
+| Field | เหตุผล |
+|-------|--------|
+| `fiscal_year` Integer NOT NULL UNIQUE | ปีงบเริ่มต้นเป็น ค.ศ. — ตรงกับตัวแปร `fiscal_year_start_ad` ที่มีอยู่แล้วใน `budget_manage()` (ปีงบเริ่มมี.ค. จบก.พ.ปีถัดไป); 1 ปีงบ = 1 row เท่านั้น |
+| `total_amount` Numeric(12,2) default 0 | เงินก้อนใหญ่ทั้งปีที่องค์กรได้รับจริง — เพดานบนสุดของระบบงบ |
+| `central_allocation` Numeric(12,2) default 0 | เพดานที่แบ่งให้ "ส่วนกลาง" (budget_type=central) จากเงินก้อนใหญ่ — ส่วนที่เหลือคือของกอง |
+| `created_at`/`updated_at` DateTime | ปกติ |
+
+**ทำไม `dept_allocation` เป็น `@property` ไม่ใช่ column:** ผู้ใช้เคาะแล้วว่าเพดานส่วนกองต้องคำนวณจากผลต่าง (`total_amount - central_allocation`) เสมอ ไม่เก็บเป็นตัวเลขอิสระ — ถ้าเก็บเป็น column แยก จะมีความเสี่ยงที่ `total ≠ central + dept` เมื่อแก้ค่าใดค่าหนึ่งแล้วลืม sync อีกฝั่ง (เช่น แก้ `central_allocation` แล้วไม่ไปแก้ `dept_allocation` ตาม) การคำนวณสดจาก property บังคับให้สมการนี้เป็นจริงเสมอโดยไม่ต้องมี validation แยก
+
+**สถานะรอบนี้ (query-only):** migration นี้สร้างตารางเปล่าเท่านั้น ไม่ seed ข้อมูล — เชื่อม UI จริง (แสดงผลเงินก้อนประจำปีในหน้า `vehicle_budget.html`) แต่ปุ่ม "ตั้งงบใหม่"/"แก้ไขก้อนเงิน" ยังเป็น mockup ไม่มี mutation logic; controller/service จัดการกรณี "ยังไม่มี record สำหรับปีงบนี้" เป็น empty state เอง
+
+**Note:** table count 25 → 26 · ไม่มี FK ไปตารางอื่น (เชื่อมด้วย `fiscal_year` value เท่านั้น ไม่ใช่ schema-level relationship) · ไม่มี index เพิ่มนอกจาก unique constraint บน `fiscal_year`
+
+---
+
+## v2.25 — Vehicle vehicle_type (2026-07-31)
+
+*Migration: [2026-07-31_vehicle-add-vehicle-type.sql](../../../app/migrations/2026-07-31_vehicle-add-vehicle-type.sql)*
+
+**บริบทธุรกิจ:** modal "เพิ่มรถใหม่" (addVehicleModal, `app/templates/vehicle/admin/vehicle_fleet.html`) ถูก redesign เพิ่ม selector "ประเภทรถ" เป็น radio-button chip group (3 ตัวเลือก) ผู้ใช้ยืนยันเจตนาว่าค่านี้ต้องถูก persist เป็น DB column จริง ไม่ใช่แค่ UI ตกแต่ง
+
+### `vehicle` + 1 field
+
+| Field | เหตุผล |
+|-------|--------|
+| `vehicle_type` String(20) nullable | ประเภทรถที่เลือกจาก chip selector ใน addVehicleModal — เก็บเป็น short-key string ตาม convention เดียวกับ `vehicle.status` (plain column ไม่ใช่ Enum). ค่าที่ UI ส่งมา: `pickup` / `van` / `truck6` (informational — ไม่ enforce ที่ DB layer, validate ที่ UI/controller ถ้าต้องการ). Nullable + ไม่ backfill รถเดิม — แถวเก่าเป็น `NULL` จนกว่าจะถูกแก้ไขผ่านฟอร์ม |
+
+**Note:** table count คงที่ 26 · ไม่มี index ใหม่ (field นี้ยังไม่ถูกใช้เป็นเงื่อนไข filter/query รายการรถ ณ รอบนี้)
+
+---
+
+## v2.26 — VehicleBudgetYearlyPlan explicit period + VehicleBudget FK link (2026-07-31)
+
+*Migration: [2026-07-31_vehicle-budget-yearly-plan-period-fk.sql](../../../app/migrations/2026-07-31_vehicle-budget-yearly-plan-period-fk.sql)*
+
+**บริบทธุรกิจ:** ระหว่าง redesign หน้า `vehicle_budget.html` ต่อ (เชื่อมโซน "เงินก้อนประจำปี"/forecast กับของจริงไปแล้วใน v2.24) ผู้ใช้ชี้ปัญหาที่คุยกันไว้ก่อนหน้า — "ปีงบเริ่ม มี.ค." เป็นค่า **hardcode ในโค้ด** (`fiscal_year_start_ad = sel_year if sel_month >= 3 else sel_year - 1` ใน `views/vehicle/vehicle_budget.py`) ไม่ใช่ config เปลี่ยนไม่ได้ถ้าองค์กรเปลี่ยนปีงบ และงบย่อย (`vehicle_budget`) ผูกกับ "เงินก้อนประจำปี" แค่ผ่านการ**คำนวณ**ปีงบจาก (year, month) ให้ตรงกันแบบหลวมๆ ไม่มี schema เชื่อมจริง
+
+แก้โดย: ให้ plan เก็บ `start_date`/`end_date` ของตัวเองตรงๆ (admin เลือกช่วงเวลาตอนสร้างก้อนงบใหญ่แทน) และให้งบย่อยผูก FK ตรงไปที่ plan ที่มันถูกแตกออกมา (แทนที่ admin ต้องเลือกช่วงเวลาของงบย่อยเองทีละตัว — ทีนี้ inherit จาก plan อัตโนมัติ)
+
+### `vehicle_budget_yearly_plan` — 2 field ใหม่ + drop UNIQUE
+
+| Field | เหตุผล |
+|-------|--------|
+| `start_date` Date NOT NULL | ช่วงเวลาที่ plan นี้ครอบคลุม เริ่มต้น — เดิม implicit เสมอ (1 มี.ค. ของ `fiscal_year`) ตอนนี้ admin เลือกเองตอนสร้าง/แก้ยอดในโมดัล `yearlyPlanModal` |
+| `end_date` Date NOT NULL | สิ้นสุด plan — เดิม implicit (28/29 ก.พ. ปีถัดไป) ปกติคาดว่า ~12 เดือนแต่ DB ไม่บังคับความยาว เผื่อ organization ปรับปีงบไม่ตรงรอบปกติ |
+| `fiscal_year` **เลิก UNIQUE** | ตัวตนจริงของ plan ย้ายไปเป็น `id` + ช่วง `start_date`–`end_date` แทน — `fiscal_year` เหลือแค่ label แสดงผล (ปกติ = `start_date.year`) เผื่ออนาคตมีการแก้/แตก plan ที่ label ปีเดียวกันซ้ำกันได้โดยไม่ผิด constraint |
+
+**SQLite migration note:** drop UNIQUE ต้อง rebuild ตาราง (SQLite ไม่รองรับ `DROP CONSTRAINT`) — migration แนบ backfill `start_date`/`end_date` ให้ row เดิม (ถ้ามี) ด้วยสูตร march-year แบบเดิมที่เคยอยู่ในโค้ด เพื่อให้ column ประกาศ `NOT NULL` ได้ทันทีโดยไม่มี row เป็น NULL ค้าง (one-time convenience เฉพาะ row เก่าก่อน migration นี้เท่านั้น)
+
+### `vehicle_budget` — 1 field ใหม่
+
+| Field | เหตุผล |
+|-------|--------|
+| `yearly_plan_id` FK → vehicle_budget_yearly_plan nullable | ผูกงบย่อยกับ plan ต้นทางแบบ FK ตรงๆ แทนการอิงแค่ `fiscal_year` ให้ตรงกันแบบหลวมๆ (ไม่มี schema เชื่อมจริงมาก่อน v2.26). **Nullable โดยตั้งใจ** — งบย่อยเก่าก่อน feature นี้ไม่ backfill (ผู้ใช้ตัดสินใจว่าจะปิดใช้งาน `is_active=False` แล้วสร้างใหม่แทน ไม่ใช่ migrate ของเก่า); งบย่อยใหม่ทุกตัวตั้งค่านี้เสมอตอนสร้าง (เลือกจาก dropdown รายการ plan แทนที่จะเลือกวันเริ่ม/สิ้นสุดของงบย่อยเองแบบเดิม) |
+
+**Index:** `ix_vb_yearly_plan(yearly_plan_id)` — รองรับ query "งบย่อยทั้งหมดของ plan นี้" ที่หน้า budget_manage ต้องใช้บ่อย (pivot/summary ต่อ plan)
+
+**ผลต่อ pivot/forecast logic:** `_build_budget_pivot()`/`_build_pivot_summary()`/`_calc_budget_forecast()` ใน `views/vehicle/vehicle_budget.py` เปลี่ยนจากคำนวณช่วงเดือนจากสูตร march-hardcode ไปใช้ `plan.start_date`/`plan.end_date` ตรงๆ และ cap ที่จัดสรรแล้ว (`central_cap_fy`/`dept_cap_fy`) เปลี่ยนจาก filter (year,month) ให้ตรงชุดปีงบ ไปเป็น filter `VehicleBudget.yearly_plan_id == plan.id` ตรงๆ (ง่ายและถูกต้องกว่าเดิม)
+
+**Note:** table count คงที่ 26 · `vehicle_budget_yearly_plan` "สถานะ query-only" ที่บันทึกไว้ใน v2.24 **ล้าสมัยแล้ว** — มี mutation logic เต็มแล้ว (`budget_service.set_yearly_plan()`, modal `yearlyPlanModal`, เพิ่มเข้ามาก่อน v2.26 นี้อีกที)
 
 ---
 

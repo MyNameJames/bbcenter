@@ -76,6 +76,8 @@
     <a href="#chip">Chip / Token</a>
     <a href="#uechip">UE Chip</a>
     <a href="#daterange">Date Range</a>
+    <a href="#datefield">DateField</a>
+    <a href="#timerangefield">TimeRangeField</a>
     <a href="#dropdown">Dropdown</a>
     <a href="#pagination">Pagination</a>
     <a href="#modal">Modal</a>
@@ -198,6 +200,24 @@
         <div style="max-width:280px">{{ component(daterange) }}</div>
       </div>
       <pre class="g-py">DateRange(name_start='date_start', name_end='date_end', placeholder='เลือกช่วงวันที่')</pre>
+    </section>
+
+    <section class="g-sec" id="datefield">
+      <div class="g-sec-head"><h2>DateField</h2><span class="g-cls">components.DateField</span></div>
+      <p class="g-sec-desc">ปฏิทินโชว์ใต้ trigger ตรงๆ เลือกวันแล้ว commit ทันที (ต่างจาก DateRange ที่ต้องกดปุ่ม "ใช้") · disable วันที่ผ่านมาแล้วในตัว · <b>ทำงานจริง</b> (โหลด bb-components.js) · event <code>bb-datefield:change</code></p>
+      <div class="g-block" style="overflow:visible">
+        <div style="max-width:320px">{{ component(date_field) }}</div>
+      </div>
+      <pre class="g-py">DateField('date', label='วันที่เดินทาง :', id='bk_date_field')</pre>
+    </section>
+
+    <section class="g-sec" id="timerangefield">
+      <div class="g-sec-head"><h2>TimeRangeField</h2><span class="g-cls">components.TimeRangeField</span></div>
+      <p class="g-sec-desc">dropdown list เวลาแบน step เดียว (ต่างจาก TimeRange ที่เป็น column ชม./นาที 2 ขั้น) · end กันเวลาก่อน start · <b>ทำงานจริง</b> (โหลด bb-components.js) · event <code>bb-timerangefield:change</code></p>
+      <div class="g-block" style="overflow:visible">
+        <div style="max-width:400px">{{ component(time_range_field) }}</div>
+      </div>
+      <pre class="g-py">TimeRangeField(start='08:00', end='17:00', label='ช่วงเวลาเดินทาง', show_duration=True)</pre>
     </section>
 
     <section class="g-sec" id="dropdown">

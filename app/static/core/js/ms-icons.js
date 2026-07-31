@@ -2,7 +2,7 @@
    core/js/ms-icons.js — Lucide → Material Symbols (runtime transform)
    ──────────────────────────────────────────────────
    Phase 1 redesign (2026-07-11): หน้าที่ opt-in (โหลด script นี้) จะแปลงทุก
-   <i data-lucide="X"> เป็น <span class="material-symbols-outlined" data-lucide="X">ms</span>
+   <i data-lucide="X"> เป็น <span class="material-symbols-rounded" data-lucide="X">ms</span>
    ครอบคลุม static + dynamic (toast/combo/sort/notification) ผ่าน MutationObserver.
 
    ⚠️ หน้านั้น "ต้องไม่โหลด Lucide จริง" (ใส่ stub window.lucide={createIcons(){}} แทน)
@@ -10,7 +10,7 @@
    - คง attribute data-lucide บน span ไว้ → JS เดิมที่ query [data-lucide] (combo remove-check,
      sort updateSortIcons) ยังทำงาน; observer ฟัง attribute change → sync ข้อความไอคอน (sort)
    - size: bb-* CSS เดิม size ผ่าน `svg` — MS เป็น span ใช้ font-size; แปลง width ใน inline style
-     เป็น font-size + เติม default sizing ผ่าน CSS ของหน้า (.ml2-content .material-symbols-outlined)
+     เป็น font-size + เติม default sizing ผ่าน CSS ของหน้า (.ml2-content .material-symbols-rounded)
 ══════════════════════════════════════════════════ */
 (function () {
     'use strict';
@@ -27,6 +27,7 @@
         'search': 'search', 'download': 'download', 'upload': 'upload', 'upload-cloud': 'cloud_upload',
         'filter': 'filter_list', 'sliders': 'tune', 'sliders-horizontal': 'tune',
         'calendar': 'calendar_month', 'calendar-days': 'calendar_month', 'calendar-check': 'event_available',
+        'calendar-x': 'event_busy',
         'clock': 'schedule', 'more-time': 'more_time',
         'more-vertical': 'more_vert', 'more-horizontal': 'more_horiz',
         'user': 'person', 'users': 'group', 'user-plus': 'person_add',
@@ -36,9 +37,9 @@
         'pencil': 'edit', 'trash-2': 'delete', 'plus': 'add', 'minus': 'remove',
         'bell': 'notifications', 'info': 'info', 'alert-triangle': 'warning',
         'alert-octagon': 'dangerous', 'alert-circle': 'error', 'triangle-alert': 'warning',
-        'wrench': 'build', 'building-2': 'apartment', 'computer': 'computer', 'hammer': 'construction',
+        'wrench': 'build', 'building-2': 'apartment', 'landmark': 'account_balance', 'computer': 'computer', 'hammer': 'construction',
         'screwdriver': 'construction', 'file': 'draft', 'file-text': 'description', 'image': 'image',
-        'map-pin': 'location_on', 'phone': 'call', 'hash': 'tag', 'list': 'list', 'list-checks': 'checklist',
+        'map-pin': 'location_on', 'trip-origin': 'trip_origin', 'phone': 'call', 'hash': 'tag', 'list': 'list', 'list-checks': 'checklist',
         'settings': 'settings', 'log-out': 'logout', 'menu': 'menu', 'home': 'home',
         'fact-check': 'fact_check', 'wallet': 'account_balance_wallet',
         'cards-stack': 'stacks', 'add-card': 'add_card', 'accessibility-new': 'accessibility_new',
@@ -63,17 +64,25 @@
         if (!name) return;
 
         /* เป็น MS span อยู่แล้ว (เช่น data-lucide เปลี่ยนค่าโดย sort) → อัปเดตข้อความ */
-        if (el.classList.contains('material-symbols-outlined')) {
+        if (el.classList.contains('material-symbols-rounded')) {
             el.textContent = msName(name);
             return;
         }
 
         var span = document.createElement('span');
-        span.className = 'material-symbols-outlined';
+        span.className = 'material-symbols-rounded';
         el.classList.forEach(function (c) {
             if (c !== 'lucide' && c.indexOf('lucide-') !== 0) span.classList.add(c);
         });
         span.setAttribute('data-lucide', name);         // คงไว้ให้ JS เดิม query ได้
+
+        /* คง attribute อื่นไว้ทั้งหมด (class/style จัดการแยกด้านล่าง) — สำคัญกับ `id`:
+           เดิม id หายตอนแปลง → getElementById('detailStatusIcon') คืน null แล้ว
+           vehicle.js/vehicle_admin.js พังตอนเปิด detail modal (2026-07-28) */
+        for (var i = 0; i < el.attributes.length; i++) {
+            var a = el.attributes[i];
+            if (a.name !== 'class' && a.name !== 'style') span.setAttribute(a.name, a.value);
+        }
 
         var col = colorFrom(el.getAttribute('style') || '');
         if (col) span.style.color = col;                // คง color เดิม (size → CSS)

@@ -468,6 +468,38 @@ def test_revert_from_rejected_ok(session):
     assert bk.status == 'pending'
 
 
+def test_revert_clears_vehicle_and_driver(session):
+    """เดิม revert() เปลี่ยนแค่ status → pending แต่ไม่เคลียร์ assigned_vehicle_id/driver_id
+    จริงในฐานข้อมูล (ฝั่ง JS patch UI ให้ดูเหมือนเคลียร์เฉยๆ) — booking ที่ย้อนแล้วต้องไม่มีรถ/
+    คนขับติดค้างอยู่ (2026-07-31)"""
+    admin = _user(session, role='admin')
+    veh = _vehicle(session)
+    drv = _driver(session)
+    bk = _booking(session, admin.id, status='approved',
+                  assigned_vehicle_id=veh.id, driver_id=drv.id)
+
+    ok, msg = bs.revert(bk, actor_id=admin.id)
+    assert ok is True
+    assert bk.status == 'pending'
+    assert bk.assigned_vehicle_id is None
+    assert bk.driver_id is None
+
+
+def test_revert_blocked_when_grouped(session):
+    """revert เดี่ยวไม่รองรับ booking ที่อยู่ในกลุ่มทริป (trip_group set) — ไปทาง ungroup()
+    แทน เพราะ ungroup cascade ทั้งกลุ่มถูกต้องกว่า ส่วน revert ตัวเดียวจะทิ้ง trip_group ค้าง
+    ให้เพื่อนร่วมทริปที่เหลือชี้มาที่กลุ่มที่มีสมาชิก pending ปนอยู่ (2026-07-31)"""
+    admin = _user(session, role='admin')
+    veh = _vehicle(session)
+    bk = _booking(session, admin.id, status='approved',
+                  assigned_vehicle_id=veh.id, trip_group='TRP-G1')
+
+    ok, msg = bs.revert(bk, actor_id=admin.id)
+    assert ok is False
+    assert bk.status == 'approved'
+    assert bk.trip_group == 'TRP-G1'
+
+
 # ──────────────────────────────────────────────────────────────
 # 7. Phase 4 (2026-07-19) — notify ย้ายเข้า service แล้ว
 # ──────────────────────────────────────────────────────────────
@@ -532,6 +564,118 @@ def test_cancel_notify_true_creates_notifications(session):
     ok, msg, info = bs.cancel(bk, actor_id=admin.id, is_owner=False, is_admin=True)
     assert ok is True
     assert Notification.query.count() > before
+
+
+# ──────────────────────────────────────────────────────────────
+# 8. merge_into_group — เพิ่มงานเข้ากลุ่มที่มีอยู่แล้ว (2026-07-31)
+#    งานเดิมในกลุ่มเป็นหลักเสมอ ไม่ถูกแตะ · งานใหม่ผ่าน guard_budget/apply_transition จริง
+#    (ต่าง admin_merge() เดิมที่ตั้ง status ตรงไม่เช็คงบเลย — BUG-3, ยังคงอยู่เฉพาะ path เดิม)
+# ──────────────────────────────────────────────────────────────
+def test_merge_into_group_requires_existing_group(session):
+    admin = _user(session, role='admin')
+    veh = _vehicle(session)
+    new_bk = _booking(session, admin.id, status='pending')
+
+    ok, msg = bs.merge_into_group('TRP-NOPE', [new_bk.id], vehicle_id=veh.id)
+    assert ok is False
+    assert new_bk.status == 'pending'
+
+
+def test_merge_into_group_adds_new_keeps_existing_untouched(session):
+    admin = _user(session, role='admin')
+    veh = _vehicle(session)
+    drv = _driver(session)
+    leader = _booking(session, admin.id, status='approved', expense_type='personal',
+                      assigned_vehicle_id=veh.id, driver_id=drv.id, trip_group='TRP-A')
+    mate = _booking(session, admin.id, status='approved', expense_type='personal',
+                    assigned_vehicle_id=veh.id, driver_id=drv.id, trip_group='TRP-A')
+    new_bk = _booking(session, admin.id, status='pending')
+    session.commit()
+
+    ok, msg = bs.merge_into_group('TRP-A', [new_bk.id], vehicle_id=veh.id,
+                                   driver_id=drv.id, expense_type='personal')
+    assert ok is True
+    assert new_bk.status == 'approved'
+    assert new_bk.trip_group == 'TRP-A'
+    assert new_bk.assigned_vehicle_id == veh.id
+    # งานเดิมเป็นหลัก — ไม่ถูกแตะเลย
+    assert leader.status == 'approved'
+    assert mate.status == 'approved'
+
+
+def test_merge_into_group_department_sets_waiting_approver(session):
+    admin = _user(session, role='admin')
+    veh = _vehicle(session)
+    bgt = _active_budget(session, expense_type='department')
+    dept = VehicleDepartment.query.get(bgt.department_id)
+    _booking(session, admin.id, status='waiting_approver', expense_type='department',
+            assigned_vehicle_id=veh.id, trip_group='TRP-B', dept_id=bgt.department_id)
+    new_bk = _booking(session, admin.id, status='pending')
+    session.commit()
+
+    ok, msg = bs.merge_into_group('TRP-B', [new_bk.id], vehicle_id=veh.id,
+                                   expense_type='department', trip_department=dept.name)
+    assert ok is True
+    assert new_bk.status == 'waiting_approver'
+    assert new_bk.trip_department_id == bgt.department_id
+
+
+def test_merge_into_group_blocked_when_existing_started(session):
+    """สมาชิกเดิมในกลุ่มออกรถแล้ว (odometer_start) → ห้ามเพิ่มงานใหม่เข้ากลุ่ม"""
+    admin = _user(session, role='admin')
+    veh = _vehicle(session)
+    leader = _booking(session, admin.id, status='approved', expense_type='personal',
+                      assigned_vehicle_id=veh.id, trip_group='TRP-C')
+    _mileage(session, leader.id, started=True)
+    new_bk = _booking(session, admin.id, status='pending')
+    session.commit()
+
+    ok, msg = bs.merge_into_group('TRP-C', [new_bk.id], vehicle_id=veh.id,
+                                   expense_type='personal')
+    assert ok is False
+    assert new_bk.status == 'pending'
+    assert new_bk.trip_group is None
+
+
+def test_merge_into_group_vehicle_conflict_blocked(session):
+    admin = _user(session, role='admin')
+    veh = _vehicle(session)
+    base = datetime.now() + timedelta(days=2)
+    leader = _booking(session, admin.id, status='approved', expense_type='personal',
+                      assigned_vehicle_id=veh.id, trip_group='TRP-D')
+    leader.start_datetime = base
+    leader.end_datetime = base + timedelta(hours=8)
+
+    other = _booking(session, admin.id, status='approved', expense_type='personal',
+                     assigned_vehicle_id=veh.id)
+    other.start_datetime = base + timedelta(hours=2)
+    other.end_datetime = base + timedelta(hours=10)
+
+    new_bk = _booking(session, admin.id, status='pending')
+    new_bk.start_datetime = base
+    new_bk.end_datetime = base + timedelta(hours=8)
+    session.commit()
+
+    ok, msg = bs.merge_into_group('TRP-D', [new_bk.id], vehicle_id=veh.id,
+                                   expense_type='personal')
+    assert ok is False
+    assert 'ทับ' in msg
+
+
+def test_merge_into_group_budget_guard_blocked(session):
+    """งานใหม่ expense_type=central แต่ไม่มีงบ active — guard_budget ต้อง block (ต่างจาก
+    admin_merge() เดิมที่ตั้ง status ตรงไม่เช็คงบเลย — BUG-3 เดิม ยังไม่แก้เฉพาะ path เดิม)"""
+    admin = _user(session, role='admin')
+    veh = _vehicle(session)
+    _booking(session, admin.id, status='approved', expense_type='personal',
+            assigned_vehicle_id=veh.id, trip_group='TRP-E')
+    new_bk = _booking(session, admin.id, status='pending')
+    session.commit()
+
+    ok, msg = bs.merge_into_group('TRP-E', [new_bk.id], vehicle_id=veh.id,
+                                   expense_type='central', central_category='medical')
+    assert ok is False
+    assert new_bk.status == 'pending'
 
 
 def test_cancel_notify_false_creates_no_notifications(session):

@@ -5,17 +5,30 @@
 
 {% block head %}
 <style>
-    /* ── Page-scoped override (เฉพาะหน้านี้) ──
-       #weekJumpDp เล็กลงเหมือน mockup Case 15 (bootstrap-cases-gallery.html) —
-       ไม่แตะ .bb-dp-trigger กลาง (ยังไม่มีหน้าอื่นใช้ bb_datepicker แต่กันไว้เผื่ออนาคต) ── */
-    #weekJumpDp .bb-dp-trigger {
-        min-width: 0; background: var(--bb-n50); border: none; box-shadow: none;
-        padding: .25rem .625rem; font-size: .8125rem; font-weight: 400; color: var(--bb-mut); gap: .25rem;
-    }
-    #weekJumpDp .bb-dp-trigger [data-lucide] { width: .875rem; height: .875rem; }
-
-    /* NEW — ตาราง preview ไม่มี thead แล้ว border-top ของ .bb-table ดูลอย ตัดออกเฉพาะตัวนี้ */
+    /* ตาราง preview ไม่มี thead แล้ว border-top ของ .bb-table ดูลอย ตัดออกเฉพาะตัวนี้ */
     #adminPreviewTable { border-top: none; }
+
+    /* การ์ดเลือกประเภทค่าใช้จ่ายใน assignModal: radio input จริง + icon/subtitle (แทน check-badge เดิม)
+       สีตอน selected ใช้ ink ดำ (ไม่ใช้ฟ้า) ให้ตรง design guideline v2.1 */
+    .bb-exp-card {
+        flex: 1; position: relative; cursor: pointer; text-align: center;
+        border: 1px solid var(--bb-n300); border-radius: var(--bb-r-md);
+        padding: .875rem .75rem .75rem; background: #fff;
+        display: flex; flex-direction: column; align-items: center; gap: .25rem;
+    }
+    .bb-exp-card:has(.bb-exp-radio:checked) { border: 2px solid var(--bb-ink); background: var(--bb-n50); }
+    .bb-exp-radio {
+        position: absolute; top: .625rem; right: .625rem; margin: 0;
+        width: 1.125rem; height: 1.125rem; appearance: none; -webkit-appearance: none;
+        border: 1.5px solid var(--bb-n300); border-radius: 50%; background: #fff; cursor: pointer;
+    }
+    .bb-exp-radio:checked {
+        border-color: var(--bb-ink);
+        background: radial-gradient(circle, var(--bb-ink) 0 35%, #fff 35% 100%);
+    }
+    .bb-exp-icon { font-size: 2.5rem; color: var(--bb-mut); margin-bottom: .125rem; }
+    .bb-exp-card:has(.bb-exp-radio:checked) .bb-exp-icon { color: var(--bb-ink); }
+    .bb-exp-title { font-size: .8125rem; font-weight: 600; color: var(--bb-str); }
 </style>
 {% endblock %}
 
@@ -23,9 +36,8 @@
 {% include '_shared/tab2.html' %}
 {% from '_shared/tab2.html' import tab2_tabs %}
 
-            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — sync กับ component WeekStrip ของจริง ใช้งานได้จริง (ไม่ hardcode แล้ว)
-               ใช้ตัวแปร `weekstrip` เดียวกับที่ควบคุม booking list จริงด้านล่าง (ผ่าน document listener 'bb-weekstrip:change'
-               ใน vehicle_admin.js) — กดวันที่นี่จะ sync กับของเดิมใน #adminWeekStripWrap ด้วย (ตัวแปรเดียวกัน คนละตำแหน่งบนหน้า) ── #}
+            {# ── WeekStrip — ตัวเดียวในหน้า (DatePicker #weekJumpDp ลบทิ้งแล้ว 2026-07-28)
+               คุมตาราง/การ์ดด้านล่างผ่าน document listener 'bb-weekstrip:change' ใน vehicle_admin.js ── #}
             <div class="row g-4 pt-4">
                 <div class="col-12 col-lg-6">
                     <div class="bb-card p-3">
@@ -34,13 +46,12 @@
                 </div>
             </div>
 
-            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — แบ่ง col-8/col-4: col-8 = tab→table ใหม่ทั้งชุด · col-4 = เอา vehicleList (col-lg-4 เดิม) มาโชว์ตัวอย่างคู่กัน ── #}
+            {# ── แบ่ง col-8/col-4: col-8 = tab→table · col-4 = การใช้รถ ── #}
             <div class="row g-4 pt-2">
             <div class="col-12 col-lg-8">
 
-            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — tab ใต้ h1 ตาม pattern vehicle_mileage.html (tab2_tabs)
-               hardcode label/value ยังไม่ผูก data จริง/JS click handler ── #}
-            <div class="pt-3">
+            {# ── tab ใต้ h1 ตาม pattern vehicle_mileage.html (tab2_tabs) · ผูก curFilter ที่ bindTab2Tabs ใน vehicle_admin.js ── #}
+            <div class="pt-3" id="adminTab2Wrap">
                 {{ tab2_tabs([
                     {'label':'ทั้งหมด',        'value':'all',              'active': True},
                     {'label':'รออนุมัติ',       'value':'pending'},
@@ -50,282 +61,43 @@
                 ]) }}
             </div>
 
-            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — action bar ระหว่าง tab กับตาราง preview · ยังไม่ผูก onclick จริง ── #}
-            <div class="d-flex gap-2 pt-4">
-                <button type="button" class="bb-btn" style="background:var(--bb-n50);color:var(--bb-n700);outline:none">
-                    <i data-lucide="merge"></i>
+            {# ── action bar: ปุ่มเริ่ม disabled · กด checkbox แล้วขึ้นจำนวน · ไม่ต้องกด "รวมงาน"/"แจ้ง Telegram" ก่อนเพื่อ "เข้าโหมด" แบบเดิมอีกต่อไป (ptUpdateActionButtons ใน vehicle_admin.js)
+               ไม่บีบ + scroll แนวนอนแทน (เหมือน tab2) เมื่อจอแคบกว่าความกว้างรวมปุ่ม ── #}
+            <div class="d-flex gap-2 pt-4" style="overflow-x:auto;overflow-y:hidden">
+                <button type="button" class="ue-chip flex-shrink-0" onclick="ptSelectAll(this)" title="เลือก/เลิกเลือกทั้งหมด">
+                    ALL
+                </button>
+                <button type="button" class="bb-btn flex-shrink-0" id="ptBtnMerge" style="background:var(--bb-n50);color:var(--bb-n700);outline:none" onclick="confirmMerge()" disabled>
+                    <span class="material-symbols-rounded">merge</span>
                     รวมงาน
                 </button>
-                <button type="button" class="bb-btn" style="background:var(--bb-n50);color:var(--bb-n700);outline:none">
+                <button type="button" class="bb-btn flex-shrink-0" id="ptBtnNotify" style="background:var(--bb-n50);color:var(--bb-n700);outline:none" onclick="ptOpenNotifyConfirm()" disabled>
                     แจ้ง Telegram
                 </button>
             </div>
 
-            {# ── NEW (เพิ่มเข้ามา ไม่ลบของเก่า) — ตาราง desktop preview · ไม่มี thead ตามที่ขอ
-               data hardcode ตัวอย่าง ยังไม่ผูก bookings จริง/JS · แถว "งานร่วม" โชว์ accordion แบบ expanded ไว้ก่อน ยังไม่ผูก toggle จริง ── #}
+            {# ── ตาราง desktop (renderPreviewTable ใน vehicle_admin.js) · ไม่มี thead ตามที่ขอ ── #}
             <div class="bb-table-scroll d-none d-md-block mt-2 mb-4">
                 <table class="bb-table" id="adminPreviewTable">
-                    <tbody>
-                        <tr>
-                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
-                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-n100);color:var(--bb-mut)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
-                            <td>
-                                <div class="fw-semibold" style="color:var(--bb-str)">สมชาย ใจดี</div>
-                                <div class="bb-subtext">อาคารสำนักงานใหญ่ → สนามบินสุวรรณภูมิ</div>
-                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
-                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>6
-                                    <span>|</span>
-                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>09:00–12:00 (3 ชม.)
-                                </div>
-                            </td>
-                            <td>
-                                <div>ส่วนกลาง</div>
-                                <div class="bb-subtext">รับ-ส่งลูกค้า</div>
-                            </td>
-                            <td>
-                                <div>—</div>
-                                <div class="bb-subtext">—</div>
-                            </td>
-                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
-                        </tr>
-
-                        <tr>
-                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
-                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-info-bg);color:var(--bb-info-tx)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
-                            <td>
-                                <div class="fw-semibold" style="color:var(--bb-str)">จันทร์เพ็ญ ศรีสุข</div>
-                                <div class="bb-subtext">อาคารสำนักงานใหญ่ → ธนาคารกรุงเทพ สนญ.</div>
-                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
-                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>2
-                                    <span>|</span>
-                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>10:00–11:30 (1.5 ชม.)
-                                </div>
-                            </td>
-                            <td>
-                                <div>ส่วนกอง</div>
-                                <div class="bb-subtext">ฝ่ายบุคคล</div>
-                            </td>
-                            <td>
-                                <div>—</div>
-                                <div class="bb-subtext">—</div>
-                            </td>
-                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
-                        </tr>
-
-                        <tr>
-                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
-                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg);color:var(--bb-ok-tx)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
-                            <td>
-                                <div class="fw-semibold" style="color:var(--bb-str)">สุภาพร วงศ์ทอง</div>
-                                <div class="bb-subtext">อาคารสำนักงานใหญ่ → ไอคอนสยาม</div>
-                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
-                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>4
-                                    <span>|</span>
-                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>13:00–17:00 (4 ชม.)
-                                </div>
-                            </td>
-                            <td>
-                                <div>ส่วนกลาง</div>
-                                <div class="bb-subtext">รับรองลูกค้า</div>
-                            </td>
-                            <td>
-                                <div>สมศักดิ์ มีชัย</div>
-                                <div class="bb-subtext">1กข 1234</div>
-                            </td>
-                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
-                        </tr>
-
-                        <tr>
-                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
-                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-dg-bg);color:var(--bb-dg-tx)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
-                            <td>
-                                <div class="fw-semibold" style="color:var(--bb-str)">อารีย์ พงษ์ไพบูลย์</div>
-                                <div class="bb-subtext">อาคารสำนักงานใหญ่ → สนามบินดอนเมือง</div>
-                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
-                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>5
-                                    <span>|</span>
-                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>16:00–18:30 (2.5 ชม.)
-                                </div>
-                            </td>
-                            <td>
-                                <div>ส่วนตัว</div>
-                                <div class="bb-subtext">—</div>
-                            </td>
-                            <td>
-                                <div>—</div>
-                                <div class="bb-subtext">—</div>
-                            </td>
-                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
-                        </tr>
-
-                        {# แถวรวมทริป (tripGroup) — คลิกแล้วขยาย accordion ด้านล่าง (โชว์ expanded ไว้ก่อน ยังไม่ผูก JS toggle จริง) #}
-                        <tr style="cursor:pointer">
-                            <td><span class="bb-check-box" role="checkbox" aria-checked="false" tabindex="0"></span></td>
-                            <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-n100);color:var(--bb-mut)"><i data-lucide="directions_car" style="width:1.75rem;height:1.75rem"></i></div></td>
-                            <td>
-                                <div class="fw-semibold d-flex align-items-center gap-1" style="color:var(--bb-str)">
-                                    <i data-lucide="chevron-down" style="width:.875rem;height:.875rem"></i>
-                                    งานร่วม <span class="bb-badge is-neutral">2</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div>ส่วนกอง</div>
-                                <div class="bb-subtext">ฝ่ายผลิต</div>
-                            </td>
-                            <td>
-                                <div>—</div>
-                                <div class="bb-subtext">—</div>
-                            </td>
-                            <td class="bb-table-actions"><button type="button" class="bb-btn is-pri is-sm">อนุมัติรถ</button></td>
-                        </tr>
-                        <tr style="background:var(--bb-n50)">
-                            <td></td>
-                            <td></td>
-                            <td colspan="4">
-                                <div class="fw-semibold" style="color:var(--bb-str)">ธนพล รุ่งเรือง</div>
-                                <div class="bb-subtext">คลังสินค้า สมุทรปราการ → นิคมฯ บางปู</div>
-                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
-                                    <i data-lucide="directions_run" style="width:.875rem;height:.275rem"></i>2
-                                    <span>|</span>
-                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>14:00–16:00 (2 ชม.)
-                                </div>
-                            </td>
-                        </tr>
-                        <tr style="background:var(--bb-n50)">
-                            <td></td>
-                            <td></td>
-                            <td colspan="4">
-                                <div class="fw-semibold" style="color:var(--bb-str)">มานะ ตั้งใจ</div>
-                                <div class="bb-subtext">คลังสินค้า สมุทรปราการ → นิคมฯ บางปู</div>
-                                <div class="bb-subtext d-flex align-items-center gap-1 pt-2">
-                                    <i data-lucide="directions_run" style="width:.875rem;height:.875rem"></i>3
-                                    <span>|</span>
-                                    <i data-lucide="clock" style="width:.875rem;height:.875rem"></i>14:00–16:00 (2 ชม.)
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tbody id="adminPreviewTbody"></tbody>
                 </table>
             </div>
 
-            </div>{# /col-8 ใหม่ #}
+            {# ── มือถือ: card แทน table (d-md-none) ภาษาภาพเดียวกับ table (วงกลมสถานะ/ปุ่มเดียว) ผูก renderPreviewCards ใน vehicle_admin.js ── #}
+            <div class="d-md-none mt-2 mb-4" id="adminPreviewCards"></div>
+
+            </div>{# /col-8 #}
             <div class="col-12 col-lg-4">
-                {# NEW — คัดลอกโครง col-lg-4/vehicleList เดิมมาโชว์ตัวอย่าง · แค่ 5 คันแรก · ไม่โชว์บรรทัดสถานะ(ว่าง) เหลือแค่เลขไมล์ · hardcode ยังไม่ผูก JS #}
+                {# การใช้รถ (ptVehicleRow ใน vehicle_admin.js) · แค่ 5 คันแรก · 2 บรรทัดต่อสถานะ ไม่ใช้ bb-badge #}
                 <div class="bb-card border-1 shadow-sm rounded-1">
                     <div class="card-body p-4">
                         <h3 class="h6 fw-bold mb-3">การใช้รถ</h3>
                         <hr class="mt-0 mb-3">
-                        <div class="bb-buy-list">
-                            <div class="d-flex gap-3 bb-buy-item">
-                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="fw-bold">1กข 1234</div>
-                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-3 bb-buy-item">
-                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="fw-bold">4ฉช 3456</div>
-                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-3 bb-buy-item">
-                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="fw-bold">5ญฎ 7788</div>
-                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-3 bb-buy-item">
-                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="fw-bold">2ขค 5678</div>
-                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-3 bb-buy-item">
-                                <div class="bb-buy-thumb flex-shrink-0 rounded-3 d-flex align-items-center justify-content-center"><i data-lucide="car"></i></div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="fw-bold">3งจ 9012</div>
-                                    <div class="text-muted small mt-1">เลขไมล์ : -</div>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="bb-buy-list" id="ptVehicleList"></div>
                     </div>
                 </div>
             </div>
-            </div>{# /row ใหม่ #}
-
-            {# ── Main Split (Bootstrap row/col) ───────────── #}
-            <div class="row g-4 pt-4">
-
-                {# ─── Left col-8 : date context (weekstrip/tab) + Booking + Trip stack ─── #}
-                <div class="col-12 col-lg-8">
-                    <div class="d-flex flex-column gap-4">
-
-                        {# ── Date context — bb-* component (WeekStrip) ห่อ bb-card ── #}
-                        <div class="bb-card rounded-1 p-3" id="adminWeekStripWrap">
-                            <div id="adminDateBar" class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
-                                <h4 class="fw-bold mb-0">รายละเอียด</h4>
-                                {{ component(week_datepicker) }}
-                            </div>
-                            {{ component(weekstrip) }}
-                        </div>
-
-                        {# Booking section (ก่อน) #}
-                        <div class="bb-card" id="sectionBefore">
-                            <div class="bb-card-head">
-                                <h3 class="bb-card-title mb-0">รายการจอง
-                                    <span style="font-size:.8125rem;font-weight:400;color:var(--bb-mut);margin-left:.375rem;" id="beforeCount"></span>
-                                </h3>
-                                <div class="d-inline-flex gap-2" id="beforeHeaderRight">
-                                    <button type="button" class="bb-btn is-sec py-2 px-3" id="btnMerge" onclick="toggleGroupMode()" title="รวมหลายงานในเที่ยวเดียว">
-                                        <i data-lucide="merge"></i>
-                                        รวมงาน
-                                    </button>
-                                    <button type="button" class="bb-btn is-sec py-2 px-3" id="btnNotify" onclick="toggleNotifyMode()" title="แจ้งผ่าน Telegram">
-                                        <i data-lucide="send"></i>
-                                        แจ้งเตือน
-                                    </button>
-                                    <button type="button" class="bb-btn is-ghost is-sm" id="btnMergeCancel" onclick="cancelGroupMode()" style="display:none" title="ยกเลิกการรวมงาน">ยกเลิก</button>
-                                    <button type="button" class="bb-btn is-pri is-sm" id="btnMergeConfirm" onclick="confirmMerge()" style="display:none" disabled title="ยืนยันรวมงานที่เลือก">
-                                        <i data-lucide="check"></i>
-                                        รวม (0)
-                                    </button>
-                                    <button type="button" class="bb-btn is-ghost is-sm" id="btnNotifyCancel" onclick="cancelNotifyMode()" style="display:none" title="ยกเลิกการแจ้ง">ยกเลิก</button>
-                                    <button type="button" class="bb-btn is-pri is-sm" id="btnNotifyConfirm" onclick="confirmNotify()" style="display:none" disabled title="ส่งแจ้งเตือนผ่าน Telegram">
-                                        <i data-lucide="send"></i>
-                                        แจ้ง (0)
-                                    </button>
-                                </div>
-                            </div>
-
-                            {# Booking list — แสดงทุกรายการเสมอ (เลิกใช้ collapsed state) #}
-                            <div id="beforeExpanded">
-                                {# Filter — bb-* component (Tabs) ห่อ div ไว้จัด layout · scroll-x บนจอแคบ #}
-                                <div class="bb-tabs-scroll pt-2 px-3" id="adminTabsWrap">
-                                    {{ component(tabs) }}
-                                </div>
-                                <div class="p-3" id="bookingList"></div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                {# ─── Right col-4 : Vehicle status (sticky) — โครง Case 10 (bootstrap-cases-gallery.html#case16) ─── #}
-                <div class="col-12 col-lg-4">
-                    <div class="bb-card border-1 shadow-sm rounded-1">
-                        <div class="card-body p-4">
-                            <h3 class="h6 fw-bold mb-3">การใช้รถ</h3>
-                            <hr class="mt-0 mb-3">
-                            <div class="bb-buy-list" id="vehicleList"></div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>{# end main row #}
+            </div>{# /row #}
 
 {% endblock %}
 
@@ -334,86 +106,128 @@
    MODAL: Approve & Assign Resources
    ════════════════════════════════════════════════ #}
 <div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
+            <div class="bb-modal-body modal-body">
 
-            <div class="bb-modal-head">
-                <div>
-                    <div class="bb-modal-title" id="assignModalTitle">อนุมัติรถและเลือกคนขับ</div>
-                    <div class="bb-modal-sub" id="assignModalSub"></div>
-                </div>
-                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><i data-lucide="x"></i></button>
-            </div>
-
-            <div class="bb-modal-body">
-
-                <div class="row g-2 mb-2">
-                    <div class="col-6">
-                        <div class="bb-field mb-0">
-                            <label class="bb-label" for="modalVehSel">เลือกรถ</label>
-                            <select class="bb-input" id="modalVehSel" onchange="checkAssignReady()">
-                                <option value="">— เลือกรถ —</option>
-                            </select>
+                {# NEW — header restyle ตาม mileageModal จริง (label เล็ก=action + ชื่อใหญ่=ผู้จอง + เวลา/badge + avatar ขวา · ไม่มีปุ่มปิด X แล้วตาม mileageModal — ปิดผ่าน ยกเลิก/backdrop) #}
+                <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                    <div>
+                        <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)" id="assignModalTitle">อนุมัติการจอง (เลือกคนขับและรถ)</div>
+                        <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)" id="assignModalSub">—</div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
+                            <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)" id="assignModalTime">—</span>
+                            <span class="bb-badge" id="assignModalBadge" style="display:none">—</span>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="bb-field mb-0">
-                            <label class="bb-label" for="modalDrvSel">เลือกคนขับ</label>
-                            <select class="bb-input" id="modalDrvSel" onchange="checkAssignReady()">
-                                <option value="">— เลือกคนขับ —</option>
+                    <div class="bb-avatar flex-shrink-0" id="assignModalAvatar" style="width:3.5rem;height:3.5rem">
+                        <span class="material-symbols-rounded">directions_car</span>
+                    </div>
+                </div>
+
+                <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-3">
+
+                <div class="bb-timeline">
+                    {# NEW — รายละเอียดคำขอ: route เดียว (b.pickup → b.dest) — dept/pax/purpose ย้ายไปโชว์ที่ header แทน #}
+                    <div class="bb-tl-item done">
+                        <span class="bb-tl-dot"></span>
+                        <div class="bb-tl-title">รายละเอียดคำขอ</div>
+                        <div class="bb-tl-desc" id="assignModalRoute">—</div>
+                    </div>
+
+                    <div class="bb-tl-item done">
+                        <span class="bb-tl-dot"></span>
+                        <div class="bb-tl-title">จัดทรัพยากร</div>
+                        <div class="bg-light rounded-3 p-3 mt-2">
+                            <div class="mt-2">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <select class="bb-input" id="modalVehSel" onchange="checkAssignReady()">
+                                            <option value="">— เลือกรถ —</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <select class="bb-input" id="modalDrvSel" onchange="checkAssignReady()">
+                                            <option value="">— เลือกคนขับ —</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="bb-callout is-wr mt-2 mb-0" id="vehConflictWarn" hidden>
+                                    <span class="material-symbols-rounded">warning</span>
+                                    <span data-conflict-text></span>
+                                </div>
+                                <div class="bb-callout is-wr mt-2 mb-0" id="drvConflictWarn" hidden>
+                                    <span class="material-symbols-rounded">warning</span>
+                                    <span data-conflict-text></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# NEW — ประเภทค่าใช้จ่าย: การ์ดกดเลือกแทน bb-seg segmented control #}
+                    <div class="bb-tl-item done">
+                        <span class="bb-tl-dot"></span>
+                        <div class="bb-tl-title">ค่าใช้จ่าย</div>
+                        <div class="bg-light rounded-3 p-3 mt-2">
+                            <div class="d-flex gap-2 mb-2" id="modalExpTabs">
+                                <label class="bb-exp-card" title="ใช้งบส่วนกลาง">
+                                    <input type="radio" name="modalExpType" class="bb-exp-radio" value="central" checked onchange="setModalExpType(this.value)">
+                                    <span class="material-symbols-rounded bb-exp-icon fs-3 pt-3">apartment</span>
+                                    <div class="bb-exp-title">ส่วนกลาง</div>
+                                </label>
+                                <label class="bb-exp-card" title="ใช้งบส่วนกอง">
+                                    <input type="radio" name="modalExpType" class="bb-exp-radio" value="department" onchange="setModalExpType(this.value)">
+                                    <span class="material-symbols-rounded bb-exp-icon fs-3 pt-3">account_balance</span>
+                                    <div class="bb-exp-title">ส่วนกอง</div>
+                                </label>
+                                <label class="bb-exp-card" title="จ่ายเอง">
+                                    <input type="radio" name="modalExpType" class="bb-exp-radio" value="personal" onchange="setModalExpType(this.value)">
+                                    <span class="material-symbols-rounded bb-exp-icon fs-3 pt-3">person</span>
+                                    <div class="bb-exp-title">ส่วนตัว</div>
+                                </label>
+                            </div>
+
+                            {# NEW — คนละ dropdown กัน ส่วนกลาง/ส่วนกอง (คนละ option list) · ส่วนตัวไม่มี dropdown เลย #}
+                            <select class="bb-input mb-2" id="modalExpSubCentral" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
+                                <option value="">— เลือกหมวด —</option>
                             </select>
+                            <select class="bb-input mb-2" id="modalExpSubDept" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
+                                <option value="">— เลือกหมวด —</option>
+                            </select>
+
+                            <div class="align-items-center gap-2 mb-2 mt-3" id="modalApproverInfo" style="font-size:.8125rem;color:var(--bb-mut);display:none">
+                                <span>ผู้อนุมัติ: <strong id="modalApproverName"></strong></span>
+                            </div>
+
+                            <div class="mt-2" id="modalBudgetBar" style="display:none">
+                                <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.8125rem">
+                                    <span id="modalBudgetLabel" style="color:var(--bb-mut)">งบคงเหลือ</span>
+                                    <span class="bb-num fw-semibold" id="modalBudgetValue" style="color:var(--bb-str)">—</span>
+                                </div>
+                                <div style="height:.375rem;border-radius:999px;background:var(--bb-n200);overflow:hidden">
+                                    <div id="modalBudgetFill" style="height:100%;width:0%;background:var(--bb-ok);border-radius:999px;transition:width .2s"></div>
+                                </div>
+                                <p class="mt-1 mb-0" id="modalBudgetWarn" style="font-size:.75rem" hidden></p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {# conflict warnings — full width ใต้ select grid #}
-                <div class="bb-callout is-wr" id="vehConflictWarn" hidden>
-                    <i data-lucide="triangle-alert"></i>
-                    <span data-conflict-text></span>
-                </div>
-                <div class="bb-callout is-wr" id="drvConflictWarn" hidden>
-                    <i data-lucide="triangle-alert"></i>
-                    <span data-conflict-text></span>
-                </div>
-
-                <div class="fw-semibold mb-2" style="font-size:.8125rem;color:var(--bb-str)">ประเภทค่าใช้จ่าย</div>
-                <div class="bb-seg mb-2" id="modalExpTabs">
-                    <button type="button" class="bb-seg-btn is-on" data-type="central" onclick="setModalExpType('central',this)" title="ใช้งบส่วนกลาง">ส่วนกลาง</button>
-                    <button type="button" class="bb-seg-btn" data-type="department" onclick="setModalExpType('department',this)" title="ใช้งบส่วนกอง">ส่วนกอง</button>
-                    <button type="button" class="bb-seg-btn" data-type="personal" onclick="setModalExpType('personal',this)" title="จ่ายเอง">ส่วนตัว</button>
-                </div>
-
-                <div class="bb-field mb-2">
-                    <select class="bb-input" id="modalExpSubSel" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
-                        <option value="">— เลือกหมวด —</option>
-                    </select>
-                </div>
-
-                <div class="d-flex align-items-center gap-2 mb-2" id="modalApproverInfo" style="font-size:.8125rem;color:var(--bb-mut);display:none">
-                    <i data-lucide="user-check" style="width:.875rem;height:.875rem"></i>
-                    <span>ผู้อนุมัติ: <strong id="modalApproverName"></strong></span>
-                </div>
-
-                <div id="modalBudgetBar" style="display:none">
-                    <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.8125rem">
-                        <span id="modalBudgetLabel" style="color:var(--bb-mut)">งบคงเหลือ</span>
-                        <span class="bb-num fw-semibold" id="modalBudgetValue" style="color:var(--bb-str)">—</span>
+                <div class="d-flex justify-content-between align-items-center gap-2 mt-4">
+                    {# ปุ่มย้อนสถานะ — ghost (ไม่มีกรอบ/เส้นใต้) โชว์เฉพาะ booking เดี่ยวที่อนุมัติแล้ว
+                       ไม่ได้อยู่กลุ่มทริป (toggle display ใน openAssignModal, vehicle_admin.js) #}
+                    <button type="button" class="bb-btn is-ghost is-sm" id="assignRevertBtn" onclick="triggerRevertFromModal()" style="display:none" title="ย้อนสถานะกลับเป็นรออนุมัติ">
+                        ย้อนสถานะ
+                    </button>
+                    <div class="d-flex gap-2 ms-auto">
+                        <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                        <button type="button" class="bb-btn is-pri" id="assignConfirmBtn" onclick="submitAssign()" disabled title="อนุมัติและจัดรถ">
+                            อนุมัติและจัดรถ
+                        </button>
                     </div>
-                    <div style="height:.375rem;border-radius:999px;background:var(--bb-n200);overflow:hidden">
-                        <div id="modalBudgetFill" style="height:100%;width:0%;background:var(--bb-ok);border-radius:999px;transition:width .2s"></div>
-                    </div>
-                    <p class="mt-1 mb-0" id="modalBudgetWarn" style="font-size:.75rem" hidden></p>
                 </div>
 
             </div>
-
-            <div class="bb-modal-foot">
-                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                <button type="button" class="bb-btn is-pri" id="assignConfirmBtn" onclick="submitAssign()" disabled title="ยืนยันการอนุมัติ">
-                    ยืนยันการอนุมัติ
-                </button>
-            </div>
-
         </div>
     </div>
 </div>
@@ -430,7 +244,7 @@
                     <div class="bb-modal-title">เปลี่ยนรถ (Swap)</div>
                     <div class="bb-modal-sub" id="swapModalSub"></div>
                 </div>
-                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><i data-lucide="x"></i></button>
+                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><span class="material-symbols-rounded">close</span></button>
             </div>
 
             <div class="bb-modal-body">
@@ -461,13 +275,13 @@
                     <div class="bb-modal-title">ส่งซ่อมรถ</div>
                     <div class="bb-modal-sub" id="repairModalSub"></div>
                 </div>
-                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><i data-lucide="x"></i></button>
+                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><span class="material-symbols-rounded">close</span></button>
             </div>
 
             <div class="bb-modal-body">
                 <div class="bb-field">
                     <label class="bb-label" for="repairDate">
-                        <i data-lucide="calendar" style="width:.875rem;height:.875rem"></i> วันที่ส่งซ่อม
+                        <span class="material-symbols-rounded">calendar_month</span> วันที่ส่งซ่อม
                     </label>
                     <input type="date" class="bb-input" id="repairDate">
                 </div>
@@ -480,7 +294,7 @@
             <div class="bb-modal-foot">
                 <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
                 <button type="button" class="bb-btn is-pri" onclick="submitRepair()" title="บันทึกการส่งซ่อม">
-                    <i data-lucide="check"></i>
+                    <span class="material-symbols-rounded">check</span>
                     บันทึกการส่งซ่อม
                 </button>
             </div>
@@ -498,13 +312,13 @@
 
             <div class="bb-modal-head">
                 <div class="bb-modal-title">ย้อนสถานะ</div>
-                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><i data-lucide="x"></i></button>
+                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><span class="material-symbols-rounded">close</span></button>
             </div>
 
             <div class="bb-modal-body">
                 <p id="revertModalText" style="color:var(--bb-str)"></p>
                 <div class="bb-callout is-wr">
-                    <i data-lucide="triangle-alert"></i>
+                    <span class="material-symbols-rounded">warning</span>
                     <span>การอนุมัติที่แจ้ง Telegram ไปแล้วจะต้องแจ้งใหม่ด้วยตัวเอง</span>
                 </div>
             </div>
@@ -512,8 +326,36 @@
             <div class="bb-modal-foot">
                 <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
                 <button type="button" class="bb-btn is-danger" onclick="submitRevert()" title="ย้อนสถานะกลับเป็นรออนุมัติ">
-                    <i data-lucide="rotate-ccw"></i>
+                    <span class="material-symbols-rounded">undo</span>
                     ย้อนเป็นรออนุมัติ
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{# ════════════════════════════════════════════════
+   MODAL: Confirm Telegram Notify (preview table action bar)
+   ════════════════════════════════════════════════ #}
+<div class="modal fade" id="ptNotifyConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="bb-modal-head">
+                <div class="bb-modal-title">ยืนยันแจ้ง Telegram</div>
+                <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"><span class="material-symbols-rounded">close</span></button>
+            </div>
+
+            <div class="bb-modal-body">
+                <p class="mb-0" style="color:var(--bb-str)">ต้องการแจ้งเตือนผ่าน Telegram <span id="ptNotifyConfirmCount" class="bb-num fw-semibold">0</span> รายการ?</p>
+            </div>
+
+            <div class="bb-modal-foot">
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="bb-btn is-pri" onclick="ptSubmitNotify()" title="ยืนยันแจ้ง Telegram">
+                    <span class="material-symbols-rounded">send</span>
+                    ยืนยัน
                 </button>
             </div>
 

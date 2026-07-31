@@ -1,0 +1,37 @@
+{#
+  bb_datefield — date picker วันเดียว แบบ inline calendar ของ Component Library .bb-*
+  ต่างจาก bb_datepicker (§ DATE/TIME): ปฏิทินโชว์ใต้ trigger ตรงๆ ไม่มี popover-apply/
+  พิมพ์เอง เลือกวันแล้ว commit ทันที + วันที่ผ่านมาแล้วเลือกไม่ได้ (disabled ใน grid)
+  CSS: core/css/components.css (.bb-df* + reuse .bb-field-box)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-datefield])
+
+  Usage:
+    {% from '_components/bb/datefield.html' import bb_datefield %}
+    {{ bb_datefield(name='travel_date', label='วันที่เดินทาง :') }}
+
+  params:
+    name         ชื่อ hidden input (default 'date')
+    value        ISO 'YYYY-MM-DD' ('' = ว่าง)
+    placeholder  ข้อความตอนยังไม่เลือก (default 'เลือกวันที่')
+    label        ข้อความ label ด้านบน ('' = ไม่มี)
+    id           id บน root (ให้ JS ภายนอกเรียก document.getElementById(id).__bbSetValue(iso) ได้)
+#}
+{% macro bb_datefield(name='date', value='', placeholder='เลือกวันที่', label='', id='') -%}
+{%- if label %}<label class="bb-label">{{ label }}</label>{% endif %}
+<div class="bb-df" data-bb-datefield data-value="{{ value }}"{% if id %} id="{{ id }}"{% endif %}>
+  <div class="bb-field-box" data-bb-df-trigger>
+    <span class="material-symbols-rounded bb-field-box-icon">calendar_month</span>
+    <input type="text" data-bb-df-display readonly placeholder="{{ placeholder }}" value="{{ value }}">
+  </div>
+  <input type="hidden" name="{{ name }}" value="{{ value }}" data-bb-df-value>
+  <div class="bb-df-panel" data-bb-df-panel hidden>
+    <div class="bb-df-head">
+      <button type="button" class="bb-df-nav" data-bb-df-prev aria-label="เดือนก่อนหน้า"><span class="material-symbols-rounded">chevron_left</span></button>
+      <div class="bb-df-month" data-bb-df-month></div>
+      <button type="button" class="bb-df-nav" data-bb-df-next aria-label="เดือนถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>
+    </div>
+    <div class="bb-df-week"><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div><div>อา</div></div>
+    <div class="bb-df-grid" data-bb-df-grid></div>
+  </div>
+</div>
+{%- endmacro %}

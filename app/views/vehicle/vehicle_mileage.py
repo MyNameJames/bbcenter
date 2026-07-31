@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import (db, get_bkk_time, Vehicle, VehicleBooking, Driver, VehicleMileage,
                     VehicleBudget, FuelBill, DriverOT)
-from sqlalchemy import extract
+from sqlalchemy import extract, func, or_
 from datetime import datetime, timedelta
 from views.core.notification_service import (
     notify_mileage_started      as _n_mileage_start,
@@ -15,6 +15,13 @@ from views.vehicle.vehicle_common import (
     get_fuel_price, calc_fuel_cost,
 )
 import services.vehicle.mileage_service as mileage_svc
+
+# chip filter "วันในสัปดาห์" — value = เลขที่ strftime('%w') ของ SQLite คืน (0=อาทิตย์ … 6=เสาร์)
+# เรียงแบบปฏิทินไทย: จันทร์ขึ้นต้น อาทิตย์ปิดท้าย (2026-07-28)
+WEEKDAY_CHIPS  = [('1', 'จันทร์'), ('2', 'อังคาร'), ('3', 'พุธ'), ('4', 'พฤหัสบดี'),
+                  ('5', 'ศุกร์'), ('6', 'เสาร์'), ('0', 'อาทิตย์')]
+WEEKDAY_VALUES = {v for v, _ in WEEKDAY_CHIPS}
+BUDGET_TYPES   = ('central', 'department', 'personal')
 
 
 def _compute_mileage_cost(b, m):
@@ -113,12 +120,8 @@ def _handle_mileage_end(booking, mileage, upload_folder):
 
 
 
-def _query_mileage_bookings(cutoff, f_date_start, f_date_end, f_vehicle,
-                             f_driver, f_budget_type, f_budget_sub):
-    q = VehicleBooking.query.filter(
-        VehicleBooking.status == 'approved',
-        VehicleBooking.start_datetime < cutoff,
-    )
+def _apply_date_range(q, f_date_start, f_date_end):
+    """กรองช่วงวันของ start_datetime — ค่าที่ parse ไม่ได้ให้ข้ามไปเงียบๆ (filter จาก query string)"""
     if f_date_start:
         try:
             q = q.filter(VehicleBooking.start_datetime >= datetime.strptime(f_date_start, '%Y-%m-%d'))
@@ -130,16 +133,52 @@ def _query_mileage_bookings(cutoff, f_date_start, f_date_end, f_vehicle,
             q = q.filter(VehicleBooking.start_datetime < end_dt)
         except ValueError:
             pass
-    if f_vehicle:
-        q = q.filter(VehicleBooking.assigned_vehicle_id == f_vehicle)
-    if f_driver:
-        q = q.filter(VehicleBooking.driver_id == f_driver)
-    if f_budget_type in ('central', 'department', 'personal'):
-        q = q.filter(VehicleBooking.expense_type == f_budget_type)
-    if f_budget_sub and f_budget_type == 'central':
-        q = q.filter(VehicleBooking.central_category == f_budget_sub)
-    elif f_budget_sub and f_budget_type == 'department':
-        q = q.filter(VehicleBooking.trip_department == f_budget_sub)
+    return q
+
+
+def _has_ot_clause():
+    """EXISTS: booking นี้มี DriverOT ที่ยังไม่ถูกลบ (2026-07-28)"""
+    return DriverOT.query.filter(
+        DriverOT.booking_id == VehicleBooking.id,
+        DriverOT.is_deleted.is_(False),
+    ).exists()
+
+
+def _apply_budget_subs(q, budget_types, budget_subs):
+    """หมวด/กอง อยู่คนละ column ตามประเภทงบ (central → central_category,
+    department → trip_department) — multi-select เลือกทั้งสองประเภทพร้อมกันได้
+    จึงต้อง OR ข้าม column ไม่ใช่ if/elif เหมือนตอนเป็น radio (2026-07-28)
+    ไม่ได้เลือกประเภทงบเลย = ไม่รู้ว่าหมวดที่ติ๊กหมายถึง column ไหน → เทียบทั้งสอง"""
+    if not budget_subs:
+        return q
+    conds = []
+    if not budget_types or 'central' in budget_types:
+        conds.append(VehicleBooking.central_category.in_(budget_subs))
+    if not budget_types or 'department' in budget_types:
+        conds.append(VehicleBooking.trip_department.in_(budget_subs))
+    return q.filter(or_(*conds)) if conds else q
+
+
+def _query_mileage_bookings(cutoff, f):
+    """f = dict จาก _parse_mileage_filters() (เดิมรับ 7 positional arg — เปลี่ยนเป็น dict
+    ตอนเพิ่ม filter วันในสัปดาห์/มี OT, 2026-07-28 เพราะ arg list ยาวเกินอ่าน)"""
+    q = VehicleBooking.query.filter(
+        VehicleBooking.status == 'approved',
+        VehicleBooking.start_datetime < cutoff,
+    )
+    q = _apply_date_range(q, f['date_start'], f['date_end'])
+    if f['vehicle_ids']:
+        q = q.filter(VehicleBooking.assigned_vehicle_id.in_(f['vehicle_ids']))
+    if f['driver_ids']:
+        q = q.filter(VehicleBooking.driver_id.in_(f['driver_ids']))
+    if f['budget_types']:
+        q = q.filter(VehicleBooking.expense_type.in_(f['budget_types']))
+    q = _apply_budget_subs(q, f['budget_types'], f['budget_subs'])
+    if f['weekdays']:
+        # strftime('%w') = '0' อาทิตย์ … '6' เสาร์ (SQLite) — ตรงกับ value ของ chip
+        q = q.filter(func.strftime('%w', VehicleBooking.start_datetime).in_(f['weekdays']))
+    if f['has_ot']:
+        q = q.filter(_has_ot_clause())
     return q.order_by(VehicleBooking.start_datetime.desc()).all()
 
 
@@ -181,6 +220,9 @@ def _build_mileage_rows(bookings, fuel_by_vehicle, ot_records_by_booking, f_stat
              'amount': float(s.amount), 'start_time': s.start_time, 'end_time': s.end_time}
             for s in ot_record.slots
         ] if ot_record else []
+        # ช่วง OT หลุดกรอบเวลาทริป = ค่า OT คำนวณจากเวลาชุดเก่า เชื่อตัวเลขไม่ได้ (2026-07-27)
+        # เกิดกับ OT ที่จ่ายแล้ว/แอดมินแก้มือ ซึ่ง sync_ot_for_trip() ไม่คำนวณทับให้
+        ot_mismatch = bool(ot_record) and not mileage_svc.ot_matches_trip(ot_record, m)
 
         rows.append({
             'b': b, 'm': m,
@@ -196,6 +238,7 @@ def _build_mileage_rows(bookings, fuel_by_vehicle, ot_records_by_booking, f_stat
             'ot_hours':        ot_hours,
             'ot_total_amount': ot_total_amount,
             'ot_slots':        ot_slots,
+            'ot_mismatch':     ot_mismatch,
         })
 
     display_rows = []
@@ -256,26 +299,45 @@ def _calc_mileage_kpi(now, cutoff):
     }
 
 
+def _parse_weekdays():
+    """chip วันในสัปดาห์ (multi-select) → list ของ '0'-'6' ตามเลข strftime('%w') ของ SQLite
+    ทิ้งค่าที่ไม่ใช่เลขวัน (query string แก้มือได้)"""
+    return [d for d in request.args.getlist('weekday') if d in WEEKDAY_VALUES]
+
+
+def _parse_multi(key, allowed=None):
+    """chip filter ทุกตัวเป็น checkbox multi-select แล้ว (2026-07-28) → getlist + ทิ้งค่าว่าง
+    allowed = whitelist สำหรับ field ที่ค่าเป็น enum (query string แก้มือได้)"""
+    vals = [v.strip() for v in request.args.getlist(key) if v.strip()]
+    return [v for v in vals if v in allowed] if allowed else vals
+
+
 def _parse_mileage_filters(today):
-    """Parse GET query param (mileage dashboard filter) (extract จาก mileage_log ตอน Phase 5,
-    logic เดิม 100% รวม default-date เมื่อไม่ระบุช่วงและไม่กด show_all)
-    คืน tuple 9 ค่าตามลำดับที่ route ใช้"""
-    show_all      = request.args.get('show_all', '') == '1'
-    f_date_start  = request.args.get('date_start', '').strip()
-    f_date_end    = request.args.get('date_end', '').strip()
-    f_vehicle     = request.args.get('vehicle_id', type=int)
-    f_driver      = request.args.get('driver_id', type=int)
-    f_status      = request.args.get('status_filter', '').strip()
-    f_budget_type = request.args.get('budget_type', '').strip()
-    f_budget_sub  = request.args.get('budget_sub', '').strip()
-    f_pending_personal = request.args.get('pending_personal', '') == '1'
+    """Parse GET query param (mileage dashboard filter) → dict
+    (เดิมคืน tuple 9 ค่า — เปลี่ยนเป็น dict ตอนเพิ่ม filter weekday/has_ot, 2026-07-28
+    เพราะ tuple 11 ค่าเรียงตำแหน่งผิดง่ายและอ่านไม่ออก)
+    default-date เมื่อไม่ระบุช่วงและไม่กด show_all = logic เดิม"""
+    f_date_start = request.args.get('date_start', '').strip()
+    f_date_end   = request.args.get('date_end', '').strip()
+    show_all     = request.args.get('show_all', '') == '1'
 
     if not show_all and not f_date_start and not f_date_end:
         f_date_start = today.replace(day=1).strftime('%Y-%m-%d')
         f_date_end   = today.strftime('%Y-%m-%d')
 
-    return (show_all, f_date_start, f_date_end, f_vehicle, f_driver, f_status,
-            f_budget_type, f_budget_sub, f_pending_personal)
+    return {
+        'show_all':         show_all,
+        'date_start':       f_date_start,
+        'date_end':         f_date_end,
+        'vehicle_ids':      request.args.getlist('vehicle_id', type=int),
+        'driver_ids':       request.args.getlist('driver_id', type=int),
+        'status_filter':    request.args.get('status_filter', '').strip(),
+        'budget_types':     _parse_multi('budget_type', BUDGET_TYPES),
+        'budget_subs':      _parse_multi('budget_sub'),
+        'pending_personal': request.args.get('pending_personal', '') == '1',
+        'weekdays':         _parse_weekdays(),
+        'has_ot':           request.args.get('has_ot', '') == '1',
+    }
 
 
 def _handle_mileage_post():
@@ -322,7 +384,11 @@ def _handle_mileage_post():
 
     if entry_type in ('end', 'both'):
         # notify_ot_created อยู่ใน auto_generate_ot() แล้ว (Phase 4, 2026-07-19)
-        mileage_svc.auto_generate_ot(booking, mileage, actor_id=current_user.id)
+        # sync_ot_for_trip แทน auto_generate_ot ตรง (2026-07-27) — บันทึกซ้ำด้วยเวลาใหม่
+        # ต้องคำนวณ OT ใหม่ ไม่ใช่ปล่อยค่าเก่าค้าง (idempotent guard เดิมทำให้จ่ายผิด)
+        for msg, cat in mileage_svc.sync_ot_for_trip(booking, mileage, actor_id=current_user.id):
+            flash(msg, cat)
+        db.session.commit()
         m2 = VehicleMileage.query.filter_by(booking_id=booking_id).first()
         result = mileage_svc.close_trip(booking, m2, source='mileage_log')
         for msg, cat in result['flash_messages']:
@@ -345,12 +411,10 @@ def mileage_log():
     today      = get_bkk_time().date()
     now        = get_bkk_time()
     fuel_price = mileage_svc.get_fuel_price(today)
-    (show_all, f_date_start, f_date_end, f_vehicle, f_driver, f_status,
-     f_budget_type, f_budget_sub, f_pending_personal) = _parse_mileage_filters(today)
+    f = _parse_mileage_filters(today)
 
     cutoff   = datetime.combine(today + timedelta(days=1), datetime.min.time())
-    bookings = _query_mileage_bookings(cutoff, f_date_start, f_date_end, f_vehicle,
-                                       f_driver, f_budget_type, f_budget_sub)
+    bookings = _query_mileage_bookings(cutoff, f)
 
     fuel_by_vehicle = {}
     for vid, mil in (db.session.query(FuelBill.vehicle_id, FuelBill.mileage)
@@ -366,7 +430,7 @@ def mileage_log():
         ot_records_by_booking[ot.booking_id] = ot  # 1 booking = 1 DriverOT (auto_generate_ot idempotent)
 
     rows, display_rows        = _build_mileage_rows(bookings, fuel_by_vehicle, ot_records_by_booking,
-                                                     f_status, f_pending_personal)
+                                                     f['status_filter'], f['pending_personal'])
     kpi                       = _calc_mileage_kpi(now, cutoff)
     vehicles_all              = Vehicle.query.order_by(Vehicle.license_plate).all()
     drivers_all               = Driver.query.filter_by(is_active=True).order_by(Driver.name).all()
@@ -382,13 +446,12 @@ def mileage_log():
         vehicles_all=vehicles_all,
         drivers_all=drivers_all,
         budget_subs=budget_subs,
-        f={'date_start': f_date_start, 'date_end': f_date_end,
-           'vehicle_id': f_vehicle or '', 'driver_id': f_driver or '',
-           'status_filter': f_status,
-           'budget_type': f_budget_type,
-           'budget_sub': f_budget_sub,
-           'pending_personal': '1' if f_pending_personal else '',
-           'show_all': show_all},
+        weekday_chips=WEEKDAY_CHIPS,
+        # chip filter เป็น multi-select → template เทียบด้วย `in` list (string ล้วน ให้ตรงกับ value ของ option)
+        f={**f,
+           'vehicle_ids': [str(v) for v in f['vehicle_ids']],
+           'driver_ids':  [str(v) for v in f['driver_ids']],
+           'pending_personal': '1' if f['pending_personal'] else ''},
     )
 
 
@@ -512,28 +575,13 @@ def mileage_export():
     from flask import send_file
     today = get_bkk_time().date()
 
-    f_date_start = request.args.get('date_start', '').strip()
-    f_date_end   = request.args.get('date_end', '').strip()
-    f_vehicle    = request.args.get('vehicle_id', type=int)
-    f_driver     = request.args.get('driver_id', type=int)
-    f_status     = request.args.get('status_filter', '').strip()
+    # ใช้ parser/query ตัวเดียวกับหน้าจอ (2026-07-28) — เดิม export เขียน query ซ้ำเองและ
+    # ตกงบ/หมวดไป ทำให้ไฟล์ที่ได้ไม่ตรงกับที่เห็นบนหน้า
+    f        = _parse_mileage_filters(today)
+    cutoff   = datetime.combine(today + timedelta(days=1), datetime.min.time())
+    bookings = _query_mileage_bookings(cutoff, f)
 
-    cutoff = datetime.combine(today + timedelta(days=1), datetime.min.time())
-    q = VehicleBooking.query.filter(
-        VehicleBooking.status == 'approved',
-        VehicleBooking.start_datetime < cutoff,
-    )
-    if f_date_start:
-        try: q = q.filter(VehicleBooking.start_datetime >= datetime.strptime(f_date_start, '%Y-%m-%d'))
-        except ValueError: pass
-    if f_date_end:
-        try: q = q.filter(VehicleBooking.start_datetime < datetime.strptime(f_date_end, '%Y-%m-%d') + timedelta(days=1))
-        except ValueError: pass
-    if f_vehicle: q = q.filter(VehicleBooking.assigned_vehicle_id == f_vehicle)
-    if f_driver:  q = q.filter(VehicleBooking.driver_id == f_driver)
-    bookings = q.order_by(VehicleBooking.start_datetime.desc()).all()
-
-    rows, total_distance, total_fuel = _filter_and_calc_mileage_rows(bookings, f_status)
+    rows, total_distance, total_fuel = _filter_and_calc_mileage_rows(bookings, f['status_filter'])
     wb = _build_mileage_workbook(rows, total_distance, total_fuel, today)
 
     buf = io.BytesIO()

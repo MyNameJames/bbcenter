@@ -32,6 +32,8 @@ import logging
 from models import (db, get_bkk_time, FuelPrice, SystemConfig, VehicleMileage,
                     VehicleBooking, DriverOT, DriverOTSlot, OTRateConfig)
 from domain.vehicle.fuel import calc_fuel_cost
+from domain.vehicle.ot import (build_ot_specs, slots_match_trip,
+                               trip_qualifies_for_ot, OT_MIN_TRIP_MINUTES)
 import services.vehicle.budget_service as budget_svc
 from services.vehicle.budget_service import _lookup_budget_for_booking
 from views.core.notification_service import (
@@ -75,31 +77,28 @@ def _select_rate_configs_for_weekday(rate_configs, weekday):
 
 def _build_ot_slots(rate_configs, trip_start_min, trip_end_min):
     """คำนวณ overlap ของแต่ละ rate config band กับช่วงเวลาทริป (นาทีนับจาก 00:00) →
-    list[DriverOTSlot] (extract จาก auto_generate_ot ตอน Phase 3 correction — logic เดิม 100%)"""
-    new_slots = []
-    for cfg in rate_configs:
-        h, m   = cfg.start_time.split(':')
-        band_s = int(h) * 60 + int(m)
-        h, m   = cfg.end_time.split(':')
-        band_e = 1440 if cfg.end_time == '24:00' else int(h) * 60 + int(m)
+    list[DriverOTSlot]. logic จริงย้ายไป domain/vehicle/ot.py::build_ot_specs() แล้ว
+    (2026-07-27) — ที่นี่เหลือแค่แปลง ORM ↔ tuple/dict ให้ domain ไม่ต้องรู้จัก model"""
+    specs = build_ot_specs(
+        [(c.label, c.start_time, c.end_time, float(c.rate), c.id) for c in rate_configs],
+        trip_start_min, trip_end_min,
+    )
+    return [DriverOTSlot(
+        rate_config_id=s['config_id'],
+        slot_label=s['label'],
+        start_time=s['start_time'],
+        end_time  =s['end_time'],
+        hours=s['hours'], rate=s['rate'], amount=s['amount'],
+    ) for s in specs]
 
-        ov_s = max(trip_start_min, band_s)
-        ov_e = min(trip_end_min, band_e)
-        ov   = max(0, ov_e - ov_s)
-        if ov == 0:
-            continue
 
-        hrs    = round(ov / 60, 2)
-        rate   = float(cfg.rate)
-        new_slots.append(DriverOTSlot(
-            rate_config_id=cfg.id,
-            slot_label=cfg.label,
-            start_time=f"{ov_s // 60:02d}:{ov_s % 60:02d}",
-            end_time  =f"{ov_e // 60:02d}:{ov_e % 60:02d}",
-            hours=hrs, rate=rate,
-            amount=round(hrs * rate, 2),
-        ))
-    return new_slots
+def _trip_minutes(mileage):
+    """(start_min, end_min) ของทริปจาก mileage — None ถ้าเวลาไม่ครบ/ปลายทางย้อนหลัง"""
+    if not mileage or not mileage.actual_start or not mileage.actual_end:
+        return None
+    trip_s = mileage.actual_start.hour * 60 + mileage.actual_start.minute
+    trip_e = mileage.actual_end.hour   * 60 + mileage.actual_end.minute
+    return (trip_s, trip_e) if trip_e > trip_s else None
 
 
 def auto_generate_ot(booking, mileage, *, actor_id, notify=True):
@@ -123,10 +122,16 @@ def auto_generate_ot(booking, mileage, *, actor_id, notify=True):
     if not rate_configs:
         return None
 
-    trip_s = mileage.actual_start.hour * 60 + mileage.actual_start.minute
-    trip_e = mileage.actual_end.hour * 60 + mileage.actual_end.minute
-    if trip_e <= trip_s:
+    trip = _trip_minutes(mileage)
+    if not trip:
         return None  # invalid same-day end
+    trip_s, trip_e = trip
+
+    # ทริปสั้นกว่าเกณฑ์ → ไม่คิด OT (build_ot_specs คืน [] เอง แต่ log ให้รู้ว่าทำไมไม่มี OT)
+    if not trip_qualifies_for_ot(trip_s, trip_e):
+        _log.info('[ot skip] booking #%s ทริป %s นาที < เกณฑ์ %s นาที',
+                  booking.id, trip_e - trip_s, OT_MIN_TRIP_MINUTES)
+        return None
 
     new_slots = _build_ot_slots(rate_configs, trip_s, trip_e)
     if not new_slots:
@@ -149,6 +154,76 @@ def auto_generate_ot(booking, mileage, *, actor_id, notify=True):
     if notify:
         _n_ot_created(booking, ot)
     return ot
+
+
+def ot_matches_trip(ot, mileage) -> bool:
+    """OT ก้อนนี้ยังตรงกับเวลาทริปที่บันทึกไว้ตอนนี้ไหม (2026-07-27)
+    False = ค่า OT คำนวณจากเวลาชุดเก่า — ตัวเลขเงินเชื่อไม่ได้ ต้องให้คนตรวจ"""
+    trip = _trip_minutes(mileage)
+    if not ot or not trip:
+        return True
+    return slots_match_trip([(s.start_time, s.end_time) for s in ot.slots], *trip)
+
+
+def _recompute_ot(ot, booking, mileage, trip_s, trip_e):
+    """แทน slot + ยอดรวมของ ot ด้วยค่าที่คำนวณจากเวลาทริปปัจจุบัน — ไม่ commit เอง
+    คืน (text, category) สำหรับ flash"""
+    rate_configs = OTRateConfig.query.filter_by(is_active=True).order_by(OTRateConfig.sort_order).all()
+    rate_configs = _select_rate_configs_for_weekday(rate_configs, mileage.actual_end.weekday())
+    new_slots    = _build_ot_slots(rate_configs, trip_s, trip_e) if rate_configs else []
+    old_amount   = float(ot.total_amount or 0)
+
+    if not new_slots:
+        ot.is_deleted = True
+        ot.deleted_at = get_bkk_time()
+        db.session.flush()
+        _log.info('[ot recompute] %s → ไม่เข้าเกณฑ์ OT แล้ว soft-delete (booking #%s)',
+                  ot.ot_number, booking.id)
+        return (f'⚠️ เวลาทริปเปลี่ยน — {ot.ot_number} ไม่เข้าเกณฑ์ OT แล้ว '
+                f'(ทริป {trip_e - trip_s} นาที < {OT_MIN_TRIP_MINUTES} นาที) '
+                f'ย้ายไปแท็บ "ลบ" ให้แล้ว (เดิม {old_amount:,.0f} บาท)', 'warning')
+
+    ot.slots        = new_slots
+    ot.date         = mileage.actual_end.date()
+    ot.total_hours  = round(sum(float(s.hours)  for s in new_slots), 2)
+    ot.total_amount = round(sum(float(s.amount) for s in new_slots), 2)
+    db.session.flush()
+    _log.info('[ot recompute] %s booking #%s %.2f → %.2f บาท',
+              ot.ot_number, booking.id, old_amount, float(ot.total_amount))
+    return (f'คำนวณ {ot.ot_number} ใหม่ตามเวลาทริปที่แก้ '
+            f'({old_amount:,.0f} → {float(ot.total_amount):,.0f} บาท)', 'info')
+
+
+def sync_ot_for_trip(booking, mileage, *, actor_id, notify=True):
+    """จุดเดียวที่ route เรียกตอนปิด/แก้ทริป — แทนการเรียก auto_generate_ot() ตรง (2026-07-27)
+
+    ยังไม่มี OT       → สร้างใหม่ (auto_generate_ot เดิม)
+    มี OT และตรงเวลา  → ไม่ทำอะไร
+    มี OT แต่ไม่ตรง   → คำนวณใหม่ ถ้าแก้ได้ (unpaid + ไม่ใช่ OT ที่แอดมินแก้มือ)
+                       ถ้าแก้ไม่ได้ → คืนคำเตือนให้คนตรวจ ห้ามแก้เงินที่จ่ายไปแล้วเงียบๆ
+
+    คืน [(text, category), ...] ให้ route flash เอง (pattern เดียวกับ close_trip)
+    """
+    ot = DriverOT.query.filter_by(booking_id=booking.id, is_deleted=False).first()
+    if not ot:
+        auto_generate_ot(booking, mileage, actor_id=actor_id, notify=notify)
+        return []
+
+    trip = _trip_minutes(mileage)
+    if not trip or ot_matches_trip(ot, mileage):
+        return []
+    trip_s, trip_e = trip
+
+    if ot.status == 'paid':
+        _log.warning('[ot mismatch] %s จ่ายแล้ว ไม่คำนวณใหม่ (booking #%s)', ot.ot_number, booking.id)
+        return [(f'⚠️ เวลาทริปเปลี่ยน แต่ {ot.ot_number} จ่ายไปแล้ว — ระบบไม่คำนวณใหม่ให้ '
+                 f'กรุณาตรวจสอบยอด OT เองที่หน้าค่าใช้จ่ายคนขับ', 'warning')]
+    if ot.is_manual:
+        _log.warning('[ot mismatch] %s แก้มือไว้ ไม่คำนวณใหม่ (booking #%s)', ot.ot_number, booking.id)
+        return [(f'⚠️ เวลาทริปเปลี่ยน แต่ {ot.ot_number} ถูกแก้ด้วยมือไว้ — ระบบไม่ทับของที่แก้เอง '
+                 f'กรุณาตรวจสอบยอด OT เองที่หน้าค่าใช้จ่ายคนขับ', 'warning')]
+
+    return [_recompute_ot(ot, booking, mileage, trip_s, trip_e)]
 
 
 def _deduct_central_or_department(booking, mileage, trip_cost, distance, fuel_price, target_date, source):

@@ -8,7 +8,7 @@
    - ⚠️ position:static ที่ ≥1200 ต้องมี flex parent (.ml2-body-row) ถึงจะเรียงข้าง <main>
    ตัวแปร optional: pending_count · approver_pending_count · is_budget_approver
 #}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
 <style>
 .sidebar2-scope{
   --sb2-green:#06C167;
@@ -66,8 +66,8 @@
   content:""; position:absolute; left:-16px; top:6px; bottom:6px; width:4px;
   border-radius:0 4px 4px 0; background:var(--sb2-green); animation: sb2FadeUp .3s ease both; animation-delay:.5s;
 }
-.sidebar2-scope .nav-item .material-symbols-outlined{ font-size:22px; transition: transform .18s ease; }
-.sidebar2-scope .nav-item:hover .material-symbols-outlined{ transform: scale(1.1); }
+.sidebar2-scope .nav-item .material-symbols-rounded{ font-size:22px; transition: transform .18s ease; }
+.sidebar2-scope .nav-item:hover .material-symbols-rounded{ transform: scale(1.1); }
 .sidebar2-scope .nav-item .chevron{ margin-left:auto; font-size:18px; color:var(--sb2-gray-500); transition: transform .25s ease; }
 .sidebar2-scope .submenu-toggle:checked ~ .nav-item.has-submenu .chevron{ transform: rotate(180deg); }
 
@@ -82,7 +82,7 @@
 }
 .sidebar2-scope .sub-nav-item:hover{ background:var(--sb2-gray-100); color:var(--sb2-ink); padding-left:34px; }
 .sidebar2-scope .sub-nav-item.active{ background:var(--sb2-gray-100); color:var(--sb2-ink); }
-.sidebar2-scope .sub-nav-item .material-symbols-outlined{ font-size:18px; }
+.sidebar2-scope .sub-nav-item .material-symbols-rounded{ font-size:18px; }
 
 /* pending badge (จำนวนรออนุมัติ) — เขียว pill ชิดขวา */
 .sidebar2-scope .sb2-badge{
@@ -91,7 +91,7 @@
   background:var(--sb2-green); color:#fff; border-radius:999px; font-size:12px; font-weight:700;
 }
 
-.sidebar2-scope .material-symbols-outlined{
+.sidebar2-scope .material-symbols-rounded{
   font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
   line-height:1;
 }
@@ -192,16 +192,16 @@
       {% for item in section['items'] %}
         {% if item.group %}
         <input type="checkbox" id="sb2grp-{{ sidx }}-{{ loop.index }}" class="submenu-toggle" hidden {% if item.open %}checked{% endif %}>
-        <label for="sb2grp-{{ sidx }}-{{ loop.index }}" class="nav-item has-submenu rounded-3"><span class="material-symbols-outlined">{{ item.icon }}</span>{{ item.group }}<span class="material-symbols-outlined chevron">expand_more</span></label>
+        <label for="sb2grp-{{ sidx }}-{{ loop.index }}" class="nav-item has-submenu rounded-3"><span class="material-symbols-rounded">{{ item.icon }}</span>{{ item.group }}<span class="material-symbols-rounded chevron">expand_more</span></label>
         <div class="submenu">
           <div class="submenu-inner">
             {% for c in item.children %}
-            <a class="sub-nav-item rounded-3{% if c.active %} active{% endif %}" href="{{ c.href }}"><span class="material-symbols-outlined">{{ c.icon }}</span>{{ c.label }}{% if c.badge %}<span class="sb2-badge">{{ c.badge }}</span>{% endif %}</a>
+            <a class="sub-nav-item rounded-3{% if c.active %} active{% endif %}" href="{{ c.href }}"><span class="material-symbols-rounded">{{ c.icon }}</span>{{ c.label }}{% if c.badge %}<span class="sb2-badge">{{ c.badge }}</span>{% endif %}</a>
             {% endfor %}
           </div>
         </div>
         {% else %}
-        <a class="nav-item rounded-3{% if item.active %} active{% endif %}" href="{{ item.href }}"><span class="material-symbols-outlined">{{ item.icon }}</span>{{ item.label }}{% if item.badge %}<span class="sb2-badge">{{ item.badge }}</span>{% endif %}</a>
+        <a class="nav-item rounded-3{% if item.active %} active{% endif %}" href="{{ item.href }}"><span class="material-symbols-rounded">{{ item.icon }}</span>{{ item.label }}{% if item.badge %}<span class="sb2-badge">{{ item.badge }}</span>{% endif %}</a>
         {% endif %}
       {% endfor %}
     {% endfor %}

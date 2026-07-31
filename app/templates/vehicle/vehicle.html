@@ -1,133 +1,111 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>จองรถบางบาล - BBCenter</title>
-    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
-    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
-    <!-- Vehicle page theme (prod, scoped body.zd) — vehicle.html เท่านั้น -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_zendenta.css') }}">
-</head>
-<body class="zd">
+{# vehicle.html — ปฏิทินการจองรถ (user-facing)
+   Phase 1 migrate 2026-07-28: shell → _base_ue.html · token → --bb-*
+   (เดิม standalone <html> + _shared/sidebar|header + body.zd + vehicle_zendenta.css)
 
-<div class="container-fluid">
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+   ⏸ เฟสถัดไป: component Calendar (.bb-mcal) + demand heatmap + redesign modal 4 ตัว
+   ห้าม rename class ในหน้านี้ — vehicle.js ผูกชื่อ/ID ไว้ตรงๆ
+#}
+{% extends '_base_ue.html' %}
 
-    {% set active_menu = 'vehicle' %}
-    {% include '_shared/sidebar.html' %}
+{% block title %}<title>จองรถบางบาล - BBCenter</title>{% endblock %}
+{% block page_title %}ปฏิทินการจองรถ{% endblock %}
 
-    <!-- Main Content -->
-    <main class="main-content vc-scope">
-        {% set page_section = 'บริการ' %}
-        {% set page_title = 'ปฏิทินการจองรถ' %}
-        {% include '_shared/header.html' %}
+{% block head %}
+{# ⏸ legacy CSS — modal 4 ตัวยังพึ่งอยู่ · ตัดออกเมื่อ migrate modal เฟสถัดไป
+   ⛔ ห้ามโหลด design-system.css — มัน override `body{background}` + `h1{font-family !important}`
+      ทำให้พื้นหลัง/หัวหน้าเพี้ยนจาก shell UE (vehicle_mileage.html ก็ไม่โหลด) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='core/css/tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='core/css/components/badge.css') }}">
+<!-- <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}"> -->
+{# ปฏิทิน + toolbar + mobile + .bk-* — --bb-* ล้วน (โหลดท้ายสุดเสมอ) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_calendar.css') }}">
+{% endblock %}
 
-        <!-- VIEW: CALENDAR -->
-        <div id="calendarView" class="container-xxl px-3 pt-2">
+{% block content %}
+<div id="calendarView">
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                <div class="vc-stack px-3 pt-2" style="margin-bottom: var(--vc-space-4);">
-                    {% for category, message in messages %}
-                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            {% endwith %}
+    {# Calendar toolbar — nav ซ้าย · เดือนกลาง · เวลาให้บริการขวา (layout = Bootstrap flex utility) #}
+    <div class="d-none d-md-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 mt-5">
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="bb-btn is-sec " id="todayBtn">วันนี้</button>
+            <button type="button" class="bb-btn is-sec is-icon" id="prevMonthBtn" title="เดือนก่อนหน้า">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <h4 class="cal-month-label text-center mb-0 fw-bold" id="currentMonthLabel"></h4>
+            <button type="button" class="bb-btn is-sec is-icon" id="nextMonthBtn" title="เดือนถัดไป">
+                <i data-lucide="chevron-right"></i>
+            </button>
+        </div>
+    </div>
 
-            <!-- Calendar toolbar — nav left · month center · service-hours caption right -->
-            <div class="cal-toolbar d-none d-md-grid pt-2">
-                <div class="cal-toolbar-left">
-                    <button type="button" class="vc-btn vc-btn-secondary" id="todayBtn">วันนี้</button>
-                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon" id="prevMonthBtn" title="เดือนก่อนหน้า">
-                        <i data-lucide="chevron-left"></i>
-                    </button>
-                    <h6 class="cal-month-label pt-2 text-header fw-bold" id="currentMonthLabel"></h6>
-                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon" id="nextMonthBtn" title="เดือนถัดไป">
-                        <i data-lucide="chevron-right"></i>
-                    </button>
-                </div>
-                <div></div>
-                <div class="d-flex align-items-center justify-content-end">
-                    <span class="cal-caption">08:00–17:00 · วันอาทิตย์ไม่ให้บริการ</span>
-                </div>
-            </div>
-
-            <!-- Mobile hero — month picker + service hours caption -->
-            <div class="vrc-m-hero d-md-none mb-3">
-                <div class="vrc-m-month d-flex align-items-center justify-content-between">
-                    <h6 class="vrc-m-month-label text-header fw-bold pt-2" id="currentMonthLabelMobile"></h6>
-                    <div class="vrc-m-month-controls">
-                        <button type="button" class="vrc-btn-icon" id="prevMonthBtnMobile" aria-label="เดือนก่อนหน้า">
-                            <i data-lucide="chevron-left"></i>
-                        </button>
-                        <button type="button" class="vrc-m-today-btn py-2 px-2 rounded-3" id="todayBtnMobile" aria-label="กระโดดไปวันนี้">
-                            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> วันนี้
-                        </button>
-                        <button type="button" class="vrc-btn-icon" id="nextMonthBtnMobile" aria-label="เดือนถัดไป">
-                            <i data-lucide="chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-                <p class="cal-caption mt-1 mb-0">08:00–17:00 · วันอาทิตย์ไม่ให้บริการ</p>
-            </div>
-
-            <div class="flex-grow-1">
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <div class="vc-card overflow-hidden" role="grid" aria-label="ปฏิทินการจองรถ — ใช้ปุ่มลูกศรซ้าย-ขวาเปลี่ยนเดือน, T เพื่อกระโดดไปวันนี้">
-                            <div class="calendar-grid calendar-grid-head text-header border-bottom" role="row">
-                                <div class="calendar-header-cell text-danger" role="columnheader" aria-label="อาทิตย์"><span class="d-none d-md-inline">อาทิตย์</span><span class="d-md-none">อา</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="จันทร์"><span class="d-none d-md-inline">จันทร์</span><span class="d-md-none">จ</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="อังคาร"><span class="d-none d-md-inline">อังคาร</span><span class="d-md-none">อ</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="พุธ"><span class="d-none d-md-inline">พุธ</span><span class="d-md-none">พ</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="พฤหัสบดี"><span class="d-none d-md-inline">พฤหัสบดี</span><span class="d-md-none">พฤ</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="ศุกร์"><span class="d-none d-md-inline">ศุกร์</span><span class="d-md-none">ศ</span></div>
-                                <div class="calendar-header-cell text-primary" role="columnheader" aria-label="เสาร์"><span class="d-none d-md-inline">เสาร์</span><span class="d-md-none">ส</span></div>
-                            </div>
-                            <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mobile list -->
-                <div class="row d-md-none mb-3">
-                    <div class="col-12">
-                        <!-- Day-bar: label + count + inline book button
-                             (Phase D revert 2026-05-23 — kept inline button per user request) -->
-                        <div class="vrc-m-daybar">
-                            <div class="vrc-m-daybar-text">
-                                <span class="vrc-m-daybar-label" id="mobileListDateLabel">รายการจอง</span>
-                                <span class="vrc-m-daybar-count" id="mobileDaybarCount"></span>
-                            </div>
-                            <button type="button" class="vc-btn vc-btn-primary py-3" id="mobileDateCountBtn"
-                                onclick="openBookingModal()" title="จองรถ">
-                                <i data-lucide="plus" class="vc-icon-sm"></i>
-                                จองรถ
-                            </button>
-                        </div>
-                        <div class="mobile-list-section" id="mobileListSection">
-                            <div id="mobileListContent"></div>
-                        </div>
-                    </div>
-                </div>
-
+    {# Mobile hero — month picker + เวลาให้บริการ (layout = Bootstrap flex utility) #}
+    <div class="d-md-none pt-2 pb-1 mb-3">
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <h6 class="vrc-m-month-label mb-0" id="currentMonthLabelMobile"></h6>
+            <div class="d-inline-flex align-items-center gap-2">
+                <button type="button" class="bb-btn is-sec is-icon" id="prevMonthBtnMobile" aria-label="เดือนก่อนหน้า">
+                    <span class="material-symbols-rounded">chevron_left</span>
+                </button>
+                <button type="button" class="bb-btn is-sec" id="todayBtnMobile" aria-label="กระโดดไปวันนี้">
+                    <span class="material-symbols-rounded">calendar_month</span> วันนี้
+                </button>
+                <button type="button" class="bb-btn is-sec is-icon" id="nextMonthBtnMobile" aria-label="เดือนถัดไป">
+                    <span class="material-symbols-rounded">chevron_right</span>
+                </button>
             </div>
         </div>
+    </div>
 
-    </main>
+    {# Month grid #}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="bb-card overflow-hidden" role="grid"
+                 aria-label="ปฏิทินการจองรถ — ใช้ปุ่มลูกศรซ้าย-ขวาเปลี่ยนเดือน, T เพื่อกระโดดไปวันนี้">
+                <div class="calendar-grid calendar-grid-head  py-2" role="row">
+                    <div class="text-danger text-center fw-bold py-2 px-2" role="columnheader" aria-label="อาทิตย์"><span class="d-none d-md-inline">อาทิตย์</span><span class="d-md-none">อา</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="จันทร์"><span class="d-none d-md-inline">จันทร์</span><span class="d-md-none">จ</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="อังคาร"><span class="d-none d-md-inline">อังคาร</span><span class="d-md-none">อ</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="พุธ"><span class="d-none d-md-inline">พุธ</span><span class="d-md-none">พ</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="พฤหัสบดี"><span class="d-none d-md-inline">พฤหัสบดี</span><span class="d-md-none">พฤ</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="ศุกร์"><span class="d-none d-md-inline">ศุกร์</span><span class="d-md-none">ศ</span></div>
+                    <div class="text-primary text-center fw-bold py-2 px-2" role="columnheader" aria-label="เสาร์"><span class="d-none d-md-inline">เสาร์</span><span class="d-md-none">ส</span></div>
+                </div>
+                <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
+            </div>
+        </div>
+    </div>
+
+    {# Mobile day list — label + count + ปุ่มจองรถ #}
+    <div class="row d-md-none mb-3">
+        <div class="col-12">
+            <div class="vrc-m-daybar d-flex align-items-center justify-content-between gap-3 py-3 px-1 mx-n1 mb-3">
+                <div class="vrc-m-daybar-text d-flex align-items-baseline gap-2">
+                    <span class="vrc-m-daybar-label" id="mobileListDateLabel">รายการจอง</span>
+                    <span class="vrc-m-daybar-count" id="mobileDaybarCount"></span>
+                </div>
+                <button type="button" class="bb-btn is-pri" id="mobileDateCountBtn"
+                        onclick="openBookingModal()" title="จองรถ">
+                    <i data-lucide="plus"></i>
+                    จองรถ
+                </button>
+            </div>
+            <div class="mobile-list-section" id="mobileListSection">
+                <div id="mobileListContent"></div>
+            </div>
+        </div>
+    </div>
+
 </div>
+{% endblock %}
 
+{% block modals %}
+{# จอง + แก้ไข ใช้ modal เดียวกัน (2026-07-28) — ดูรายละเอียดใน vehicle_book.html #}
+{% include 'vehicle/modals/vehicle_book.html' %}
+{% include 'vehicle/modals/vehicle_more_events.html' %}
+{% include 'vehicle/modals/vehicle_detail.html' %}
+{% endblock %}
 
+{% block scripts %}
 {# ══════════════════════════════════════════════════════════
    DATA INJECTION — Jinja2 → JavaScript
    ต้องอยู่ใน HTML (ไม่ใช่ .js) เพราะใช้ Jinja2 template
@@ -188,20 +166,5 @@ window.BOOKINGS = [
 ];
 </script>
 
-
-{# ── Modals (แยกไฟล์ vehicle-modal-*.html) ── #}
-{% include 'vehicle/modals/vehicle_book.html' %}
-{% include 'vehicle/modals/vehicle_edit.html' %}
-{% include 'vehicle/modals/vehicle_more_events.html' %}
-{% include 'vehicle/modals/vehicle_detail.html' %}
-
-
-<!-- Scripts -->
-<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle.js') }}"></script>
-
-</body>
-</html>
+{% endblock %}

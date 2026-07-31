@@ -31,7 +31,7 @@ event ทุกตัวลงท้าย `on_*` → ออกเป็น `dat
 
 | Component | Signature | ตัวอย่าง |
 |---|---|---|
-| **Input** | `Input(name, label='', value='', placeholder='', icon=None, hint='', error='', type='text', disabled=False, required=False)` | `Input('phone', 'เบอร์โทร', icon='phone', required=True)` |
+| **Input** | `Input(name, label='', value='', placeholder='', icon=None, hint='', error='', type='text', disabled=False, required=False, min=None, max=None, pattern=None, inputmode=None)` | `Input('phone', 'เบอร์โทร', icon='phone', required=True)` |
 | **Search** | `Search(placeholder='ค้นหา…', name='', value='', on_input='')` | `Search('ค้นหาทะเบียน', on_input='search')` |
 | **Button** | `Button(text='', variant='pri', size=None, icon=None, icon_only=False, disabled=False, on_click=None, type='button', href='', target='', title='', mobile_icon=False, block=False)` | `Button('บันทึก', 'pri', icon='check', on_click='save')` |
 | **DateRange** | `DateRange(name_start='date_start', name_end='date_end', start='', end='', preset='', placeholder='ทั้งหมด', align='left')` | `DateRange(placeholder='เลือกช่วงวันที่')` |
@@ -56,12 +56,15 @@ event ทุกตัวลงท้าย `on_*` → ออกเป็น `dat
 | **TimePicker** | `TimePicker(name='time', value='09:00', step=1)` | `TimePicker('start_time', value='09:00', step=15)` |
 | **TimeRange** | `TimeRange(name_start='time_start', name_end='time_end', start='08:00', end='10:00', step=15, warn_before='')` | `TimeRange(start='08:00', end='10:00', warn_before='08:00')` |
 | **Calendar** | `Calendar(events={}, year=None, month=None, max_chips=2, caption='', book_url='')` | `Calendar(events=cal_events, caption='08:00–17:00', book_url=url_for('vehicle.vehicle'))` |
+| **DateField** ★ | `DateField(name='date', value='', placeholder='เลือกวันที่', label='')` | `DateField('date', label='วันที่เดินทาง :', id='bk_date_field')` |
+| **TimeRangeField** ★ | `TimeRangeField(name_start='time_start', name_end='time_end', start='08:00', end='17:00', step=15, label='', show_duration=False)` | `TimeRangeField(start='08:00', end='17:00', label='ช่วงเวลาเดินทาง', show_duration=True, id='bk_timerange_field')` |
 
 - ค่า `value`/`counts` ISO: วัน `'YYYY-MM-DD'` · เวลา `'HH:MM'` · `counts` = `{iso: จำนวนงาน}` (badge แดง)
 - event: `bb-weekstrip:change {date}` · `bb-datepicker:change {date}` · `bb-timepicker:change {value}` · `bb-timerange:change {start,end}`
 - TimeRange: end เลือกก่อน start ไม่ได้ · เลือก start เสร็จเด้งไป end · `warn_before='HH:MM'` = ค่าก่อนเกณฑ์เป็นสีเตือน
 - **Calendar** ปฏิทินรายเดือน: `events` = dict `{'YYYY-MM-DD': [{time, title, status, url}]}` · `status ∈ ok|wr|dg|info|neutral` (Controller แมป booking status เอง) · ช่องสูงเท่ากัน · เกิน `max_chips` → `+N รายการ` กดเป็น popover + ปุ่มจองรถ · `book_url` ตั้ง=นำทาง `url?date=…` · event `bb-calendar:daychange {date}` · `bb-calendar:eventclick {date,index}` · `bb-calendar:book {date}`
 - ทุกตัว include `core/js/bb-components.js` (auto-init) — เซ็ต hidden input ให้ · DatePicker/TimePicker step ตั้ง default ได้
+- **DateField/TimeRangeField (2026-07-29)** — component ใหม่แยกจาก DatePicker/TimeRange เดิม (คนละ interaction, ไม่แทนที่ของเก่า): DateField = ปฏิทินโชว์ใต้ trigger ตรงๆ เลือกวันแล้ว commit ทันที (ไม่มีขั้นพิมพ์เอง/ปุ่มยืนยัน แบบ DatePicker) + disable วันที่ผ่านมาแล้วในตัว; TimeRangeField = dropdown list เวลาแบน step เดียว (ไม่ใช่ column ชม./นาที 2 ขั้นแบบ TimeRange). ทั้งคู่ใช้ `.bb-field-box` เป็น trigger shell (icon+input+action ไอคอนขวา, กล่องเดียวคลิกได้ทั้งกล่อง). external prefill/reset: `document.getElementById(id).__bbSetValue(ds)`/`__bbGetValue()`/`__bbClear()` (DateField) · `__bbSetRange(start,end)`/`__bbGetRange()` (TimeRangeField) — ใช้เมื่อ modal เดียวรองรับทั้งสร้าง/แก้ไข (ดู `vehicle_book.html`#bookingModal, prefill ใน `openEditBookingModal()`). event: `bb-datefield:change {date}` · `bb-timerangefield:change {start,end}`. ที่มา: ดึงจาก hand-edit ทดลองใน `vehicle_book.html` เข้า canonical — first/only adopter ตอนนี้คือ booking modal
 
 ## Navigation / Filter
 
@@ -198,8 +201,8 @@ def fuel():
 
 ---
 
-## รายการครบ (22 component / 31 export)
+## รายการครบ (24 component / 33 export)
 
-`Table·Column · Badge·Status · Button · Card · KPI · Input · Search · Tabs·Tab · Segmented·Seg · Chip·Token · DateRange · Dropdown·MenuItem·MenuLabel·MenuDivider·MenuRich · Pagination · Modal · Drawer·Section·DescList · Timeline·TLItem · Empty · Spinner · Skeleton`
+`Table·Column · Badge·Status · Button · Card · KPI · Input · Search · Tabs·Tab · Segmented·Seg · Chip·Token · DateRange · Dropdown·MenuItem·MenuLabel·MenuDivider·MenuRich · Pagination · Modal · Drawer·Section·DescList · Timeline·TLItem · Empty · Spinner · Skeleton · DateField · TimeRangeField`
 
 import door เดียว: `from components import <ชื่อ>` (re-export ครบใน `__init__.py`)

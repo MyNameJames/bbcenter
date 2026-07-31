@@ -1,0 +1,917 @@
+/* ============================================================
+   vehicle_calendar.css — หน้าปฏิทินการจองรถ (vehicle.html) เท่านั้น
+   ─────────────────────────────────────────────────────────────
+   Phase 1 migrate (2026-07-28): shell → _base_ue.html · token → --bb-*
+   แทนที่ทั้งหมดของ: vehicle.css (block ปฏิทิน/mobile/bk-*) + vehicle_zendenta.css (ลบแล้ว)
+
+   ⚠️ vehicle.css **ไม่ถูกแตะ** — room.html/room.js + อีก 10 หน้ายังใช้ class ชุดเดียวกันอยู่
+      หน้านี้เลิกโหลด vehicle.css แล้ว จึง port เฉพาะที่หน้านี้ใช้มาไว้ที่เดียว
+
+   ยังพึ่งไฟล์เก่าอยู่ (modal 4 ตัว = เฟสถัดไป):
+     tokens.css (--vc-*) · badge.css (.vc-badge) · vehicle_admin.css (.va-cal)
+
+   ห้าม rename class ในไฟล์นี้ — vehicle.js ผูกชื่อไว้ตรงๆ
+   token: --bb-* เท่านั้น · ห้าม hex literal · radius binary 8/pill
+   ============================================================ */
+
+/* ── Calendar toolbar (desktop) — layout = Bootstrap flex utility (template)
+   เหลือแค่ identity: ขนาดตัวอักษร/สี/font ตัวเลข ── */
+.cal-month-label {
+    min-width: 200px;   /* กันเดือนยาว (กันยายน/พฤศจิกายน) ดันปุ่มเลื่อน — ไม่มี utility ตรงตัว */
+    color: var(--bb-str);
+}
+.cal-caption {
+    font-size: 13px;
+    color: var(--bb-mut);
+}
+
+/* ── Calendar grid ─────────────────────────────────────────── */
+/* 7 คอลัมน์เท่ากัน — ไม่มี Bootstrap utility ตรงตัว (row-cols สูงสุด 6),
+   ยังต้องเป็น CSS grid ของจริง จึงคงไว้ */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(90px, 1fr));
+    gap: 0;
+}
+.calendar-grid-head {
+    background: transparent;
+    border-top: 1px solid var(--bb-n200);
+    border-bottom: 1px solid var(--bb-n200);
+}
+/* padding/text-align ของหัวคอลัมน์ → utility (text-center py-2 px-2 ในเทมเพลต) */
+.calendar-header-cell {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--bb-body);
+    background: var(--bb-n50);
+}
+/* อาทิตย์ = วันไม่ให้บริการ (เดิมใช้ Bootstrap .text-danger/.text-primary — ⛔ §8) */
+.calendar-header-cell.cal-sun { color: var(--bb-dg-tx); }
+
+.calendar-cell {
+    padding: 8px;
+    min-height: 125px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    border-right: 1px solid var(--bb-n200);
+    border-bottom: 1px solid var(--bb-n200);
+    transition: background .08s;
+}
+.calendar-cell:nth-child(7n) { border-right: 0; }
+.calendar-cell:hover { background: var(--bb-n50); }
+.calendar-cell.selected {
+    background: var(--bb-n0);
+    position: relative;
+    z-index: 1;
+}
+.calendar-cell.other-month,
+.calendar-cell.other-month:hover {
+    background: var(--bb-n50);
+    opacity: .5;
+    cursor: default;
+}
+.calendar-cell.past-day { cursor: not-allowed; }
+.calendar-cell.past-day:hover { background: var(--bb-n50); }
+
+/* ── Date number — มุมขวาบน (วงกลมเดียวในปฏิทิน = วันที่เลือก) ── */
+.date-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-end;
+    width: 26px;
+    height: 26px;
+    font-size: 14px;   /* 13→14: ตรง .bb-cell-id (เลขในบริบทเดียวกันของระบบ) */
+    font-weight: 500;
+    line-height: 1;
+    color: var(--bb-str);
+    font-family: var(--bb-num-font);
+    font-feature-settings: 'tnum';
+}
+.calendar-cell.other-month .date-number { color: var(--bb-n500); }
+.today .date-number { color: var(--bb-str); font-weight: 500; }
+.calendar-cell.selected .date-number {
+    background: var(--bb-ink);
+    color: var(--bb-n0);
+    border-radius: 50%;
+    font-weight: 600;
+}
+
+/* ── Vehicle availability badge ────────────────────────────── */
+.vehicle-full-badge {
+    display: inline-block;
+    margin-top: 2px;
+    padding: 2px 5px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: var(--bb-r-surface);
+    background: var(--bb-dg-bg);
+    color: var(--bb-dg-tx);
+}
+
+/* ── Event chips ในช่องวัน ─────────────────────────────────── */
+.events-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.event-card {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    padding: 3px 7px;
+    font-size: 14px;   /* 13→14: เนื้อหาหลักที่อ่าน (เวลา+ปลายทาง) ตรง label-tier ระบบ */
+    font-weight: 500;
+    color: var(--bb-body);
+    background: var(--bb-n100);
+    border: 1px solid transparent;
+    border-radius: var(--bb-r-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: filter .08s ease;
+}
+.event-card:hover { filter: brightness(.96); }
+
+/* "+N รายการ" trigger — กดได้ = pill (§5) · icon คุมด้วย font-size ไม่ใช่ width/height
+   (เดิมใช้ width/height ซึ่งใช้ไม่ได้กับ Material Symbols <span> เลยไปใช้ default ~20px
+   ใหญ่กว่าตัวหนังสือ 12px มาก ดูไม่สมส่วน) */
+.event-more.vc-cal-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    margin-top: 2px;
+    padding: 3px 9px;
+    border: none;
+    border-radius: var(--bb-r-surface);
+    background: var(--bb-n50);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--bb-mut);
+    text-align: left;
+    cursor: pointer;
+    transition: background .1s, color .1s;
+}
+.event-more.vc-cal-more:hover {
+    color: var(--bb-str);
+    background: var(--bb-n100);
+    text-decoration: none;
+}
+.event-more.vc-cal-more .vc-cal-more-icon { font-size: 13px; line-height: 1; }
+
+/* ── Mobile hero — month picker + caption (≤767 · ซ่อนด้วย d-md-none) ── */
+/* .vrc-m-hero / .vrc-m-month / .vrc-m-month-controls — layout ย้ายไป utility ในเทมเพลตหมดแล้ว
+   (pt-2 pb-1 mb-3 · d-flex align-items-center justify-content-between mt-3 · d-inline-flex gap-2) */
+.vrc-m-month-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--bb-str);
+    font-family: var(--bb-num-font);
+    font-feature-settings: 'tnum';
+}
+/* .vrc-btn-icon / .vrc-m-today-btn ลบแล้ว (2026-07-30) — ปุ่ม toolbar มือถือย้ายไปใช้
+   .bb-btn.is-sec(.is-icon) canonical component แทน (ตรงกับปุ่ม desktop ในไฟล์นี้อยู่แล้ว
+   บรรทัด 30-37 ใน vehicle.html) กัน duplicate ของ Button component เดียวกัน */
+
+/* ── Mobile day-bar — label + count + ปุ่มจองรถ
+   layout = utility ในเทมเพลต (d-flex align-items-center justify-content-between gap-3
+   py-3 px-1 mx-n1 mb-3 — mx-n1/px-1 คู่กัน = เส้นแบ่งชนขอบจอเต็มความกว้างแบบเดิม)
+   เหลือ identity: เส้นขอบล่าง ── */
+.vrc-m-daybar { border-bottom: 1px solid var(--bb-n200); }
+/* min-width:0 จำเป็นให้ลูก ellipsis ทำงานใน flex — ไม่มี Bootstrap utility ตรงตัว */
+.vrc-m-daybar-text { min-width: 0; }
+.vrc-m-daybar-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--bb-str);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vrc-m-daybar-count {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--bb-mut);
+    white-space: nowrap;
+    font-family: var(--bb-num-font);
+    font-feature-settings: 'tnum';
+}
+.vrc-m-daybar-count:empty { display: none; }
+
+/* ── Mobile event cards ────────────────────────────────────── */
+.vrc-m-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 24px;
+}
+.vrc-m-evt {
+    background: var(--bb-n0);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    overflow: hidden;
+    transition: border-color .12s, transform .12s;
+}
+.vrc-m-evt:hover { border-color: var(--bb-n400); }
+.vrc-m-evt:active { transform: scale(.985); }
+
+.vrc-m-evt-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+}
+.vrc-m-evt-dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 7px;
+    border-radius: 50%;
+    background: var(--bb-n500);
+    flex-shrink: 0;
+}
+.vrc-m-evt-dot--approved  { background: var(--bb-ok); }
+.vrc-m-evt-dot--pending   { background: var(--bb-wr); }
+.vrc-m-evt-dot--approver  { background: var(--bb-info); }
+.vrc-m-evt-dot--rejected  { background: var(--bb-dg); }
+.vrc-m-evt-dot--group     { background: var(--bb-ink); }
+.vrc-m-evt-dot--completed { background: var(--bb-n500); }
+
+.vrc-m-evt-body { flex: 1; min-width: 0; }
+.vrc-m-evt-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--bb-str);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vrc-m-evt-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 6px;
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--bb-mut);
+}
+.vrc-m-evt-meta .sep { color: var(--bb-n400); }
+
+/* status pill — bg tint + text tone ไม่มีเส้นขอบ (ตรง .bb-status §12) */
+.vrc-m-evt-status {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: var(--bb-r-surface);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.vrc-m-evt-status--approved  { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
+.vrc-m-evt-status--pending   { background: var(--bb-wr-bg);   color: var(--bb-wr-tx); }
+.vrc-m-evt-status--approver  { background: var(--bb-info-bg); color: var(--bb-info-tx); }
+.vrc-m-evt-status--rejected  { background: var(--bb-dg-bg);   color: var(--bb-dg-tx); }
+.vrc-m-evt-status--group     { background: var(--bb-accent-bg); color: var(--bb-accent-dk); }
+.vrc-m-evt-status--completed { background: var(--bb-n100);    color: var(--bb-mut); }
+
+/* group toggle chevron */
+.vrc-m-evt-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    margin-top: -2px;
+    border: 0;
+    border-radius: var(--bb-r-pill);
+    background: transparent;
+    color: var(--bb-mut);
+    cursor: pointer;
+    transition: background .12s;
+}
+.vrc-m-evt-toggle:hover { background: var(--bb-n100); }
+.vrc-m-evt-toggle i { width: 16px; height: 16px; transition: transform .2s ease; }
+.vrc-m-evt-toggle:not(.collapsed) i { transform: rotate(180deg); }
+.grp-toggle .grp-chevron { transition: transform .2s ease; }
+.grp-toggle:not(.collapsed) .grp-chevron { transform: rotate(180deg); }
+
+/* group sub-rows */
+.vrc-m-evt-sub {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border-top: 1px solid var(--bb-n200);
+    background: var(--bb-n50);
+}
+.vrc-m-evt-sub-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    background: var(--bb-n0);
+    color: var(--bb-str);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+}
+.vrc-m-evt-sub-row:hover { background: var(--bb-n100); border-color: var(--bb-n400); }
+.vrc-m-evt-sub-time {
+    flex-shrink: 0;
+    min-width: 42px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--bb-str);
+    font-family: var(--bb-num-font);
+    font-feature-settings: 'tnum';
+}
+.vrc-m-evt-sub-body { flex: 1; min-width: 0; }
+.vrc-m-evt-sub-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--bb-str);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vrc-m-evt-sub-meta {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--bb-mut);
+}
+
+/* empty state */
+.vrc-m-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    padding: 48px 16px;
+}
+.vrc-m-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    background: var(--bb-n50);
+    color: var(--bb-mut);
+}
+.vrc-m-empty-icon .material-symbols-rounded { font-size: 24px; }
+.vrc-m-empty-title { font-size: 16px; font-weight: 700; color: var(--bb-str); }
+.vrc-m-empty-sub { margin-top: -10px; font-size: 14px; line-height: 1.6; color: var(--bb-mut); }
+
+/* ── Mobile list shell ─────────────────────────────────────── */
+.mobile-list-section { display: none; }
+.mobile-indicator    { display: none; }
+
+/* ── Motion ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+    .vrc-m-hero { animation: vrc-m-rise .35s cubic-bezier(.2,.8,.2,1) both; }
+    .vrc-m-daybar-label,
+    .vrc-m-daybar-count { animation: vrc-m-fade .2s cubic-bezier(.2,.8,.2,1) both; }
+    .vrc-m-evt {
+        animation: vrc-m-item-in .2s cubic-bezier(.2,.8,.2,1) both;
+        animation-delay: calc(var(--i, 0) * 30ms);
+    }
+    .vrc-m-empty { animation: vrc-m-item-in .35s cubic-bezier(.2,.8,.2,1) both; }
+}
+@keyframes vrc-m-rise    { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes vrc-m-fade    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vrc-m-item-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ============================================================
+   Mobile (≤767px) — ปฏิทินช่องสี่เหลี่ยมจัตุรัส + indicator ปริมาณงาน
+   ============================================================ */
+@media (max-width: 767px) {
+    /* ปฏิทินทิ้ง card chrome */
+    #calendarView .bb-card,
+    #calendarView .vc-card {
+        border: 0;
+        background: transparent;
+        border-radius: 0;
+        overflow: visible;
+    }
+
+    .calendar-grid {
+        grid-template-columns: repeat(7, 1fr);
+        border: 0;
+        border-radius: 0;
+        gap: 2px;
+        padding: 0 4px;
+    }
+    .calendar-grid-head { background: transparent; padding: 0 4px; border-top: 1px solid var(--bb-n200); border-bottom: 1px solid var(--bb-n200); }
+    .calendar-header-cell {
+        padding: 6px 0;
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--bb-mut);
+        background: transparent;
+        border: 0;
+    }
+
+    .calendar-cell {
+        min-height: 0;
+        height: auto;
+        aspect-ratio: 1;
+        padding: 0;
+        gap: 3px;
+        border: 0;
+        border-radius: var(--bb-r-surface);
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        transition: background .12s cubic-bezier(.2,.8,.2,1), transform .12s;
+    }
+    .calendar-cell:hover  { background: var(--bb-n100); }
+    .calendar-cell:active { transform: scale(.94); }
+
+    .calendar-cell .events-container,
+    .calendar-cell .event-more { display: none !important; }
+
+    .calendar-cell .date-number {
+        width: auto;
+        height: auto;
+        margin: 0;
+        align-self: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: inherit;
+        background: transparent;
+        border: 0;
+    }
+
+    /* วันนี้ = ช่องดำทึบ (กลับสีตัวอักษร) */
+    .calendar-cell.today,
+    .calendar-cell.today:hover { background: var(--bb-ink); color: var(--bb-n0); }
+    .calendar-cell.today .date-number { color: var(--bb-n0); font-weight: 600; background: transparent; }
+
+    /* วันที่เลือก = วงแหวน inset (ไม่ดันเลย์เอาต์) */
+    .calendar-cell.selected {
+        background: transparent;
+        outline: 0;
+        box-shadow: inset 0 0 0 1.5px var(--bb-ink);
+    }
+    .calendar-cell.selected .date-number { background: transparent; color: inherit; }
+    .calendar-cell.selected.today {
+        background: var(--bb-ink);
+        box-shadow: none;
+    }
+    .calendar-cell.selected.today .date-number { color: var(--bb-n0); }
+
+    .calendar-cell.other-month,
+    .calendar-cell.other-month:hover { background: transparent; opacity: .3; }
+    .calendar-cell.past-day { cursor: not-allowed; }
+    .calendar-cell.past-day:hover { background: var(--bb-n100); }
+
+    /* indicator ปริมาณงาน: 1 งาน = จุด · 2-3 = แถบสั้น · 4+ = แถบยาว */
+    .mobile-indicator {
+        display: block !important;
+        position: static;
+        width: 4px;
+        height: 4px;
+        margin: 0;
+        transform: none;
+        background: var(--bb-mut);
+        border-radius: 50%;
+    }
+    .mobile-indicator--bar-md,
+    .mobile-indicator--bar-lg { height: 3px; border-radius: var(--bb-r-pill); }
+    .mobile-indicator--bar-md { width: 14px; }
+    .mobile-indicator--bar-lg { width: 22px; }
+    .calendar-cell.today .mobile-indicator { background: var(--bb-n0); opacity: .7; }
+
+    .mobile-list-section {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        overflow: visible;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        #calendarBody { animation: vrc-m-fade .35s cubic-bezier(.2,.8,.2,1) .05s both; }
+    }
+}
+
+/* ============================================================
+   Booking / edit / detail modal — port จาก vehicle.css (token swap)
+   ⏸ redesign เป็น .bb-* = เฟสถัดไป
+   ============================================================ */
+
+/* ── field wrap + valid icon (ขวา) + lead icon (ซ้าย, 2026-07-29) ───────── */
+.bk-field-wrap { position: relative; }
+.bk-lead-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: var(--bb-mut);
+    pointer-events: none;
+}
+.bk-valid-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%) scale(.6);
+    font-size: 15px;
+    color: var(--bb-ok);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease-out, transform .15s ease-out;
+}
+.bk-field-wrap .form-control.is-valid ~ .bk-valid-icon { opacity: 1; transform: translateY(-50%) scale(1); }
+.bk-field-wrap .form-control { transition: border-color .15s ease-out, box-shadow .15s ease-out; }
+.form-control.is-valid,
+.was-validated .form-control:valid { background-image: none; }
+
+/* ── date picker — hybrid (2026-07-29): native <input type="date"> จริงถูกซ่อน
+   ไว้เฉพาะโซน icon ซ้าย (คลิกเปิด native picker ได้แค่ตรงนั้น) + โชว์ข้อความไทยเต็มแทน
+   text format ไม่สามารถทำผ่าน <input type="date"> ตรงๆ ได้ (เบราว์เซอร์คุม format เอง) ── */
+.bk-datepick { position: relative; }
+.bk-datepick-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 42px;
+    padding: 0 12px 0 40px;
+    font-size: 15px;
+    color: var(--bb-str);
+    background: var(--bb-n50);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+}
+.bk-datepick-display.is-empty { color: var(--bb-n500); }
+.bk-datepick-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: var(--bb-mut);
+    pointer-events: none;
+}
+/* native input ซ่อน (opacity 0) วางทับเฉพาะโซน icon ซ้าย 40px — คลิกที่ icon เท่านั้นถึงเปิด picker */
+.bk-datepick-native {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40px;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+.bk-datepick:focus-within .bk-datepick-display { border-color: var(--bb-ink); box-shadow: var(--bb-ring); }
+
+.bk-cal {
+    left: 0;
+    right: auto;
+    width: 100%;
+    max-width: none;
+    transform-origin: top center;
+}
+
+/* ── time picker ───────────────────────────────────────────── */
+.bk-timepick { position: relative; }
+.bk-timepick-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 42px;
+    padding: 0 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--bb-str);
+    background: var(--bb-n0);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    cursor: pointer;
+    font-family: var(--bb-num-font);
+    font-feature-settings: 'tnum';
+    transition: border-color .15s ease-out, box-shadow .15s ease-out;
+}
+.bk-timepick-btn:hover { border-color: var(--bb-mut); }
+.bk-timepick-btn[aria-expanded="true"] {
+    border-color: var(--bb-ink);
+    box-shadow: var(--bb-ring);
+}
+.bk-timepick-btn.bk-ot-active { border-color: var(--bb-wr); color: var(--bb-wr-tx); }
+.bk-timepick-caret { color: var(--bb-n500); flex-shrink: 0; transition: transform .15s ease-out; }
+.bk-timepick-btn[aria-expanded="true"] .bk-timepick-caret { transform: rotate(180deg); }
+.bk-time-sep { display: flex; align-items: center; color: var(--bb-n500); }
+
+.bk-timepick-pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: var(--bb-n0);
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    box-shadow: var(--bb-shadow-lg);
+    overflow: hidden;
+}
+.bk-timepick-pop[hidden] { display: none; }
+.bk-timepick-list {
+    max-height: 220px;
+    padding: 4px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+.bk-timepick-opt {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    border-radius: var(--bb-r-surface);
+    background: transparent;
+    color: var(--bb-str);
+    font-size: 15px;   /* 14→15: ตรง .bb-menu-item (list ให้เลือกค่าในระบบ) */
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    font-family: var(--bb-num-font);
+    font-feature-settings: 'tnum';
+    transition: background .12s ease-out;
+}
+.bk-timepick-opt:hover { background: var(--bb-n100); }
+.bk-timepick-opt--ot { color: var(--bb-wr-tx); }
+.bk-timepick-opt--active,
+.bk-timepick-opt--active:hover {
+    background: var(--bb-ink);
+    color: var(--bb-n0);
+    font-weight: 700;
+}
+
+/* ── time range v2 — mockup เทียบกับ time picker เดิมด้านบน (2026-07-29)
+   static placeholder เท่านั้น ยังไม่ wire JS จริง ── */
+.bk-time-v2 { display: flex; align-items: center; gap: 10px; }
+.bk-time-v2-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    background: var(--bb-n0);
+}
+.bk-time-v2-icon { font-size: 18px; color: var(--bb-mut); }
+.bk-time-v2-text {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--bb-str);
+    font-family: var(--bb-num-font);
+    font-feature-settings: 'tnum';
+}
+.bk-time-v2-caret { font-size: 18px; color: var(--bb-mut); }
+.bk-time-v2-to { flex-shrink: 0; font-size: 14px; color: var(--bb-mut); }
+
+/* ── duration / warning / inline error ─────────────────────── */
+.bk-duration-preview {
+    min-height: 1em;
+    font-size: 13px;
+    color: var(--bb-mut);
+}
+.bk-duration-preview:not(:empty)::before { content: '· '; color: var(--bb-mut); }
+
+.bk-ot-warn {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--bb-wr-tx);
+    background: var(--bb-wr-bg);
+    border: 1px solid transparent;
+    border-radius: var(--bb-r-surface);
+}
+.bk-ot-warn[hidden] { display: none; }
+.bk-ot-warn-icon { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+.bk-ot-warn-text strong { font-weight: 700; }
+
+.bk-inline-err {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--bb-dg-tx);
+}
+.bk-inline-err[hidden] { display: none; }
+
+.bk-noarrow { -moz-appearance: textfield; appearance: textfield; }
+.bk-noarrow::-webkit-outer-spin-button,
+.bk-noarrow::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.bk-info-note {
+    background: var(--bb-wr-bg);
+    border: 1px solid transparent;
+    color: var(--bb-wr-tx);
+}
+
+/* ── modal chrome ที่ใช้ร่วม (book / edit) ─────────────────── */
+.bk-header-title { font-size: 15px; font-weight: 600; color: var(--bb-str); }
+.bk-close { width: 28px; height: 28px; font-size: 12px; opacity: .45; }
+.bk-close:hover { opacity: .75; }
+.bk-divider { margin: 4px 0 8px; border-top: 1px dashed var(--bb-n300); opacity: 1; }   /* เส้นประ ตาม assignModal */
+.bk-row-main { font-size: 15px; font-weight: 500; color: var(--bb-str); }
+.bk-row-sub  { font-size: 14px; color: var(--bb-mut); }
+.bk-switch { width: 2.2em; height: 1.2em; cursor: pointer; }
+
+/* ── Detail modal ──────────────────────────────────────────── */
+.bk-detail-dialog { max-width: 440px; }
+.bk-detail-content {
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    overflow: hidden;
+    animation: bk-content-rise .35s cubic-bezier(.16,1,.3,1) .05s both;
+}
+.bk-detail-title { font-size: 16px; font-weight: 600; color: var(--bb-str); }
+.bk-detail-divider { margin: 0; border-top: 1px solid var(--bb-n200); }
+
+.bk-detail-content .bk-detail-head {
+    position: relative;
+    padding: 20px 24px 16px;
+    background: var(--bb-n0);
+}
+.bk-detail-content .bk-detail-eyebrow {
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--bb-mut);
+}
+.bk-detail-content .bk-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    opacity: .4;
+    transition: opacity .15s;
+}
+.bk-detail-content .bk-close:hover { opacity: .75; }
+
+/* status pill — icon + label เสมอ (§12) · ไม่มีเส้นขอบ */
+.bk-detail-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    margin-top: 10px;
+    padding: 0 10px;
+    border-radius: var(--bb-r-surface);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    animation: bk-pill-in .35s cubic-bezier(.16,1,.3,1) .15s both;
+}
+.bk-detail-status [data-lucide],
+.bk-detail-status svg.lucide { width: 14px; height: 14px; }
+.bk-detail-status--approved  { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
+.bk-detail-status--pending   { background: var(--bb-wr-bg);   color: var(--bb-wr-tx); }
+.bk-detail-status--approver  { background: var(--bb-info-bg); color: var(--bb-info-tx); }
+.bk-detail-status--rejected  { background: var(--bb-dg-bg);   color: var(--bb-dg-tx); }
+.bk-detail-status--group     { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
+.bk-detail-status--completed { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
+
+.bk-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 24px 20px;
+}
+.bk-detail-row { display: flex; align-items: flex-start; gap: 12px; animation: bk-row-in .3s ease-out both; }
+.bk-detail-row:nth-child(1) { animation-delay: .15s; }
+.bk-detail-row:nth-child(2) { animation-delay: .20s; }
+.bk-detail-row:nth-child(3) { animation-delay: .25s; }
+.bk-detail-icon { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; color: var(--bb-n500); }
+.bk-detail-text {
+    font-size: 15px;   /* 14→15: เนื้อหาหลักของ modal (ทะเบียน/คนขับ/เวลา) ตรง .bb-table td */
+    color: var(--bb-str);
+    font-feature-settings: 'tnum';
+}
+.bk-detail-row--primary .bk-detail-text { font-weight: 600; }   /* แยกชั้นด้วย weight แทนขนาด — เหมือน .bb-table th/td */
+.bk-detail-row--primary .bk-detail-icon { color: var(--bb-str); }
+.bk-detail-plate-code  { font-family: var(--bb-num-font); margin-right: 8px; }
+.bk-detail-plate-brand { color: var(--bb-mut); font-weight: 500; }
+
+.bk-detail-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 18px 24px 10px;
+    background: var(--bb-n50);
+}
+.bk-detail-section-label { font-size: 14px; font-weight: 500; color: var(--bb-mut); }
+.bk-detail-section-count { font-size: 13px; color: var(--bb-mut); font-family: var(--bb-num-font); }
+
+.bk-detail-members {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 16px 16px;
+    background: var(--bb-n50);
+}
+.bk-detail-member {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    background: var(--bb-n50);
+    transition: border-color .15s, background .15s;
+    animation: bk-member-in .3s cubic-bezier(.16,1,.3,1) both;
+    animation-delay: calc(.25s + var(--bk-i, 0) * .05s);
+}
+.bk-detail-member:hover { border-color: var(--bb-n400); }
+.bk-detail-member-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--bb-n200);
+    border-radius: 50%;
+    background: var(--bb-n0);
+    color: var(--bb-mut);
+}
+.bk-detail-member-avatar [data-lucide],
+.bk-detail-member-avatar svg.lucide { width: 14px; height: 14px; }
+.bk-detail-member-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.bk-detail-member-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.bk-detail-member-name { min-width: 0; font-size: 15px; font-weight: 500; color: var(--bb-str); }
+.bk-detail-member-trip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    font-size: 14px;
+    color: var(--bb-mut);
+}
+.bk-detail-member-pickup { margin-top: 2px; font-size: 13px; color: var(--bb-mut); }
+
+.bk-detail-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 20px;
+    background: var(--bb-n50);
+}
+.bk-detail-footer:has(#detailActions:empty) { display: none; }
+
+@keyframes bk-content-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes bk-pill-in      { from { opacity: 0; transform: translateY(-4px) scale(.95); } to { opacity: 1; transform: none; } }
+@keyframes bk-row-in       { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+@keyframes bk-member-in    { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .bk-detail-content,
+    .bk-detail-status,
+    .bk-detail-row,
+    .bk-detail-member,
+    .vrc-m-evt,
+    .vrc-m-hero { animation: none; }
+}

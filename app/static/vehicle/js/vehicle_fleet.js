@@ -22,22 +22,49 @@
         if (el) el.checked = !!v;
     }
 
-    // Edit Vehicle
-    const editVehicleModal = document.getElementById('editVehicleModal');
-    if (editVehicleModal) {
-        editVehicleModal.addEventListener('show.bs.modal', function (e) {
+    // ue-chip radio ตั้งค่าผ่าน JS (.checked=true เฉยๆ) ไม่ทำให้ badge/label ของ ue-chip-dd
+    // อัปเดต — bb-components.js sync ด้วย native 'change' event เท่านั้น (ดู initUeChipDd
+    // ใน bb-components.js) ต้อง dispatch เองหลังตั้งค่า .checked ให้ทุกตัวใน group ครบก่อน
+    function syncChip(anyRadioId) {
+        const el = document.getElementById(anyRadioId);
+        if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Add/Edit Vehicle — merged เป็น modal เดียว (#addVehicleModal, 2026-07-31)
+    // e.relatedTarget มี data-id = เปิดจากปุ่มแก้ไข (edit mode) · ไม่มี = เปิดจากปุ่ม toolbar (add mode)
+    const addVehicleModal = document.getElementById('addVehicleModal');
+    if (addVehicleModal) {
+        addVehicleModal.addEventListener('show.bs.modal', function (e) {
             const b = e.relatedTarget;
-            if (!b) return;
-            setVal('ev_id',        b.dataset.id);
-            setVal('ev_brand',     b.dataset.brand);
-            setVal('ev_model',     b.dataset.model);
-            setVal('ev_plate',     b.dataset.plate);
-            setVal('ev_capacity',  b.dataset.capacity);
-            setVal('ev_fuel_rate', b.dataset.fuelRate || 10);
-            setVal('ev_status',    b.dataset.status);
-            setVal('ev_svc_date',  b.dataset.svcDate || '');
-            setVal('ev_svc_km',    b.dataset.svcKm  || '');
-            setVal('ev_tax_date',  b.dataset.taxDate || '');
+            const isEdit = !!(b && b.dataset.id);
+
+            setVal('av_action',     isEdit ? 'edit_vehicle' : 'add_vehicle');
+            setVal('av_vehicle_id', isEdit ? b.dataset.id : '');
+            setText('avModalEyebrow',  isEdit ? '#แก้ไขข้อมูล' : '#แบบฟอร์ม');
+            setText('avModalTitle',    isEdit ? 'แก้ไขข้อมูลรถ' : 'เพิ่มรถใหม่ในระบบ');
+            setText('avModalSubtitle', isEdit ? 'แก้ไขข้อมูลรถคันนี้ในระบบ' : 'กรอกข้อมูลรถเพื่อเพิ่มเข้าระบบ');
+            const submitBtn = document.getElementById('avSubmitBtn');
+            if (submitBtn) submitBtn.title = isEdit ? 'บันทึกการแก้ไข' : 'บันทึกรถใหม่';
+
+            setVal('av_plate', isEdit ? b.dataset.plate : '');
+            setVal('av_brand', isEdit ? (b.dataset.brand || '') + (b.dataset.model ? ' ' + b.dataset.model : '') : '');
+            setVal('av_fuel_rate', isEdit ? (b.dataset.fuelRate || 10) : 10);
+            window.avSetCapacity?.(isEdit ? (parseInt(b.dataset.capacity, 10) || 1) : 8);
+
+            setChecked('av_vtype_pickup', isEdit && b.dataset.vehicleType === 'pickup');
+            setChecked('av_vtype_van',    isEdit && b.dataset.vehicleType === 'van');
+            setChecked('av_vtype_truck6', isEdit && b.dataset.vehicleType === 'truck6');
+            syncChip('av_vtype_pickup');
+
+            setChecked('av_status_active',      !isEdit || b.dataset.status === 'active');
+            setChecked('av_status_maintenance',  isEdit && b.dataset.status === 'maintenance');
+            syncChip('av_status_active');
+
+            const svcSection = document.getElementById('avServiceSection');
+            if (svcSection) svcSection.classList.toggle('d-none', !isEdit);
+            setVal('av_svc_date', isEdit ? (b.dataset.svcDate || '') : '');
+            setVal('av_svc_km',   isEdit ? (b.dataset.svcKm  || '') : '');
+            setVal('av_tax_date', isEdit ? (b.dataset.taxDate || '') : '');
         });
     }
 
@@ -52,9 +79,9 @@
         });
     }
 
-    // คนขับ: data-* อยู่บน .mf-driver-row — ปุ่ม view/edit/delete อ่านจาก row ที่ครอบ
+    // คนขับ: data-* อยู่บน .fleet-driver-row (<tr> จริง, 2026-07-30) — ปุ่ม view/edit/delete อ่านจาก row ที่ครอบ
     function driverRowOf(el) {
-        return el ? el.closest('.mf-driver-row') : null;
+        return el ? el.closest('.fleet-driver-row') : null;
     }
 
     function fillEditDriver(d) {
@@ -236,4 +263,51 @@
             window.lucide.createIcons();
         }
     });
+
+    // Tab รถ/คนขับ — สลับ panel เต็มความกว้าง (pattern เดียวกับ bindTab2Tabs ใน vehicle_admin.js)
+    function bindFleetTabs() {
+        const wrap = document.getElementById('fleetTabWrap');
+        if (!wrap) return;
+        const vehiclesPanel = document.getElementById('fleetPanelVehicles');
+        const driversPanel  = document.getElementById('fleetPanelDrivers');
+        wrap.querySelectorAll('.tab2-tab').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const panel = btn.dataset.tab || 'vehicles';
+                wrap.querySelectorAll('.tab2-tab').forEach(function (c) {
+                    c.classList.toggle('active', c === btn);
+                });
+                if (vehiclesPanel) vehiclesPanel.classList.toggle('d-none', panel !== 'vehicles');
+                if (driversPanel)  driversPanel.classList.toggle('d-none', panel !== 'drivers');
+            });
+        });
+    }
+    bindFleetTabs();
+
+    // Stepper "เพิ่มรถใหม่" (#addVehicleModal) — pattern เดียวกับ .ui-stepper ใน vehicle_book.html
+    // (min 1, ไม่มี max) — sync hidden input #fleetCapacityInput ด้วย ไม่งั้น capacity ไม่ถูกส่งไป
+    // form เลย (int(None) พังตอน controller อ่านค่า)
+    (function bindFleetCapacityStepper() {
+        const wrap  = document.getElementById('fleetCapacityStepper');
+        const input = document.getElementById('fleetCapacityInput');
+        if (!wrap || !input) return;
+        const minus = wrap.querySelector('.minus');
+        const plus  = wrap.querySelector('.plus');
+        const val   = wrap.querySelector('.step-value');
+        let count = parseInt(val.textContent, 10) || 1;
+        function render() {
+            val.textContent = count;
+            input.value = count;
+            minus.disabled = count <= 1;
+        }
+        minus.addEventListener('click', function () { if (count > 1) { count--; render(); } });
+        plus.addEventListener('click', function () { count++; render(); });
+        render();
+
+        // เรียกจากภายนอก (edit mode ของ #addVehicleModal) ให้ sync ทั้ง count ภายใน +
+        // hidden input + ตัวเลขที่โชว์ — pattern เดียวกับ window.bkSetPax ใน vehicle_book.html
+        window.avSetCapacity = function (n) {
+            count = Math.max(1, parseInt(n, 10) || 1);
+            render();
+        };
+    })();
 })();

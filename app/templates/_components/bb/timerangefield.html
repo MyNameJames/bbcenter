@@ -1,0 +1,39 @@
+{#
+  bb_timerangefield — ช่วงเวลา (เริ่ม→สิ้นสุด) แบบ dropdown list เวลาแบน step เดียว
+  ของ Component Library .bb-* — ต่างจาก bb_timerange (§ DATE/TIME): ไม่ใช่ column
+  ชม./นาที 2 ขั้น เลือกครั้งเดียวจบ · end กันเวลาก่อน start (option จางถ้าอยู่นอกช่วง)
+  CSS: core/css/components.css (.bb-trf* + reuse .bb-field-box)
+  JS:   core/js/bb-components.js  (auto-init [data-bb-timerangefield])
+
+  Usage:
+    {% from '_components/bb/timerangefield.html' import bb_timerangefield %}
+    {{ bb_timerangefield(start='08:00', end='17:00', step=15, label='ช่วงเวลาเดินทาง', show_duration=True) }}
+
+  params:
+    name_start/name_end  ชื่อ hidden input (default time_start/time_end)
+    start/end             'HH:MM'
+    step                  step นาที (default 15)
+    label                 ข้อความ label ด้านบน ('' = ไม่มี)
+    show_duration         True = โชว์ระยะเวลารวมต่อท้าย label ในวงเล็บ (sync จาก JS อัตโนมัติ)
+    id                    id บน root (ให้ JS ภายนอกเรียก document.getElementById(id).__bbSetRange(s,e) ได้)
+#}
+{% macro bb_timerangefield(name_start='time_start', name_end='time_end', start='08:00', end='17:00', step=15, label='', show_duration=false, id='') -%}
+{%- if label %}<label class="bb-label">{{ label }}{% if show_duration %} (<small data-bb-trf-duration></small>){% endif %}</label>{% endif %}
+<div class="bb-trf" data-bb-timerangefield data-step="{{ step }}"{% if id %} id="{{ id }}"{% endif %}>
+  <div class="bb-field-box bb-trf-unit" data-bb-trf-unit="start">
+    <span class="material-symbols-rounded bb-field-box-icon">schedule</span>
+    <input type="text" data-bb-trf-display readonly value="{{ start }}">
+    <span class="material-symbols-rounded bb-field-box-action">expand_more</span>
+    <div class="bb-trf-pop" data-bb-trf-pop></div>
+  </div>
+  <input type="hidden" name="{{ name_start }}" value="{{ start }}" data-bb-trf-value="start">
+  <small class="bb-trf-to">ถึง</small>
+  <div class="bb-field-box bb-trf-unit" data-bb-trf-unit="end">
+    <span class="material-symbols-rounded bb-field-box-icon">schedule</span>
+    <input type="text" data-bb-trf-display readonly value="{{ end }}">
+    <span class="material-symbols-rounded bb-field-box-action">expand_more</span>
+    <div class="bb-trf-pop" data-bb-trf-pop></div>
+  </div>
+  <input type="hidden" name="{{ name_end }}" value="{{ end }}" data-bb-trf-value="end">
+</div>
+{%- endmacro %}

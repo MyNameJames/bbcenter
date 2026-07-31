@@ -18,6 +18,15 @@ document.addEventListener('keydown', (ev) => {
         bootstrap.Popover.getInstance(el)?.hide();
     });
 });
+// ปิด popover "+N รายการ" เมื่อคลิกนอกพื้นที่ popover (trigger เองมี stopPropagation
+// อยู่แล้วเลยไม่ถูก listener นี้ตัดตอนตอนเปิด/toggle)
+document.addEventListener('click', (ev) => {
+    if (ev.target.closest('.popover.vc-cal-pop')) return;
+    if (!document.querySelector('.popover.vc-cal-pop.show')) return;
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+        bootstrap.Popover.getInstance(el)?.hide();
+    });
+});
 
 // Keyboard navigation — ← / → เปลี่ยนเดือน, T = วันนี้
 // Skip เมื่อ focus อยู่ใน input/textarea/contenteditable หรือ modal เปิดอยู่
@@ -57,6 +66,13 @@ const STATUS_DOT = {
     rejected:         'rejected',
     completed:        'approved',
 };
+const EVENT_CARD_STYLE = {
+    pending:          'background:var(--bb-wr-bg);color:var(--bb-wr-tx);',
+    waiting_approver: 'background:var(--bb-info-bg);color:var(--bb-info-tx);',
+    approved:         'background:var(--bb-ok-bg);color:var(--bb-ok-tx);',
+    rejected:         'background:var(--bb-dg-bg);color:var(--bb-dg-tx);',
+    completed:        'background:var(--bb-n100);color:var(--bb-mut);'
+};
 const STATUS_ICON = {
     pending:          'clock',
     waiting_approver: 'send',
@@ -64,20 +80,13 @@ const STATUS_ICON = {
     rejected:         'circle-x',
     completed:        'check-circle-2'
 };
-const EVENT_CARD_STYLE = {
-    pending:          'background:var(--vc-amber-bg);border-color:var(--vc-amber-border);color:var(--vc-amber);',
-    waiting_approver: 'background:var(--vc-blue-bg);border-color:var(--vc-blue-border);color:var(--vc-blue);',
-    approved:         'background:var(--vc-green-bg);border-color:var(--vc-green-border);color:var(--vc-green);',
-    rejected:         'background:var(--vc-red-bg);border-color:var(--vc-red-border);color:var(--vc-red);',
-    completed:        'background:var(--vc-bg-subtle);border-color:var(--vc-border);color:var(--vc-fg-muted);'
-};
 
 /* ── State ─────────────────────────────────────── */
 let currentDate      = new Date();
 currentDate.setDate(1);
 let selectedDate     = new Date();
 let calendarCollapsed = false;
-let bookingModal, editBookingModal, eventDetailModal, moreEventsModal;
+let bookingModal, eventDetailModal, moreEventsModal;
 
 /* Hide cancelled bookings ใน user-facing view (2026-05-23) — admin หน้าอื่นยังเห็น */
 const mockEvents = (window.BOOKINGS || []).filter(e => e.status !== 'cancelled');
@@ -109,9 +118,17 @@ function isSoloBooking(e) {
 
 /* ── Init (module deferred — DOM is ready) ────── */
 bookingModal     = new bootstrap.Modal(document.getElementById('bookingModal'));
-editBookingModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
 eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
 moreEventsModal  = new bootstrap.Modal(document.getElementById('moreEventsModal'));
+
+/* ปิด popover "+N รายการ" ทุกครั้งที่ modal ใดๆ ในหน้ากำลังจะเปิด — จุดเดียวครอบทุกทาง
+   (เดิมปะเฉพาะ openEventDetail() แล้วพลาด — ปุ่ม "จองรถ"/คลิกช่องวันก็เปิด modal ได้เหมือนกัน
+   แต่ไม่ผ่านจุดนั้น ทำให้ popover ที่ append ไปที่ <body> ลอยทะลุ backdrop ขึ้นมา) */
+document.addEventListener('show.bs.modal', () => {
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+        bootstrap.Popover.getInstance(el)?.hide();
+    });
+});
 
 initFlatpickr();
 renderCalendar();
@@ -149,18 +166,16 @@ unlockMonthNav();
 document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     this.classList.add('was-validated');
-    const date = document.getElementById('bk_date').value;
-    if (!date) {  // bk_date เป็น hidden → validate เอง
+    const date = bkDateFieldEl()?.__bbGetValue() || '';
+    if (!date) {
         const err = document.getElementById('bk_date_err');
         if (err) err.hidden = false;
-        document.getElementById('bk_datepick_btn')?.focus();
         return;
     }
     if (!this.checkValidity()) return;
-    const tStart = document.getElementById('bk_start_time').value;
-    const tEnd   = document.getElementById('bk_end_time').value;
-    document.getElementById('bk_start_datetime').value = date + 'T' + tStart;
-    document.getElementById('bk_end_datetime').value   = date + 'T' + tEnd;
+    const range = bkTimeRangeEl()?.__bbGetRange() || {};
+    document.getElementById('bk_start_datetime').value = date + 'T' + range.start;
+    document.getElementById('bk_end_datetime').value   = date + 'T' + range.end;
     this.submit();
 });
 document.querySelectorAll('#bookingForm [required]').forEach(field => {
@@ -179,33 +194,10 @@ document.getElementById('bookingModal')?.addEventListener('hidden.bs.modal', fun
         f.classList.remove('was-validated');
         f.reset();
         f.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
-    }
-});
-
-/* ── editBookingForm validation ────────────────── */
-// 2026-05-23: mirror bookingForm pattern — compose hidden start/end datetime จาก
-//   edit_date + edit_start_time + edit_end_time (visible split fields) ก่อน submit
-document.getElementById('editBookingForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    this.classList.add('was-validated');
-    if (!this.checkValidity()) return;
-    const date   = document.getElementById('edit_date').value;
-    const tStart = document.getElementById('edit_start_time').value;
-    const tEnd   = document.getElementById('edit_end_time').value;
-    document.getElementById('editStartDatetime').value = date + 'T' + tStart;
-    document.getElementById('editEndDatetime').value   = date + 'T' + tEnd;
-    this.submit();
-});
-document.querySelectorAll('#editBookingForm [required]').forEach(field => {
-    ['input', 'change'].forEach(evt => field.addEventListener(evt, () => {
-        field.classList.toggle('is-valid', field.checkValidity());
-    }));
-});
-document.getElementById('editBookingModal')?.addEventListener('hidden.bs.modal', function() {
-    const f = document.getElementById('editBookingForm');
-    if (f) {
-        f.classList.remove('was-validated');
-        f.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
+        // form.reset() คืนแค่ hidden input ของแต่ละ component ไม่คืนตัวเลข/ข้อความที่โชว์ — sync มือ
+        window.bkSetPax?.(1);
+        bkDateFieldEl()?.__bbClear();
+        bkTimeRangeEl()?.__bbSetRange('08:00', '17:00');
     }
 });
 
@@ -247,86 +239,18 @@ function expandCalendar() {
     });
 }
 
-/* ── Flatpickr ─────────────────────────────────── */
-// Shared helper: convert native date input → flatpickr w/ Thai display "วันจันทร์ที่ 4 พฤษภาคม 2569"
-//   - dateFormat 'Y-m-d' → hidden value (form submit + .value reads ยังทำงาน)
-//   - altInput visible = readable Thai+BE format
-//   - guard `_flatpickr` กัน init ซ้ำ
-const _TH_DAYS_FP   = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
-const _TH_MONTHS_FP = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-                       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-function _initThaiDatePicker(input) {
-    if (!input || input._flatpickr) return;
-    flatpickr(input, {
-        dateFormat: 'Y-m-d',
-        altInput: true,
-        altInputClass: 'form-control',
-        altFormat: 'thai_be',  // custom marker — branch ใน formatDate
-        minDate: 'today',
-        locale: (flatpickr.l10ns && flatpickr.l10ns.th) || 'default',
-        disableMobile: true,
-        formatDate: (date, format) => {
-            if (format === 'thai_be') {
-                return `วัน${_TH_DAYS_FP[date.getDay()]}ที่ ${date.getDate()} ${_TH_MONTHS_FP[date.getMonth()]} ${date.getFullYear() + 543}`;
-            }
-            return flatpickr.formatDate(date, format);
-        },
-    });
-}
-
-// Shared helper: bind start_time + end_time → duration preview (live "X ชม. Y นาที")
-function _bindTimeDuration(startEl, endEl, previewEl) {
-    if (!startEl || !endEl) return;
-    const update = () => {
-        if (!previewEl) return;
-        const s = startEl.value, e = endEl.value;
-        if (!s || !e || e <= s) { previewEl.textContent = ''; return; }
-        const [sh, sm] = s.split(':').map(Number);
-        const [eh, em] = e.split(':').map(Number);
-        const mins = (eh * 60 + em) - (sh * 60 + sm);
-        const h = Math.floor(mins / 60), m = mins % 60;
-        const parts = [];
-        if (h) parts.push(`${h} ชม.`);
-        if (m) parts.push(`${m} นาที`);
-        previewEl.textContent = `ระยะเวลา ${parts.join(' ')}`;
-    };
-    startEl.addEventListener('change', () => {
-        endEl.min = startEl.value;
-        if (endEl.value && endEl.value <= startEl.value) endEl.value = '';
-        update();
-    });
-    endEl.addEventListener('change', update);
-    return update;
-}
-
 function initFlatpickr() {
-    // booking modal: date(va-cal)+time(picker) จัดการใน bkBindBookingControls แล้ว
+    // booking modal (จอง+แก้ไข ใช้ modal เดียวกัน) — date/time เป็น DateField/TimeRangeField
+    // component แล้ว (bb-components.js) จัดการใน bkBindBookingControls แค่ event/OT warning
+    // flatpickr เอาออกแล้ว (2026-07-28) — เดิมใช้เฉพาะ edit modal ที่รวมเข้า bookingModal แล้ว
 }
 
-function initFlatpickrInModal() {
-    // 2026-05-23: edit modal restructured ให้ mirror book modal — date / start_time / end_time แยก field
-    _initThaiDatePicker(document.getElementById('edit_date'));
-    _bindTimeDuration(
-        document.getElementById('edit_start_time'),
-        document.getElementById('edit_end_time'),
-        document.getElementById('edit_duration_preview'),
-    );
-}
-
-/* ══ Booking modal — date (va-cal) + time picker + OT warning ══════
-   2026-06-10: date=ปฏิทินคลิกเดียว · time=list 00:00–23:30 (default 08:00–17:00)
+/* ══ Booking modal — DateField/TimeRangeField (component กลาง) + OT warning ══════
+   2026-07-29: date/time ย้ายจาก native input + custom list → DateField/TimeRangeField
+   (core/js/bb-components.js, event 'bb-datefield:change'/'bb-timerangefield:change')
    · OT warning เมื่อวันอาทิตย์ / นอกเวลา 08:00–17:00 (อ่าน rate จาก window.OT_RATES) */
-const BK_DOW_S = ['อา','จ','อ','พ','พฤ','ศ','ส'];
-const BK_MON_S = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
-                  'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const BK_WORK_START = 480;   // 08:00 (นาที)
 const BK_WORK_END   = 1020;  // 17:00
-const BK_TIMES = (() => {
-    const a = [];
-    for (let h = 0; h < 24; h++) for (let m = 0; m < 60; m += 30)
-        a.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-    return a;
-})();
 const _t2m = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
 function _fmtDur(mins) {
     const h = Math.floor(mins / 60), m = mins % 60, parts = [];
@@ -335,115 +259,36 @@ function _fmtDur(mins) {
     return parts.join(' ') || '0 นาที';
 }
 
-let bkCalCursor = null;   // Date — เดือนที่ปฏิทินโชว์ (วันที่ 1)
-let bkSelDate   = null;   // Date — วันที่เลือก
+let bkSelDate = null;   // Date — sync จาก event bb-datefield:change (bkBindBookingControls)
 
-function bkRenderCal() {
-    const dowWrap = document.getElementById('bk_cal_dow');
-    const days    = document.getElementById('bk_cal_days');
-    const title   = document.getElementById('bk_cal_title');
-    if (!days || !bkCalCursor) return;
-    const y = bkCalCursor.getFullYear(), m = bkCalCursor.getMonth();
-    if (title) title.textContent = `${TH_MONTHS[m]} ${y + 543}`;
-    if (dowWrap && !dowWrap.childElementCount) {
-        dowWrap.innerHTML = BK_DOW_S.map((d, i) => {
-            const c = i === 0 ? ' va-cal-dow-cell--sun' : i === 6 ? ' va-cal-dow-cell--sat' : '';
-            return `<span class="va-cal-dow-cell${c}">${d}</span>`;
-        }).join('');
-    }
-    const pad = new Date(y, m, 1).getDay();
-    const dim = new Date(y, m + 1, 0).getDate();
-    const todayMid = new Date(); todayMid.setHours(0, 0, 0, 0);
-    let cells = '';
-    for (let i = 0; i < pad; i++) cells += `<span class="va-cal-cell va-cal-cell--empty"></span>`;
-    for (let dnum = 1; dnum <= dim; dnum++) {
-        const d  = new Date(y, m, dnum);
-        const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(dnum).padStart(2, '0')}`;
-        const dw = d.getDay();
-        const isSel   = bkSelDate && d.toDateString() === bkSelDate.toDateString();
-        const isToday = d.toDateString() === new Date().toDateString();
-        const isPast  = d < todayMid;
-        let cls = 'va-cal-cell';
-        if (isSel)              cls += ' va-cal-cell--active';
-        if (isToday && !isSel)  cls += ' va-cal-cell--today';
-        if (dw === 0)           cls += ' va-cal-cell--sun';
-        else if (dw === 6)      cls += ' va-cal-cell--sat';
-        if (isPast)
-            cells += `<span class="${cls} va-cal-cell--empty" style="opacity:.32;">${dnum}</span>`;
-        else
-            cells += `<button type="button" class="${cls}" data-date="${ds}">${dnum}</button>`;
-    }
-    days.innerHTML = cells;
-}
+function bkDateFieldEl() { return document.getElementById('bk_date_field'); }
+function bkTimeRangeEl() { return document.getElementById('bk_timerange_field'); }
 
-function bkSetDate(ds) {
-    const [yy, mm, dd] = ds.split('-').map(Number);
-    bkSelDate   = new Date(yy, mm - 1, dd);
-    bkCalCursor = new Date(yy, mm - 1, 1);
-    document.getElementById('bk_date').value = ds;
-    const val = document.getElementById('bk_datepick_val');
-    val.textContent = `${BK_DOW_S[bkSelDate.getDay()]}. ${dd} ${BK_MON_S[mm - 1]} ${yy + 543}`;
-    val.classList.remove('bk-datepick-val--empty');
-    const err = document.getElementById('bk_date_err');
-    if (err) err.hidden = true;
-    bkRenderCal();
-    bkUpdateWarning();
-}
-
+/* ตั้งค่าวัน/ช่วงเวลาแบบโปรแกรม (เปิด modal สร้างใหม่/แก้ไข) — bkSelDate + OT warning
+   sync ผ่าน event listener ใน bkBindBookingControls (component ยิง event เองตอน __bbSetValue) */
+function bkSetDate(ds) { bkDateFieldEl()?.__bbSetValue(ds); }
 function bkClearDate() {
+    bkDateFieldEl()?.__bbClear();
     bkSelDate = null;
-    bkCalCursor = new Date(); bkCalCursor.setDate(1);
-    document.getElementById('bk_date').value = '';
-    const val = document.getElementById('bk_datepick_val');
-    val.textContent = 'เลือกวันที่เดินทาง';
-    val.classList.add('bk-datepick-val--empty');
-    bkRenderCal();
     bkUpdateWarning();
 }
-
-function bkBuildTimeLists() {
-    document.querySelectorAll('#bookingModal .bk-timepick').forEach(tp => {
-        const list = tp.querySelector('.bk-timepick-list');
-        if (list.childElementCount) return;
-        list.innerHTML = BK_TIMES.map(t => {
-            const ot = _t2m(t) < BK_WORK_START || _t2m(t) > BK_WORK_END;
-            return `<button type="button" class="bk-timepick-opt${ot ? ' bk-timepick-opt--ot' : ''}" data-val="${t}" role="option">${t}</button>`;
-        }).join('');
-    });
-}
-
-function bkSelectTime(target, val) {
-    const tp = document.querySelector(`.bk-timepick[data-target="${target}"]`);
-    if (!tp) return;
-    document.getElementById(target).value = val;
-    tp.querySelector('.bk-timepick-val').textContent = val;
-    tp.querySelectorAll('.bk-timepick-opt').forEach(o =>
-        o.classList.toggle('bk-timepick-opt--active', o.dataset.val === val));
-    bkUpdateDuration();
+function bkSetTimeRange(start, end) {
+    bkTimeRangeEl()?.__bbSetRange(start, end);
     bkUpdateWarning();
-}
-
-function bkUpdateDuration() {
-    const p = document.getElementById('bk_duration_preview');
-    if (!p) return;
-    const s = document.getElementById('bk_start_time').value;
-    const e = document.getElementById('bk_end_time').value;
-    if (!s || !e || e <= s) { p.textContent = ''; return; }
-    p.textContent = `ระยะเวลา ${_fmtDur(_t2m(e) - _t2m(s))}`;
 }
 
 /* คำนวณค่าล่วงเวลาสารถีจากวัน+เวลา — null = ไม่เข้าเกณฑ์ OT */
 function bkComputeOT() {
     const rates = window.OT_RATES || [];
     if (!bkSelDate) return null;
-    if (!document.getElementById('needDriver')?.checked) return null;  // ไม่ใช้คนขับ = ไม่มี OT
     const jsDow = bkSelDate.getDay();
     if (jsDow === 0) {  // วันอาทิตย์ = หยุดทั้งวัน
         const r = rates.find(x => x.dow === 6);
         return { type: 'sunday', rate: r ? r.rate : null };
     }
-    const sMin = _t2m(document.getElementById('bk_start_time').value || '08:00');
-    const eMin = _t2m(document.getElementById('bk_end_time').value   || '17:00');
+    const range = bkTimeRangeEl()?.__bbGetRange() || {};
+    const sMin = _t2m(range.start || '08:00');
+    const eMin = _t2m(range.end   || '17:00');
     if (eMin <= sMin) return null;
     const segs = [];
     if (sMin < BK_WORK_START) segs.push([sMin, Math.min(eMin, BK_WORK_START)]);
@@ -466,9 +311,6 @@ function bkUpdateWarning() {
     const box = document.getElementById('bk_ot_warn');
     const txt = document.getElementById('bk_ot_warn_text');
     if (!box || !txt) return;
-    const sBtn = document.querySelector('.bk-timepick[data-target="bk_start_time"] .bk-timepick-btn');
-    const eBtn = document.querySelector('.bk-timepick[data-target="bk_end_time"] .bk-timepick-btn');
-    [sBtn, eBtn].forEach(b => b && b.classList.remove('bk-ot-active'));
     const ot = bkComputeOT();
     if (!ot) { box.hidden = true; txt.innerHTML = ''; return; }
     if (ot.type === 'sunday') {
@@ -479,92 +321,26 @@ function bkUpdateWarning() {
     } else {
         const rTxt = `ชั่วโมงละ <strong>${ot.rates.map(r => r.toLocaleString()).join('/')} บาท</strong>`;
         txt.innerHTML = `เวลาที่เลือกอยู่ <strong>นอกเวลาทำงานของสารถี (08:00–17:00)</strong></br>: หากไม่ใช่งานส่วนกลาง จะมีค่าล่วงเวลาสารถี <strong>${Math.round(ot.amount).toLocaleString()} บาท</strong></br>: (นอกเวลา ${_fmtDur(ot.minutes)} · ${rTxt})`;
-        [sBtn, eBtn].forEach(b => b && b.classList.add('bk-ot-active'));
     }
     box.hidden = false;
     initIcons(box);
 }
 
-function bkCloseAllTimePops(except) {
-    document.querySelectorAll('#bookingModal .bk-timepick').forEach(tp => {
-        if (tp === except) return;
-        tp.querySelector('.bk-timepick-pop').hidden = true;
-        tp.querySelector('.bk-timepick-btn').setAttribute('aria-expanded', 'false');
-    });
-}
-
 function bkBindBookingControls() {
     if (!document.getElementById('bookingModal')) return;
-    bkBuildTimeLists();
 
-    /* ── date calendar ── */
-    const dBtn = document.getElementById('bk_datepick_btn');
-    const dPop = document.getElementById('bk_cal_pop');
-    const closeDate = () => { if (dPop) { dPop.hidden = true; dBtn?.setAttribute('aria-expanded', 'false'); } };
-    dBtn?.addEventListener('click', e => {
-        e.stopPropagation();
-        const open = dBtn.getAttribute('aria-expanded') === 'true';
-        bkCloseAllTimePops();
-        if (open) { closeDate(); return; }
-        if (!bkCalCursor) { bkCalCursor = new Date(); bkCalCursor.setDate(1); }
-        bkRenderCal();
-        dPop.hidden = false;
-        dBtn.setAttribute('aria-expanded', 'true');
+    /* ── DateField: user เลือกวันเองในปฏิทิน (ไม่ผ่าน bkSetDate) → sync bkSelDate + OT ── */
+    bkDateFieldEl()?.addEventListener('bb-datefield:change', e => {
+        const [yy, mm, dd] = e.detail.date.split('-').map(Number);
+        bkSelDate = new Date(yy, mm - 1, dd);
+        bkUpdateWarning();
     });
-    document.getElementById('bk_cal_prev')?.addEventListener('click', e => {
-        e.stopPropagation();
-        bkCalCursor = new Date(bkCalCursor.getFullYear(), bkCalCursor.getMonth() - 1, 1);
-        bkRenderCal();
-    });
-    document.getElementById('bk_cal_next')?.addEventListener('click', e => {
-        e.stopPropagation();
-        bkCalCursor = new Date(bkCalCursor.getFullYear(), bkCalCursor.getMonth() + 1, 1);
-        bkRenderCal();
-    });
-    document.getElementById('bk_cal_days')?.addEventListener('click', e => {
-        const b = e.target.closest('[data-date]');
-        if (!b) return;
-        bkSetDate(b.dataset.date);
-        closeDate();
-    });
-
-    /* ── time pickers ── */
-    document.querySelectorAll('#bookingModal .bk-timepick').forEach(tp => {
-        const btn  = tp.querySelector('.bk-timepick-btn');
-        const pop  = tp.querySelector('.bk-timepick-pop');
-        const list = tp.querySelector('.bk-timepick-list');
-        btn.addEventListener('click', e => {
-            e.stopPropagation();
-            const open = btn.getAttribute('aria-expanded') === 'true';
-            bkCloseAllTimePops();
-            closeDate();
-            if (open) { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); return; }
-            pop.hidden = false;
-            btn.setAttribute('aria-expanded', 'true');
-            const active = list.querySelector('.bk-timepick-opt--active');
-            if (active) list.scrollTop = active.offsetTop - list.clientHeight / 2 + active.clientHeight / 2;
-        });
-        list.addEventListener('click', e => {
-            const o = e.target.closest('[data-val]');
-            if (!o) return;
-            bkSelectTime(tp.dataset.target, o.dataset.val);
-            pop.hidden = true;
-            btn.setAttribute('aria-expanded', 'false');
-        });
-    });
-
-    /* ── ปิด popover เมื่อคลิกนอกพื้นที่ ── */
-    document.addEventListener('click', e => {
-        if (!e.target.closest('.bk-datepick')) closeDate();
-        if (!e.target.closest('.bk-timepick')) bkCloseAllTimePops();
-    });
+    /* ── TimeRangeField: user เลือกเวลาเอง → recompute OT warning ── */
+    bkTimeRangeEl()?.addEventListener('bb-timerangefield:change', bkUpdateWarning);
 
     /* ── ผู้โดยสาร: เฉพาะตัวเลข ── */
     const pax = document.getElementById('bk_passenger_count');
     pax?.addEventListener('input', () => { pax.value = pax.value.replace(/[^0-9]/g, ''); });
-
-    /* ── toggle คนขับ → recompute OT warning ── */
-    document.getElementById('needDriver')?.addEventListener('change', bkUpdateWarning);
 }
 bkBindBookingControls();
 
@@ -740,7 +516,7 @@ function buildDesktopEventCards(dayEvents, ds) {
         }).join('');
 
         html+=`<div class="event-more vc-cal-more popover-trigger" data-ds="${ds}"
-            data-bs-toggle="popover" data-bs-placement="auto" data-bs-html="true"
+            data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true"
             data-bs-content="${popContent.replace(/"/g,'&quot;')}"
             onclick="event.stopPropagation()">+${extra.length} รายการ<i data-lucide="chevron-down" class="vc-cal-more-icon"></i></div>`;
     }
@@ -989,13 +765,13 @@ function openEventDetail(eventId) {
         actDiv.innerHTML = `
             <form action="${e.cancelUrl}" method="POST"
                 onsubmit="return confirm('ยืนยันยกเลิกการจอง #${e.id}? — แจ้ง Admin/Approver/Driver/ผู้ร่วมเดินทาง')">
-                <button type="submit" class="vc-btn vc-btn-danger vc-btn-sm" title="ยกเลิกการจองนี้">
+                <button type="submit" class="bb-btn is-danger-sec is-sm" title="ยกเลิกการจองนี้">
                     <i data-lucide="trash-2" class="vc-icon-sm"></i>
                     ยกเลิกการจอง
                 </button>
             </form>
             ${showEdit ? `
-            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" title="แก้ไขการจอง"
+            <button type="button" class="bb-btn is-sec is-sm" title="แก้ไขการจอง"
                 onclick="eventDetailModal.hide();setTimeout(()=>openEditBookingModal(${e.id}),300)">
                 <i data-lucide="pencil" class="vc-icon-sm"></i>
                 แก้ไข
@@ -1006,37 +782,50 @@ function openEventDetail(eventId) {
     eventDetailModal.show();
 }
 
+/* จอง+แก้ไข ใช้ #bookingForm เดียวกัน (2026-07-28) — สลับปุ่ม/หมายเหตุ/ปลายทาง submit ตามโหมด
+   create ใช้ data-create-action ที่ template เก็บไว้ (กัน action ค้างจาก edit ครั้งก่อน) */
+function bkSetMode(mode) {
+    const isEdit = mode === 'edit';
+    const btn = document.getElementById('bkSubmitBtn');
+    if (btn) {
+        btn.title = isEdit ? 'บันทึกการแก้ไข' : 'ส่งคำขอจองรถ';
+        btn.innerHTML = isEdit
+            ? 'บันทึก <i data-lucide="check" class="vc-icon-sm"></i>'
+            : 'ส่งคำขอ <i data-lucide="arrow-right" class="vc-icon-sm"></i>';
+        initIcons(btn);
+    }
+    const note = document.getElementById('bk_info_note_text');
+    if (note) {
+        note.innerHTML = isEdit
+            ? '<small class="fw-bold">หมายเหตุ :</small> <small>แก้ไขได้เฉพาะรายการที่ยังรออนุมัติ — การแก้ไขจะถูกบันทึกและแจ้ง Admin</small>'
+            : '<small class="fw-bold">แอดมิน :</small> <small>จะจัดสรรรถและคนขับให้ตามความเหมาะสม</small>';
+    }
+}
+
 function openEditBookingModal(eventId) {
     const e = mockEvents.find(b => b.id === eventId);
     if (!e) return;
     eventDetailModal?.hide();
+    if (moreEventsModal) moreEventsModal.hide();
 
-    const editForm = document.getElementById('editBookingForm');
-    editForm.action = e.editUrl;
-    editForm.classList.remove('was-validated');
-    editForm.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
+    const form = document.getElementById('bookingForm');
+    form.action = e.editUrl;
+    form.classList.remove('was-validated');
+    form.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
 
-    document.getElementById('editDest').value         = e.dest    || '';
-    document.getElementById('editPurpose').value      = e.purpose || '';
-    document.getElementById('editPax').value          = e.pax     || 1;
-    document.getElementById('editNeedDriver').checked = e.needDriver;
-    document.getElementById('editPickup').value       = e.pickup  || '';
-    document.getElementById('edit_start_time').value  = e.time    || '';
-    document.getElementById('edit_end_time').value    = e.timeEnd || '';
+    document.getElementById('bk_destination').value      = e.dest    || '';
+    document.getElementById('bk_purpose').value           = e.purpose || '';
+    window.bkSetPax?.(e.pax || 1);
+    document.getElementById('bk_pickup_location').value   = e.pickup  || '';
+    bkSetDate(e.date);
+    bkSetTimeRange(e.time || '08:00', e.timeEnd || '17:00');
 
-    initFlatpickrInModal();
-    setTimeout(() => {
-        // edit_date via flatpickr setDate → sync altInput Thai display
-        const editDate = document.getElementById('edit_date');
-        if (editDate?._flatpickr) editDate._flatpickr.setDate(e.date, true);
-        else if (editDate) editDate.value = e.date;
-        // Trigger duration preview + valid-icon refresh
-        document.getElementById('edit_end_time')?.dispatchEvent(new Event('change'));
-        editForm.querySelectorAll('[required]').forEach(field => {
-            if (field.value) field.classList.add('is-valid');
-        });
-        editBookingModal.show();
-    }, 50);
+    form.querySelectorAll('[required]').forEach(field => {
+        if (field.value) field.classList.add('is-valid');
+    });
+
+    bkSetMode('edit');
+    bookingModal.show();
 }
 
 function openBookingModal(dateStr=null) {
@@ -1047,11 +836,14 @@ function openBookingModal(dateStr=null) {
         ? `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth()+1)}-${pad(selectedDate.getDate())}`
         : null);
 
+    const form = document.getElementById('bookingForm');
+    form.action = form.dataset.createAction;   // คืนค่า action กัน edit ครั้งก่อนค้างไว้
+
     if (ds) bkSetDate(ds); else bkClearDate();
     // เวลา default 08:00–17:00 ทุกครั้งที่เปิด modal
-    bkSelectTime('bk_start_time', '08:00');
-    bkSelectTime('bk_end_time',   '17:00');
+    bkSetTimeRange('08:00', '17:00');
 
+    bkSetMode('create');
     bookingModal.show();
 }
 
@@ -1063,10 +855,8 @@ function openDuplicateModal(eventId) {
     const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     setVal('bk_purpose',         e.purpose || '');
     setVal('bk_destination',     e.dest    || '');
-    setVal('bk_passenger_count', e.pax     || 1);
+    window.bkSetPax?.(e.pax || 1);
     setVal('bk_pickup_location', e.pickup  || '');
-    const nd = document.getElementById('needDriver');
-    if (nd) nd.checked = !!e.needDriver;
 }
 
 /* ── Expose for HTML-string onclick handlers ── */

@@ -30,6 +30,8 @@ from .weekstrip import WeekStrip
 from .datepicker import DatePicker
 from .timepicker import TimePicker
 from .timerange import TimeRange
+from .datefield import DateField
+from .timerangefield import TimeRangeField
 from .combo import Combo
 from .upload import Upload
 from .bell import Bell
@@ -47,6 +49,7 @@ __all__ = ['BaseComponent', 'Table', 'Column', 'Badge', 'Status',
            'Pagination', 'Modal', 'Timeline', 'TLItem',
            'Empty', 'Spinner', 'Skeleton',
            'WeekStrip', 'DatePicker', 'TimePicker', 'TimeRange',
+           'DateField', 'TimeRangeField',
            'Combo', 'Upload', 'Bell', 'Callout', 'ToastRegion', 'Sidebar',
            'Slider', 'Calendar', 'Drawer', 'Section', 'DescList',
            'register_components']

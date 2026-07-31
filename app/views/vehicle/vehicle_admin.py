@@ -17,7 +17,7 @@ from services.vehicle.booking_service import (
 import os, time
 from collections import Counter
 from werkzeug.utils import secure_filename
-from components import Tabs, Tab, WeekStrip, DatePicker, ToastRegion
+from components import WeekStrip, ToastRegion
 from views.vehicle.vehicle_common import (
     vehicle_bp, adminfleet_bp, admincost_bp, driver_bp,
     is_vehicle_admin, _lookup_budget_for_booking,
@@ -62,6 +62,7 @@ def _fleet_add_vehicle():
         license_plate = request.form.get('license_plate'),
         capacity      = int(request.form.get('capacity')),
         fuel_rate     = float(request.form.get('fuel_rate') or 10),
+        vehicle_type  = request.form.get('vehicle_type') or None,
     )
     db.session.add(v)
     db.session.commit()
@@ -97,6 +98,7 @@ def _fleet_edit_vehicle():
     vehicle.license_plate = request.form.get('license_plate')
     vehicle.capacity      = int(request.form.get('capacity'))
     vehicle.status        = request.form.get('status', 'active')
+    vehicle.vehicle_type  = request.form.get('vehicle_type') or None
     fuel_rate_str = request.form.get('fuel_rate', '').strip()
     if fuel_rate_str:
         vehicle.fuel_rate = float(fuel_rate_str)
@@ -310,15 +312,7 @@ def admin_trips():
     # weekstrip badge — จำนวน booking ต่อวัน (ทุกสถานะ)
     day_counts = Counter(b.start_datetime.date().isoformat() for b in bookings)
 
-    tabs = Tabs([
-        Tab('ทั้งหมด',      count=0, active=True, value='all'),
-        Tab('รออนุมัติ',     count=0, value='pending'),
-        Tab('ส่ง Approver', count=0, value='waiting_approver'),
-        Tab('อนุมัติแล้ว',   count=0, value='approved'),
-        Tab('ปฏิเสธ',       count=0, value='rejected'),
-    ])
     weekstrip = WeekStrip(value='', counts=dict(day_counts))
-    week_datepicker = DatePicker(name='week_jump_date', value=now.date().isoformat(), align='right', id='weekJumpDp')
 
     return render_template('vehicle/admin/vehicle_admin.html',
                            bookings=bookings,
@@ -329,9 +323,7 @@ def admin_trips():
                            dept_items=dept_items,
                            fuel_price=fuel_price,
                            now=now,
-                           tabs=tabs,
                            weekstrip=weekstrip,
-                           week_datepicker=week_datepicker,
                            toast_region=ToastRegion())
 
 
@@ -441,12 +433,35 @@ def admin_merge():
     driver_id           = request.form.get('driver_id') or None
     trip_group          = request.form.get('trip_group', '').strip()
     expense_type        = request.form.get('expense_type') or None
-
-    if len(booking_ids) < 2:
-        return jsonify({'ok': False, 'msg': 'กรุณาเลือกรายการอย่างน้อย 2 รายการเพื่อรวมทริป'}), 400
+    central_category    = request.form.get('central_category') or None
+    trip_department     = request.form.get('trip_department', '').strip()
 
     if not assigned_vehicle_id:
         return jsonify({'ok': False, 'msg': 'กรุณาเลือกรถที่จะใช้สำหรับทริปนี้'}), 400
+
+    # ── เพิ่มงานเข้ากลุ่มที่มีอยู่แล้ว (2026-07-31) — งานเดิมในกลุ่มเป็นหลัก ไม่ถูกแตะ ──
+    # แยกจากทาง "รวมทริปใหม่/แก้ไขกลุ่มเดิม" ด้านล่างด้วย new_ids (id ที่ยังไม่ใช่สมาชิกกลุ่ม
+    # เดิม) — ครอบคลุมทั้งเคส "เพิ่มงานใหม่ล้วน" และเคสที่ resend สมาชิกเดิมมาปนโดยไม่ตั้งใจ
+    # (new_ids จะกรองออกเอง เหลือแค่ตัวใหม่จริงๆ ไปที่ merge_into_group)
+    existing_ids = ({b.id for b in VehicleBooking.query.filter_by(trip_group=trip_group).all()}
+                     if trip_group else set())
+    new_ids = [bid for bid in booking_ids if int(bid) not in existing_ids]
+
+    if existing_ids and new_ids:
+        ok, msg = booking_svc.merge_into_group(
+            trip_group, new_ids,
+            vehicle_id=assigned_vehicle_id, driver_id=driver_id,
+            expense_type=expense_type, central_category=central_category,
+            trip_department=trip_department,
+        )
+        if not ok:
+            return jsonify({'ok': False, 'msg': msg}), 400
+        db.session.commit()
+        return jsonify({'ok': True, 'trip_group': trip_group})
+
+    # ── รวมทริปใหม่ / แก้ไขทรัพยากรของกลุ่มเดิม (โค้ดเดิม — ไม่แตะ) ──────────
+    if len(booking_ids) < 2:
+        return jsonify({'ok': False, 'msg': 'กรุณาเลือกรายการอย่างน้อย 2 รายการเพื่อรวมทริป'}), 400
 
     # หมายเหตุ: ไม่บังคับเลือกคนขับตอน merge — สามารถ assign ทีหลังได้
 

@@ -34,6 +34,7 @@ class DriverOT(db.Model):
     paid_by_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     paid_at        = db.Column(db.DateTime, nullable=True)
     no_receipt     = db.Column(db.Boolean, default=False)  # True = OT ที่ไม่ต้องออกใบเสร็จ ("ผู้ใช้จ่ายเอง" tab) (2026-06-08)
+    is_manual      = db.Column(db.Boolean, default=False)  # True = แอดมินสร้าง/แก้เอง → sync_ot_for_trip() ห้ามคำนวณทับ (2026-07-27)
     is_deleted     = db.Column(db.Boolean, default=False)  # soft delete → tab "ลบ" (2026-06-08)
     deleted_at     = db.Column(db.DateTime, nullable=True)
     note           = db.Column(db.String(500), nullable=True)

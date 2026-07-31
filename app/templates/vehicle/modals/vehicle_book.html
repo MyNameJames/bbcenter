@@ -1,33 +1,244 @@
-{# vehicle-modal-book.html — Modal จองรถ (ใหม่)
+{# vehicle-modal-book.html — Modal จองรถ + แก้ไข (รวมเป็น modal เดียว 2026-07-28)
    วิธีใช้: {% include 'vehicle/modals/vehicle_book.html' %}
-   JS validation อยู่ใน vehicle.js (DOMContentLoaded > bookingForm)
+   JS: bkBindBookingControls() ผูก widget · openBookingModal()=สร้างใหม่ · openEditBookingModal()=แก้ไข
+       ทั้งคู่เรียก bkSetMode('create'|'edit') สลับปุ่ม/หมายเหตุ/form.action ให้ตรงโหมด (อยู่ใน vehicle.js)
+   data-create-action = URL เริ่มต้น (สร้างใหม่) — เก็บไว้คืนค่า action หลัง edit ครั้งก่อนเปลี่ยนมันไปแล้ว
 #}
+
+<style>
+.material-symbols-rounded{
+    font-variation-settings:
+    'FILL' 0,
+    'wght' 300,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+/* .bb-field-box* ย้ายไป components.css แล้ว (canonical, 2026-07-29) */
+
+/* ---------- Stepper ---------- */
+
+.ui-stepper{
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    height:46px;
+
+    padding:0 8px;
+
+    border:1px solid #dee2e6;
+    border-radius:10px;
+
+    background:#fff;
+
+}
+
+.step-btn{
+
+    width:30px;
+    height:30px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#111827;
+    color:#fff;
+
+    transition:.2s;
+
+}
+
+.step-btn:hover{
+
+    background:#000;
+
+}
+
+.step-btn:disabled{
+
+    background:#F3F4F6;
+    color:#9CA3AF;
+
+    cursor:not-allowed;
+
+}
+
+.step-value{
+
+    font-size:16px;
+    font-weight:600;
+
+    width:40px;
+    text-align:center;
+
+}
+
+/* .ui-time-range/.ui-time-picker/.ui-dropdown/.ui-option ย้ายเป็น .bb-trf-* ใน
+   components.css แล้ว (TimeRangeField component, 2026-07-29) */
+
+.driver-card{
+
+    position:relative;
+
+    display:flex;
+    gap:16px;
+
+    padding:18px;
+
+    border:1px solid #DEE2E6;
+    border-radius:14px;
+
+    background:#F8F9FA;
+
+    cursor:pointer;
+
+    transition:.2s;
+
+}
+
+.driver-card:hover{
+
+    border-color:#ADB5BD;
+    background:#fff;
+
+}
+
+.btn-check:checked + .driver-card{
+
+    border:2px solid #111827;
+
+    background:#F8FAFC;
+
+    box-shadow:0 0 0 3px rgba(17,24,39,.06);
+
+}
+
+.driver-card-check{
+
+    position:absolute;
+
+    right:16px;
+    top:16px;
+
+    width:24px;
+    height:24px;
+
+    border:2px solid #CED4DA;
+    border-radius:50%;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    transition:.2s;
+
+}
+
+.driver-card-check span{
+
+    font-size:16px;
+
+    opacity:0;
+
+}
+
+.btn-check:checked + .driver-card .driver-card-check{
+
+    background:#111827;
+    border-color:#111827;
+    color:#fff;
+
+}
+
+.btn-check:checked + .driver-card .driver-card-check span{
+
+    opacity:1;
+
+}
+
+.driver-card-icon{
+
+    width:52px;
+    height:52px;
+
+    border-radius:12px;
+
+    background:#fff;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    flex-shrink:0;
+
+}
+
+.driver-card-icon .material-symbols-rounded{
+
+    font-size:28px;
+
+    color:#495057;
+
+}
+
+.driver-card-title{
+
+    font-size:16px;
+
+    font-weight:600;
+
+    color:#111827;
+
+    margin-bottom:8px;
+
+}
+
+.driver-card-description{
+
+    font-size:13px;
+
+    line-height:1.7;
+
+    color:#6B7280;
+
+}
+
+/* .ui-datepicker/.calendar-*/.day*/.date-picker-wrapper ย้ายเป็น .bb-df-* ในcomponents.css แล้ว (DateField component, 2026-07-29) */
+</style>
+
 <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered ">
         <div class="card modal-content border-0">
-            <form action="{{ url_for('vehicle.book_vehicle_simple') }}" method="POST" id="bookingForm" novalidate>
+            <form action="{{ url_for('vehicle.book_vehicle_simple') }}"
+                  data-create-action="{{ url_for('vehicle.book_vehicle_simple') }}"
+                  method="POST" id="bookingForm" novalidate>
 
                 <input type="hidden" name="start_datetime" id="bk_start_datetime">
                 <input type="hidden" name="end_datetime"   id="bk_end_datetime">
 
-                <div class="card-header bg-white d-flex align-items-start">
-                    <div class="row">
-                        <div class="col-12 d-flex align-items-start gap-2 pt-3">
-                            <div class="row gx-0 d-flex justify-content-between">
-                                <div class="col gap-2 flex-grow-1">
-                                    <div class="row gx-0 d-flex align-items-center gap-2">
-                                        <div class="col">
-                                            <div class="row">
-                                                <span class="bk-row-main">{{ current_user.full_name or current_user.username }}</span>
-                                                <span class="bk-row-sub">{{ current_user.department or '' }}{% if current_user.email %} · {{ current_user.email }}{% endif %}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-auto d-flex align-items-start">
-                                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
+                {# header ตาม pattern assignModal (vehicle_admin.html) — eyebrow + ชื่อใหญ่ + สังกัด + avatar ขวา
+                   ไม่มีปุ่มปิด X ตาม assignModal เป๊ะๆ (ปิดผ่าน ยกเลิก/backdrop)
+                   ⚠️ ห้ามใช้ class "card-header" — Bootstrap บังคับ padding 16px ซ้าย-ขวา/8px บน-ล่าง
+                   + border-bottom เอง (assignModal ไม่มี ใช้ .bb-modal-body ห่อทั้งก้อน padding 20px แทน)
+                   ใส่ padding ตรงให้เท่ากับ .bb-modal-body (14px 20px) แทน #}
+                <div style="padding:14px 20px 0">
+                    <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                        <div>
+                            <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)">#แบบฟอร์มจองรถ</div>
+                            <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">{{ current_user.full_name or current_user.username }}</div>
+                            <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
+                                <span style="font-size:.8125rem;color:var(--bb-mut)">สังกัด {{ current_user.department or '-' }}</span>
                             </div>
+                        </div>
+                        <div class="bb-avatar flex-shrink-0" style="width:4.5rem;height:4.5rem;background:var(--bb-n100);color:var(--bb-mut)">
+                            <span class="material-symbols-rounded" style="font-size:2.5rem">hail</span>
                         </div>
                     </div>
                 </div>
@@ -35,134 +246,75 @@
                 <div class="card-body">
                     <hr class="bk-divider">
 
-                    {# วันที่ — ปฏิทิน va-cal (คลิกวันเดียวเลือกได้เลย) #}
-                    <div class="mb-3">
-                        <label class="form-label mb-1"><small>วันที่เดินทาง :</small></label>
-                        <div class="bk-datepick" id="bk_datepick">
-                            <input type="hidden" id="bk_date">
-                            <button type="button" class="bk-datepick-btn" id="bk_datepick_btn" aria-expanded="false" aria-haspopup="dialog">
-                                <i data-lucide="calendar" class="vc-icon-sm bk-datepick-lead"></i>
-                                <span class="bk-datepick-val bk-datepick-val--empty" id="bk_datepick_val">เลือกวันที่เดินทาง</span>
-                                <i data-lucide="chevron-down" class="vc-icon-sm bk-datepick-caret"></i>
-                            </button>
-                            <div class="va-cal bk-cal" id="bk_cal_pop" role="dialog" aria-label="เลือกวันที่เดินทาง" hidden>
-                                <div class="va-cal-head">
-                                    <button type="button" class="va-cal-nav" id="bk_cal_prev" aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
-                                        <i data-lucide="chevron-left" class="vc-icon-sm"></i>
-                                    </button>
-                                    <span class="va-cal-title" id="bk_cal_title"></span>
-                                    <button type="button" class="va-cal-nav" id="bk_cal_next" aria-label="เดือนถัดไป" title="เดือนถัดไป">
-                                        <i data-lucide="chevron-right" class="vc-icon-sm"></i>
-                                    </button>
-                                </div>
-                                <div class="va-cal-grid va-cal-dow" id="bk_cal_dow"></div>
-                                <div class="va-cal-grid" id="bk_cal_days"></div>
-                            </div>
-                        </div>
-                        <div class="bk-inline-err" id="bk_date_err" hidden>กรุณาเลือกวันที่เดินทาง</div>
-                    </div>
-
-                    {# ช่วงเวลา — time picker 00:00–23:30 (default 08:00–17:00) #}
-                    <div class="mb-3">
-                        <label class="form-label mb-1"><small>ช่วงเวลาเดินทาง :  <div id="bk_duration_preview" class="bk-duration-preview" aria-live="polite"></div></small></label>
-                        <div class="row align-items-center gx-2">
-                            <div class="col">
-                                <input type="hidden" id="bk_start_time">
-                                <div class="bk-timepick" data-target="bk_start_time" data-default="08:00">
-                                    <button type="button" class="bk-timepick-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="เวลาออกเดินทาง">
-                                        <span class="bk-timepick-val"></span>
-                                        <i data-lucide="chevron-down" class="vc-icon-sm bk-timepick-caret"></i>
-                                    </button>
-                                    <div class="bk-timepick-pop" hidden>
-                                        <div class="bk-timepick-list" role="listbox"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <span class="col-auto bk-time-sep"><i data-lucide="arrow-right" class="vc-icon-sm"></i></span>
-                            <div class="col">
-                                <input type="hidden" id="bk_end_time">
-                                <div class="bk-timepick" data-target="bk_end_time" data-default="17:00">
-                                    <button type="button" class="bk-timepick-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="เวลากลับ">
-                                        <span class="bk-timepick-val"></span>
-                                        <i data-lucide="chevron-down" class="vc-icon-sm bk-timepick-caret"></i>
-                                    </button>
-                                    <div class="bk-timepick-pop" hidden>
-                                        <div class="bk-timepick-list" role="listbox"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                    </div>
-
-                    {# คำเตือนค่าล่วงเวลาสารถี — โชว์เมื่อเลือกวันอาทิตย์ / นอกเวลา 08:00–17:00 #}
-                    <div class="bk-ot-warn mb-2" id="bk_ot_warn" hidden role="status" aria-live="polite">
-                        <div class="bk-ot-warn-text" id="bk_ot_warn_text"></div>
+                    <div class="form-group mb-3 mt-3">
+                        {{ component(date_field) }}
                     </div>
 
                     <div class="mb-2">
-                        <div class="row justify-content-between align-items-center gx-2">
-                            <div class="col-8">
-                                <label for="bk_purpose" class="form-label mb-1"><small>วัตถุประสงค์การเดินทาง :</small></label>
-                                <div class="bk-field-wrap">
-                                    <input type="text" name="purpose" id="bk_purpose" class="form-control pe-5" required>
-                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                                    <div class="invalid-feedback">กรุณาระบุวัตถุประสงค์</div>
-                                </div>
+                        {{ component(time_range_field) }}
+                        {# คำเตือนค่าล่วงเวลาสารถี — โชว์เมื่อเลือกวันอาทิตย์ / นอกเวลา 08:00–17:00 #}
+                        <div class="bk-ot-warn mb-3 mt-2" id="bk_ot_warn" hidden role="status" aria-live="polite">
+                            <div class="bk-ot-warn-text" id="bk_ot_warn_text"></div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <!-- วัตถุประสงค์ -->
+                        <div class="col-8">
+                            <label class="form-label" for="bk_purpose">วัตถุประสงค์การเดินทาง</label>
+                            <div class="bb-field-box">
+                                <span class="material-symbols-rounded bb-field-box-icon">description</span>
+                                <input type="text" id="bk_purpose" name="purpose" required class="form-control" autocomplete="off" placeholder="ระบุวัตถุประสงค์">
                             </div>
-                            <div class="col-4">
-                                <label for="bk_passenger_count" class="form-label mb-1"><small>จำนวนผู้เดินทาง :</small></label>
-                                <div class="bk-field-wrap">
-                                    <input type="number" name="passenger_count" id="bk_passenger_count" class="form-control pe-5 bk-noarrow" inputmode="numeric" pattern="[0-9]*" min="1" max="10" value="1" required>
-                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                                    <div class="invalid-feedback">กรุณาระบุจำนวน</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="mb-2">
-                        <label for="bk_destination" class="form-label mb-1"><small>สถานที่ปลายทาง :</small></label>
-                        <div class="bk-field-wrap">
-                            <input type="text" name="destination" id="bk_destination" class="form-control pe-5" required>
-                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                            <div class="invalid-feedback">กรุณาระบุสถานที่ปลายทาง</div>
                         </div>
-                    </div>
 
-                    <div class="mb-2">
-                        <label for="bk_pickup_location" class="form-label mb-1"><small>จุดขึ้นรถ :</small></label>
-                        <div class="bk-field-wrap">
-                            <input type="text" name="pickup_location" id="bk_pickup_location" class="form-control pe-5" placeholder="เช่น หน้าอาคารเรียน 1" required>
-                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                            <div class="invalid-feedback">กรุณาระบุจุดขึ้นรถ</div>
-                        </div>
-                    </div>
+                        <!-- จำนวนผู้เดินทาง -->
+                        <div class="col-4">
+                            <label class="form-label">จำนวนผู้เดินทาง</label>
+                            <input type="hidden" id="bk_passenger_count" name="passenger_count" value="1">
+                            <div class="ui-stepper">
+                                <button type="button" class="step-btn minus"><span class="material-symbols-rounded">remove</span></button>
+                                <span class="step-value">1</span>
 
-                    <div class="row pt-2">
-                        <div class="d-flex align-items-center gap-3 flex-grow-1">
-                            <span class="bk-row-main flex-grow-1">ต้องการพนักงานขับรถ</span>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input bk-switch" type="checkbox" name="need_driver" id="needDriver" checked>
+                                <button type="button" class="step-btn plus"><span class="material-symbols-rounded">add</span></button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bk-info-note rounded-2 pb-3 pt-2 px-3 mt-2">
-                        <div class="row">
-                            <div class="col">
-                                <div class="">
-                                    <small class="fw-bold">แอดมิน :</small>
-                                    <small>จะจัดสรรรถและคนขับให้ตามความเหมาะสม</small>
-                                </div>
+                    <input type="hidden" name="need_driver" value="on">
+
+                    <hr class="bk-divider">
+
+                        <div class="form-group mb-2 mt-3">
+                            <label for="bk_pickup_location" class="form-label">จุดขึ้นรถ</label>
+                            <div class="bb-field-box">
+                                <span class="material-symbols-rounded bb-field-box-icon border-end">hail</span>
+                                <input type="text" id="bk_pickup_location" name="pickup_location" required class="form-control p-2" autocomplete="off" placeholder="ระบุจุดขึ้นรถ">
                             </div>
                         </div>
-                    </div>
+
+                        <div class="form-group mb-2 ">
+                            <label for="bk_destination" class="form-label">สถานที่ปลายทาง</label>
+                            <div class="bb-field-box">
+                                <span class="material-symbols-rounded bb-field-box-icon border-end">directions_run</span>
+                                <input type="text" id="bk_destination" name="destination" required class="form-control p-2" autocomplete="off" placeholder="ระบุสถานที่ปลายทาง">
+                            </div>
+                        </div>
+
+                          <div class="form-group">
+                            <label for="travelDate" class="form-label">หมายเหตุ</label>
+                            <div class="bb-field-box">
+                                <span class="material-symbols-rounded bb-field-box-icon border-end">export_notes</span>
+                                <input type="text" id="travelDate" class="form-control p-2" placeholder="">
+                            </div>
+                        </div>
+
                 </div>
 
-                <div class="card-footer bg-white d-flex justify-content-end gap-2 pt-2 pb-3">
-                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                    <button type="submit" class="vc-btn vc-btn-primary" title="ส่งคำขอจองรถ">
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-end gap-2 pt-2 pb-3">
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri" id="bkSubmitBtn" title="ส่งคำขอจองรถ">
                         ส่งคำขอ
                         <i data-lucide="arrow-right" class="vc-icon-sm"></i>
                     </button>
@@ -172,3 +324,54 @@
         </div>
     </div>
 </div>
+<script>
+    const stepper = document.querySelector('.ui-stepper');
+
+const minus = stepper.querySelector('.minus');
+const plus = stepper.querySelector('.plus');
+const value = stepper.querySelector('.step-value');
+const paxInput = document.getElementById('bk_passenger_count');
+
+let count = 1;
+
+function render(){
+
+    value.textContent = count;
+    paxInput.value = count;
+
+    minus.disabled = count <= 1;
+    plus.disabled = count >= 10;
+
+}
+
+minus.onclick = () =>{
+
+    if(count > 1){
+
+        count--;
+        render();
+
+    }
+
+}
+
+plus.onclick = () =>{
+
+    if(count < 10){
+
+        count++;
+        render();
+
+    }
+
+}
+
+// เรียกจากภายนอก (แก้ไข/ทำซ้ำการจอง) ให้ sync ทั้ง count ภายใน + hidden input + ตัวเลขที่โชว์
+window.bkSetPax = function(n){
+    count = Math.max(1, Math.min(10, parseInt(n, 10) || 1));
+    render();
+};
+
+render();
+// TimeRangeField/DateField logic ย้ายไป core/js/bb-components.js แล้ว (component กลาง, 2026-07-29)
+</script>

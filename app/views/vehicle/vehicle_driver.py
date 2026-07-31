@@ -311,7 +311,10 @@ def driver_mileage():
 
     if entry_type == 'end':
         # notify_ot_created อยู่ใน auto_generate_ot() แล้ว (Phase 4, 2026-07-19)
-        mileage_svc.auto_generate_ot(booking, mileage, actor_id=current_user.id)
+        # sync_ot_for_trip แทน auto_generate_ot ตรง (2026-07-27) — ดู vehicle_mileage.py
+        for msg, cat in mileage_svc.sync_ot_for_trip(booking, mileage, actor_id=current_user.id):
+            flash(msg, cat)
+        db.session.commit()
         m2 = VehicleMileage.query.filter_by(booking_id=booking_id).first()
         result = mileage_svc.close_trip(booking, m2, source='driver_mileage')
         for msg, cat in result['flash_messages']:
