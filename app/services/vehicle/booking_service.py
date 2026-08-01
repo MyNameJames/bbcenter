@@ -242,6 +242,9 @@ def ungroup(booking):
     (vehicle_admin.js patchBooking) คาดหวังว่า server ทำครบทั้ง 4 field)
     Guard: ถ้ามีสมาชิกใดในกลุ่มมี mileage start entry (odometer_start ไม่ None — รถออกแล้ว)
     → block ทั้งกลุ่ม (เหมือน cancel())
+    เคลียร์ expense_type/central_category/trip_department(_id) ด้วย (2026-08-01) — endpoint นี้
+    เป็นที่มาของปุ่ม "ย้อนสถานะ" สำหรับงานร่วมด้วย (vehicle_admin.js submitRevert) ต้อง reset งบ
+    กลับไปเหมือนก่อนอนุมัติเช่นเดียวกับ revert() ของงานเดี่ยว
     คืน (ok: bool, msg: str|None)
     """
     group_bookings = [booking]
@@ -258,6 +261,10 @@ def ungroup(booking):
         gb.assigned_vehicle_id = None
         gb.driver_id = None
         gb.trip_group = None
+        gb.expense_type = None
+        gb.central_category = None
+        gb.trip_department = None
+        gb.trip_department_id = None
 
     return True, None
 
@@ -479,6 +486,9 @@ def revert(booking, *, actor_id):
     เคลียร์ assigned_vehicle_id/driver_id ด้วย (2026-07-31) — เดิมเปลี่ยนแค่ status ทำให้ DB
     ไม่ตรงกับที่ frontend patch (vehicle_admin.js submitRevert) คาดหวังไว้อยู่แล้ว
 
+    เคลียร์ expense_type/central_category/trip_department(_id) ด้วย (2026-08-01) — ย้อนสถานะ
+    ต้องรีเซ็ตการเลือกงบกลับไปเหมือนก่อนอนุมัติ ไม่ใช่แค่รถ/คนขับ
+
     คืน (ok: bool, msg: str|None)
     """
     if any(m.budget_deducted_at for m in booking.mileage):
@@ -492,4 +502,8 @@ def revert(booking, *, actor_id):
         booking.reject_reason = None
         booking.assigned_vehicle_id = None
         booking.driver_id = None
+        booking.expense_type = None
+        booking.central_category = None
+        booking.trip_department = None
+        booking.trip_department_id = None
     return ok, msg

@@ -63,6 +63,7 @@ let swapBookingId    = null;
 let swapVehicleId    = null;
 let repairVehicleId  = null;
 let revertBookingId  = null;
+let revertGroupName  = null;
 let isSaving         = false;
 let pendingAddIds    = [];     // booking id ใหม่ที่กำลังจะเพิ่มเข้ากลุ่มเดิม (modalAction==='group_add')
 
@@ -116,9 +117,16 @@ function findConflict(b, resourceKey, resourceId) {
    ตัว strip/prev-next/badge จัดการเองใน core/js/bb-components.js
    หน้านี้แค่ฟัง event 'bb-weekstrip:change' แล้ว sync selDate + re-render
 ══════════════════════════════════════════════════ */
+/* เปลี่ยนวัน = ยกเลิกการเลือกทั้งหมด (groupSel/notifySel/groupRowSel) + ปิดปุ่ม ALL — กันเลือก
+   ค้างข้ามวัน (ตัวเลือกที่ค้างอ้างถึง booking ของวันเก่าที่มองไม่เห็นแล้ว) */
 function bindDateControls() {
     document.addEventListener('bb-weekstrip:change', (e) => {
         selDate = fromDateStr(e.detail.date);
+        groupSel.clear();
+        notifySel.clear();
+        groupRowSel.clear();
+        document.getElementById('ptBtnAll')?.classList.remove('is-on');
+        ptUpdateActionButtons();
         renderBefore();
         renderDuring();
         initIcons();
@@ -185,8 +193,8 @@ function ptBudgetInline(b) {
 /* pending = ปุ่ม pri "อนุมัติรถ" · อื่นๆ = ปุ่ม n50/n700 "แก้ไข" (ปุ่มย้อนสถานะเก็บไว้ก่อน ยังไม่โชว์) */
 function ptActionBtn(allPending, onclick) {
     return allPending
-        ? `<button type="button" class="bb-btn is-pri is-sm" onclick="event.stopPropagation();${onclick('approve')}">อนุมัติรถ</button>`
-        : `<button type="button" class="bb-btn is-sm" style="background:var(--bb-n50);color:var(--bb-n700);outline:none" onclick="event.stopPropagation();${onclick('edit')}">แก้ไข</button>`;
+        ? `<button type="button" class="bb-btn is-pri is-sm flex-shrink-0" style="white-space:nowrap" onclick="event.stopPropagation();${onclick('approve')}">อนุมัติรถ</button>`
+        : `<button type="button" class="bb-btn is-sm flex-shrink-0" style="background:var(--bb-n50);color:var(--bb-n700);outline:none;white-space:nowrap" onclick="event.stopPropagation();${onclick('edit')}">แก้ไข</button>`;
 }
 
 /* checkbox โชว์ทุกแถว ความหมายขึ้นกับสถานะ: pending → เลือกไว้รวมงาน (groupSel) · approved → เลือกไว้แจ้ง Telegram (notifySel)
@@ -239,6 +247,38 @@ function ptSingleRow(b) {
     </tr>`;
 }
 
+/* subtext รวมของทั้งกลุ่ม (desktop เท่านั้น) — คนรวมทุกรายการ + ช่วงเวลารวม (min start–max end) */
+function ptGroupMeta(members) {
+    const totalPax = members.reduce((s, b) => s + (b.pax || 0), 0);
+    const minStart = members.reduce((m, b) => (b.startIso < m ? b.startIso : m), members[0].startIso);
+    const maxEnd   = members.reduce((m, b) => (b.endIso   > m ? b.endIso   : m), members[0].endIso);
+    const h = (new Date(maxEnd) - new Date(minStart)) / 3600000;
+    const durStr = h > 0 ? `(${Number.isInteger(h) ? h : h.toFixed(1)} ชม.)` : '';
+    return `<div class="bb-subtext d-flex align-items-center gap-1 pt-1">
+        <span class="material-symbols-rounded">directions_run</span>${totalPax}
+        <span>|</span>
+        <span class="material-symbols-rounded">schedule</span>${minStart.slice(11,16)}–${maxEnd.slice(11,16)} ${durStr}
+    </div>`;
+}
+
+/* แถวย่อยของงานร่วม — เป็น <tr> จริงในตารางเดียวกับแถวหลัก (ไม่ใช่ nested table) เพื่อให้
+   คอลัมน์ align กับแถวอื่นเป๊ะๆ โดยไม่ต้องเดา offset · bg ขาว + padding 16px + เส้นประคั่นระหว่าง
+   รายการ (แถวสุดท้ายคั่นด้วยเส้นทึบปกติ) ใส่เป็น inline style กันชน .bb-table tbody td */
+function ptGroupSubRow(b, colId, isLast) {
+    const border = isLast ? '1px solid var(--bb-n200)' : '1px dashed var(--bb-n300)';
+    const cell   = `background:#fff;padding-top:16px;padding-bottom:16px;border-bottom:${border}`;
+    return `
+    <tr data-ptgrp="${colId}" style="display:none">
+        <td style="${cell}"></td>
+        <td style="${cell}"></td>
+        <td style="${cell}" colspan="4">
+            <div class="fw-semibold" style="color:var(--bb-str)">${esc(b.booker)}</div>
+            <div class="bb-subtext">${esc(b.pickup || '—')} → ${esc(b.dest || '—')}</div>
+            ${ptTripMeta(b)}
+        </td>
+    </tr>`;
+}
+
 function ptGroupRow(grpName, members) {
     const allPending = members.every(b => b.status === 'pending');
     const colId = `ptgrp-${grpName.replace(/[^a-z0-9]/gi,'')}`;
@@ -246,30 +286,22 @@ function ptGroupRow(grpName, members) {
     const bud   = ptBudgetLines(rep);
     const sel   = ptGroupChecked(grpName);
     const isAddTarget = sel && groupSel.size >= 1;
-    const subRows = members.map(b => `
-        <tr style="background:var(--bb-n50)">
-            <td></td><td></td>
-            <td colspan="4">
-                <div class="fw-semibold" style="color:var(--bb-str)">${esc(b.booker)}</div>
-                <div class="bb-subtext">${esc(b.pickup || '—')} → ${esc(b.dest || '—')}</div>
-                ${ptTripMeta(b)}
-            </td>
-        </tr>`).join('');
+    const subRows = members.map((b, i) => ptGroupSubRow(b, colId, i === members.length - 1)).join('');
     return `
-    <tr style="cursor:pointer;${sel ? 'background:var(--bb-n50);outline:none' : ''}" onclick="ptToggleGroup('${colId}')">
+    <tr style="cursor:pointer;${sel ? 'background:var(--bb-n50);outline:none' : ''}" onclick="toggleGroupRowSel('${grpName}')">
         <td>${ptGroupCheckbox(grpName)}</td>
-        <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded">directions_car</span></div></td>
-        <td>
+        <td><div class="bb-avatar" style="width:3.5rem;height:3.5rem;background:var(--bb-ok-bg);color:var(--bb-ok-tx)"><span class="material-symbols-rounded">merge</span></div></td>
+        <td onclick="event.stopPropagation();ptToggleGroupRows('${colId}')">
             <div class="fw-semibold d-flex align-items-center gap-1" style="color:var(--bb-str)">
-                <span class="material-symbols-rounded" style="color:var(--bb-ok-tx)">merge</span>
                 งานร่วม <span class="bb-badge is-neutral">${members.length}</span>${isAddTarget ? ' <span class="bb-badge is-neutral">หลัก</span>' : ''}
             </div>
+            ${ptGroupMeta(members)}
         </td>
         <td><div>${esc(bud.top)}</div><div class="bb-subtext">${esc(bud.bottom)}</div></td>
         <td><div>${esc(rep.driverLabel || '—')}</div><div class="bb-subtext">${ptPlate(rep.vehicleLabel)}</div></td>
         <td class="bb-table-actions">${ptActionBtn(allPending, () => `openAssignModal(null,'group','${grpName}')`)}</td>
     </tr>
-    <tr id="${colId}" style="display:none"><td colspan="6" style="padding:0"><table style="width:100%"><tbody>${subRows}</tbody></table></td></tr>`;
+    ${subRows}`;
 }
 
 function ptCardSingle(b) {
@@ -302,27 +334,33 @@ function ptCardGroup(grpName, members) {
     const rep   = members[0];
     const sel   = ptGroupChecked(grpName);
     const isAddTarget = sel && groupSel.size >= 1;
-    const sub = members.map(b => `
-        <div class="pt-2 mt-2" style="border-top:1px solid var(--bb-n200)">
+    /* indent 4rem (avatar 3rem + gap-3 1rem) ให้เท่าจุดเริ่ม text บรรทัดชื่อด้านบน · เส้นคั่นเป็น
+       เส้นประ (ไม่ใส่ให้รายการแรก) */
+    const sub = members.map((b, i) => `
+        <div class="pt-2 mt-2" style="padding-left:4rem;${i > 0 ? 'border-top:1px dashed var(--bb-n300)' : ''}">
             <div class="fw-semibold" style="font-size:.8125rem;color:var(--bb-str)">${esc(b.booker)}</div>
             <div class="bb-subtext">${esc(b.pickup || '—')} → ${esc(b.dest || '—')}</div>
             ${ptTripMeta(b)}
         </div>`).join('');
+    /* คลิกที่การ์ด (ยกเว้น checkbox/ปุ่ม action/label "งานร่วม") = ติ๊กเลือกทั้งกลุ่ม (เหมือนแถวเดี่ยว)
+       คลิกเฉพาะ label "งานร่วม" = โชว์/ซ่อนรายการที่รวมเข้ามา */
     return `
-    <div class="bb-card p-3 mb-2" style="${sel ? 'background:var(--bb-n50);outline:none' : ''}">
-        <div class="d-flex gap-3" style="cursor:pointer" onclick="ptToggleGroup('${colId}')">
-            <div class="bb-avatar flex-shrink-0" style="width:3rem;height:3rem;background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded">directions_car</span></div>
+    <div class="bb-card p-3 mb-2" style="cursor:pointer;${sel ? 'background:var(--bb-n50);outline:none' : ''}" onclick="toggleGroupRowSel('${grpName}')">
+        <div class="d-flex gap-3">
+            <div class="bb-avatar flex-shrink-0" style="width:3rem;height:3rem;background:var(--bb-ok-bg);color:var(--bb-ok-tx)"><span class="material-symbols-rounded">call_merge</span></div>
             <div class="flex-grow-1" style="min-width:0">
                 <div class="fw-semibold d-flex align-items-center justify-content-between gap-1" style="color:var(--bb-str)">
-                    <span class="d-flex align-items-center gap-1">
-                        <span class="material-symbols-rounded" style="color:var(--bb-ok-tx)">merge</span>
+                    <span class="d-flex align-items-center gap-1" onclick="event.stopPropagation();ptToggleGroup('${colId}')">
                         งานร่วม <span class="bb-badge is-neutral">${members.length}</span>${isAddTarget ? ' <span class="bb-badge is-neutral">หลัก</span>' : ''}
                     </span>
                     ${ptGroupCheckbox(grpName)}
                 </div>
-                <div class="bb-subtext pt-1">${esc(ptBudgetInline(rep))}</div>
+                <div class="bb-subtext">${ptGroupMeta(members)}</div>
                 <div class="d-flex justify-content-between align-items-end">
-                    <span style="font-size:.8125rem">${esc(rep.driverLabel || '—')} · ${ptPlate(rep.vehicleLabel)}</span>
+                    <div class="row">
+                        <span class="bb-subtext pb-1" style="font-size:.8125rem">${esc(ptBudgetInline(rep))}</span>   
+                        <span class="pt-1" style="font-size:.8125rem">${esc(rep.driverLabel || '—')} · ${ptPlate(rep.vehicleLabel)}</span>   
+                    </div>
                     ${ptActionBtn(allPending, () => `openAssignModal(null,'group','${grpName}')`)}
                 </div>
             </div>
@@ -334,6 +372,14 @@ function ptCardGroup(grpName, members) {
 function ptToggleGroup(id) {
     const el = document.getElementById(id);
     if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+/* desktop group sub-rows = sibling <tr> จริง (ไม่ใช่ wrapper element เดียวเหมือนมือถือ)
+   toggle ผ่าน data-ptgrp แทน id */
+function ptToggleGroupRows(colId) {
+    document.querySelectorAll(`tr[data-ptgrp="${colId}"]`).forEach(tr => {
+        tr.style.display = tr.style.display === 'none' ? '' : 'none';
+    });
 }
 
 /* action bar: ปุ่มเริ่ม disabled ไม่มีตัวเลข → กด checkbox แล้วโชว์จำนวน+เปิดใช้งาน
@@ -649,9 +695,14 @@ function openAssignModal(bookingId, action, groupName) {
     modalAction     = action;
 
     let b = bookingId ? bookings.find(x=>x.id===bookingId) : null;
-    /* ปุ่มย้อนสถานะ (ghost) — เฉพาะ booking เดี่ยวที่อนุมัติแล้วและไม่ได้อยู่กลุ่มทริป
-       (กลุ่ม/pending/waiting_approver/rejected ไม่โชว์ — revert() service รองรับแค่เคสนี้) */
-    const canRevert = !!(b && action === 'edit' && b.status === 'approved' && !b.tripGroup);
+    /* ปุ่มย้อนสถานะ (ghost) — โชว์ 2 เคส (2026-08-01): งานเดี่ยวที่อนุมัติ/ส่ง approver แล้ว
+       (ไม่ได้อยู่กลุ่มทริป) หรือ งานร่วมที่อนุมัติ/ส่ง approver แล้วทั้งกลุ่ม (action='group' —
+       ตั้งจาก ptActionBtn เฉพาะกลุ่มที่ไม่ใช่ all-pending) — pending/rejected ไม่โชว์ */
+    const REVERTIBLE = new Set(['approved', 'waiting_approver']);
+    const canRevertSingle = !!(b && action === 'edit' && REVERTIBLE.has(b.status) && !b.tripGroup);
+    const canRevertGroup  = !!(groupName && action === 'group'
+        && bookings.some(x => x.tripGroup === groupName && REVERTIBLE.has(x.status)));
+    const canRevert = canRevertSingle || canRevertGroup;
 
     /* เดิม header เคยโชว์ "Reject Booking"/"Merge N Bookings" ฯลฯ ให้แยกโหมดได้ ตอนนี้ header
        เปลี่ยนไปโชว์เลขคำขอแทน (ตาม widget) เลยย้ายการบอกโหมดมาไว้ที่ปุ่มยืนยันแทน (CONFIRM_LABEL ด้านบนไฟล์) */
@@ -660,7 +711,7 @@ function openAssignModal(bookingId, action, groupName) {
     let refLabel = '—', name = '—', timeStr = '—', badgeCls = '', badgeLabel = '';
     let route = '—';
     if (b) {
-        refLabel   = `#${b.id}`;
+        refLabel   = `คำขอจองรถ #${b.id}`;
         name       = b.booker || '—';
         timeStr    = `${b.purpose || '—'} · ${b.pax || 0} คน · ${b.start}–${b.end}`;
         const sb   = STATUS_BADGE[b.status] || STATUS_BADGE.pending;
@@ -975,22 +1026,55 @@ async function submitAssign() {
 /* ปุ่ม ghost ใน assignModal (โหมด edit ของ booking อนุมัติแล้ว) — ปิด assignModal แล้วต่อด้วย
    revertModal (confirm dialog เดิม) ไม่ยิง revert ตรงจากในนี้เลย กันกดพลาด */
 function triggerRevertFromModal() {
+    if (activeGroupName && modalAction === 'group') {
+        const grp = activeGroupName;
+        bsAssignModal.hide();
+        openRevertModal(null, grp);
+        return;
+    }
     if (!activeBookingId) return;
     const id = activeBookingId;
     bsAssignModal.hide();
     openRevertModal(id);
 }
 
-function openRevertModal(bookingId) {
-    revertBookingId = bookingId;
-    const b = bookings.find(x=>x.id===bookingId);
-    document.getElementById('revertModalText').textContent =
-        `ต้องการย้อนสถานะ "${b?.dest || ''}" กลับเป็นรออนุมัติ?`;
+function openRevertModal(bookingId, groupName) {
+    revertBookingId = bookingId || null;
+    revertGroupName = groupName || null;
+    const text = groupName
+        ? `ต้องการย้อนสถานะงานร่วม (${bookings.filter(x=>x.tripGroup===groupName).length} รายการ) กลับเป็นรออนุมัติทั้งหมดใช่ไหม?`
+        : `ต้องการย้อนสถานะ "${bookings.find(x=>x.id===bookingId)?.dest || ''}" กลับเป็นรออนุมัติ?`;
+    document.getElementById('revertModalText').textContent = text;
     bsRevertModal = bsRevertModal || new bootstrap.Modal(document.getElementById('revertModal'));
     bsRevertModal.show();
 }
 
 async function submitRevert() {
+    /* งานร่วม (ทั้งกลุ่ม) — ใช้ endpoint ungroup เดิม (all-or-nothing) แล้ว patch ทุกสมาชิก
+       รวม field งบด้วย (backend เคลียร์ expense_type/central_category/trip_department ให้แล้ว) */
+    if (revertGroupName) {
+        const members = bookings.filter(x => x.tripGroup === revertGroupName);
+        if (!members.length) return;
+        try {
+            const fd = new FormData(); fd.append('action', 'ungroup');
+            const res  = await fetch(members[0].assignUrl, { method:'POST', body:fd });
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+                showToast(data.msg || 'ย้อนสถานะไม่ได้');
+                bsRevertModal.hide();
+                return;
+            }
+            members.forEach(b => patchBooking(b.id, {
+                status:'pending', vehicleId:null, vehicleLabel:null, driverId:null,
+                tripGroup:null, expType:null, expSub:null, deptName:'',
+            }));
+            showToast('✓ ย้อนสถานะแล้ว');
+            bsRevertModal.hide();
+            renderAll();
+        } catch(e) { showToast('เกิดข้อผิดพลาด'); }
+        return;
+    }
+
     if (!revertBookingId) return;
     const b = bookings.find(x=>x.id===revertBookingId);
     try {
@@ -1001,7 +1085,10 @@ async function submitRevert() {
             bsRevertModal.hide();
             return;
         }
-        patchBooking(revertBookingId, { status:'pending', vehicleId:null, vehicleLabel:null, driverId:null });
+        patchBooking(revertBookingId, {
+            status:'pending', vehicleId:null, vehicleLabel:null, driverId:null,
+            expType:null, expSub:null, deptName:'',
+        });
         showToast('✓ ย้อนสถานะแล้ว');
         bsRevertModal.hide();
         renderAll();
@@ -1309,7 +1396,7 @@ function renderAll() {
 /* ── Expose to window for legacy onclick handlers ── */
 Object.assign(window, {
     confirmMerge, confirmNotify,
-    toggleGroupSel, toggleNotifySel, toggleGroupRowSel, ptToggleGroup,
+    toggleGroupSel, toggleNotifySel, toggleGroupRowSel, ptToggleGroup, ptToggleGroupRows,
     ptOpenNotifyConfirm, ptSubmitNotify, ptRowClick, ptSelectAll,
     openAssignModal, openRevertModal, triggerRevertFromModal, openAdminBookingDetail,
     openSwapModal, openRepairModal,

@@ -12,23 +12,169 @@
        สีตอน selected ใช้ ink ดำ (ไม่ใช้ฟ้า) ให้ตรง design guideline v2.1 */
     .bb-exp-card {
         flex: 1; position: relative; cursor: pointer; text-align: center;
-        border: 1px solid var(--bb-n300); border-radius: var(--bb-r-md);
-        padding: .875rem .75rem .75rem; background: #fff;
+        border: 1px solid var(--bb-n500); 
+        color: var(--bb-n500);
+        border-radius: var(--bb-r-lg);
+        background: #fff;
         display: flex; flex-direction: column; align-items: center; gap: .25rem;
     }
-    .bb-exp-card:has(.bb-exp-radio:checked) { border: 2px solid var(--bb-ink); background: var(--bb-n50); }
-    .bb-exp-radio {
+    .bb-exp-card:has(.bb-exp-radio:checked) { border: 2px solid var(--bb-ink); background:  #fff; }
+    /* .bb-exp-radio {
         position: absolute; top: .625rem; right: .625rem; margin: 0;
         width: 1.125rem; height: 1.125rem; appearance: none; -webkit-appearance: none;
         border: 1.5px solid var(--bb-n300); border-radius: 50%; background: #fff; cursor: pointer;
-    }
+    } */
     .bb-exp-radio:checked {
         border-color: var(--bb-ink);
-        background: radial-gradient(circle, var(--bb-ink) 0 35%, #fff 35% 100%);
+        background: #fff;
     }
-    .bb-exp-icon { font-size: 2.5rem; color: var(--bb-mut); margin-bottom: .125rem; }
-    .bb-exp-card:has(.bb-exp-radio:checked) .bb-exp-icon { color: var(--bb-ink); }
-    .bb-exp-title { font-size: .8125rem; font-weight: 600; color: var(--bb-str); }
+    /* .bb-exp-icon { font-size: 2.5rem; color: var(--bb-mut); margin-bottom: .125rem; } */
+    /* .bb-exp-card:has(.bb-exp-radio:checked) .bb-exp-icon { color: var(--bb-ink); } */
+    /* .bb-exp-title { font-size: .8125rem; font-weight: 600; color: var(--bb-str); } */
+
+/* ---------- Timeline ---------- */
+
+.vm-step{
+
+    display:flex;
+
+    gap:16px;
+
+    align-items:flex-start;
+
+}
+
+.vm-dot{
+
+    width:18px;
+
+    height:18px;
+
+    border-radius:50%;
+
+    border:2px solid #19b15d;
+
+    position:relative;
+
+    margin-top:4px;
+
+    flex-shrink:0;
+
+}
+
+.vm-dot::after{
+
+    content:"";
+
+    width:8px;
+
+    height:8px;
+
+    border-radius:50%;
+
+    background:#19b15d;
+
+    position:absolute;
+
+    top:50%;
+
+    left:50%;
+
+    transform:translate(-50%,-50%);
+
+}
+
+
+/* ---------- Radio Card ---------- */
+
+/* Container Radio Label */
+.vm-radio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: #ffffff;
+  color: #616161;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  user-select: none;
+  text-align: center;
+  height: 100%;
+}
+
+/* ซ่อน radio input จริง */
+.vm-radio input[type="radio"] {
+  display: none;
+}
+
+/* ไอคอน Material Symbols */
+.vm-radio .vm-icon {
+  font-size: 32px;
+  margin-bottom: 6px;
+  color: #757575;
+  transition: color 0.2s ease-in-out;
+}
+
+/* ข้อความตัวหนังสือ */
+.vm-radio .fw-semibold {
+  font-size: 14px;
+}
+
+/* Hover effect เมื่อชี้เมาส์ */
+.vm-radio:hover {
+  border-color: #212121;
+  background-color: #fafafa;
+}
+
+/* สไตล์เมื่อถูกเลือก (Checked Status - สีดำ) */
+.vm-radio:has(input[type="radio"]:checked) {
+  background-color: #18181b; /* ดำเข้มสไตล์ Modern */
+  border-color: #18181b;
+  color: #ffffff;
+}
+
+.vm-radio:has(input[type="radio"]:checked) .vm-icon {
+  color: #ffffff;
+}
+
+/* สไตล์จุด Checkbox มุมขวาบน (ถ้าไม่ได้ใช้ สามารถลบ .vm-check ออกได้) */
+.vm-radio .vm-check {
+  display: none; /* หากอยากซ่อนวงกลมเช็กด้านใน ให้เปิดบรรทัดนี้ไว้ */
+}
+
+.vm-icon{
+    font-size:34px;
+    color:#555;
+    margin-bottom:10px;
+}
+
+
+/* ---------- Form ---------- */
+
+.form-select{
+    border-radius:10px;
+    height:42px;
+}
+
+
+/* ---------- Progress ---------- */
+
+.progress{
+    height:6px;
+    border-radius:999px;
+}
+
+
+/* ---------- Footer ---------- */
+
+.btn{
+
+    min-width:120px;
+}
+
 </style>
 {% endblock %}
 
@@ -62,7 +208,7 @@
             {# ── action bar: ปุ่มเริ่ม disabled · กด checkbox แล้วขึ้นจำนวน · ไม่ต้องกด "รวมงาน"/"แจ้ง Telegram" ก่อนเพื่อ "เข้าโหมด" แบบเดิมอีกต่อไป (ptUpdateActionButtons ใน vehicle_admin.js)
                ไม่บีบ + scroll แนวนอนแทน (เหมือน tab2) เมื่อจอแคบกว่าความกว้างรวมปุ่ม ── #}
             <div class="d-flex gap-2 pt-4" style="overflow-x:auto;overflow-y:hidden">
-                <button type="button" class="ue-chip flex-shrink-0" onclick="ptSelectAll(this)" title="เลือก/เลิกเลือกทั้งหมด">
+                <button type="button" class="ue-chip flex-shrink-0" id="ptBtnAll" onclick="ptSelectAll(this)" title="เลือก/เลิกเลือกทั้งหมด">
                     ALL
                 </button>
                 <button type="button" class="bb-btn flex-shrink-0" id="ptBtnMerge" style="background:var(--bb-n50);color:var(--bb-n700);outline:none" onclick="confirmMerge()" disabled>
@@ -106,20 +252,20 @@
 <div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="bb-modal-body modal-body">
+            <div class="modal-body p-4">
 
                 {# NEW — header restyle ตาม mileageModal จริง (label เล็ก=action + ชื่อใหญ่=ผู้จอง + เวลา/badge + avatar ขวา · ไม่มีปุ่มปิด X แล้วตาม mileageModal — ปิดผ่าน ยกเลิก/backdrop) #}
                 <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
                     <div>
-                        <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)" id="assignModalTitle">อนุมัติการจอง (เลือกคนขับและรถ)</div>
+                        <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)" id="assignModalTitle">--</div>
                         <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)" id="assignModalSub">—</div>
                         <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
                             <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)" id="assignModalTime">—</span>
                             <span class="bb-badge" id="assignModalBadge" style="display:none">—</span>
                         </div>
                     </div>
-                    <div class="bb-avatar flex-shrink-0" id="assignModalAvatar" style="width:3.5rem;height:3.5rem">
-                        <span class="material-symbols-rounded">directions_car</span>
+                    <div class="bb-avatar flex-shrink-0" style="width:4.5rem;height:4.5rem;" id="assignModalAvatar">
+                            <span class="material-symbols-rounded" style="font-size:2.5rem">directions_car</span>
                     </div>
                 </div>
 
@@ -129,24 +275,24 @@
                     {# NEW — รายละเอียดคำขอ: route เดียว (b.pickup → b.dest) — dept/pax/purpose ย้ายไปโชว์ที่ header แทน #}
                     <div class="bb-tl-item done">
                         <span class="bb-tl-dot"></span>
-                        <div class="bb-tl-title">รายละเอียดคำขอ</div>
-                        <div class="bb-tl-desc" id="assignModalRoute">—</div>
+                        <h6 class="fw-semibold pt-1">รายละเอียดคำขอ</h6>
+                        <div class="text-secondary small" id="assignModalRoute"><small>—</small></div>
                     </div>
 
                     <div class="bb-tl-item done">
                         <span class="bb-tl-dot"></span>
-                        <div class="bb-tl-title">จัดทรัพยากร</div>
-                        <div class="bg-light rounded-3 p-3 mt-2">
+                        <h6 class="fw-semibold pt-1">จัดทรัพยากร</h6>
+                        <div class="bg-light rounded-2 p-3 mt-2">
                             <div class="mt-2">
                                 <div class="row g-2">
                                     <div class="col-6">
-                                        <select class="bb-input" id="modalVehSel" onchange="checkAssignReady()">
-                                            <option value="">— เลือกรถ —</option>
+                                        <select class="form-select" id="modalVehSel" onchange="checkAssignReady()">
+                                            <option value="">เลือกรถ</option>
                                         </select>
                                     </div>
                                     <div class="col-6">
-                                        <select class="bb-input" id="modalDrvSel" onchange="checkAssignReady()">
-                                            <option value="">— เลือกคนขับ —</option>
+                                        <select class="form-select" id="modalDrvSel" onchange="checkAssignReady()">
+                                            <option value="">เลือกคนขับ</option>
                                         </select>
                                     </div>
                                 </div>
@@ -165,40 +311,40 @@
                     {# NEW — ประเภทค่าใช้จ่าย: การ์ดกดเลือกแทน bb-seg segmented control #}
                     <div class="bb-tl-item done">
                         <span class="bb-tl-dot"></span>
-                        <div class="bb-tl-title">ค่าใช้จ่าย</div>
+                        <h6 class="fw-semibold pt-1">ค่าใช้จ่าย</h6>
                         <div class="bg-light rounded-3 p-3 mt-2">
-                            <div class="d-flex gap-2 mb-2" id="modalExpTabs">
-                                <label class="bb-exp-card" title="ใช้งบส่วนกลาง">
+                            <div class="cool-12 d-flex gap-2 mb-2" id="modalExpTabs">
+                                <label class="col vm-radio py-3 px-2" title="ใช้งบส่วนกลาง">
                                     <input type="radio" name="modalExpType" class="bb-exp-radio" value="central" checked onchange="setModalExpType(this.value)">
-                                    <span class="material-symbols-rounded bb-exp-icon fs-3 pt-3">apartment</span>
-                                    <div class="bb-exp-title">ส่วนกลาง</div>
+                                    <span class="material-symbols-rounded bb-exp-icon fs-1 pt-3 pb-2">emoji_people</span>
+                                    <div class="fw-semibold" style="font-size: 0.825rem;">ส่วนกลาง</div>
                                 </label>
-                                <label class="bb-exp-card" title="ใช้งบส่วนกอง">
+                                <label class="col vm-radio py-3 px-2" title="ใช้งบส่วนกอง">
                                     <input type="radio" name="modalExpType" class="bb-exp-radio" value="department" onchange="setModalExpType(this.value)">
-                                    <span class="material-symbols-rounded bb-exp-icon fs-3 pt-3">account_balance</span>
-                                    <div class="bb-exp-title">ส่วนกอง</div>
+                                    <span class="material-symbols-rounded bb-exp-icon fs-1 pt-3 pb-2">directions_walk</span>
+                                    <div class="fw-semibold" style="font-size: 0.825rem;">ส่วนกอง</div>
                                 </label>
-                                <label class="bb-exp-card" title="จ่ายเอง">
+                                <label class="col vm-radio py-3 px-2" title="จ่ายเอง">
                                     <input type="radio" name="modalExpType" class="bb-exp-radio" value="personal" onchange="setModalExpType(this.value)">
-                                    <span class="material-symbols-rounded bb-exp-icon fs-3 pt-3">person</span>
-                                    <div class="bb-exp-title">ส่วนตัว</div>
+                                    <span class="material-symbols-rounded bb-exp-icon fs-1 pt-3 pb-2">rocket_launch</span>
+                                    <div class="fw-semibold" style="font-size: 0.825rem;">ส่วนตัว</div>
                                 </label>
                             </div>
 
                             {# NEW — คนละ dropdown กัน ส่วนกลาง/ส่วนกอง (คนละ option list) · ส่วนตัวไม่มี dropdown เลย #}
-                            <select class="bb-input mb-2" id="modalExpSubCentral" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
+                            <select class="form-select mb-2" id="modalExpSubCentral" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
                                 <option value="">— เลือกหมวด —</option>
                             </select>
-                            <select class="bb-input mb-2" id="modalExpSubDept" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
+                            <select class="form-select mb-2" id="modalExpSubDept" style="display:none" onchange="updateExpSubDropdown(null);checkAssignReady()">
                                 <option value="">— เลือกหมวด —</option>
                             </select>
 
-                            <div class="align-items-center gap-2 mb-2 mt-3" id="modalApproverInfo" style="font-size:.8125rem;color:var(--bb-mut);display:none">
-                                <span>ผู้อนุมัติ: <strong id="modalApproverName"></strong></span>
+                            <div class="align-items-center gap-1 mt-3 px-1" id="modalApproverInfo" style="font-size:.8125rem;color:var(--bb-mut);display:none">
+                                <span>| ผู้อนุมัติ: <strong id="modalApproverName"></strong></span>
                             </div>
 
-                            <div class="mt-2" id="modalBudgetBar" style="display:none">
-                                <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.8125rem">
+                            <div class="mt-2 px-1" id="modalBudgetBar" style="display:none">
+                                <div class="d-flex justify-content-between align-items-center mb-1 pt-3" style="font-size:.8125rem">
                                     <span id="modalBudgetLabel" style="color:var(--bb-mut)">งบคงเหลือ</span>
                                     <span class="bb-num fw-semibold" id="modalBudgetValue" style="color:var(--bb-str)">—</span>
                                 </div>
@@ -212,8 +358,8 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center gap-2 mt-4">
-                    {# ปุ่มย้อนสถานะ — ghost (ไม่มีกรอบ/เส้นใต้) โชว์เฉพาะ booking เดี่ยวที่อนุมัติแล้ว
-                       ไม่ได้อยู่กลุ่มทริป (toggle display ใน openAssignModal, vehicle_admin.js) #}
+                    {# ปุ่มย้อนสถานะ — ghost (ไม่มีกรอบ/เส้นใต้) โชว์เมื่ออนุมัติ/ส่ง approver แล้ว
+                       ทั้งงานเดี่ยวและงานร่วม (toggle display ใน openAssignModal, vehicle_admin.js) #}
                     <button type="button" class="bb-btn is-ghost is-sm" id="assignRevertBtn" onclick="triggerRevertFromModal()" style="display:none" title="ย้อนสถานะกลับเป็นรออนุมัติ">
                         ย้อนสถานะ
                     </button>
@@ -226,6 +372,7 @@
                 </div>
 
             </div>
+            
         </div>
     </div>
 </div>
