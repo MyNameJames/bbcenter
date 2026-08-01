@@ -84,30 +84,46 @@
         return el ? el.closest('.fleet-driver-row') : null;
     }
 
-    function fillEditDriver(d) {
-        if (!d) return;
-        setVal('ed_id',               d.id);
-        setVal('ed_name',             d.name);
-        setVal('ed_phone',            d.phone);
-        setChecked('ed_active',       d.active === 'true');
-        setVal('ed_user_id',          d.userId || '');
-        setVal('ed_national_id',      d.nationalId || '');
-        setVal('ed_addr_line',        d.addrLine || '');
-        setVal('ed_addr_subdistrict', d.addrSubdistrict || '');
-        setVal('ed_addr_district',    d.addrDistrict || '');
-        setVal('ed_addr_province',    d.addrProvince || '');
-        setVal('ed_addr_postal',      d.addrPostal || '');
+    // Add/Edit Driver — merged เป็น modal เดียว (#addDriverModal, 2026-07-31), pattern เดียวกับ
+    // #addVehicleModal (docs/notes/modal_pattern.md) ต่างตรง data-* อยู่บน .fleet-driver-row
+    // ไม่ใช่ปุ่ม — เรียกจาก isEdit=false ตอน add จะได้ d={} (ไม่ใช่ null) กัน d.xxx พังตอนอ่าน
+    function fillDriverForm(d, isEdit) {
+        setVal('ed_action', isEdit ? 'edit_driver' : 'add_driver');
+        setVal('ed_id',     isEdit ? d.id : '');
+        setText('adModalEyebrow',  isEdit ? '#แก้ไขข้อมูล' : '#แบบฟอร์ม');
+        setText('adModalTitle',    isEdit ? 'แก้ไขข้อมูลคนขับ' : 'เพิ่มคนขับใหม่');
+        setText('adModalSubtitle', isEdit ? 'แก้ไขข้อมูลคนขับคนนี้ในระบบ' : 'กรอกข้อมูลคนขับเพื่อเพิ่มเข้าระบบ');
+        const submitBtn = document.getElementById('adSubmitBtn');
+        if (submitBtn) submitBtn.title = isEdit ? 'บันทึกการแก้ไข' : 'บันทึกคนขับใหม่';
 
+        setVal('ed_name',             isEdit ? d.name : '');
+        setVal('ed_phone',            isEdit ? d.phone : '');
+        setChecked('ed_active',       !isEdit || d.active === 'true');
+        setVal('ed_user_id',          isEdit ? (d.userId || '') : '');
+        setVal('ed_national_id',      isEdit ? (d.nationalId || '') : '');
+        setVal('ed_addr_line',        isEdit ? (d.addrLine || '') : '');
+        setVal('ed_addr_subdistrict', isEdit ? (d.addrSubdistrict || '') : '');
+        setVal('ed_addr_district',    isEdit ? (d.addrDistrict || '') : '');
+        setVal('ed_addr_province',    isEdit ? (d.addrProvince || '') : '');
+        setVal('ed_addr_postal',      isEdit ? (d.addrPostal || '') : '');
+
+        document.getElementById('ed_avatar_hint')?.classList.toggle('d-none', !isEdit);
+        document.getElementById('ed_idcard_hint')?.classList.toggle('d-none', !isEdit);
         const avEl = document.getElementById('ed_avatar_current');
         if (avEl) {
-            if (d.avatar) { avEl.href = d.avatar; avEl.style.display = ''; }
+            if (isEdit && d.avatar) { avEl.href = d.avatar; avEl.style.display = ''; }
             else { avEl.style.display = 'none'; }
         }
         const idEl = document.getElementById('ed_idcard_current');
         if (idEl) {
-            if (d.idcard) { idEl.href = d.idcard; idEl.style.display = ''; }
+            if (isEdit && d.idcard) { idEl.href = d.idcard; idEl.style.display = ''; }
             else { idEl.style.display = 'none'; }
         }
+
+        // <input type=file> ไม่ยอมให้ set .value เป็นไฟล์ผ่าน JS — reset ทุกครั้งที่เปิด (ทั้ง 2
+        // โหมด) กันไฟล์ที่เคยเลือกไว้ค้างจากการเปิด modal รอบก่อนหน้า (add ครั้งก่อน/edit คนละคน)
+        const avFile = document.getElementById('ed_avatar_file'); if (avFile) avFile.value = '';
+        const idFile = document.getElementById('ed_idcard_file'); if (idFile) idFile.value = '';
     }
 
     function composeAddress(d) {
@@ -120,12 +136,14 @@
         return parts.join(' ');
     }
 
-    // Edit Driver
-    const editDriverModal = document.getElementById('editDriverModal');
-    if (editDriverModal) {
-        editDriverModal.addEventListener('show.bs.modal', function (e) {
+    // Add/Edit Driver — relatedTarget อาจเป็นปุ่ม toolbar (ไม่อยู่ใน row → null → add mode),
+    // ปุ่มแก้ไขต่อแถว (อยู่ใน row → edit mode), หรือ row เองที่ dd_edit_btn ส่งผ่าน .show(row)
+    // (driverRowOf ใช้ .closest() — element ที่ตรง selector อยู่แล้วคืนตัวเองได้)
+    const addDriverModal = document.getElementById('addDriverModal');
+    if (addDriverModal) {
+        addDriverModal.addEventListener('show.bs.modal', function (e) {
             const row = driverRowOf(e.relatedTarget);
-            if (row) fillEditDriver(row.dataset);
+            fillDriverForm(row ? row.dataset : {}, !!row);
         });
     }
 
@@ -141,14 +159,14 @@
     }
 
     // Driver Detail (read-only) + ปุ่มแก้ไขในนั้น
-    let detailDataset = null;
+    let detailRow = null;
     const driverDetailModal = document.getElementById('driverDetailModal');
     if (driverDetailModal) {
         driverDetailModal.addEventListener('show.bs.modal', function (e) {
             const row = driverRowOf(e.relatedTarget);
             if (!row) return;
             const d = row.dataset;
-            detailDataset = d;
+            detailRow = row;
 
             setText('dd_detail_name', d.name);
             setText('dd_detail_jobs', d.jobs || '0');
@@ -194,17 +212,18 @@
         });
     }
 
-    // ปุ่ม "แก้ไข" ใน detail modal → ปิด detail แล้วเปิด edit ของคนเดิม
+    // ปุ่ม "แก้ไข" ใน detail modal → ปิด detail แล้วเปิด #addDriverModal ของคนเดิม
+    // ส่ง row เป็น relatedTarget ผ่าน .show(row) (Bootstrap API รับ arg ได้) แทนการเรียก
+    // fillDriverForm() เอง — ให้ไหลผ่าน show.bs.modal listener เดียวกับปุ่มแก้ไขในตาราง
     const ddEditBtn = document.getElementById('dd_edit_btn');
     if (ddEditBtn && window.bootstrap) {
         ddEditBtn.addEventListener('click', function () {
-            const captured = detailDataset;
+            const row = detailRow;
             const detailInstance = bootstrap.Modal.getInstance(driverDetailModal);
             if (detailInstance) detailInstance.hide();
             driverDetailModal.addEventListener('hidden.bs.modal', function handler() {
                 driverDetailModal.removeEventListener('hidden.bs.modal', handler);
-                fillEditDriver(captured);
-                bootstrap.Modal.getOrCreateInstance(editDriverModal).show();
+                bootstrap.Modal.getOrCreateInstance(addDriverModal).show(row);
             });
         });
     }

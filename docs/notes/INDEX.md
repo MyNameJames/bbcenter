@@ -19,6 +19,7 @@
 | งานที่ทำแล้ว / กำลังทำ | [doc/](doc/) · [log/](log/) |
 | Feature backlog | [future_features.md](future_features.md) |
 | Redesign หน้าเก่า → bb-* (legacy CSS migration) | [redesign_migration_pattern.md](redesign_migration_pattern.md) |
+| Modal pattern (1 modal สลับ add/edit หลายโหมด) | [modal_pattern.md](modal_pattern.md) |
 | Migration .sql ทั้งหมด | [app/migrations/migrations-index.md](../../app/migrations/migrations-index.md) |
 
 ---

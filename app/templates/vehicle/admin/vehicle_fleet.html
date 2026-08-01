@@ -4,6 +4,7 @@
    Shell: _base_ue.html (migrated 2026-07-29 — see docs/notes/log/2026-07-29_vehicle-fleet-shell-token.md)
    Table reskin (รถ/คนขับ → bb-table จริง ผูกข้อมูลจริงแล้ว, 2026-07-30) · #addVehicleModal
    rebuilt ตาม #bookingModal pattern + ผูกใช้จริงแล้ว (2026-07-31, ดู log) — component phase จบ
+   #addDriverModal merge editDriverModal เข้าเป็น modal เดียว (2026-07-31) ตาม docs/notes/modal_pattern.md
 #}
 {% extends '_base_ue.html' %}
 
@@ -58,17 +59,109 @@
     .step-btn:disabled { background: var(--bb-n100); color: var(--bb-n400); cursor: not-allowed; }
     .step-value { font-size: 15px; font-weight: 600; width: 32px; text-align: center; color: var(--bb-str); }
 
-    /* #addVehicleModal ใช้ .card.modal-content.border-0 ตาม pattern #bookingModal (vehicle_book.html)
-       แต่หน้านี้โหลด design-system.css ซึ่งมี .card{border/-radius/box-shadow:...!important} แบบ global
-       (บรรทัด 380 ของไฟล์นั้น) — bookingModal ไม่โดนเพราะหน้าที่มันอยู่ไม่โหลด design-system.css
-       ต้อง override เฉพาะจุดกัน !important เดิมบัง ให้ตรง .bb-modal look ที่ตั้งใจไว้จริง (ไม่มีเส้นขอบ
-       ใช้เงาแทน) — .card-footer ของ design-system.css comment ทิ้งไปแล้วในไฟล์นั้น ไม่ชน จึงไม่ต้อง override */
-    #addVehicleModal .card.modal-content {
+    /* modal ที่ merge add/edit (#addVehicleModal, #addDriverModal) ใช้ .card.modal-content.border-0
+       ตาม pattern #bookingModal (vehicle_book.html) — แต่หน้านี้โหลด design-system.css ซึ่งมี
+       .card{border/-radius/box-shadow:...!important} แบบ global (บรรทัด 380 ของไฟล์นั้น) —
+       bookingModal ไม่โดนเพราะหน้าที่มันอยู่ไม่โหลด design-system.css ต้อง override เฉพาะจุดกัน
+       !important เดิมบัง ให้ตรง .bb-modal look ที่ตั้งใจไว้จริง (ไม่มีเส้นขอบ ใช้เงาแทน) — เขียนเป็น
+       class selector เดียว (ไม่ผูก id) เพราะ modal ทุกตัวที่ตาม pattern นี้ในหน้านี้ต้องการค่าเดียวกัน
+       ไม่ต้องเพิ่ม override ทีละ id ทุกครั้งที่มี modal ใหม่ */
+    .card.modal-content {
         border: none !important;
         border-radius: var(--bb-r-lg) !important;
         box-shadow: var(--bb-shadow-lg) !important;
         background: #fff;
     }
+
+    .profile-upload{
+    width:140px;
+    height:140px;
+    margin:auto;
+    position:relative;
+}
+
+.profile-upload img{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    object-fit:cover;
+    display:none;
+    border:1px solid #e5e7eb;
+}
+
+.profile-placeholder{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    background:#f3f4f6;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border:1px solid #e5e7eb;
+}
+
+.profile-placeholder .material-symbols-rounded{
+    font-size:72px;
+    color:#9ca3af;
+}
+
+.upload-btn,
+.remove-btn{
+
+    position:absolute;
+
+    width:42px;
+    height:42px;
+
+    border:none;
+    border-radius:50%;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    cursor:pointer;
+
+    color:#fff;
+
+    transition:.2s;
+}
+
+/* เพิ่มรูป */
+
+.upload-btn{
+
+    right:2px;
+    bottom:2px;
+
+    background:#000;
+}
+
+.upload-btn:hover{
+    background:#222;
+}
+
+/* ลบรูป */
+
+.remove-btn{
+
+    left:2px;
+    bottom:2px;
+
+    background:#000;
+}
+
+.remove-btn:hover{
+    background:#222;
+}
+
+.upload-btn .material-symbols-rounded,
+.remove-btn .material-symbols-rounded{
+
+    font-size:20px;
+}
 </style>
 {% endblock %}
 
@@ -253,7 +346,7 @@
                                     <span class="material-symbols-rounded">visibility</span>
                                 </button>
                                 <button type="button" class="bb-btn is-sec is-icon mf-driver-edit"
-                                        data-bs-toggle="modal" data-bs-target="#editDriverModal" title="แก้ไข">
+                                        data-bs-toggle="modal" data-bs-target="#addDriverModal" title="แก้ไข">
                                     <span class="material-symbols-rounded">edit</span>
                                 </button>
                                 <button type="button" class="bb-btn is-sec is-icon mf-driver-delete"
@@ -482,103 +575,193 @@
     </div>
 </div>
 
-{# ── Add Driver ── #}
-<div class="modal fade vc-modal" id="addDriverModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
+{# ── Add/Edit Driver — merged เป็น modal เดียว (2026-07-31), pattern เดียวกับ #addVehicleModal
+   (ดู docs/notes/modal_pattern.md) — card + modal-content + border-0 · ไม่มีปุ่มปิด X ·
+   card-footer bg-white border-top-0. ต่างจาก #addVehicleModal ตรงที่:
+   (1) data-* ไม่ได้อยู่ที่ปุ่มแก้ไข แต่อยู่ที่ .fleet-driver-row (<tr>) ครอบ — อ่านผ่าน
+       driverRowOf(e.relatedTarget) เดิมที่ไฟล์นี้มีอยู่แล้ว (ปุ่ม toolbar "เพิ่ม" ไม่ได้อยู่ใน
+       row → driverRowOf คืน null → add mode)
+   (2) ไม่มี section คั่นเส้นประเฉพาะ edit เพราะ field ตรงกันหมด ต่างแค่ hint ข้อความ + ลิงก์
+       ไฟล์เดิม (avatar/บัตร) ระดับ field ไม่ใช่ทั้ง section
+   (3) enctype multipart เพราะมีไฟล์แนบ — input type=file ไม่ reset ตัวเองเมื่อเปิด modal ซ้ำ
+       (JS set .value เป็นไฟล์ผ่าน API ไม่ได้) ต้อง .value='' เองทุกครั้งที่เปิด กัน carry-over
+   ปุ่ม "แก้ไข" ใน driverDetailModal เปิด modal นี้ผ่าน bootstrap .show(row) ส่ง row เป็น
+   relatedTarget เอง (ไม่ใช่ data-bs-toggle) — เข้า handler เดียวกันได้เพราะ driverRowOf() ใช้
+   .closest() ซึ่ง match ตัวเองได้ถ้า element ที่ส่งมาตรง selector อยู่แล้ว #}
+<div class="modal fade" id="addDriverModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="card modal-content border-0">
             <form action="/admin/manage-fleet" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="add_driver">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i data-lucide="plus" class="vc-icon-sm"></i>
-                        เพิ่มคนขับใหม่
-                    </h5>
-                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="vc-form-row vc-form-row-2">
-                        <div class="vc-form-group">
-                            <label class="vc-label">ชื่อ-นามสกุล <span class="vc-required">*</span></label>
-                            <input type="text" class="vc-input" name="name" placeholder="สมชาย ใจดี" required>
+                <input type="hidden" name="action" value="add_driver" id="ed_action">
+                <input type="hidden" name="driver_id" id="ed_id" value="">
+
+                <div style="padding:14px 20px 0">
+                    <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                        <div>
+                            <div class="text-uppercase" id="adModalEyebrow" style="font-size:.75rem;color:var(--bb-mut)">#แบบฟอร์ม</div>
+                            <div id="adModalTitle" style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">เพิ่มคนขับใหม่</div>
+                            <div class="mt-1" id="adModalSubtitle" style="font-size:.8125rem;color:var(--bb-mut)">กรอกข้อมูลคนขับเพื่อเพิ่มเข้าระบบ</div>
                         </div>
-                        <div class="vc-form-group">
-                            <label class="vc-label">เบอร์โทร</label>
-                            <input type="text" class="vc-input" name="phone" placeholder="081-234-5678">
+                        <div class="bb-avatar flex-shrink-0" style="width:4.5rem;height:4.5rem;background:var(--bb-n100);color:var(--bb-mut)">
+                            <span class="material-symbols-rounded" style="font-size:2.5rem">face</span>
                         </div>
                     </div>
-                    <div class="vc-form-row vc-form-row-2">
-                        <div class="vc-form-group">
-                            <label class="vc-label">เลขบัตรประชาชน</label>
-                            <input type="text" class="vc-input" name="national_id" inputmode="numeric" maxlength="13" placeholder="1234567890123">
+                </div>
+
+                <div class="card-body">
+
+                    <hr class="fleet-divider mb-2">
+                    
+                    <div class="row g-2 mb-3 mt-2">
+                        <div class="col-12 text-center">
+<div class="profile-upload">
+
+    <img id="profilePreview" src="" alt="Profile">
+
+    <div id="profilePlaceholder" class="profile-placeholder">
+        <span class="material-symbols-rounded">face</span>
+    </div>
+
+    <!-- ลบรูป -->
+    <button
+        type="button"
+        id="removeProfile"
+        class="remove-btn"
+       
+    >
+        <span class="material-symbols-rounded">delete</span>
+    </button>
+
+    <!-- เพิ่มรูป -->
+    <label for="profileImage" class="upload-btn">
+        <span class="material-symbols-rounded">add</span>
+    </label>
+
+    <input
+        type="file"
+        id="profileImage"
+        accept="image/*"
+        hidden
+    >
+
+</div>
                         </div>
-                        <div class="vc-form-group">
-                            <label class="vc-label">ผูก User Account</label>
-                            <select class="vc-select" name="user_id">
+                    </div>
+                    
+                    
+                    <hr class="fleet-divider">
+
+                    <div class="row g-2 mb-3 mt-2">
+                        <div class="col-12">
+                            <label class="form-label" for="ed_name">ชื่อ-นามสกุล</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_name" name="name" required class="form-control" autocomplete="off" placeholder="สมชาย ใจดี">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" for="ed_national_id">เลขบัตรประชาชน</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_national_id" name="national_id" class="form-control" autocomplete="off" inputmode="numeric" maxlength="13" placeholder="X XXXX XXXXX XX X">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" for="ed_phone">เบอร์โทร</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_phone" name="phone" class="form-control" autocomplete="off" placeholder="081-234-5678">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" for="ed_user_id">ผูก User Account</label>
+                            <select class="form-select" id="ed_user_id" name="user_id">
                                 <option value="">— ไม่ผูก —</option>
                                 {% for u in users %}
                                 <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
                                 {% endfor %}
                             </select>
                         </div>
-                    </div>
+                        <div class="col-6">
 
-                    <div class="vc-form-group mf-form-section">
-                        <p class="mf-form-section-title">
-                            <i data-lucide="map-pin" class="vc-icon-sm"></i>
-                            ที่อยู่ตามบัตรประชาชน
-                        </p>
-                        <div class="vc-form-group">
-                            <label class="vc-label">บ้านเลขที่ / หมู่ / ถนน</label>
-                            <input type="text" class="vc-input" name="addr_line" placeholder="89 ม.7 หมู่บ้านอังกูล">
-                        </div>
-                        <div class="vc-form-row vc-form-row-2">
-                            <div class="vc-form-group">
-                                <label class="vc-label">ตำบล / แขวง</label>
-                                <input type="text" class="vc-input" name="addr_subdistrict" placeholder="ใจดี">
-                            </div>
-                            <div class="vc-form-group">
-                                <label class="vc-label">อำเภอ / เขต</label>
-                                <input type="text" class="vc-input" name="addr_district" placeholder="ขุขันธ์">
-                            </div>
-                        </div>
-                        <div class="vc-form-row vc-form-row-2">
-                            <div class="vc-form-group">
-                                <label class="vc-label">จังหวัด</label>
-                                <input type="text" class="vc-input" name="addr_province" placeholder="ศรีสะเกษ">
-                            </div>
-                            <div class="vc-form-group">
-                                <label class="vc-label">รหัสไปรษณีย์</label>
-                                <input type="text" class="vc-input" name="addr_postal" inputmode="numeric" maxlength="5" placeholder="33140">
-                            </div>
                         </div>
                     </div>
 
-                    <div class="vc-form-row vc-form-row-2">
-                        <div class="vc-form-group">
-                            <label class="vc-label">รูปโปรไฟล์คนขับ</label>
-                            <input type="file" class="vc-input" name="avatar_image" accept="image/*">
+                    <hr class="fleet-divider">
+
+                    <div class="text-uppercase mb-2" style="font-size:.75rem;color:var(--bb-mut)">
+                        ที่อยู่ตามบัตรประชาชน
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="form-label" for="ed_addr_line">บ้านเลขที่ / หมู่ / ถนน</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_addr_line" name="addr_line" class="form-control" autocomplete="off" placeholder="89 ม.7 หมู่บ้านอังกูล">
+                            </div>
                         </div>
-                        <div class="vc-form-group">
-                            <label class="vc-label">รูปบัตรประชาชน</label>
-                            <input type="file" class="vc-input" name="id_card_image" accept="image/*">
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label" for="ed_addr_subdistrict">ตำบล / แขวง</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_addr_subdistrict" name="addr_subdistrict" class="form-control" autocomplete="off" placeholder="ใจดี">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" for="ed_addr_district">อำเภอ / เขต</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_addr_district" name="addr_district" class="form-control" autocomplete="off" placeholder="ขุขันธ์">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" for="ed_addr_province">จังหวัด</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_addr_province" name="addr_province" class="form-control" autocomplete="off" placeholder="ศรีสะเกษ">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" for="ed_addr_postal">รหัสไปรษณีย์</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_addr_postal" name="addr_postal" class="form-control" autocomplete="off" inputmode="numeric" maxlength="5" placeholder="33140">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="vc-form-group">
-                        <div class="mf-switch-row">
-                            <span class="vc-label" style="margin:0;">สถานะใช้งาน</span>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" name="is_active" value="1" checked>
-                            </div>
+                    <hr class="fleet-divider">
+
+                    <div class="row g-2 mb-2 mt-3">
+                        <div class="col-6">
+                            <label class="form-label">รูปโปรไฟล์คนขับ <span id="ed_avatar_hint" class="d-none" style="color:var(--bb-mut);font-weight:400">(เว้นว่าง = ใช้รูปเดิม)</span></label>
+                            <input type="file" id="ed_avatar_file" name="avatar_image" accept="image/*" class="form-control">
+                            <a href="#" id="ed_avatar_current" class="d-inline-flex align-items-center gap-1 mt-1" style="display:none;font-size:.8125rem;color:var(--bb-accent-dk)" target="_blank" rel="noopener">
+                                <span class="material-symbols-rounded" style="font-size:16px">image</span>รูปปัจจุบัน
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">รูปบัตรประชาชน <span id="ed_idcard_hint" class="d-none" style="color:var(--bb-mut);font-weight:400">(เว้นว่าง = ใช้รูปเดิม)</span></label>
+                            <input type="file" id="ed_idcard_file" name="id_card_image" accept="image/*" class="form-control">
+                            <a href="#" id="ed_idcard_current" class="d-inline-flex align-items-center gap-1 mt-1" style="display:none;font-size:.8125rem;color:var(--bb-accent-dk)" target="_blank" rel="noopener">
+                                <span class="material-symbols-rounded" style="font-size:16px">image</span>รูปปัจจุบัน
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="mf-switch-row mt-1">
+                        <span class="form-label mb-0">สถานะใช้งาน</span>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="ed_active" name="is_active" value="1" checked>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="vc-btn vc-btn-primary">
-                        <i data-lucide="check" class="vc-icon-sm"></i>
-                        บันทึก
-                    </button>
+
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-end gap-2 pt-2 pb-3">
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri" id="adSubmitBtn" title="บันทึกคนขับใหม่">บันทึก</button>
                 </div>
             </form>
         </div>
@@ -609,116 +792,6 @@
                     <button type="submit" class="vc-btn vc-btn-danger">
                         <i data-lucide="trash-2" class="vc-icon-sm"></i>
                         ลบเลย
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-{# ── Edit Driver ── #}
-<div class="modal fade vc-modal" id="editDriverModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <form action="/admin/manage-fleet" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="edit_driver">
-                <input type="hidden" name="driver_id" id="ed_id">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i data-lucide="pencil" class="vc-icon-sm"></i>
-                        แก้ไขข้อมูลคนขับ
-                    </h5>
-                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="vc-form-row vc-form-row-2">
-                        <div class="vc-form-group">
-                            <label class="vc-label">ชื่อ-นามสกุล <span class="vc-required">*</span></label>
-                            <input type="text" class="vc-input" name="name" id="ed_name" required>
-                        </div>
-                        <div class="vc-form-group">
-                            <label class="vc-label">เบอร์โทร</label>
-                            <input type="text" class="vc-input" name="phone" id="ed_phone">
-                        </div>
-                    </div>
-                    <div class="vc-form-row vc-form-row-2">
-                        <div class="vc-form-group">
-                            <label class="vc-label">เลขบัตรประชาชน</label>
-                            <input type="text" class="vc-input" name="national_id" id="ed_national_id" inputmode="numeric" maxlength="13">
-                        </div>
-                        <div class="vc-form-group">
-                            <label class="vc-label">ผูก User Account</label>
-                            <select class="vc-select" name="user_id" id="ed_user_id">
-                                <option value="">— ไม่ผูก —</option>
-                                {% for u in users %}
-                                <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="vc-form-group mf-form-section">
-                        <p class="mf-form-section-title">
-                            <i data-lucide="map-pin" class="vc-icon-sm"></i>
-                            ที่อยู่ตามบัตรประชาชน
-                        </p>
-                        <div class="vc-form-group">
-                            <label class="vc-label">บ้านเลขที่ / หมู่ / ถนน</label>
-                            <input type="text" class="vc-input" name="addr_line" id="ed_addr_line">
-                        </div>
-                        <div class="vc-form-row vc-form-row-2">
-                            <div class="vc-form-group">
-                                <label class="vc-label">ตำบล / แขวง</label>
-                                <input type="text" class="vc-input" name="addr_subdistrict" id="ed_addr_subdistrict">
-                            </div>
-                            <div class="vc-form-group">
-                                <label class="vc-label">อำเภอ / เขต</label>
-                                <input type="text" class="vc-input" name="addr_district" id="ed_addr_district">
-                            </div>
-                        </div>
-                        <div class="vc-form-row vc-form-row-2">
-                            <div class="vc-form-group">
-                                <label class="vc-label">จังหวัด</label>
-                                <input type="text" class="vc-input" name="addr_province" id="ed_addr_province">
-                            </div>
-                            <div class="vc-form-group">
-                                <label class="vc-label">รหัสไปรษณีย์</label>
-                                <input type="text" class="vc-input" name="addr_postal" id="ed_addr_postal" inputmode="numeric" maxlength="5">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="vc-form-row vc-form-row-2">
-                        <div class="vc-form-group">
-                            <label class="vc-label">รูปโปรไฟล์คนขับ <span class="vc-label-meta">เว้นว่าง = ใช้รูปเดิม</span></label>
-                            <input type="file" class="vc-input" name="avatar_image" accept="image/*">
-                            <a href="#" id="ed_avatar_current" class="mf-current-file" target="_blank" rel="noopener" style="display:none;">
-                                <i data-lucide="image" class="vc-icon-sm"></i> รูปปัจจุบัน
-                            </a>
-                        </div>
-                        <div class="vc-form-group">
-                            <label class="vc-label">รูปบัตรประชาชน <span class="vc-label-meta">เว้นว่าง = ใช้รูปเดิม</span></label>
-                            <input type="file" class="vc-input" name="id_card_image" accept="image/*">
-                            <a href="#" id="ed_idcard_current" class="mf-current-file" target="_blank" rel="noopener" style="display:none;">
-                                <i data-lucide="image" class="vc-icon-sm"></i> รูปปัจจุบัน
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="vc-form-group">
-                        <div class="mf-switch-row">
-                            <span class="vc-label" style="margin:0;">สถานะใช้งาน</span>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" name="is_active" id="ed_active" value="1">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="vc-btn vc-btn-primary">
-                        <i data-lucide="check" class="vc-icon-sm"></i>
-                        บันทึก
                     </button>
                 </div>
             </form>
@@ -855,6 +928,59 @@
         </div>
     </div>
 </div>
+
+<script >
+const input = document.getElementById('profileImage');
+const preview = document.getElementById('profilePreview');
+const placeholder = document.getElementById('profilePlaceholder');
+
+input.addEventListener('change', function () {
+
+    const file = this.files[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+
+        placeholder.style.display = 'none';
+
+    };
+
+    reader.readAsDataURL(file);
+
+});
+
+const removeBtn = document.getElementById("removeProfile");
+
+reader.onload = function(e){
+
+    preview.src = e.target.result;
+    preview.style.display = "block";
+
+    placeholder.style.display = "none";
+
+    removeBtn.style.display = "flex";
+};
+
+removeBtn.addEventListener("click", function(){
+
+    input.value = "";
+
+    preview.src = "";
+    preview.style.display = "none";
+
+    placeholder.style.display = "flex";
+
+    removeBtn.style.display = "none";
+
+});
+
+</script>
 
 {% endblock %}
 

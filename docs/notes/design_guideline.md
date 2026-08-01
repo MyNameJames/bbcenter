@@ -453,6 +453,8 @@ sidebar→drawer · ตารางกว้าง 3 กลยุทธ์ (hori
 
 **ไม่ใช่ standard (debt เฉพาะไฟล์นี้ ไม่ใช่ pattern ให้ทำตาม):** field "หมายเหตุ" (`id="travelDate"`) ยังเป็น mockup ค้าง ไม่มี `name`/backend รองรับ · global unscoped `.material-symbols-rounded{font-variation-settings:'wght' 300}` ใน `<style>` ของไฟล์ — รายละเอียด → [INDEX_ui.md § Templates](INDEX_ui.md)
 
+> ต้องการ **modal เดียวสลับ add/edit** (ไม่ใช่แค่ฟอร์มเปล่า) → recipe + variations แยกไว้ที่ [modal_pattern.md](modal_pattern.md) (ต่อยอดจาก `#bookingModal` ข้างบนนี้ ไม่ซ้ำเนื้อหา)
+
 ---
 
 ## 14. Drift ledger — guideline v2.0 vs โค้ดวันนี้

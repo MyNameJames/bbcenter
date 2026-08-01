@@ -1,7 +1,9 @@
 {# vehicle_budget.html — จัดการงบประมาณ (admin)
    Shell: _base_ue.html (migrated 2026-07-29 — see docs/notes/log/2026-07-29_vehicle-budget-shell-token.md)
    Token: bb-* ทำไปแล้วตั้งแต่ bb-* migration 2026-07-05 (ดู INDEX_ui.md) — เฟสนี้ shell เท่านั้น
-   ยังไม่ทำ (เฟสถัดไป — component/icon): data-lucide → Material Symbols ตรงๆ, pivot table reskin
+   Icon: data-lucide → material-symbols-rounded ตรงๆ ครบทั้งไฟล์แล้ว (2026-07-31, audit + phase 1-4) —
+   ยังไม่ทำ: reskin 5 modal เดิม (setBudget/topUp/adjust/extend/refund) ตาม bookingModal-style
+   (เฟส 5 — deferred ตามคำขอ, ดู yearlyPlanModal comment ด้านล่างสำหรับ pattern ที่จะใช้)
 #}
 {% extends '_base_ue.html' %}
 
@@ -25,6 +27,9 @@
                ชิปกลม (filter, mockup เฉยๆ ไม่ผูก logic) · ปุ่มดำทึบ(ink)=หลัก เขียวโผล่แค่จุดเดียว (กล่องคาดการณ์)
                ตาม design_guideline.md v2.1 "ink คือโครง เขียวคือสัญญาณ" #}
             <div class="mt-3" id="budgetYearlyMockup">
+
+
+
 
                 <div class="d-flex gap-2 flex-wrap mb-3">
                     {# ── เลือกก้อนงบ: v2.26 — เดิมเป็น "ปีงบ" chip ผูกกับ fiscal_year_start_ad ที่ compute
@@ -73,19 +78,19 @@
                 {% set _remaining    = _total_amt - _total_used %}
                 {% set _central_pct  = (_central_used / _total_amt * 100) if _total_amt > 0 else 0 %}
                 {% set _dept_pct     = (_dept_used / _total_amt * 100) if _total_amt > 0 else 0 %}
-                <div style="font-size:.875rem;color:var(--bb-mut)">เงินก้อนประจำปี</div>
+                <div style="font-size:14px;color:var(--bb-mut)">เงินก้อนประจำปี</div>
                 <div class="d-flex align-items-baseline flex-wrap gap-2 mb-2">
-                    <span class="bb-num" style="font-size:1.875rem;font-weight:600;color:var(--bb-str);letter-spacing:-.02em">฿{{ '{:,.0f}'.format(_total_amt) }}</span>
-                    <span style="font-size:.875rem;color:var(--bb-mut)">จัดสรรแล้ว <span class="bb-num">฿{{ '{:,.0f}'.format(_total_used) }}</span> · เหลือจัดสรร <span class="bb-num">฿{{ '{:,.0f}'.format(_remaining) }}</span></span>
+                    <span class="bb-num" style="font-size:30px;font-weight:600;color:var(--bb-str);letter-spacing:-.02em">฿{{ '{:,.0f}'.format(_total_amt) }}</span>
+                    <span style="font-size:14px;color:var(--bb-mut)">จัดสรรแล้ว <span class="bb-num">฿{{ '{:,.0f}'.format(_total_used) }}</span> · เหลือจัดสรร <span class="bb-num">฿{{ '{:,.0f}'.format(_remaining) }}</span></span>
                 </div>
 
-                <div class="d-flex mb-2" style="height:.375rem;border-radius:999px;overflow:hidden;background:var(--bb-n100)">
+                <div class="d-flex mb-2" style="height:6px;border-radius:999px;overflow:hidden;background:var(--bb-n100)">
                     <span style="width:{{ '{:.2f}'.format(_central_pct) }}%;background:var(--bb-ink)"></span>
                     <span style="width:{{ '{:.2f}'.format(_dept_pct) }}%;background:var(--bb-accent-dk)"></span>
                 </div>
-                <div class="d-flex gap-4 flex-wrap pb-3 mb-3" style="font-size:.875rem;color:var(--bb-mut);border-bottom:1px solid var(--bb-n200)">
-                    <span><span style="display:inline-block;width:.5rem;height:.5rem;border-radius:999px;background:var(--bb-ink);margin-right:.375rem"></span>ส่วนกลาง <span class="bb-num" style="color:var(--bb-str)">฿{{ '{:,.0f}'.format(_central_used) }}</span> <span style="color:var(--bb-n400)">/ {{ '{:,.0f}'.format(_central_cap) }}</span></span>
-                    <span><span style="display:inline-block;width:.5rem;height:.5rem;border-radius:999px;background:var(--bb-accent-dk);margin-right:.375rem"></span>ส่วนกอง <span class="bb-num" style="color:var(--bb-str)">฿{{ '{:,.0f}'.format(_dept_used) }}</span> <span style="color:var(--bb-n400)">/ {{ '{:,.0f}'.format(_dept_cap) }}</span></span>
+                <div class="d-flex gap-4 flex-wrap pb-3 mb-3" style="font-size:14px;color:var(--bb-mut);border-bottom:1px solid var(--bb-n200)">
+                    <span><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--bb-ink);margin-right:6px"></span>ส่วนกลาง <span class="bb-num" style="color:var(--bb-str)">฿{{ '{:,.0f}'.format(_central_used) }}</span> <span style="color:var(--bb-n400)">/ {{ '{:,.0f}'.format(_central_cap) }}</span></span>
+                    <span><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--bb-accent-dk);margin-right:6px"></span>ส่วนกอง <span class="bb-num" style="color:var(--bb-str)">฿{{ '{:,.0f}'.format(_dept_used) }}</span> <span style="color:var(--bb-n400)">/ {{ '{:,.0f}'.format(_dept_cap) }}</span></span>
                 </div>
                 {% else %}
                 <div class="bb-empty py-4">
@@ -103,8 +108,8 @@
                    ปีงบเก่า (ไม่ใช่ปีปัจจุบัน) → เปลี่ยนข้อความเป็นสรุปผลจริง ไม่ project ไปข้างหน้า
                    งบเสี่ยง = ใช้ไปแล้ว >80% ของ cap ตัวเอง (เกณฑ์ง่าย ไม่ project รายงบ, ตกลงแล้ว) #}
                 {% if forecast.total_allocated > 0 %}
-                <div class="mb-2" style="font-size:1.25rem;font-weight:600;color:var(--bb-str)">ใช้ไปแล้ว <span class="bb-num">฿{{ '{:,.0f}'.format(forecast.total_spent) }}</span> จาก <span class="bb-num">฿{{ '{:,.0f}'.format(forecast.total_allocated) }}</span></div>
-                <div class="mb-3" style="font-size:.9375rem;color:var(--bb-mut);line-height:1.6">
+                <div class="mb-2" style="font-size:20px;font-weight:600;color:var(--bb-str)">ใช้ไปแล้ว <span class="bb-num">฿{{ '{:,.0f}'.format(forecast.total_spent) }}</span> จาก <span class="bb-num">฿{{ '{:,.0f}'.format(forecast.total_allocated) }}</span></div>
+                <div class="mb-3" style="font-size:15px;color:var(--bb-mut);line-height:1.6">
                     คิดเป็น {{ '{:.0f}'.format(forecast.spent_pct) }}% ของงบที่จัดสรรทั้งปี · เหลือใช้ได้อีก <span class="bb-num">฿{{ '{:,.0f}'.format(forecast.remaining_to_use) }}</span>{% if forecast.peak_month_label %} {% endif %}
                 </div>
                 {% endif %}
@@ -292,9 +297,9 @@
                             {% set _plan = _plan_by_id.v.get(b.yearly_plan_id) %}
                             {% set _pct_tone = 'var(--bb-dg-tx)' if b.pct >= 90 else ('var(--bb-wr-tx)' if b.pct >= 70 else 'var(--bb-ok-tx)') %}
                             <tr>
-                                <td><span class="bb-avatar {{ 'is-info' if _is_central else 'is-wr' }}" style="width:2.625rem;height:2.625rem;border-radius:var(--bb-r-md)"><span class="material-symbols-rounded">{{ 'account_balance' if _is_central else 'group' }}</span></span></td>
+                                <td><span class="bb-avatar {{ 'is-info' if _is_central else 'is-wr' }}" style="width:42px;height:42px;border-radius:var(--bb-r-surface)"><span class="material-symbols-rounded">{{ 'account_balance' if _is_central else 'group' }}</span></span></td>
                                 <td class="bb-cell-strong">{{ b.department }}<span class="bb-cell-sub">ระหว่างวันที่ {{ b.start_date_th or '—' }} - {{ b.end_date_th or '—' }}</span></td>
-                                <td>{% if _plan %}<span style="font-size:.8125rem;color:var(--bb-mut)">ปีงบ {{ _plan.fiscal_year + 543 }}</span>{% else %}<span style="color:var(--bb-n300)">—</span>{% endif %}</td>
+                                <td>{% if _plan %}<span style="font-size:13px;color:var(--bb-mut)">ปีงบ {{ _plan.fiscal_year + 543 }}</span>{% else %}<span style="color:var(--bb-n300)">—</span>{% endif %}</td>
                                 <td><span class="bb-badge is-neutral">{{ 'ส่วนกลาง' if _is_central else 'ส่วนกอง' }}</span></td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.budget_amount) }}</td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.used_amount) }}<span class="bb-cell-sub" style="color:{{ _pct_tone }}">({{ '{:.0f}'.format(b.pct) }}%)</span></td>
@@ -333,10 +338,10 @@
             {% set pct_color = 'var(--bb-dg-tx)' if b.pct >= 90 else ('var(--bb-wr-tx)' if b.pct >= 70 else 'var(--bb-ok-tx)') %}
             <div class="bb-card p-3"{% if not b.is_active %} style="opacity:.6"{% endif %}>
                 <div class="d-flex align-items-start gap-3">
-                    <span class="bb-avatar" style="width:2.625rem;height:2.625rem;border-radius:var(--bb-r-md);background:var(--bb-n100);color:var(--bb-mut)"><i data-lucide="{{ icon }}" style="width:1.25rem;height:1.25rem"></i></span>
+                    <span class="bb-avatar" style="width:42px;height:42px;border-radius:var(--bb-r-surface);background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded" style="font-size:20px">{{ icon }}</span></span>
                     <div class="flex-grow-1" style="min-width:0">
                         <div class="fw-semibold" style="color:var(--bb-str)">{{ b.department }}</div>
-                        <div class="bb-num" style="font-size:.9375rem">
+                        <div class="bb-num" style="font-size:15px">
                             ฿{{ '{:,.0f}'.format(b.used_amount) }}<span style="color:var(--bb-mut)">/{{ '{:,.0f}'.format(b.budget_amount) }}</span>
                             <span style="color:{{ pct_color }}">({{ '{:.0f}'.format(b.pct) }}%)</span>
                         </div>
@@ -344,7 +349,7 @@
                     <div class="bb-ml-dd" data-dropdown>
                         <button type="button" class="bb-btn is-ghost is-icon is-sm"
                                 data-dropdown-trigger aria-label="เมนูจัดการ" title="เมนูจัดการ">
-                            <i data-lucide="more-horizontal"></i>
+                            <span class="material-symbols-rounded">more_horiz</span>
                         </button>
                         <div class="bb-menu bb-ml-dd-menu" data-dropdown-menu hidden>
                             <button type="button" class="bb-menu-item" data-dropdown-close
@@ -354,19 +359,19 @@
                                     data-approver="{{ '' if btype == 'central' else (b.approver_id or '') }}"
                                     data-plan-id="{{ b.yearly_plan_id or '' }}"
                                     title="แก้เพดานงบ">
-                                <span class="d-flex align-items-center gap-2"><i data-lucide="pencil"></i> แก้เพดานงบ</span>
+                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">edit</span> แก้เพดานงบ</span>
                             </button>
                             <button type="button" class="bb-menu-item" data-dropdown-close
                                     data-bs-toggle="modal" data-bs-target="#budgetTopUpModal"
                                     data-bid="{{ b.id }}" data-dept="{{ b.department }}" data-amount="{{ b.budget_amount }}"
                                     title="เพิ่มงบ (top-up)">
-                                <span class="d-flex align-items-center gap-2"><i data-lucide="plus-circle"></i> เพิ่มงบ (top-up)</span>
+                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">add_circle</span> เพิ่มงบ (top-up)</span>
                             </button>
                             <button type="button" class="bb-menu-item" data-dropdown-close
                                     data-bs-toggle="modal" data-bs-target="#budgetAdjustModal"
                                     data-bid="{{ b.id }}" data-dept="{{ b.department }}" data-used="{{ b.used_amount }}"
                                     title="ปรับยอดใช้ไป">
-                                <span class="d-flex align-items-center gap-2"><i data-lucide="sliders-horizontal"></i> ปรับยอดใช้ไป</span>
+                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">tune</span> ปรับยอดใช้ไป</span>
                             </button>
                             <div class="bb-menu-divider"></div>
                             <form method="POST" data-confirm-toggle
@@ -378,26 +383,26 @@
                                 <input type="hidden" name="to_active" value="0">
                                 <button type="submit" class="bb-menu-item" data-dropdown-close
                                         title="ปิดใช้งานงบนี้ — booking ใหม่จะถูกบล็อก">
-                                    <span class="d-flex align-items-center gap-2" style="color:var(--bb-dg-tx)"><i data-lucide="power-off" style="color:var(--bb-dg-tx)"></i> ปิดใช้งานงบนี้</span>
+                                    <span class="d-flex align-items-center gap-2" style="color:var(--bb-dg-tx)"><span class="material-symbols-rounded" style="color:var(--bb-dg-tx)">power_settings_new</span> ปิดใช้งานงบนี้</span>
                                 </button>
                             </form>
                         </div>
                     </div>
                 </div>
-                <div style="border-top:1px solid var(--bb-n200);margin:.75rem 0"></div>
-                <div style="font-size:.8125rem;color:var(--bb-mut)">
+                <div style="border-top:1px solid var(--bb-n200);margin:12px 0"></div>
+                <div style="font-size:13px;color:var(--bb-mut)">
                     <div>: ตั้งแต่วันที่ {{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}</div>
                     {% if btype == 'dept' %}
                     {% if b.approver_name %}
                     <div>: {{ b.approver_name }} <span style="color:var(--bb-ph)">(ผู้อนุมัติงบ)</span></div>
                     {% else %}
-                    <button type="button" class="d-flex align-items-center gap-1 mt-1" style="background:none;border:none;padding:0;font-size:.8125rem;color:var(--bb-wr-tx)"
+                    <button type="button" class="d-flex align-items-center gap-1 mt-1" style="background:none;border:none;padding:0;font-size:13px;color:var(--bb-wr-tx)"
                             data-bs-toggle="modal" data-bs-target="#setBudgetModal"
                             data-budget-type="department" data-dept="{{ b.department }}"
                             data-amount="{{ b.budget_amount }}" data-approver=""
                             data-plan-id="{{ b.yearly_plan_id or '' }}"
                             title="กดเพื่อกำหนดผู้อนุมัติ">
-                        <i data-lucide="alert-circle" style="width:.8125rem;height:.8125rem"></i> ยังไม่มีผู้อนุมัติ
+                        <span class="material-symbols-rounded" style="font-size:13px">error</span> ยังไม่มีผู้อนุมัติ
                     </button>
                     {% endif %}
                     {% endif %}
@@ -409,10 +414,10 @@
             {% set _pct = (b.used_amount / b.budget_amount * 100) if b.budget_amount else 0 %}
             <div class="bb-card p-3" style="opacity:.6">
                 <div class="d-flex align-items-start gap-3">
-                    <span class="bb-avatar" style="width:2.625rem;height:2.625rem;border-radius:var(--bb-r-md);background:var(--bb-n100);color:var(--bb-mut)"><i data-lucide="{{ icon }}" style="width:1.25rem;height:1.25rem"></i></span>
+                    <span class="bb-avatar" style="width:42px;height:42px;border-radius:var(--bb-r-surface);background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded" style="font-size:20px">{{ icon }}</span></span>
                     <div class="flex-grow-1" style="min-width:0">
                         <div class="fw-semibold" style="color:var(--bb-str)">{{ b.department }}</div>
-                        <div class="bb-num" style="font-size:.9375rem">
+                        <div class="bb-num" style="font-size:15px">
                             ฿{{ '{:,.0f}'.format(b.used_amount) }}<span style="color:var(--bb-mut)">/{{ '{:,.0f}'.format(b.budget_amount) }}</span>
                             <span style="color:var(--bb-mut)">({{ '{:.0f}'.format(_pct) }}%)</span>
                         </div>
@@ -425,8 +430,8 @@
                         เปิดการใช้งาน
                     </button>
                 </div>
-                <div style="border-top:1px solid var(--bb-n200);margin:.75rem 0"></div>
-                <div style="font-size:.8125rem;color:var(--bb-mut)">
+                <div style="border-top:1px solid var(--bb-n200);margin:12px 0"></div>
+                <div style="font-size:13px;color:var(--bb-mut)">
                     : ตั้งแต่วันที่ {{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}
                 </div>
             </div>
@@ -438,9 +443,9 @@
             {# section head (dot+label+count+line) ใช้ซ้ำ 4 จุด — ไม่มี bb-* component ตรงตัว ประกอบจาก token #}
             {% macro bcard_section_head(on, label, count, extra='') %}
             <div class="d-flex align-items-center gap-2 mb-3{% if not on %} mt-4{% endif %}">
-                <span style="width:.5rem;height:.5rem;border-radius:999px;flex-shrink:0;{% if on %}background:var(--bb-ok){% else %}background:#fff;border:1.5px solid var(--bb-n300){% endif %}"></span>
-                <span style="font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:{% if on %}var(--bb-mut){% else %}var(--bb-ph){% endif %}">{{ label }}</span>
-                <span class="bb-num" style="font-size:.6875rem;font-weight:600;color:var(--bb-mut)">{{ count }}</span>
+                <span style="width:8px;height:8px;border-radius:999px;flex-shrink:0;{% if on %}background:var(--bb-ok){% else %}background:#fff;border:1.5px solid var(--bb-n300){% endif %}"></span>
+                <span style="font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:{% if on %}var(--bb-mut){% else %}var(--bb-ph){% endif %}">{{ label }}</span>
+                <span class="bb-num" style="font-size:11px;font-weight:600;color:var(--bb-mut)">{{ count }}</span>
                 {% if extra %}{{ extra|safe }}{% endif %}
                 <span class="flex-grow-1" style="height:1px;background:var(--bb-n200)"></span>
             </div>
@@ -455,12 +460,12 @@
             {% if central_budgets %}
             {{ bcard_section_head(true, 'ส่วนกลาง', central_budgets|length, _pending) }}
             <div class="row g-3">
-                {% for b in central_budgets %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card(b, 'central', 'landmark') }}</div>{% endfor %}
+                {% for b in central_budgets %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card(b, 'central', 'account_balance') }}</div>{% endfor %}
             </div>
             {% else %}
             <div class="bb-card mb-4">
                 <div class="bb-empty">
-                    <div class="bb-empty-icon"><i data-lucide="landmark"></i></div>
+                    <div class="bb-empty-icon"><span class="material-symbols-rounded">account_balance</span></div>
                     <p class="bb-empty-title">ยังไม่มีงบส่วนกลาง</p>
                     <p class="bb-empty-desc">กดปุ่ม "ตั้งงบใหม่" ด้านบนเพื่อเริ่มต้น</p>
                 </div>
@@ -471,12 +476,12 @@
             {% if dept_budgets %}
             {{ bcard_section_head(true, 'ส่วนกอง', dept_budgets|length) }}
             <div class="row g-3">
-                {% for b in dept_budgets %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card(b, 'dept', 'users') }}</div>{% endfor %}
+                {% for b in dept_budgets %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card(b, 'dept', 'group') }}</div>{% endfor %}
             </div>
             {% else %}
             <div class="bb-card">
                 <div class="bb-empty">
-                    <div class="bb-empty-icon"><i data-lucide="users"></i></div>
+                    <div class="bb-empty-icon"><span class="material-symbols-rounded">group</span></div>
                     <p class="bb-empty-title">ยังไม่มีงบงานกอง</p>
                     <p class="bb-empty-desc">กดปุ่ม "ตั้งงบใหม่" ด้านบนเพื่อเริ่มต้น</p>
                 </div>
@@ -492,7 +497,7 @@
             {% if central_off %}
             {{ bcard_section_head(false, 'ส่วนกลาง', central_off|length) }}
             <div class="row g-3">
-                {% for b in central_off %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card_off(b, 'landmark') }}</div>{% endfor %}
+                {% for b in central_off %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card_off(b, 'account_balance') }}</div>{% endfor %}
             </div>
             {% endif %}
 
@@ -500,7 +505,7 @@
             <div class="{% if central_off %}mt-4{% endif %}">
             {{ bcard_section_head(false, 'ส่วนกอง', dept_off|length) }}
             <div class="row g-3">
-                {% for b in dept_off %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card_off(b, 'users') }}</div>{% endfor %}
+                {% for b in dept_off %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card_off(b, 'group') }}</div>{% endfor %}
             </div>
             </div>
             {% endif %}
@@ -508,7 +513,7 @@
             {% if not central_off and not dept_off %}
             <div class="bb-card">
                 <div class="bb-empty">
-                    <div class="bb-empty-icon"><i data-lucide="archive"></i></div>
+                    <div class="bb-empty-icon"><span class="material-symbols-rounded">archive</span></div>
                     <p class="bb-empty-title">ไม่มีงบที่ปิดใช้งาน</p>
                     <p class="bb-empty-desc">งบที่ถูกปิดใช้งานจะแสดงที่นี่</p>
                 </div>
@@ -527,10 +532,10 @@
             <section id="sectionPersonal">
                 <div class="d-flex align-items-center justify-content-between gap-3 mb-3 py-1">
                     <div class="d-flex align-items-center gap-2">
-                        <span style="font-size:.875rem;font-weight:600;color:var(--bb-str)">งานส่วนตัว</span>
+                        <span style="font-size:14px;font-weight:600;color:var(--bb-str)">งานส่วนตัว</span>
                         <span class="bb-badge is-neutral">{{ personal_rows|length }} รายการ</span>
                     </div>
-                    <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)">
+                    <span class="bb-num" style="font-size:13px;color:var(--bb-mut)">
                         ฿{{ '{:,.0f}'.format(kpi.personal_received) }} รับแล้ว
                         {% if kpi.personal_unpaid_amount %}
                         <span class="mx-2" style="color:var(--bb-n300)">·</span>
@@ -553,7 +558,7 @@
                 </nav>
 
                 <div class="table-responsive">
-                    <table class="table data-table mb-0" data-sortable-table>
+                    <table class="bb-table mb-0" data-sortable-table>
                         <thead>
                             <tr>
                                 <th data-sort="text">วันที่ปิดทริป</th>
@@ -568,17 +573,17 @@
                             {% for r in personal_rows %}
                             <tr data-personal-row="{{ 'paid' if r.is_paid else 'unpaid' }}"
                                 {% if unpaid_count and r.is_paid %}hidden{% endif %}>
-                                <td class="bb-num" style="color:var(--bb-mut)">
+                                <td class="bb-cell-num" style="color:var(--bb-mut)">
                                     {{ r.date.strftime('%d/%m %H:%M') if r.date else '—' }}
                                 </td>
-                                <td class="bb-num">
+                                <td class="bb-cell-num">
                                     {% if r.booking_id %}
-                                    <span style="font-weight:600;color:var(--bb-str)">BK-{{ r.booking_id }}</span>
+                                    <span class="bb-cell-strong">BK-{{ r.booking_id }}</span>
                                     {% else %}—{% endif %}
                                 </td>
                                 <td>{{ r.user }}</td>
                                 <td style="color:var(--bb-mut)">{{ r.destination }}</td>
-                                <td class="text-end bb-num">฿{{ '{:,.0f}'.format(r.fuel_cost) }}</td>
+                                <td class="bb-cell-num">฿{{ '{:,.0f}'.format(r.fuel_cost) }}</td>
                                 <td class="text-end">
                                     {% if r.is_paid %}
                                     <span class="bb-badge is-neutral" style="background:var(--bb-ok-bg);color:var(--bb-ok-tx)"
@@ -596,7 +601,7 @@
                                         <button type="submit"
                                                 class="bb-badge is-neutral" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx);border:none"
                                                 title="กดเพื่อยืนยันว่าได้รับเงินจาก {{ r.user }} แล้ว (฿{{ '{:,.0f}'.format(r.fuel_cost) }})">
-                                            <i data-lucide="clock"></i>
+                                            <span class="material-symbols-rounded">schedule</span>
                                             ค้างรับ
                                         </button>
                                     </form>
@@ -611,7 +616,7 @@
                 <div class="bb-card">
                     <div class="bb-empty">
                         <div class="bb-empty-icon">
-                            <i data-lucide="hand-coins"></i>
+                            <span class="material-symbols-rounded">payments</span>
                         </div>
                         <p class="bb-empty-title">ไม่มีการใช้รถส่วนตัวในเดือน {{ month_label }}</p>
                         <p class="bb-empty-desc">รายการจะแสดงเมื่อมีผู้จองปิดทริปแบบ "ใช้ส่วนตัว"</p>
@@ -644,9 +649,9 @@
 
                 <div class="bb-modal-head">
                     <h5 class="bb-modal-title" id="sbTitle">
-                        <i data-lucide="wallet" style="width:1rem;height:1rem"></i> ตั้งงบประมาณ
+                        <span class="material-symbols-rounded" style="font-size:16px">account_balance_wallet</span> ตั้งงบประมาณ
                     </h5>
-                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><i data-lucide="x"></i></button>
+                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
                 </div>
 
                 <div class="bb-modal-body">
@@ -674,7 +679,7 @@
 
                     <div class="bb-field" id="approverRow" hidden>
                         <label class="bb-label">
-                            <i data-lucide="id-card" style="width:.875rem;height:.875rem"></i> ผู้อนุมัติการจองของกองนี้
+                            <span class="material-symbols-rounded" style="font-size:14px">badge</span> ผู้อนุมัติการจองของกองนี้
                         </label>
                         <select name="approver_id" id="sbApprover" class="bb-input"
                                 data-autocomplete placeholder="ค้นหาชื่อผู้อนุมัติ…">
@@ -691,7 +696,7 @@
                        (_handle_set_budget). preselect ตอนแก้ไขผ่าน JS (sbYearlyPlan, ดู vehicle_budget.js) #}
                     <div class="bb-field">
                         <label class="bb-label">
-                            <span class="material-symbols-rounded" style="width:.875rem;height:.875rem">account_balance_wallet</span> ก้อนงบ <span style="color:var(--bb-dg)">*</span>
+                            <span class="material-symbols-rounded" style="font-size:14px">account_balance_wallet</span> ก้อนงบ <span style="color:var(--bb-dg)">*</span>
                         </label>
                         <select name="yearly_plan_id" id="sbYearlyPlan" class="bb-input" required>
                             <option value="">— เลือกก้อนงบ —</option>
@@ -703,7 +708,7 @@
                     </div>
 
                     <div class="bb-callout is-info mt-3" id="sbNotice">
-                        <i data-lucide="info"></i>
+                        <span class="material-symbols-rounded">info</span>
                         <span id="sbNoticeText">ตั้งงบประจำเดือน <strong>{{ month_label }}</strong> — ถ้ามีงบเดิมอยู่จะถูกอัปเดตทับ</span>
                     </div>
                 </div>
@@ -731,9 +736,9 @@
 
                 <div class="bb-modal-head">
                     <h5 class="bb-modal-title">
-                        <i data-lucide="plus-circle" style="width:1rem;height:1rem"></i> เพิ่มเพดานงบ (top-up)
+                        <span class="material-symbols-rounded" style="font-size:16px">add_circle</span> เพิ่มเพดานงบ (top-up)
                     </h5>
-                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><i data-lucide="x"></i></button>
+                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
                 </div>
 
                 <div class="bb-modal-body">
@@ -765,7 +770,7 @@
                 <div class="bb-modal-foot">
                     <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ปิดโดยไม่เพิ่มงบ">ยกเลิก</button>
                     <button type="submit" class="bb-btn is-pri" title="บวกเพิ่มเข้ากับเพดานงบเดิม">
-                        <i data-lucide="plus-circle"></i> เพิ่มเข้าเพดานงบ
+                        <span class="material-symbols-rounded">add_circle</span> เพิ่มเข้าเพดานงบ
                     </button>
                 </div>
             </form>
@@ -785,14 +790,14 @@
 
                 <div class="bb-modal-head">
                     <h5 class="bb-modal-title">
-                        <i data-lucide="sliders-horizontal" style="width:1rem;height:1rem"></i> แก้ยอดงบที่หักผิด
+                        <span class="material-symbols-rounded" style="font-size:16px">tune</span> แก้ยอดงบที่หักผิด
                     </h5>
-                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><i data-lucide="x"></i></button>
+                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
                 </div>
 
                 <div class="bb-modal-body">
                     <div class="bb-callout is-wr">
-                        <i data-lucide="alert-triangle"></i>
+                        <span class="material-symbols-rounded">warning</span>
                         <span>ใช้กรณี <strong>หักงบผิดบัญชี / ผิดจำนวน</strong> เท่านั้น — ไม่ใช่การคืนเงินจริง เพราะค่าใช้จ่ายเกิดขึ้นแล้วเปลี่ยนแปลงไม่ได้ ทุกการแก้ไขจะถูกบันทึกใน ledger เพื่อตรวจสอบย้อนหลัง</span>
                     </div>
 
@@ -824,7 +829,7 @@
                 <div class="bb-modal-foot">
                     <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ปิดโดยไม่บันทึก">ยกเลิก</button>
                     <button type="submit" class="bb-btn is-pri" title="บันทึกการแก้ไขลง ledger">
-                        <i data-lucide="check"></i> บันทึกการแก้ไข
+                        <span class="material-symbols-rounded">check</span> บันทึกการแก้ไข
                     </button>
                 </div>
             </form>
@@ -844,9 +849,9 @@
 
                 <div class="bb-modal-head">
                     <h5 class="bb-modal-title">
-                        <i data-lucide="calendar-plus" style="width:1rem;height:1rem"></i> นำงบกลับมาใช้ / เพิ่มเวลา
+                        <span class="material-symbols-rounded" style="font-size:16px">calendar_add_on</span> นำงบกลับมาใช้ / เพิ่มเวลา
                     </h5>
-                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><i data-lucide="x"></i></button>
+                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
                 </div>
 
                 <div class="bb-modal-body">
@@ -858,30 +863,30 @@
                     </dl>
 
                     <div class="bb-callout is-info">
-                        <i data-lucide="info"></i>
+                        <span class="material-symbols-rounded">info</span>
                         <span>กำหนดช่วงเวลาใหม่ที่งบนี้จะเปิดใช้ — ระบบจะเปิดใช้งานงบกลับให้อัตโนมัติ ยอดที่หักไว้เดิมยังคงอยู่ครบ</span>
                     </div>
 
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="bb-label">
-                                <i data-lucide="calendar" style="width:.875rem;height:.875rem"></i> เริ่มใช้งบ <span style="color:var(--bb-dg)">*</span>
+                                <span class="material-symbols-rounded" style="font-size:14px">calendar_month</span> เริ่มใช้งบ <span style="color:var(--bb-dg)">*</span>
                             </label>
                             <div class="bb-dp" data-datepick>
                                 <button type="button" class="bb-select bb-dp-trigger" data-datepick-btn
                                         aria-haspopup="dialog" aria-expanded="false" aria-label="เลือกวันเริ่มใช้งบ">
-                                    <i data-lucide="calendar"></i>
+                                    <span class="material-symbols-rounded">calendar_month</span>
                                     <span class="bb-dp-val" data-datepick-label>เลือกวันที่</span>
                                 </button>
                                 <input type="hidden" name="start_date" data-bind="start_date" data-datepick-input data-datepick-required>
                                 <div class="bb-datepicker" data-datepick-pop role="dialog" aria-label="เลือกวันเริ่มใช้งบ" hidden>
                                     <div class="bb-dp-head">
                                         <button type="button" class="bb-dr-nav" data-cal-prev aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
-                                            <i data-lucide="chevron-left"></i>
+                                            <span class="material-symbols-rounded">chevron_left</span>
                                         </button>
                                         <span class="bb-dp-month" data-cal-title></span>
                                         <button type="button" class="bb-dr-nav" data-cal-next aria-label="เดือนถัดไป" title="เดือนถัดไป">
-                                            <i data-lucide="chevron-right"></i>
+                                            <span class="material-symbols-rounded">chevron_right</span>
                                         </button>
                                     </div>
                                     <div class="bb-cal">
@@ -893,23 +898,23 @@
                         </div>
                         <div class="col-6">
                             <label class="bb-label">
-                                <i data-lucide="calendar-check" style="width:.875rem;height:.875rem"></i> สิ้นสุด <span style="color:var(--bb-dg)">*</span>
+                                <span class="material-symbols-rounded" style="font-size:14px">event_available</span> สิ้นสุด <span style="color:var(--bb-dg)">*</span>
                             </label>
                             <div class="bb-dp is-align-right" data-datepick>
                                 <button type="button" class="bb-select bb-dp-trigger" data-datepick-btn
                                         aria-haspopup="dialog" aria-expanded="false" aria-label="เลือกวันสิ้นสุด">
-                                    <i data-lucide="calendar-check"></i>
+                                    <span class="material-symbols-rounded">event_available</span>
                                     <span class="bb-dp-val" data-datepick-label>เลือกวันที่</span>
                                 </button>
                                 <input type="hidden" name="end_date" data-bind="end_date" data-datepick-input data-datepick-required>
                                 <div class="bb-datepicker" data-datepick-pop role="dialog" aria-label="เลือกวันสิ้นสุด" hidden>
                                     <div class="bb-dp-head">
                                         <button type="button" class="bb-dr-nav" data-cal-prev aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
-                                            <i data-lucide="chevron-left"></i>
+                                            <span class="material-symbols-rounded">chevron_left</span>
                                         </button>
                                         <span class="bb-dp-month" data-cal-title></span>
                                         <button type="button" class="bb-dr-nav" data-cal-next aria-label="เดือนถัดไป" title="เดือนถัดไป">
-                                            <i data-lucide="chevron-right"></i>
+                                            <span class="material-symbols-rounded">chevron_right</span>
                                         </button>
                                     </div>
                                     <div class="bb-cal">
@@ -932,7 +937,7 @@
                 <div class="bb-modal-foot">
                     <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ปิดโดยไม่บันทึก">ยกเลิก</button>
                     <button type="submit" class="bb-btn is-pri" title="ตั้งช่วงเวลาใหม่ + เปิดใช้งานงบ">
-                        <i data-lucide="calendar-plus"></i> นำงบกลับมาใช้
+                        <span class="material-symbols-rounded">calendar_add_on</span> นำงบกลับมาใช้
                     </button>
                 </div>
             </form>
@@ -952,9 +957,9 @@
 
                 <div class="bb-modal-head">
                     <h5 class="bb-modal-title">
-                        <i data-lucide="x-circle" style="width:1rem;height:1rem"></i> ยกเลิกการจองที่ยังไม่ปิดทริป
+                        <span class="material-symbols-rounded" style="font-size:16px">cancel</span> ยกเลิกการจองที่ยังไม่ปิดทริป
                     </h5>
-                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><i data-lucide="x"></i></button>
+                    <button type="button" class="bb-modal-x" data-bs-dismiss="modal" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
                 </div>
 
                 <div class="bb-modal-body">
@@ -963,8 +968,8 @@
                         รายการด้านล่างคือ booking ที่ <strong>อนุมัติแล้วแต่ยังไม่ได้ปิดทริป</strong> — ยังไม่มีการหักงบ จึงยกเลิกได้
                         <br><span style="color:var(--bb-ph)">หมายเหตุ: booking ที่ปิดทริปแล้วยกเลิกไม่ได้ เพราะรถได้ขับและเกิดค่าใช้จ่ายจริงไปแล้ว</span>
                     </p>
-                    <div class="table-responsive" style="max-height:20rem;overflow-y:auto">
-                        <table class="table data-table mb-0">
+                    <div class="table-responsive" style="max-height:320px;overflow-y:auto">
+                        <table class="bb-table mb-0">
                             <thead>
                                 <tr>
                                     <th style="width:30px;"></th>
@@ -979,9 +984,9 @@
                             <tbody>
                                 {% for p in pending_list %}
                                 <tr data-pick-booking="{{ p.id }}">
-                                    <td><i data-lucide="circle" style="width:.875rem;height:.875rem"></i></td>
-                                    <td class="bb-num" style="font-weight:600;color:var(--bb-str)">#{{ p.id }}</td>
-                                    <td class="bb-num" style="color:var(--bb-mut)">{{ p.start.strftime('%d/%m %H:%M') if p.start else '—' }}</td>
+                                    <td><span class="material-symbols-rounded" style="font-size:14px">radio_button_unchecked</span></td>
+                                    <td class="bb-cell-strong">#{{ p.id }}</td>
+                                    <td style="color:var(--bb-mut)">{{ p.start.strftime('%d/%m %H:%M') if p.start else '—' }}</td>
                                     <td>
                                         {% if p.expense_type == 'central' %}
                                         <span class="bb-badge is-neutral">ส่วนกลาง</span>
@@ -1000,7 +1005,7 @@
                     {% else %}
                     <div class="bb-empty">
                         <div class="bb-empty-icon">
-                            <i data-lucide="check-circle-2"></i>
+                            <span class="material-symbols-rounded">check_circle</span>
                         </div>
                         <p class="bb-empty-title">ไม่มีการจองที่ค้างปิดทริป</p>
                         <p class="bb-empty-desc">ทุก booking ที่อนุมัติแล้วได้ปิดทริปเรียบร้อย</p>
@@ -1012,7 +1017,7 @@
                     <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ปิดหน้าต่าง">ปิด</button>
                     {% if pending_list %}
                     <button type="submit" class="bb-btn is-danger" data-refund-submit disabled title="ยืนยันยกเลิกการจองที่เลือก">
-                        <i data-lucide="x-circle"></i> ยืนยันยกเลิกการจอง
+                        <span class="material-symbols-rounded">cancel</span> ยืนยันยกเลิกการจอง
                     </button>
                     {% endif %}
                 </div>
@@ -1054,11 +1059,11 @@
                 <div style="padding:14px 20px 0">
                     <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
                         <div>
-                            <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)">#เงินก้อนประจำปี</div>
-                            <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">ตั้ง/แก้ไขเงินก้อนประจำปี {{ (yearly_plan.fiscal_year if yearly_plan else fallback_fiscal_year) + 543 }}</div>
+                            <div class="text-uppercase" style="font-size:12px;color:var(--bb-mut)">#เงินก้อนประจำปี</div>
+                            <div style="font-size:20px;font-weight:700;color:var(--bb-str)">ตั้ง/แก้ไขเงินก้อนประจำปี {{ (yearly_plan.fiscal_year if yearly_plan else fallback_fiscal_year) + 543 }}</div>
                         </div>
-                        <div class="bb-avatar flex-shrink-0" style="width:4.5rem;height:4.5rem;background:var(--bb-n100);color:var(--bb-mut)">
-                            <span class="material-symbols-rounded" style="font-size:2.5rem">account_balance_wallet</span>
+                        <div class="bb-avatar flex-shrink-0" style="width:72px;height:72px;background:var(--bb-n100);color:var(--bb-mut)">
+                            <span class="material-symbols-rounded" style="font-size:40px">account_balance_wallet</span>
                         </div>
                     </div>
                 </div>
@@ -1071,7 +1076,7 @@
                     <div class="row g-2 mb-3 mt-3">
                         <div class="col-6">
                             <label class="bb-label">
-                                <span class="material-symbols-rounded" style="width:.875rem;height:.875rem">calendar_month</span> เริ่มก้อนงบ
+                                <span class="material-symbols-rounded" style="font-size:14px">calendar_month</span> เริ่มก้อนงบ
                             </label>
                             <div class="bb-dp" data-datepick>
                                 <button type="button" class="bb-select bb-dp-trigger" data-datepick-btn
@@ -1100,7 +1105,7 @@
                         </div>
                         <div class="col-6">
                             <label class="bb-label">
-                                <span class="material-symbols-rounded" style="width:.875rem;height:.875rem">event_upcoming</span> สิ้นสุด
+                                <span class="material-symbols-rounded" style="font-size:14px">event_upcoming</span> สิ้นสุด
                             </label>
                             <div class="bb-dp is-align-right" data-datepick>
                                 <button type="button" class="bb-select bb-dp-trigger" data-datepick-btn

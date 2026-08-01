@@ -88,13 +88,14 @@
                 const d = new Date(start); d.setDate(start.getDate() + i);
                 const on = sameDay(d, sel), isTd = sameDay(d, td), c = counts[toISO(d)] || 0;
                 const wd = i === 0 ? ' is-sun' : i === 6 ? ' is-sat' : '';
-                /* indicator: บาร์ดำ (ขาวถ้า active) ยาวตามจำนวนงาน เต็มแถบที่ 5 งาน · ไม่มีงาน = ว่าง ไม่โชว์ */
-                const fillW = (Math.min(c, 5) * 0.35).toFixed(2);
-                const ind = c === 0 ? '' : `<div class="bb-ws-ind-fill" style="width:${fillW}rem"></div>`;
-                h += `<button type="button" class="bb-ws-day${wd}${on ? ' is-on' : ''}${isTd && !on ? ' is-today' : ''}" data-iso="${toISO(d)}">` +
+                /* load indicator 3 ระดับ (spec: mockup-vehicle-admin.html §weekstrip)
+                   1 งาน = dot · 2-3 = เส้นเล็ก · 4+ = เส้นใหญ่ · ไม่มีงาน = ว่าง
+                   ขนาดจริงคุมที่ CSS (.bb-ws-ind.is-*) — ห้ามส่ง inline style กลับมาอีก (guideline §10) */
+                const lv = c === 0 ? 'is-lv0' : c === 1 ? 'is-dot' : c <= 3 ? 'is-sm' : 'is-lg';
+                h += `<button type="button" class="bb-ws-day${wd}${on ? ' is-on' : ''}${isTd ? ' is-today' : ''}" data-iso="${toISO(d)}">` +
                      `<div class="bb-ws-dow">${TH_DOW[i]}</div>` +
                      `<div class="bb-ws-dnum bb-num">${d.getDate()}</div>` +
-                     `<div class="bb-ws-ind">${ind}</div></button>`;
+                     `<div class="bb-ws-ind ${lv}"><div class="bb-ws-ind-fill"></div></div></button>`;
             }
             strip.innerHTML = h;
         }
