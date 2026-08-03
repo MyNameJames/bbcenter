@@ -212,80 +212,8 @@
     gap: 8px;
     padding-bottom: 24px;
 }
-.vrc-m-evt {
-    background: var(--bb-n0);
-    border: 1px solid var(--bb-n200);
-    border-radius: var(--bb-r-surface);
-    overflow: hidden;
-    transition: border-color .12s, transform .12s;
-}
-.vrc-m-evt:hover { border-color: var(--bb-n400); }
-.vrc-m-evt:active { transform: scale(.985); }
-
-.vrc-m-evt-head {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    cursor: pointer;
-}
-.vrc-m-evt-dot {
-    width: 8px;
-    height: 8px;
-    margin-top: 7px;
-    border-radius: 50%;
-    background: var(--bb-n500);
-    flex-shrink: 0;
-}
-.vrc-m-evt-dot--approved  { background: var(--bb-ok); }
-.vrc-m-evt-dot--pending   { background: var(--bb-wr); }
-.vrc-m-evt-dot--approver  { background: var(--bb-info); }
-.vrc-m-evt-dot--rejected  { background: var(--bb-dg); }
-.vrc-m-evt-dot--group     { background: var(--bb-ink); }
-.vrc-m-evt-dot--completed { background: var(--bb-n500); }
-
-.vrc-m-evt-body { flex: 1; min-width: 0; }
-.vrc-m-evt-title {
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--bb-str);
-    line-height: 1.4;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.vrc-m-evt-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px 6px;
-    margin-top: 4px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--bb-mut);
-}
-.vrc-m-evt-meta .sep { color: var(--bb-n400); }
-
-/* status pill — bg tint + text tone ไม่มีเส้นขอบ (ตรง .bb-status §12) */
-.vrc-m-evt-status {
-    display: inline-flex;
-    align-items: center;
-    height: 22px;
-    padding: 0 8px;
-    border-radius: var(--bb-r-surface);
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1;
-    white-space: nowrap;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-.vrc-m-evt-status--approved  { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
-.vrc-m-evt-status--pending   { background: var(--bb-wr-bg);   color: var(--bb-wr-tx); }
-.vrc-m-evt-status--approver  { background: var(--bb-info-bg); color: var(--bb-info-tx); }
-.vrc-m-evt-status--rejected  { background: var(--bb-dg-bg);   color: var(--bb-dg-tx); }
-.vrc-m-evt-status--group     { background: var(--bb-accent-bg); color: var(--bb-accent-dk); }
-.vrc-m-evt-status--completed { background: var(--bb-n100);    color: var(--bb-mut); }
+/* 2026-08-03: การ์ด (.bb-card) + avatar/subtext/status ย้ายไปใช้ bb-card/bb-avatar/bb-subtext/bb-status
+   จาก core/css/components.css แทน .vrc-m-evt* เดิม (ตัด custom card CSS ทิ้งทั้งหมด — เหลือแค่ chevron/sub-row ด้านล่าง) */
 
 /* group toggle chevron */
 .vrc-m-evt-toggle {
@@ -324,7 +252,7 @@
     gap: 12px;
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--bb-n200);
+    /* border: 1px solid var(--bb-n200); */
     border-radius: var(--bb-r-surface);
     background: var(--bb-n0);
     color: var(--bb-str);
@@ -334,16 +262,6 @@
     transition: background .12s, border-color .12s;
 }
 .vrc-m-evt-sub-row:hover { background: var(--bb-n100); border-color: var(--bb-n400); }
-.vrc-m-evt-sub-time {
-    flex-shrink: 0;
-    min-width: 42px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--bb-str);
-    font-family: var(--bb-num-font);
-    font-feature-settings: 'tnum';
-}
-.vrc-m-evt-sub-body { flex: 1; min-width: 0; }
 .vrc-m-evt-sub-title {
     font-size: 14px;
     font-weight: 500;
@@ -392,7 +310,7 @@
     .vrc-m-hero { animation: vrc-m-rise .35s cubic-bezier(.2,.8,.2,1) both; }
     .vrc-m-daybar-label,
     .vrc-m-daybar-count { animation: vrc-m-fade .2s cubic-bezier(.2,.8,.2,1) both; }
-    .vrc-m-evt {
+    .vrc-m-list .bb-card {
         animation: vrc-m-item-in .2s cubic-bezier(.2,.8,.2,1) both;
         animation-delay: calc(var(--i, 0) * 30ms);
     }
@@ -407,13 +325,13 @@
    ============================================================ */
 @media (max-width: 767px) {
     /* ปฏิทินทิ้ง card chrome */
-    #calendarView .bb-card,
+    /* #calendarView .bb-card,
     #calendarView .vc-card {
         border: 0;
         background: transparent;
         border-radius: 0;
         overflow: visible;
-    }
+    } */
 
     .calendar-grid {
         grid-template-columns: repeat(7, 1fr);
@@ -502,6 +420,8 @@
     .mobile-indicator--bar-md { width: 14px; }
     .mobile-indicator--bar-lg { width: 22px; }
     .calendar-cell.today .mobile-indicator { background: var(--bb-n0); opacity: .7; }
+    /* ว่าง (0 event) — ยังจองพื้นที่เท่า dot ปกติ (visibility:hidden ไม่ใช่ display:none) กัน cell สูงไม่เท่ากัน */
+    .mobile-indicator.is-empty { visibility: hidden; }
 
     .mobile-list-section {
         display: flex;
@@ -772,15 +692,6 @@
     font-weight: 500;
     color: var(--bb-mut);
 }
-.bk-detail-content .bk-close {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    opacity: .4;
-    transition: opacity .15s;
-}
-.bk-detail-content .bk-close:hover { opacity: .75; }
-
 /* status pill — icon + label เสมอ (§12) · ไม่มีเส้นขอบ */
 .bk-detail-status {
     display: inline-flex;
@@ -900,7 +811,6 @@
     padding: 14px 20px;
     background: var(--bb-n50);
 }
-.bk-detail-footer:has(#detailActions:empty) { display: none; }
 
 @keyframes bk-content-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes bk-pill-in      { from { opacity: 0; transform: translateY(-4px) scale(.95); } to { opacity: 1; transform: none; } }
@@ -912,6 +822,6 @@
     .bk-detail-status,
     .bk-detail-row,
     .bk-detail-member,
-    .vrc-m-evt,
+    .vrc-m-list .bb-card,
     .vrc-m-hero { animation: none; }
 }

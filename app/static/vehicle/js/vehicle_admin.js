@@ -1296,9 +1296,10 @@ function openAdminBookingDetail(id) {
 
     const canEdit = !['in_progress','completed','cancelled'].includes(b.status);
     const actDiv  = document.getElementById('detailActions');
+    // ไม่มีปุ่มแก้ไข = ปุ่ม "ปิด" fallback กันไม่มีทางปิด modal (เอาปุ่ม X ออกแล้ว, 2026-08-03 — modal_pattern.md)
     actDiv.innerHTML = canEdit
         ? `<button class="btn btn-sm btn-outline-primary" onclick="openAdminEdit(${b.id})">แก้ไข</button>`
-        : '';
+        : `<button type="button" class="bb-btn is-sec is-sm" data-bs-dismiss="modal" title="ปิด">ปิด</button>`;
 
     document.getElementById('detailEditSection').classList.add('d-none');
 

@@ -144,13 +144,14 @@
                 {# ── Toolbar (ตั้งงบ) — โชว์เฉพาะ tab "กำลังใช้งาน" (toggle .d-none ใน initBudgetTabs() ของ vehicle_budget.js)
                    dropdown เลือกเดือนถูกตัดออก 2026-07-29 (ผู้ใช้สั่ง) — เปลี่ยนเดือนยังทำได้ผ่านลิงก์ในเซลล์ตารางรวม #}
                 <div class="d-flex align-items-center gap-2 mt-3 d-none" id="budgetToolbar">
-                    <button type="button" class="bb-btn is-pri"
+                    <button type="button" class="bb-btn flex-shrink-0"
+                            style="background:var(--bb-n50);color:var(--bb-n700);outline:none"
                             data-bs-toggle="modal" data-bs-target="#setBudgetModal"
                             data-budget-type="department" data-dept="" data-amount=""
                             data-approver="" data-plan-id=""
-                            title="ตั้งงบประมาณใหม่">
+                            title="ตั้งงบประมาณย่อยใหม่">
                         <span class="material-symbols-rounded">add</span>
-                        <span class="bb-btn-text">ตั้งงบ</span>
+                        <span class="bb-btn-text">ตั้งงบย่อย</span>
                     </button>
                 </div>
             </div>
@@ -271,7 +272,9 @@
                ลำดับการสร้าง เพราะเป็น auto-increment PK). เพิ่มคอลัมน์ "ก้อนงบ" หน้า "ประเภท" ตามคำขอ
                (2026-07-31) — lookup จาก plan_options (ผ่าน yearly_plan_id) ที่ page มีอยู่แล้ว ไม่ต้อง
                query เพิ่ม. งบเก่าที่ yearly_plan_id เป็น NULL (ก่อน feature นี้) โชว์ "—"
-               tone .bb-avatar: is-info=ส่วนกลาง (account_balance) · is-wr=ส่วนกอง (group) #}
+               redesign (2026-08-03): คอลัมน์ "ประเภท" ย้ายขึ้นหน้าสุด (badge is-ok=ส่วนกลาง ·
+               is-info=ส่วนกอง) · คอลัมน์ avatar เดิมถูกลบ · action เป็น dropdown เต็ม
+               (แก้เพดาน/top-up/ปรับยอด/ปิดใช้งาน — ย้ายมาจาก card เดิมที่ถูกลบ) #}
             {% set _plan_by_id = namespace(v={}) %}
             {% for p in plan_options %}{% set _ = _plan_by_id.v.update({p.id: p}) %}{% endfor %}
             {% set _active_rows = (central_budgets + dept_budgets) | sort(attribute='id', reverse=True) %}
@@ -281,10 +284,9 @@
                     <table class="bb-table">
                         <thead>
                             <tr>
-                                <th></th>
+                                <th>ประเภท</th>
                                 <th>ชื่องบ</th>
                                 <th>ก้อนงบ</th>
-                                <th>ประเภท</th>
                                 <th class="text-end">จำนวน</th>
                                 <th class="text-end">ใช้ไป</th>
                                 <th>ผู้อนุมัติ</th>
@@ -297,23 +299,55 @@
                             {% set _plan = _plan_by_id.v.get(b.yearly_plan_id) %}
                             {% set _pct_tone = 'var(--bb-dg-tx)' if b.pct >= 90 else ('var(--bb-wr-tx)' if b.pct >= 70 else 'var(--bb-ok-tx)') %}
                             <tr>
-                                <td><span class="bb-avatar {{ 'is-info' if _is_central else 'is-wr' }}" style="width:42px;height:42px;border-radius:var(--bb-r-surface)"><span class="material-symbols-rounded">{{ 'account_balance' if _is_central else 'group' }}</span></span></td>
+                                <td><span class="bb-badge {{ 'is-ok' if _is_central else 'is-info' }}">{{ 'ส่วนกลาง' if _is_central else 'ส่วนกอง' }}</span></td>
                                 <td class="bb-cell-strong">{{ b.department }}<span class="bb-cell-sub">ระหว่างวันที่ {{ b.start_date_th or '—' }} - {{ b.end_date_th or '—' }}</span></td>
                                 <td>{% if _plan %}<span style="font-size:13px;color:var(--bb-mut)">ปีงบ {{ _plan.fiscal_year + 543 }}</span>{% else %}<span style="color:var(--bb-n300)">—</span>{% endif %}</td>
-                                <td><span class="bb-badge is-neutral">{{ 'ส่วนกลาง' if _is_central else 'ส่วนกอง' }}</span></td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.budget_amount) }}</td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.used_amount) }}<span class="bb-cell-sub" style="color:{{ _pct_tone }}">({{ '{:.0f}'.format(b.pct) }}%)</span></td>
                                 <td>{% if _is_central %}Admin{% elif b.approver_name %}{{ b.approver_name }}{% else %}<span style="color:var(--bb-n300)">ยังไม่มีผู้อนุมัติ</span>{% endif %}</td>
                                 <td>
-                                    <button type="button" class="bb-btn is-sec is-icon"
-                                            data-bs-toggle="modal" data-bs-target="#setBudgetModal"
-                                            data-budget-type="{{ 'central' if _is_central else 'department' }}"
-                                            data-dept="{{ b.department }}" data-amount="{{ b.budget_amount }}"
-                                            data-approver="{{ '' if _is_central else (b.approver_id or '') }}"
-                                            data-plan-id="{{ b.yearly_plan_id or '' }}"
-                                            title="แก้ไข">
-                                        <span class="material-symbols-rounded">edit</span>
-                                    </button>
+                                    <div class="bb-ml-dd" data-dropdown>
+                                        <button type="button" class="bb-btn is-sec is-icon"
+                                                data-dropdown-trigger aria-label="เมนูจัดการ" title="เมนูจัดการ">
+                                            <span class="material-symbols-rounded">more_horiz</span>
+                                        </button>
+                                        <div class="bb-menu bb-ml-dd-menu" data-dropdown-menu hidden>
+                                            <button type="button" class="bb-menu-item" data-dropdown-close
+                                                    data-bs-toggle="modal" data-bs-target="#setBudgetModal"
+                                                    data-budget-type="{{ 'central' if _is_central else 'department' }}"
+                                                    data-dept="{{ b.department }}" data-amount="{{ b.budget_amount }}"
+                                                    data-approver="{{ '' if _is_central else (b.approver_id or '') }}"
+                                                    data-plan-id="{{ b.yearly_plan_id or '' }}"
+                                                    title="แก้เพดานงบ">
+                                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">edit</span> แก้เพดานงบ</span>
+                                            </button>
+                                            <button type="button" class="bb-menu-item" data-dropdown-close
+                                                    data-bs-toggle="modal" data-bs-target="#budgetTopUpModal"
+                                                    data-bid="{{ b.id }}" data-dept="{{ b.department }}" data-amount="{{ b.budget_amount }}"
+                                                    title="เพิ่มงบ (top-up)">
+                                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">add_circle</span> เพิ่มงบ (top-up)</span>
+                                            </button>
+                                            <button type="button" class="bb-menu-item" data-dropdown-close
+                                                    data-bs-toggle="modal" data-bs-target="#budgetAdjustModal"
+                                                    data-bid="{{ b.id }}" data-dept="{{ b.department }}" data-used="{{ b.used_amount }}"
+                                                    title="ปรับยอดใช้ไป">
+                                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">tune</span> ปรับยอดใช้ไป</span>
+                                            </button>
+                                            <div class="bb-menu-divider"></div>
+                                            <form method="POST" data-confirm-toggle
+                                                  data-dept-name="{{ b.department }}" data-to-active="0">
+                                                <input type="hidden" name="action"    value="toggle_active">
+                                                <input type="hidden" name="year"      value="{{ sel_year }}">
+                                                <input type="hidden" name="month"     value="{{ sel_month }}">
+                                                <input type="hidden" name="budget_id" value="{{ b.id }}">
+                                                <input type="hidden" name="to_active" value="0">
+                                                <button type="submit" class="bb-menu-item" data-dropdown-close
+                                                        title="ปิดใช้งานงบนี้ — booking ใหม่จะถูกบล็อก">
+                                                    <span class="d-flex align-items-center gap-2" style="color:var(--bb-dg-tx)"><span class="material-symbols-rounded" style="color:var(--bb-dg-tx)">power_settings_new</span> ปิดใช้งานงบนี้</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -328,198 +362,74 @@
                 {% endif %}
             </div>
 
-            {# ════════════════════════════════════════════ #}
-            {# Card layout redesign (2026-06-17) — central/dept = card grid แบ่ง 2 section
-               (ใช้งานอยู่ = central_budgets · ไม่ได้ใช้งาน = archived_budgets filter budget_type).
-               2 macro reuse: budget_card (active, full dropdown) + budget_card_off (inactive, ปุ่มเปิดใช้งาน)
-            #}
-            {# bcard → bb-card composition (ไม่มี dropdown-menu/avatar-tone component ตรงตัว — ใช้ bb-ml-dd + bb-menu-item + inline token) #}
-            {% macro budget_card(b, btype, icon) %}
-            {% set pct_color = 'var(--bb-dg-tx)' if b.pct >= 90 else ('var(--bb-wr-tx)' if b.pct >= 70 else 'var(--bb-ok-tx)') %}
-            <div class="bb-card p-3"{% if not b.is_active %} style="opacity:.6"{% endif %}>
-                <div class="d-flex align-items-start gap-3">
-                    <span class="bb-avatar" style="width:42px;height:42px;border-radius:var(--bb-r-surface);background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded" style="font-size:20px">{{ icon }}</span></span>
-                    <div class="flex-grow-1" style="min-width:0">
-                        <div class="fw-semibold" style="color:var(--bb-str)">{{ b.department }}</div>
-                        <div class="bb-num" style="font-size:15px">
-                            ฿{{ '{:,.0f}'.format(b.used_amount) }}<span style="color:var(--bb-mut)">/{{ '{:,.0f}'.format(b.budget_amount) }}</span>
-                            <span style="color:{{ pct_color }}">({{ '{:.0f}'.format(b.pct) }}%)</span>
-                        </div>
-                    </div>
-                    <div class="bb-ml-dd" data-dropdown>
-                        <button type="button" class="bb-btn is-ghost is-icon is-sm"
-                                data-dropdown-trigger aria-label="เมนูจัดการ" title="เมนูจัดการ">
-                            <span class="material-symbols-rounded">more_horiz</span>
-                        </button>
-                        <div class="bb-menu bb-ml-dd-menu" data-dropdown-menu hidden>
-                            <button type="button" class="bb-menu-item" data-dropdown-close
-                                    data-bs-toggle="modal" data-bs-target="#setBudgetModal"
-                                    data-budget-type="{{ 'central' if btype == 'central' else 'department' }}"
-                                    data-dept="{{ b.department }}" data-amount="{{ b.budget_amount }}"
-                                    data-approver="{{ '' if btype == 'central' else (b.approver_id or '') }}"
-                                    data-plan-id="{{ b.yearly_plan_id or '' }}"
-                                    title="แก้เพดานงบ">
-                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">edit</span> แก้เพดานงบ</span>
-                            </button>
-                            <button type="button" class="bb-menu-item" data-dropdown-close
-                                    data-bs-toggle="modal" data-bs-target="#budgetTopUpModal"
-                                    data-bid="{{ b.id }}" data-dept="{{ b.department }}" data-amount="{{ b.budget_amount }}"
-                                    title="เพิ่มงบ (top-up)">
-                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">add_circle</span> เพิ่มงบ (top-up)</span>
-                            </button>
-                            <button type="button" class="bb-menu-item" data-dropdown-close
-                                    data-bs-toggle="modal" data-bs-target="#budgetAdjustModal"
-                                    data-bid="{{ b.id }}" data-dept="{{ b.department }}" data-used="{{ b.used_amount }}"
-                                    title="ปรับยอดใช้ไป">
-                                <span class="d-flex align-items-center gap-2"><span class="material-symbols-rounded">tune</span> ปรับยอดใช้ไป</span>
-                            </button>
-                            <div class="bb-menu-divider"></div>
-                            <form method="POST" data-confirm-toggle
-                                  data-dept-name="{{ b.department }}" data-to-active="0">
-                                <input type="hidden" name="action"    value="toggle_active">
-                                <input type="hidden" name="year"      value="{{ sel_year }}">
-                                <input type="hidden" name="month"     value="{{ sel_month }}">
-                                <input type="hidden" name="budget_id" value="{{ b.id }}">
-                                <input type="hidden" name="to_active" value="0">
-                                <button type="submit" class="bb-menu-item" data-dropdown-close
-                                        title="ปิดใช้งานงบนี้ — booking ใหม่จะถูกบล็อก">
-                                    <span class="d-flex align-items-center gap-2" style="color:var(--bb-dg-tx)"><span class="material-symbols-rounded" style="color:var(--bb-dg-tx)">power_settings_new</span> ปิดใช้งานงบนี้</span>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <div style="border-top:1px solid var(--bb-n200);margin:12px 0"></div>
-                <div style="font-size:13px;color:var(--bb-mut)">
-                    <div>: ตั้งแต่วันที่ {{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}</div>
-                    {% if btype == 'dept' %}
-                    {% if b.approver_name %}
-                    <div>: {{ b.approver_name }} <span style="color:var(--bb-ph)">(ผู้อนุมัติงบ)</span></div>
-                    {% else %}
-                    <button type="button" class="d-flex align-items-center gap-1 mt-1" style="background:none;border:none;padding:0;font-size:13px;color:var(--bb-wr-tx)"
-                            data-bs-toggle="modal" data-bs-target="#setBudgetModal"
-                            data-budget-type="department" data-dept="{{ b.department }}"
-                            data-amount="{{ b.budget_amount }}" data-approver=""
-                            data-plan-id="{{ b.yearly_plan_id or '' }}"
-                            title="กดเพื่อกำหนดผู้อนุมัติ">
-                        <span class="material-symbols-rounded" style="font-size:13px">error</span> ยังไม่มีผู้อนุมัติ
-                    </button>
-                    {% endif %}
-                    {% endif %}
-                </div>
-            </div>
-            {% endmacro %}
-
-            {% macro budget_card_off(b, icon) %}
-            {% set _pct = (b.used_amount / b.budget_amount * 100) if b.budget_amount else 0 %}
-            <div class="bb-card p-3" style="opacity:.6">
-                <div class="d-flex align-items-start gap-3">
-                    <span class="bb-avatar" style="width:42px;height:42px;border-radius:var(--bb-r-surface);background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded" style="font-size:20px">{{ icon }}</span></span>
-                    <div class="flex-grow-1" style="min-width:0">
-                        <div class="fw-semibold" style="color:var(--bb-str)">{{ b.department }}</div>
-                        <div class="bb-num" style="font-size:15px">
-                            ฿{{ '{:,.0f}'.format(b.used_amount) }}<span style="color:var(--bb-mut)">/{{ '{:,.0f}'.format(b.budget_amount) }}</span>
-                            <span style="color:var(--bb-mut)">({{ '{:.0f}'.format(_pct) }}%)</span>
-                        </div>
-                    </div>
-                    <button type="button" class="bb-btn is-sec is-sm"
-                            data-bs-toggle="modal" data-bs-target="#extendBudgetModal"
-                            data-bid="{{ b.id }}" data-dept="{{ b.department }}"
-                            data-start="{{ b.start_date }}" data-end="{{ b.end_date }}"
-                            title="ตั้งช่วงเวลาใหม่ + เปิดใช้งานงบ">
-                        เปิดการใช้งาน
-                    </button>
-                </div>
-                <div style="border-top:1px solid var(--bb-n200);margin:12px 0"></div>
-                <div style="font-size:13px;color:var(--bb-mut)">
-                    : ตั้งแต่วันที่ {{ b.start_date_th or '—' }} – {{ b.end_date_th or '—' }}
-                </div>
-            </div>
-            {% endmacro %}
-
             {% set central_off = archived_budgets|selectattr('budget_type', 'equalto', 'central')|list %}
             {% set dept_off    = archived_budgets|rejectattr('budget_type', 'equalto', 'central')|list %}
-
-            {# section head (dot+label+count+line) ใช้ซ้ำ 4 จุด — ไม่มี bb-* component ตรงตัว ประกอบจาก token #}
-            {% macro bcard_section_head(on, label, count, extra='') %}
-            <div class="d-flex align-items-center gap-2 mb-3{% if not on %} mt-4{% endif %}">
-                <span style="width:8px;height:8px;border-radius:999px;flex-shrink:0;{% if on %}background:var(--bb-ok){% else %}background:#fff;border:1.5px solid var(--bb-n300){% endif %}"></span>
-                <span style="font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:{% if on %}var(--bb-mut){% else %}var(--bb-ph){% endif %}">{{ label }}</span>
-                <span class="bb-num" style="font-size:11px;font-weight:600;color:var(--bb-mut)">{{ count }}</span>
-                {% if extra %}{{ extra|safe }}{% endif %}
-                <span class="flex-grow-1" style="height:1px;background:var(--bb-n200)"></span>
-            </div>
-            {% endmacro %}
-
-            {# ── งบที่ใช้งานอยู่ (ส่วนกลาง + ส่วนกอง รวมกัน — restructure ตาม tab ใหม่ 2026-07-29) ── #}
-            {% set _pending = '' %}
-            {% if kpi.central_pending_count %}
-            {% set _pending %}<span class="bb-badge is-neutral" style="background:var(--bb-wr-bg);color:var(--bb-wr-tx)">{{ kpi.central_pending_count }} รอปิด</span>{% endset %}
-            {% endif %}
-
-            {% if central_budgets %}
-            {{ bcard_section_head(true, 'ส่วนกลาง', central_budgets|length, _pending) }}
-            <div class="row g-3">
-                {% for b in central_budgets %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card(b, 'central', 'account_balance') }}</div>{% endfor %}
-            </div>
-            {% else %}
-            <div class="bb-card mb-4">
-                <div class="bb-empty">
-                    <div class="bb-empty-icon"><span class="material-symbols-rounded">account_balance</span></div>
-                    <p class="bb-empty-title">ยังไม่มีงบส่วนกลาง</p>
-                    <p class="bb-empty-desc">กดปุ่ม "ตั้งงบใหม่" ด้านบนเพื่อเริ่มต้น</p>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="mt-4">
-            {% if dept_budgets %}
-            {{ bcard_section_head(true, 'ส่วนกอง', dept_budgets|length) }}
-            <div class="row g-3">
-                {% for b in dept_budgets %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card(b, 'dept', 'group') }}</div>{% endfor %}
-            </div>
-            {% else %}
-            <div class="bb-card">
-                <div class="bb-empty">
-                    <div class="bb-empty-icon"><span class="material-symbols-rounded">group</span></div>
-                    <p class="bb-empty-title">ยังไม่มีงบงานกอง</p>
-                    <p class="bb-empty-desc">กดปุ่ม "ตั้งงบใหม่" ด้านบนเพื่อเริ่มต้น</p>
-                </div>
-            </div>
-            {% endif %}
-            </div>
 
             </section>{# /tabPanelActive #}
 
             <section id="tabPanelInactive" data-budget-panel="inactive" class="d-none">
-            {# ── งบที่ไม่ได้ใช้งานแล้ว (ส่วนกลาง + ส่วนกอง รวมกัน) ── #}
-
-            {% if central_off %}
-            {{ bcard_section_head(false, 'ส่วนกลาง', central_off|length) }}
-            <div class="row g-3">
-                {% for b in central_off %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card_off(b, 'account_balance') }}</div>{% endfor %}
-            </div>
-            {% endif %}
-
-            {% if dept_off %}
-            <div class="{% if central_off %}mt-4{% endif %}">
-            {{ bcard_section_head(false, 'ส่วนกอง', dept_off|length) }}
-            <div class="row g-3">
-                {% for b in dept_off %}<div class="col-12 col-sm-6 col-lg-4">{{ budget_card_off(b, 'group') }}</div>{% endfor %}
-            </div>
-            </div>
-            {% endif %}
-
-            {% if not central_off and not dept_off %}
-            <div class="bb-card">
-                <div class="bb-empty">
-                    <div class="bb-empty-icon"><span class="material-symbols-rounded">archive</span></div>
-                    <p class="bb-empty-title">ไม่มีงบที่ปิดใช้งาน</p>
-                    <p class="bb-empty-desc">งบที่ถูกปิดใช้งานจะแสดงที่นี่</p>
+            {# ── งบที่ไม่ได้ใช้งานแล้ว: table เหมือน tab "งบที่ใช้อยู่" (2026-08-03 redesign) —
+               ใช้ _plan_by_id ที่ตั้งไว้ใน tabPanelActive ด้านบน (Jinja set ไม่ scope ตาม HTML section)
+               action: "เปิดการใช้งาน" (extendBudgetModal ของเดิม) + icon bin ลบงบ (mockup เฉยๆ ยังไม่ผูก logic) #}
+            {% set _inactive_rows = (central_off + dept_off) | sort(attribute='id', reverse=True) %}
+            <div class="mb-4" id="inactiveMockupTable">
+                {% if _inactive_rows %}
+                <div class="table-responsive">
+                    <table class="bb-table">
+                        <thead>
+                            <tr>
+                                <th>ประเภท</th>
+                                <th>ชื่องบ</th>
+                                <th>ก้อนงบ</th>
+                                <th class="text-end">จำนวน</th>
+                                <th class="text-end">ใช้ไป</th>
+                                <th>ผู้อนุมัติ</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in _inactive_rows %}
+                            {% set _is_central = (b.budget_type == 'central') %}
+                            {% set _plan = _plan_by_id.v.get(b.yearly_plan_id) %}
+                            {% set _pct = (b.used_amount / b.budget_amount * 100) if b.budget_amount else 0 %}
+                            {% set _pct_tone = 'var(--bb-dg-tx)' if _pct >= 90 else ('var(--bb-wr-tx)' if _pct >= 70 else 'var(--bb-ok-tx)') %}
+                            <tr>
+                                <td><span class="bb-badge {{ 'is-ok' if _is_central else 'is-info' }}">{{ 'ส่วนกลาง' if _is_central else 'ส่วนกอง' }}</span></td>
+                                <td class="bb-cell-strong">{{ b.department }}<span class="bb-cell-sub">ระหว่างวันที่ {{ b.start_date_th or '—' }} - {{ b.end_date_th or '—' }}</span></td>
+                                <td>{% if _plan %}<span style="font-size:13px;color:var(--bb-mut)">ปีงบ {{ _plan.fiscal_year + 543 }}</span>{% else %}<span style="color:var(--bb-n300)">—</span>{% endif %}</td>
+                                <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.budget_amount) }}</td>
+                                <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.used_amount) }}<span class="bb-cell-sub" style="color:{{ _pct_tone }}">({{ '{:.0f}'.format(_pct) }}%)</span></td>
+                                <td>{% if _is_central %}Admin{% elif b.approver_name %}{{ b.approver_name }}{% else %}<span style="color:var(--bb-n300)">ยังไม่มีผู้อนุมัติ</span>{% endif %}</td>
+                                <td>
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button type="button" class="bb-btn is-sec is-sm flex-shrink-0"
+                                                data-bs-toggle="modal" data-bs-target="#extendBudgetModal"
+                                                data-bid="{{ b.id }}" data-dept="{{ b.department }}"
+                                                data-start="{{ b.start_date }}" data-end="{{ b.end_date }}"
+                                                title="ตั้งช่วงเวลาใหม่ + เปิดใช้งานงบ">
+                                            เปิดการใช้งาน
+                                        </button>
+                                        <button type="button" class="bb-btn is-danger-sec is-icon flex-shrink-0"
+                                                title="ลบงบนี้ทั้งหมด (mockup — ยังไม่ผูก logic จริง)">
+                                            <span class="material-symbols-rounded">delete</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
+                {% else %}
+                <div class="bb-card">
+                    <div class="bb-empty">
+                        <div class="bb-empty-icon"><span class="material-symbols-rounded">archive</span></div>
+                        <p class="bb-empty-title">ไม่มีงบที่ปิดใช้งาน</p>
+                        <p class="bb-empty-desc">งบที่ถูกปิดใช้งานจะแสดงที่นี่</p>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
-
             </section>{# /tabPanelInactive #}
 
             <section id="tabPanelPersonal" data-budget-panel="personal" class="d-none">
@@ -627,7 +537,7 @@
             </section>{# /tabPanelPersonal #}
 
             {# Section "คลังงบ" (tab archived) ถูกตัด 2026-06-17 — งบไม่ active แสดงเป็น
-               section ใน tab "ไม่ได้ใช้งานแล้ว" แล้ว (budget_card_off + extendBudgetModal) #}
+               section ใน tab "ไม่ได้ใช้งานแล้ว" แล้ว (table + extendBudgetModal, redesign 2026-08-03) #}
 
 {% endblock %}
 

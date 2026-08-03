@@ -80,6 +80,29 @@ const STATUS_ICON = {
     rejected:         'circle-x',
     completed:        'check-circle-2'
 };
+/* Phase 2026-08-03 — vrc-m-list การ์ดใหม่ (bb-card style ตาม adminPreviewCards): avatar tone/bb-status class/icon ต่อ status */
+const STATUS_TONE = {
+    pending:          { bg: 'var(--bb-wr-bg)',   fg: 'var(--bb-wr-tx)'   },
+    waiting_approver: { bg: 'var(--bb-info-bg)', fg: 'var(--bb-info-tx)' },
+    approved:         { bg: 'var(--bb-ok-bg)',   fg: 'var(--bb-ok-tx)'   },
+    rejected:         { bg: 'var(--bb-dg-bg)',   fg: 'var(--bb-dg-tx)'   },
+    completed:        { bg: 'var(--bb-n100)',    fg: 'var(--bb-mut)'    }
+};
+const BB_STATUS_TONE = {
+    pending:          'is-wr',
+    waiting_approver: 'is-info',
+    approved:         'is-ok',
+    rejected:         'is-dg',
+    completed:        'is-neutral'
+};
+/* Material Symbols ตรงๆ ไม่ใช้ data-lucide shim (โค้ดใหม่ตาม feedback_material_symbols_direct) */
+const BB_STATUS_ICON = {
+    pending:          'schedule',
+    waiting_approver: 'send',
+    approved:         'check_circle',
+    rejected:         'cancel',
+    completed:        'task_alt'
+};
 
 /* ── State ─────────────────────────────────────── */
 let currentDate      = new Date();
@@ -398,10 +421,11 @@ function createCell(day, year, month, isOtherMonth, isToday=false) {
     }
 
     if(!isOtherMonth){
-        /* Phase F (2026-05-23): 1=dot · 2-3=short bar · 4+=long bar */
-        if(dayEvents.length===1) html+=`<span class="mobile-indicator mt-1"></span>`;
-        else if(dayEvents.length>=4) html+=`<span class="mobile-indicator mobile-indicator--bar-lg mt-1"></span>`;
-        else if(dayEvents.length>=2) html+=`<span class="mobile-indicator mobile-indicator--bar-md mt-1"></span>`;
+        /* Phase F (2026-05-23): 1=dot · 2-3=short bar · 4+=long bar
+           2026-08-03: slot render เสมอ (แม้ 0 event) กัน cell สูงไม่เท่ากันบนมือถือ — ว่าง = is-empty (visibility:hidden แต่ยังกิน layout space) */
+        const n = dayEvents.length;
+        const barCls = n===0 ? 'is-empty' : n>=4 ? 'mobile-indicator--bar-lg' : n>=2 ? 'mobile-indicator--bar-md' : '';
+        html+=`<span class="mobile-indicator ${barCls} mt-1"></span>`;
     }
 
     html+=`<div class="events-container mt-auto">`;
@@ -524,6 +548,28 @@ function buildDesktopEventCards(dayEvents, ds) {
     return html;
 }
 
+/* 2026-08-03: การ์ด mobileListSection คุมให้ตรง adminPreviewCards (ptCardSingle/ptCardGroup ใน vehicle_admin.js)
+   ทุกจุด — duration + plate extract แยกจาก calcDuration()/​_plateLabel() เดิมเพราะ format/scope ต่างกัน
+   (admin ptDuration คืน "(N ชม.)" สั้น, ptPlate คืนแค่รหัสทะเบียนล้วนไม่มี HTML span) */
+function _mlDurLabel(t1, t2) {
+    const [h1,m1]=t1.split(':').map(Number), [h2,m2]=t2.split(':').map(Number);
+    let mins=(h2*60+m2)-(h1*60+m1); if(mins<0) mins+=1440;   // t1===t2 → 0 นาที (ห้ามจองข้ามวัน อยู่แล้วตาม CLAUDE.md gotcha ไม่ต้อง wrap)
+    const h=mins/60;
+    return h>0 ? `(${Number.isInteger(h)?h:h.toFixed(1)} ชม.)` : '';
+}
+function _mlPlate(carStr) {
+    const m=(carStr||'').match(/\(([^)]+)\)/);
+    return m ? m[1] : '—';
+}
+/* meta line เดียวกับ ptTripMeta (admin) — 🏃pax | 🕐time–time(dur) */
+function _mlTripMeta(pax, t1, t2) {
+    return `<div class="bb-subtext d-flex align-items-center gap-1 pt-1">
+                <span class="material-symbols-rounded" style="font-size:14px">directions_run</span>${pax||0}
+                <span>|</span>
+                <span class="material-symbols-rounded" style="font-size:14px">schedule</span>${t1}${t2?`–${t2}`:''} ${_mlDurLabel(t1,t2)}
+            </div>`;
+}
+
 function updateMobileList(dateObj) {
     if(!dateObj) return;
     const pad=n=>String(n).padStart(2,'0');
@@ -570,12 +616,11 @@ function updateMobileList(dateObj) {
         }
     });
 
-    /* Phase C (2026-05-23): premium event-card markup (.vrc-m-evt*) */
-    const dotKey = s => (s === 'completed' ? 'completed' : (STATUS_DOT[s] || 'approved'));
-    const statusKey = s => (s === 'completed' ? 'completed' : (STATUS_DOT[s] || 'approved'));
-
+    /* 2026-08-03: bb-card ตรงกับ adminPreviewCards (ptCardSingle/ptCardGroup ใน vehicle_admin.js) ทุกจุด
+       ยกเว้น 3 อย่างที่ตัดตามที่ขอ (budget/checkbox/ปุ่ม action) — group ยังคง expand/collapse
+       (dual data-bs-toggle บน head + ปุ่ม chevron, stopPropagation กันซ้อน) ต่างจาก admin (ไม่ expand แต่โชว์ยุบ) */
     let html='<div class="vrc-m-list">';
-    let _i = 0;   /* Phase E: stagger index (--i) across groups + singles */
+    let _i = 0;   /* stagger index (--i) — คงพฤติกรรม fade-in เดิม (คีย์เฟรมย้ายไป target .bb-card ใน CSS) */
 
     Object.entries(grouped)
         .sort((a,b)=>{
@@ -588,37 +633,37 @@ function updateMobileList(dateObj) {
             const minTime=sorted[0].time;
             const maxTimeEnd=sorted.reduce((best,e)=>toMins(e.timeEnd)>toMins(best)?e.timeEnd:best, sorted[0].timeEnd);
             const totalPax=members.reduce((sum,e)=>sum+(parseInt(e.pax)||0),0);
-            const carLabel=(members[0].car||'').split('(')[0].trim() || grpName;
+            const rep=sorted[0];   /* ตัวแทนกลุ่ม (คนขับ/ทะเบียน) — เหมือน admin ptCardGroup rep=members[0] */
             const collapseId=`grp-${grpName.replace(/[^a-z0-9]/gi,'')}`;
 
             html+=`
-            <div class="vrc-m-evt vrc-m-evt--group" style="--i:${_i++}">
-                <div class="vrc-m-evt-head" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
-                    <span class="vrc-m-evt-dot vrc-m-evt-dot--group"></span>
-                    <div class="vrc-m-evt-body">
-                        <div class="vrc-m-evt-title">${carLabel}</div>
-                        <div class="vrc-m-evt-meta">
-                            <span>${totalPax} ท่าน</span>
-                            <span class="sep">·</span>
-                            <span>${minTime}–${maxTimeEnd}</span>
-                        </div>
+            <div class="bb-card p-3" style="--i:${_i++}">
+                <div class="d-flex gap-3" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                    <div class="bb-avatar flex-shrink-0" style="width:3rem;height:3rem;background:var(--bb-ok-bg);color:var(--bb-ok-tx)">
+                        <span class="material-symbols-rounded">call_merge</span>
                     </div>
-                    <span class="vrc-m-evt-status vrc-m-evt-status--group">${members.length} งานรวม</span>
-                    <button type="button" class="vrc-m-evt-toggle grp-toggle collapsed"
-                            data-bs-toggle="collapse" data-bs-target="#${collapseId}"
-                            aria-label="ขยาย/ยุบสมาชิกในกลุ่ม"
-                            onclick="event.stopPropagation();">
-                        <i data-lucide="chevron-down"></i>
-                    </button>
+                    <div class="flex-grow-1" style="min-width:0">
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <span class="fw-semibold" style="color:var(--bb-str)">งานร่วม <span class="bb-badge is-neutral">${members.length}</span></span>
+                            <button type="button" class="vrc-m-evt-toggle grp-toggle collapsed flex-shrink-0"
+                                    data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+                                    aria-label="ขยาย/ยุบสมาชิกในกลุ่ม"
+                                    onclick="event.stopPropagation();">
+                                <i data-lucide="chevron-down"></i>
+                            </button>
+                        </div>
+                        ${_mlTripMeta(totalPax, minTime, maxTimeEnd)}
+                        <div class="pt-2" style="font-size:.8125rem">${rep.driverName||'—'} · ${_mlPlate(rep.car)}</div>
+                    </div>
                 </div>
                 <div class="collapse" id="${collapseId}">
-                    <div class="vrc-m-evt-sub">
-                        ${sorted.map(e=>`
-                        <button type="button" class="vrc-m-evt-sub-row" onclick="openEventDetail(${e.id})">
-                            <span class="vrc-m-evt-sub-time">${e.time}</span>
-                            <div class="vrc-m-evt-sub-body">
-                                <div class="vrc-m-evt-sub-title">${e.booker}</div>
-                                <div class="vrc-m-evt-sub-meta">${e.pax} ท่าน${e.dest?` · ${e.dest}`:''}</div>
+                    <div class="">
+                        ${sorted.map((e, i)=>`
+                        <button type="button" class="w-100 pt-2 mt-2 bg-white border-bottom-0 border-end-0 border-start-0" style="padding-left:4rem; ${i > 0 ? 'border-top:1px dashed var(--bb-n300);' : 'border-top:none;'} " onclick="openEventDetail(${e.id})">
+                            <div class="flex-grow-1" style="min-width:0;text-align:left">
+                                <div class="fw-semibold" style="color:var(--bb-str);">${e.booker}</div>
+                                <div class="bb-subtext">${e.pickup||'—'} → ${e.dest||'—'}</div>
+                                ${_mlTripMeta(e.pax, e.time, e.timeEnd)}
                             </div>
                         </button>`).join('')}
                     </div>
@@ -627,26 +672,23 @@ function updateMobileList(dateObj) {
         });
 
     singles.forEach(e=>{
-        const title = e.dest
-            ? `${e.time}–${e.timeEnd} · ${e.dest}`
-            : `${e.time}–${e.timeEnd}`;
-        const carShort = (e.car||'').split('(')[0].trim();
-        const metaParts = [e.booker, `${e.pax} ท่าน`];
-        if (carShort) metaParts.push(carShort);
-        const metaHTML = metaParts
-            .map((p,i) => i === 0
-                ? `<span>${p}</span>`
-                : `<span class="sep">·</span><span>${p}</span>`)
-            .join('');
+        const tone = STATUS_TONE[e.status] || STATUS_TONE.completed;
+        const badgeTone = BB_STATUS_TONE[e.status] || 'is-neutral';
+        const badgeIcon = BB_STATUS_ICON[e.status] || 'help';
         html+=`
-        <div class="vrc-m-evt" style="--i:${_i++}" onclick="openEventDetail(${e.id})">
-            <div class="vrc-m-evt-head">
-                <span class="vrc-m-evt-dot vrc-m-evt-dot--${dotKey(e.status)}"></span>
-                <div class="vrc-m-evt-body">
-                    <div class="vrc-m-evt-title">${title}</div>
-                    <div class="vrc-m-evt-meta">${metaHTML}</div>
+        <div class="bb-card p-3 d-flex gap-3" style="--i:${_i++};cursor:pointer" onclick="openEventDetail(${e.id})">
+            <div class="bb-avatar flex-shrink-0" style="width:3rem;height:3rem;background:${tone.bg};color:${tone.fg}">
+                <span class="material-symbols-rounded">directions_car</span>
+            </div>
+            <div class="flex-grow-1" style="min-width:0">
+                <span class="fw-semibold me-1" style="color:var(--bb-str)">${e.booker}</span>
+                <span class="py-1 px-2 bb-badge ${badgeTone}" style="font-size:11px;">${STATUS_LABEL[e.status]||e.status}</span>
+                <div class="bb-subtext">${e.pickup||'—'} → ${e.dest||'—'}</div>
+                ${_mlTripMeta(e.pax, e.time, e.timeEnd)}
+                <div class="d-flex justify-content-between align-items-end pt-2">
+                    <span style="font-size:.8125rem">${e.driverName||'—'} · ${_mlPlate(e.car)}</span>
+
                 </div>
-                <span class="vrc-m-evt-status vrc-m-evt-status--${statusKey(e.status)}">${STATUS_LABEL[e.status]||e.status}</span>
             </div>
         </div>`;
     });
@@ -713,23 +755,23 @@ function openEventDetail(eventId) {
     const statusKey      = isGroup ? 'group' : (STATUS_DOT[e.status]   || 'approved');
     const statusLabel    = isGroup ? 'ใช้รถร่วมกัน' : (STATUS_LABEL[e.status] || 'อนุมัติแล้ว');
     const statusIconName = isGroup ? 'users'   : (STATUS_ICON[e.status]  || 'circle-check');
-    const statusPill = document.getElementById('detailStatusPill');
-    statusPill.className = `bk-detail-status bk-detail-status--${statusKey}`;
-    document.getElementById('detailStatusIcon').outerHTML =
-        `<i id="detailStatusIcon" data-lucide="${statusIconName}"></i>`;
-    document.getElementById('detailStatusText').textContent = statusLabel;
+    // const statusPill = document.getElementById('detailStatusPill');
+    // statusPill.className = `bk-detail-status bk-detail-status--${statusKey}`;
+    // document.getElementById('detailStatusIcon').outerHTML =
+    //     `<i id="detailStatusIcon" data-lucide="${statusIconName}"></i>`;
+    // document.getElementById('detailStatusText').textContent = statusLabel;
 
     document.getElementById('detailDateLine').textContent = _thaiDateFull(e.date);
-    document.getElementById('detailTime').textContent     = `${e.time} – ${e.timeEnd}`;
-    document.getElementById('detailPlate').innerHTML      = _plateLabel(rep);
+    // document.getElementById('detailTime').textContent     = `${e.time} – ${e.timeEnd}`;
+    // document.getElementById('detailPlate').innerHTML      = _plateLabel(rep);
 
-    const driverLine = document.getElementById('detailDriverLine');
-    if (rep.needDriver) {
-        document.getElementById('detailDriver').textContent = rep.driver || 'รอ Admin มอบหมาย';
-        driverLine.style.display = '';
-    } else {
-        driverLine.style.display = 'none';
-    }
+    // const driverLine = document.getElementById('detailDriverLine');
+    // if (rep.needDriver) {
+    //     document.getElementById('detailDriver').textContent = rep.driver || 'รอ Admin มอบหมาย';
+    //     driverLine.style.display = '';
+    // } else {
+    //     driverLine.style.display = 'none';
+    // }
 
     // Section count
     document.getElementById('detailMemberCount').textContent = `${members.length} คน`;
@@ -777,8 +819,12 @@ function openEventDetail(eventId) {
                 แก้ไข
             </button>` : ''}`;
     }
+    // ไม่มี action ใด (isGroup / ไม่ใช่เจ้าของ / แก้ไข-ยกเลิกไม่ได้แล้ว) — ปุ่ม "ปิด" fallback กันไม่มีทางปิด modal
+    // เพราะเอาปุ่ม X ออกแล้ว (modal_pattern.md: ปิดผ่านปุ่มใน footer/backdrop เท่านั้น)
+    if (!actDiv.innerHTML) {
+        actDiv.innerHTML = `<button type="button" class="bb-btn is-sec is-sm" data-bs-dismiss="modal" title="ปิด">ปิด</button>`;
+    }
 
-    // Footer collapse: CSS `.bk-detail-footer:has(#detailActions:empty) { display: none }` ทำให้แล้ว
     eventDetailModal.show();
 }
 
