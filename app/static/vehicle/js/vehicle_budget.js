@@ -55,11 +55,6 @@ function wireModal(id, fields) {
     });
 }
 
-wireModal('budgetTopUpModal', {
-    budget_id:    'bid',
-    dept_label:   'dept',
-    current_cap:  'amount',
-});
 wireModal('budgetAdjustModal', {
     budget_id:    'bid',
     dept_label:   'dept',
@@ -73,58 +68,282 @@ wireModal('extendBudgetModal', {
     end_date:   'end',
 });
 
-// ── setBudgetModal: swap datalist + approver pre-select + retitle ──
+// ── setBudgetModal: merged รอบ 2 (2026-08-07) — เลิก tab ตั้ง/แก้เพดาน ↔ top-up (ดู comment
+//    เต็มบนตัว modal ใน vehicle_budget.html) เหลือฟอร์มเดียว action=set_budget เสมอ. โหมด
+//    แก้ไข/สร้างใหม่ toggle บล็อก DOM ตรง (sbHero/sbCreateFields/sbQuickAdd/sbNoteWrap/sbNotice)
+//    sbBaseAmount เก็บเพดานเดิมตอนเปิด modal ให้ sbUpdateDeltaHint() คำนวณส่วนต่างตอนพิมพ์/กดปุ่มบวก ──
 const setBudgetModal = document.getElementById('setBudgetModal');
 if (setBudgetModal) {
-    setBudgetModal.addEventListener('show.bs.modal', function (ev) {
-        const btn        = ev.relatedTarget;
-        const type       = (btn && btn.dataset.budgetType) || 'department';
-        const isCentral  = type === 'central';
-        const approverId = (btn && btn.dataset.approver) || '';
-        const deptName   = (btn && btn.dataset.dept) || '';
-        const amount     = (btn && btn.dataset.amount) || '';
-        // edit mode = มี dept + amount จาก dropdown ที่อ้างอิงงบเดิม
-        const isEdit     = !!(deptName && amount);
+    const sbHero         = document.getElementById('sbHero');
+    const sbCreateFields = document.getElementById('sbCreateFields');
+    const sbQuickAdd     = document.getElementById('sbQuickAdd');
+    const sbNoteWrap     = document.getElementById('sbNoteWrap');
+    const sbNotice       = document.getElementById('sbNotice');
+    const sbAmountInput  = document.getElementById('sbAmount');
+    const sbAmountLabel  = document.getElementById('sbAmountLabel');
+    const sbAmountHint   = document.getElementById('sbAmountHint');
+    const sbDeltaHint    = document.getElementById('sbDeltaHint');
+    let sbBaseAmount = 0;
 
+    function fmtMoney(n) { return Math.round(Number(n) || 0).toLocaleString('en-US'); }
+
+    // ส่วนต่างระหว่างเพดานเดิม (sbBaseAmount) กับค่าในช่องตอนนี้ — โชว์เฉพาะตอนมีการเปลี่ยน
+    function sbUpdateDeltaHint(next) {
+        if (!sbDeltaHint) return;
+        const diff = Number(next) - sbBaseAmount;
+        sbDeltaHint.textContent = diff
+            ? '฿' + fmtMoney(sbBaseAmount) + ' → ' + (diff >= 0 ? '+' : '−') + '฿' + fmtMoney(Math.abs(diff))
+            : '';
+    }
+
+    // ── ปุ่มบวกเร็ว: เติมค่าเข้า sbAmount ฝั่ง client เท่านั้น ไม่ใช่ delta field แยก ──
+    document.querySelectorAll('#sbQuickAdd [data-sb-add]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            const next = (Number(sbAmountInput.value) || 0) + Number(b.dataset.sbAdd);
+            sbAmountInput.value = next;
+            sbUpdateDeltaHint(next);
+        });
+    });
+    if (sbAmountInput) {
+        sbAmountInput.addEventListener('input', function () {
+            if (!sbHero.classList.contains('d-none')) sbUpdateDeltaHint(sbAmountInput.value);
+        });
+    }
+
+    // ── hero summary: เพดาน/ใช้ไป/คงเหลือ + bar (สีตาม pct เหมือน _pct_tone ของตาราง) ──
+    function sbApplyHero(btn) {
+        const cap    = Number((btn && btn.dataset.amount) || 0);
+        const used   = Number((btn && btn.dataset.used) || 0);
+        const remain = Number((btn && btn.dataset.remaining) != null ? btn.dataset.remaining : cap - used);
+        const pct    = Number((btn && btn.dataset.pct) || 0);
+
+        document.getElementById('sbPeriodText').textContent =
+            (btn && btn.dataset.startTh && btn.dataset.endTh) ? (btn.dataset.startTh + ' – ' + btn.dataset.endTh) : '—';
+        document.getElementById('sbCurCap').textContent       = fmtMoney(cap);
+        document.getElementById('sbCurUsed').textContent      = fmtMoney(used);
+        document.getElementById('sbCurRemain').textContent    = fmtMoney(remain);
+        document.getElementById('sbLegUsed').textContent      = '฿' + fmtMoney(used);
+        document.getElementById('sbLegUsedPct').textContent   = '/ ' + pct.toFixed(0) + '%';
+        document.getElementById('sbLegRemain').textContent    = '฿' + fmtMoney(remain);
+        document.getElementById('sbLegRemainPct').textContent = '/ ' + Math.max(0, 100 - pct).toFixed(0) + '%';
+
+        const fill = document.getElementById('sbBarFill');
+        fill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+        fill.classList.toggle('is-dg', pct >= 90);
+        fill.classList.toggle('is-wr', pct >= 70 && pct < 90);
+    }
+
+    // ── โหมดสร้างใหม่ (redesign 2026-08-07 รอบ 3) ──────────────────────────────────────
+    const sbPoolSummary = document.getElementById('sbPoolSummary');
+    const sbTypeHint     = document.getElementById('sbTypeHint');
+
+    // ประเภทงบ (.bb-seg) — กำหนด pool ที่ใช้เทียบ (central_allocation/dept_allocation คนละก้อน)
+    // + ผู้อนุมัติ (เฉพาะ department) + datalist ชื่อกอง — ใช้ทั้งตอนกด segmented และตอน show.bs.modal
+    function sbSetType(type) {
+        const isCentral = type === 'central';
         document.getElementById('sbBudgetType').value = type;
-        document.getElementById('sbDept').value       = deptName;
-        document.getElementById('sbAmount').value     = amount;
-        document.getElementById('sbYearlyPlan').value = (btn && btn.dataset.planId) || '';
+        document.querySelectorAll('#sbTypeSeg [data-sb-type]').forEach(function (b) {
+            b.classList.toggle('is-on', b.dataset.sbType === type);
+        });
+        const lbl = document.getElementById('sbDeptLabel');
+        if (lbl) lbl.textContent = isCentral ? 'หมวดงาน (ส่วนกลาง)' : 'ชื่อกอง / แผนก';
+        if (sbTypeHint) sbTypeHint.textContent = isCentral
+            ? 'งบส่วนกลางไม่มีผู้อนุมัติแยก — การจองผ่าน admin โดยตรง'
+            : 'แต่ละกองมีผู้อนุมัติของตัวเอง ก่อนส่งถึง admin';
+        document.getElementById('approverRow').classList.toggle('d-none', isCentral);
 
         const activeList = document.getElementById('sbDeptListActive');
         const srcList    = document.getElementById(isCentral ? 'sbDeptListCentral' : 'sbDeptListDept');
         if (activeList && srcList) activeList.innerHTML = srcList.innerHTML;
 
-        const sel = document.getElementById('sbApprover');
-        if (sel) {
-            sel.value = approverId;
-            // notify the vc-ac autocomplete to refresh its visible label
-            sel.dispatchEvent(new Event('change', { bubbles: true }));
+        sbRecomputePool();
+    }
+    document.querySelectorAll('#sbTypeSeg [data-sb-type]').forEach(function (b) {
+        b.addEventListener('click', function () { sbSetType(b.dataset.sbType); });
+    });
+
+    // ── .sb-dd generic open/close (ก้อนงบ + ผู้อนุมัติ) — ก็อปพฤติกรรมจาก .yp-dd (yearlyPlanModal) ──
+    function sbCloseAllDD() {
+        document.querySelectorAll('#setBudgetModal .sb-dd-pop').forEach(function (p) { p.classList.remove('is-open'); });
+        document.querySelectorAll('#setBudgetModal .sb-dd').forEach(function (t) { t.setAttribute('aria-expanded', 'false'); });
+    }
+    function sbInitDD(triggerId, popId, onSelect, onOpen) {
+        const trigger = document.getElementById(triggerId);
+        const pop     = document.getElementById(popId);
+        if (!trigger || !pop) return;
+        trigger.addEventListener('click', function (e) {
+            if (e.target.closest('.sb-dd-search')) return;
+            e.stopPropagation();
+            const willOpen = !pop.classList.contains('is-open');
+            sbCloseAllDD();
+            if (willOpen) {
+                pop.classList.add('is-open');
+                trigger.setAttribute('aria-expanded', 'true');
+                if (onOpen) onOpen();
+            }
+        });
+        pop.addEventListener('click', function (e) {
+            const opt = e.target.closest('.sb-dd-opt');
+            if (!opt || opt.hidden) return;
+            e.stopPropagation();
+            onSelect(opt);
+            sbCloseAllDD();
+        });
+    }
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#setBudgetModal .sb-dd')) sbCloseAllDD();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') sbCloseAllDD(); });
+
+    // ก้อนงบ — set ค่า + label + .is-active จาก data-value/data-label แล้วคำนวณ pool ใหม่
+    function sbSetPlan(value) {
+        const label = document.getElementById('sbPlanLabel');
+        let matched = null;
+        document.querySelectorAll('#sbPlanPop .sb-dd-opt').forEach(function (o) {
+            const on = String(o.dataset.value) === String(value || '');
+            o.classList.toggle('is-active', on);
+            if (on) matched = o;
+        });
+        document.getElementById('sbYearlyPlan').value = value || '';
+        if (matched) { label.textContent = matched.dataset.label; label.classList.remove('is-ph'); }
+        else { label.textContent = label.dataset.placeholder || ''; label.classList.add('is-ph'); }
+        sbRecomputePool();
+    }
+    sbInitDD('sbPlanTrigger', 'sbPlanPop', function (opt) { sbSetPlan(opt.dataset.value); });
+
+    // ผู้อนุมัติ — เช่นเดียวกับก้อนงบ + ช่องค้นหาในตัว pop (แทน .vc-ac เดิม)
+    function sbSetApprover(value) {
+        const label = document.getElementById('sbApproverLabel');
+        let matched = null;
+        document.querySelectorAll('#sbApproverPop .sb-dd-opt').forEach(function (o) {
+            const on = (o.dataset.value || '') === (value || '');
+            o.classList.toggle('is-active', on);
+            if (on) matched = o;
+        });
+        document.getElementById('sbApprover').value = value || '';
+        if (matched) { label.textContent = matched.dataset.label; label.classList.remove('is-ph'); }
+        else { label.textContent = label.dataset.placeholder || ''; label.classList.add('is-ph'); }
+    }
+    const sbApproverSearch = document.getElementById('sbApproverSearch');
+    sbInitDD('sbApproverTrigger', 'sbApproverPop', function (opt) { sbSetApprover(opt.dataset.value); }, function () {
+        if (!sbApproverSearch) return;
+        sbApproverSearch.value = '';
+        document.querySelectorAll('#sbApproverPop .sb-dd-opt').forEach(function (o) { o.hidden = false; });
+        sbApproverSearch.focus();
+    });
+    if (sbApproverSearch) {
+        sbApproverSearch.addEventListener('input', function () {
+            const q = sbApproverSearch.value.trim().toLowerCase();
+            document.querySelectorAll('#sbApproverPop .sb-dd-opt').forEach(function (o) {
+                if (o.dataset.value === '') return;   // "— ยังไม่กำหนด —" อยู่ให้เลือกเสมอ
+                o.hidden = !!q && !(o.dataset.label || '').toLowerCase().includes(q);
+            });
+        });
+    }
+
+    // วงเงินคงเหลือของ (ประเภทงบ, ก้อนงบ) ที่เลือกอยู่ — bar 3 ช่วง (จัดสรรแล้ว/งบก้อนนี้/เหลือ)
+    // + เตือน/บล็อกถ้าเพดานที่พิมพ์เกินวงเงินที่เหลือ (ตัดสินใจ 2026-08-07: บล็อกจริง ไม่ใช่แค่เตือน —
+    // backend เช็กซ้ำอีกชั้นใน _handle_set_budget กันกรณี client ถูกข้าม)
+    function sbRecomputePool() {
+        const opt = document.querySelector('#sbPlanPop .sb-dd-opt.is-active');
+        if (!opt) { sbPoolSummary.classList.add('d-none'); return; }
+        sbPoolSummary.classList.remove('d-none');
+
+        const isCentral = document.getElementById('sbBudgetType').value === 'central';
+        const pool   = Number(isCentral ? opt.dataset.centralPool : opt.dataset.deptPool) || 0;
+        const alloc  = Number(isCentral ? opt.dataset.centralAlloc : opt.dataset.deptAlloc) || 0;
+        const newAmt = Math.max(0, Number(sbAmountInput.value) || 0);
+        const left   = pool - alloc;
+
+        document.getElementById('sbPoolLabel').textContent  = isCentral ? 'วงเงินส่วนกลาง' : 'วงเงินส่วนกอง';
+        document.getElementById('sbPoolPeriod').textContent = opt.dataset.period || '—';
+        document.getElementById('sbPoolTotal').textContent  = fmtMoney(pool);
+        document.getElementById('sbPoolAlloc').textContent  = fmtMoney(alloc);
+        document.getElementById('sbPoolLeft').textContent   = fmtMoney(Math.max(0, left - newAmt));
+
+        const allocPct = pool > 0 ? Math.min(100, alloc / pool * 100) : 0;
+        const newPct   = pool > 0 ? Math.min(Math.max(0, 100 - allocPct), newAmt / pool * 100) : 0;
+        const over     = newAmt > left;
+
+        document.getElementById('sbPoolBarAlloc').style.width = allocPct + '%';
+        const barNew = document.getElementById('sbPoolBarNew');
+        barNew.style.width = newPct + '%';
+        barNew.classList.toggle('is-over', over);
+        document.getElementById('sbPoolLegNew').classList.toggle('d-none', newAmt <= 0);
+
+        if (sbAmountHint) {
+            sbAmountHint.style.color = over ? 'var(--bb-dg)' : '';
+            sbAmountHint.textContent = over
+                ? 'เกินวงเงินที่เหลือ ฿' + fmtMoney(left) + ' อยู่ ฿' + fmtMoney(newAmt - left)
+                : 'ยอดสูงสุดที่หักได้ตลอดช่วงของก้อนงบที่เลือก — เมื่อปิดทริปแต่ละครั้งระบบจะหักจากยอดนี้';
         }
+    }
 
-        const approverRow = document.getElementById('approverRow');
-        if (approverRow) approverRow.hidden = isCentral;
+    setBudgetModal.addEventListener('show.bs.modal', function (ev) {
+        const btn        = ev.relatedTarget;
+        const type       = (btn && btn.dataset.budgetType) || 'central';
+        const isCentral  = type === 'central';
+        const approverId = (btn && btn.dataset.approver) || '';
+        const deptName   = (btn && btn.dataset.dept) || '';
+        const amount     = (btn && btn.dataset.amount) || '';
+        const bid        = (btn && btn.dataset.bid) || '';
+        const hasBudget  = !!bid;
 
-        const ttl       = document.getElementById('sbTitle');
-        const lbl       = document.getElementById('sbDeptLabel');
-        const noticeTxt = document.getElementById('sbNoticeText');
-        const submitTxt = document.getElementById('sbSubmitText');
+        document.getElementById('sbBudgetId').value = bid;
+        document.getElementById('sbDept').value     = deptName;
+        sbAmountInput.value                          = amount;
+        document.getElementById('sbNote').value     = '';
+
+        sbSetType(type);
+        sbSetPlan((btn && btn.dataset.planId) || '');
+        sbSetApprover(approverId);
+
         const groupLabel = isCentral ? 'งบส่วนกลาง' : 'งบงานกอง';
-        const groupIcon  = isCentral ? 'landmark' : 'users';
-        const fieldLabel = isCentral ? 'หมวดงาน (ส่วนกลาง)' : 'ชื่อกอง / แผนก';
+        const eyebrow     = document.getElementById('sbEyebrow');
+        const title       = document.getElementById('sbTitle');
+        const subtitle    = document.getElementById('sbSubtitle');
+        const submitTxt   = document.getElementById('sbSubmitText');
 
-        if (isEdit) {
-            ttl.innerHTML = '<i data-lucide="pencil" style="width:1rem;height:1rem"></i> แก้เพดาน' + groupLabel + ' — ' + deptName;
-            if (noticeTxt) noticeTxt.innerHTML = 'อัปเดตเพดาน' + groupLabel + 'ของ <strong>' + deptName + '</strong> — ยอดที่หักไว้แล้วจะคงเดิม กระทบเฉพาะเพดานสูงสุด';
+        sbHero.classList.toggle('d-none', !hasBudget);
+        sbCreateFields.classList.toggle('d-none', hasBudget);
+        sbQuickAdd.classList.toggle('d-none', !hasBudget);
+        sbNoteWrap.classList.toggle('d-none', !hasBudget);
+        sbNotice.classList.toggle('d-none', hasBudget);
+        if (sbAmountHint) sbAmountHint.classList.toggle('d-none', hasBudget);
+
+        if (hasBudget) {
+            eyebrow.textContent  = '#แก้ไขเพดานงบ';
+            title.textContent    = deptName;
+            subtitle.textContent = groupLabel;
             if (submitTxt) submitTxt.textContent = 'อัปเดตเพดาน';
+            if (sbAmountLabel) sbAmountLabel.textContent = 'เพดานงบใหม่ (บาท)';
+            sbApplyHero(btn);
+            sbBaseAmount = Number(amount) || 0;
+            sbUpdateDeltaHint(sbBaseAmount);
         } else {
-            ttl.innerHTML = '<i data-lucide="' + groupIcon + '" style="width:1rem;height:1rem"></i> ตั้ง' + groupLabel + 'ใหม่';
-            if (noticeTxt) noticeTxt.innerHTML = 'ตั้ง' + groupLabel + 'สำหรับเดือนที่เลือก — ถ้ามีงบของ' + (isCentral ? 'หมวด' : 'กอง') + 'นี้อยู่แล้ว ระบบจะอัปเดตทับ';
+            eyebrow.textContent  = '#ตั้งงบย่อยใหม่';
+            title.textContent    = 'ตั้ง' + groupLabel + 'ใหม่';
+            subtitle.textContent = 'กรอกข้อมูลกองและเพดานที่ต้องการ';
             if (submitTxt) submitTxt.textContent = 'บันทึกงบ';
+            if (sbAmountLabel) sbAmountLabel.textContent = 'เพดานงบ (บาท)';
         }
-        lbl.innerHTML = fieldLabel + ' <span style="color:var(--bb-dg)">*</span>';
+    });
 
-        initIcons(setBudgetModal);
+    // ── บล็อก submit ถ้าโหมดสร้างใหม่ + เพดานเกินวงเงินที่เหลือ (client-side preview ของเช็ก
+    //    เดียวกับ backend _handle_set_budget — กันกด submit เปล่าๆ ก่อนถึง server) ──
+    setBudgetModal.querySelector('form').addEventListener('submit', function (ev) {
+        if (sbCreateFields.classList.contains('d-none')) return;   // โหมดแก้ไข ไม่เช็กฝั่งนี้
+        const opt = document.querySelector('#sbPlanPop .sb-dd-opt.is-active');
+        if (!opt) return;   // required attr ของ input ก้อนงบเดิมจับไปแล้ว (ไม่มี hidden required แต่ browser เช็ก sbAmount/sbDept)
+        const isCentral = document.getElementById('sbBudgetType').value === 'central';
+        const pool  = Number(isCentral ? opt.dataset.centralPool : opt.dataset.deptPool) || 0;
+        const alloc = Number(isCentral ? opt.dataset.centralAlloc : opt.dataset.deptAlloc) || 0;
+        const newAmt = Number(sbAmountInput.value) || 0;
+        if (newAmt > pool - alloc) {
+            ev.preventDefault();
+            sbRecomputePool();
+            sbAmountInput.focus();
+        }
     });
 }
 
@@ -137,6 +356,16 @@ document.addEventListener('submit', function (e) {
     const msg = toActive
         ? 'เปิดใช้งานงบของ "' + dept + '" ใช่หรือไม่?\n\nbooking ใหม่ของแผนก/กองนี้จะสามารถหักจากงบนี้ได้อีกครั้ง'
         : 'ปิดใช้งานงบของ "' + dept + '" ใช่หรือไม่?\n\n⚠️ booking ใหม่ที่จะหักจากงบนี้จะถูกบล็อก จนกว่าจะเปิดใช้งานใหม่\n(งบที่หักไปแล้วในอดีตจะไม่ได้รับผลกระทบ)';
+    if (!confirm(msg)) e.preventDefault();
+});
+
+// ── Confirm dialog ก่อนลบงบทิ้งถาวร (v2.29 — งบปิดแล้ว tab) ──
+document.addEventListener('submit', function (e) {
+    const form = e.target.closest('form[data-confirm-delete]');
+    if (!form) return;
+    const dept = form.dataset.deptName || 'งบนี้';
+    const msg = 'ลบงบของ "' + dept + '" ทิ้งถาวรใช่หรือไม่?\n\n' +
+        '⚠️ กู้คืนไม่ได้ (ใช้ได้เฉพาะงบที่ยังไม่เคยมีการหักเงิน/ปรับยอดจริง — ระบบจะบล็อกให้เองถ้าเคยใช้แล้ว)';
     if (!confirm(msg)) e.preventDefault();
 });
 
@@ -202,42 +431,282 @@ document.addEventListener('click', function (e) {
     });
 })();
 
-// ── Pivot filter: ประเภทงบ + กอง (2026-07-29) — กรองเฉพาะตารางปีงบ (#pivotMockupTable,
-//    เดิมกรอง #pivotAllDetails ก่อนตารางนั้นถูกลบ 2026-07-31)
-//    ไม่แตะ tab อื่น (ตกลงกันไว้). ue_chip_dd ทั้ง 2 ตัวเป็น checkbox multi-select ปกติ
-//    (ไม่ติ๊ก = ทั้งหมด) filter client-side ล้วน — ข้อมูล render มาครบแล้วในหน้าไม่ต้อง reload.
-//    "กอง" กรองเฉพาะแถวใน tbody ประเภท dept เท่านั้น ไม่กระทบ central · แถวรวมท้ายตาราง (tbody
+// ── Plan year chip (v2.29 — client-side, ไม่ reload หน้าแล้ว) — narrow ตัวเลือกใน chip "งบ"
+//    (#ddYearlyPlan) เหลือเฉพาะ plan ที่ทับปีปฏิทินที่เลือก อ่านช่วงปีจาก data-plan-year-start/end
+//    ที่แปะไว้ที่ .ue-chip-opt แต่ละตัว (เดิม v2.28 navigate ไป ?plan_year= — ตัดตามคำขอผู้ใช้)
+(function initPlanYearChip() {
+    const dd     = document.getElementById('ddPlanYear');
+    const planDd = document.getElementById('ddYearlyPlan');
+    if (!dd || !planDd) return;
+
+    function apply() {
+        const radio = dd.querySelector('input[type="radio"]:checked');
+        const year  = radio ? Number(radio.value) : null;
+        planDd.querySelectorAll('.ue-chip-opt').forEach(function (opt) {
+            if (!year) { opt.hidden = false; return; }
+            const start = Number(opt.dataset.planYearStart);
+            const end   = Number(opt.dataset.planYearEnd);
+            opt.hidden = !(start <= year && year <= end);
+        });
+    }
+
+    dd.addEventListener('ue-chip:change', apply);
+    apply();
+})();
+
+// ── Pivot filter: ประเภทงบ (2026-07-29, v2.28: ตัด "กอง" ออก) — กรองเฉพาะตารางปีงบ
+//    (#pivotMockupTable, เดิมกรอง #pivotAllDetails ก่อนตารางนั้นถูกลบ 2026-07-31)
+//    ไม่แตะ tab อื่น (ตกลงกันไว้). ue_chip_dd เป็น checkbox multi-select ปกติ (ไม่ติ๊ก = ทั้งหมด)
+//    filter client-side ล้วน — ข้อมูล render มาครบแล้วในหน้าไม่ต้อง reload. แถวรวมท้ายตาราง (tbody
 //    ไม่มี data-budget-type) ไม่ถูกฟิลเตอร์ — โชว์ grand total เสมอไม่ว่าจะกรองอะไรอยู่
 (function initPivotFilter() {
     const ddType = document.getElementById('ddPivotBudgetType');
-    const ddDept = document.getElementById('ddPivotDept');
     const table  = document.getElementById('pivotMockupTable');
-    if (!table || (!ddType && !ddDept)) return;
+    if (!table || !ddType) return;
 
     function checkedValues(dd) {
-        if (!dd) return [];
         return Array.from(dd.querySelectorAll('input[type="checkbox"]:checked')).map(function (el) { return el.value; });
     }
 
     function apply() {
         const types = checkedValues(ddType);
-        const depts = checkedValues(ddDept);
         table.querySelectorAll('tbody[data-budget-type]').forEach(function (tbody) {
             const type = tbody.dataset.budgetType;
-            const typeMatch = types.length === 0 || types.includes(type);
-            tbody.hidden = !typeMatch;
-            if (!typeMatch || type !== 'dept') return;
-            tbody.querySelectorAll('tr[data-dept-name]').forEach(function (tr) {
-                tr.hidden = !(depts.length === 0 || depts.includes(tr.dataset.deptName));
-            });
+            tbody.hidden = !(types.length === 0 || types.includes(type));
         });
     }
 
-    if (ddType) ddType.addEventListener('ue-chip:change', apply);
-    if (ddDept) ddDept.addEventListener('ue-chip:change', apply);
+    ddType.addEventListener('ue-chip:change', apply);
 })();
 
-// ── Yearly plan modal: preview ส่วนกอง = ทั้งปี − ส่วนกลาง (2026-07-31) ──
+// ── "งบหลัก" tab (v2.28, เปลี่ยนชื่อจาก "รายชื่องบใหญ่" v2.29) — radio "ตั้งเป็นค่าเริ่มต้น" auto-submit ฟอร์มของแถวนั้นเมื่อเลือก
+//    (แต่ละแถวมี <form data-set-default-form> ของตัวเอง — POST action=set_default_plan)
+document.addEventListener('change', function (e) {
+    if (!e.target.matches('[data-set-default-radio]')) return;
+    const form = e.target.closest('[data-set-default-form]');
+    if (form) form.submit();
+});
+
+// ── yearlyPlanModal: create vs edit (v2.29 — data-attribute driven, wireModal-style) — modal
+//    instance เดียวใช้ร่วมหลายปุ่ม ("ตั้งงบใหม่" โซนบน, "แก้ไขก้อนเงิน" โซนบน, icon แก้ไขรายแถวใน
+//    แท็บ "งบหลัก") เดิม (v2.28) ใช้ snapshot ค่าเดียวตอน page-load ทำให้แก้ไขได้แค่ plan ที่กำลังดูอยู่
+//    เท่านั้น — ตอนนี้เปลี่ยนมาอ่านจาก data-plan-* ของปุ่มที่กดตรงๆ (เหมือน wireModal() ด้านบน) ทำให้
+//    icon แก้ไขแต่ละแถวในแท็บ "งบหลัก" เปิดแก้ plan ของแถวนั้นได้ตรงตัว ไม่ใช่แค่ plan ที่กำลังดูอยู่
+//    redesign 2026-08-06 รอบ 2: วันที่เริ่ม/สิ้นสุดเปลี่ยนจาก ue_chip_dd (filter chip — ผิดหมวด
+//    ใน form field) เป็น .yp-dd (field-box trigger dropdown, ดู macro yp_dd ใน vehicle_budget.html)
+//    + ปีเป็น disabled input — ค่า day/month/year ถูกประกอบเป็น ISO string เขียนลง hidden
+//    #ypStartDate/#ypEndDate (name เดิม start_date/end_date ไม่เปลี่ยน contract กับ backend
+//    _handle_set_yearly_plan)
+
+// ── .yp-dd popover open/close/select (UI ล้วน — ไม่รู้เรื่อง ISO date, แค่ dataset.value +
+//    dispatch 'yp-dd:change' ให้ initYearlyPlanModalMode ด้านล่างฟังต่อ) ──
+(function initYearlyPlanDateDD() {
+    const dds = document.querySelectorAll('#yearlyPlanModal .yp-dd');
+    if (!dds.length) return;
+
+    function closeAll() {
+        dds.forEach(function (dd) {
+            const pop = dd.querySelector('[data-yp-dd-pop]');
+            if (pop) pop.classList.remove('is-open');
+            dd.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    dds.forEach(function (dd) {
+        const pop = dd.querySelector('[data-yp-dd-pop]');
+        if (!pop) return;
+
+        dd.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const willOpen = !pop.classList.contains('is-open');
+            closeAll();
+            if (willOpen) { pop.classList.add('is-open'); dd.setAttribute('aria-expanded', 'true'); }
+        });
+
+        pop.addEventListener('click', function (e) {
+            const opt = e.target.closest('.yp-dd-opt');
+            if (!opt) return;
+            e.stopPropagation();
+            const label = dd.querySelector('[data-yp-dd-value]');
+            dd.dataset.value = opt.dataset.value;
+            if (label) { label.textContent = opt.dataset.label; label.classList.remove('is-ph'); }
+            pop.querySelectorAll('.yp-dd-opt').forEach(function (o) { o.classList.toggle('is-active', o === opt); });
+            closeAll();
+            dd.dispatchEvent(new Event('yp-dd:change', { bubbles: true }));
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#yearlyPlanModal .yp-dd')) closeAll();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+})();
+
+(function initYearlyPlanModalMode() {
+    const modal = document.getElementById('yearlyPlanModal');
+    const form  = modal && modal.querySelector('form');
+    if (!form) return;
+
+    const planIdInput  = form.querySelector('[name="plan_id"]');
+    const nameInput     = document.getElementById('ypName');
+    const totalInput    = document.getElementById('ypTotal');
+    const centralInput  = document.getElementById('ypCentral');
+    const deptPreview   = document.getElementById('ypDeptPreview');
+
+    const startDateHidden = document.getElementById('ypStartDate');
+    const endDateHidden   = document.getElementById('ypEndDate');
+    const startYearInput  = document.getElementById('ypStartYear');
+    const endYearInput    = document.getElementById('ypEndYear');
+    const errorBox        = document.getElementById('ypDateError');
+    const errorText       = document.getElementById('ypDateErrorText');
+
+    const ddStartDay   = document.getElementById('ddYpStartDay');
+    const ddStartMonth = document.getElementById('ddYpStartMonth');
+    const ddEndDay     = document.getElementById('ddYpEndDay');
+    const ddEndMonth   = document.getElementById('ddYpEndMonth');
+
+    // .yp-dd (field-box dropdown, redesign 2026-08-06 รอบ 2 — แทน ue_chip_dd) เก็บค่าที่เลือกไว้ที่
+    // dataset.value ของ root ตรงๆ ไม่ผ่าน radio/checked แล้ว — เปิด/ปิด popover + toggle .is-active
+    // อยู่ใน initYearlyPlanDateDD ด้านล่าง (แยกความรับผิดชอบ: อันนั้นแค่ UI, อันนี้ประกอบ ISO date)
+    function chipValue(dd) {
+        const v = dd && dd.dataset.value;
+        return v ? Number(v) : null;
+    }
+
+    // set ค่า .yp-dd ตรงๆ ผ่าน dataset + label + .is-active แล้ว dispatch 'yp-dd:change' ครั้งเดียว
+    // value=null = เคลียร์ (คืน placeholder เดิมจาก data-placeholder บน label)
+    function setChipValue(dd, value) {
+        if (!dd) return;
+        const label = dd.querySelector('[data-yp-dd-value]');
+        const opts  = dd.querySelectorAll('.yp-dd-opt');
+        let matched = null;
+        opts.forEach(function (o) {
+            const on = value !== null && Number(o.dataset.value) === Number(value);
+            o.classList.toggle('is-active', on);
+            if (on) matched = o;
+        });
+        if (matched) {
+            dd.dataset.value = matched.dataset.value;
+            if (label) { label.textContent = matched.dataset.label; label.classList.remove('is-ph'); }
+        } else {
+            delete dd.dataset.value;
+            if (label) { label.textContent = label.dataset.placeholder || ''; label.classList.add('is-ph'); }
+        }
+        dd.dispatchEvent(new Event('yp-dd:change', { bubbles: true }));
+    }
+
+    function daysInMonth(month, year) {
+        return new Date(year, month, 0).getDate();
+    }
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function hideDateError() {
+        if (errorBox) errorBox.classList.add('d-none');
+        if (errorText) errorText.textContent = '';
+    }
+
+    function showDateError(msg) {
+        if (errorText) errorText.textContent = msg;
+        if (errorBox) errorBox.classList.remove('d-none');
+    }
+
+    // ประกอบ day/month/year ปัจจุบันเป็น ISO string ลง hidden input — เดือนที่มีวันน้อยกว่าที่เลือกไว้
+    // ("เดือนนี้มี 30 วันไม่สามารถเลือกวันที่ 31 ได้") เคลียร์ day ทิ้งแล้วเตือน
+    function recomputeDates() {
+        const sYear = Number(startYearInput.value) || null;
+        const eYear = Number(endYearInput.value) || null;
+        const sMonth = chipValue(ddStartMonth);
+        const eMonth = chipValue(ddEndMonth);
+        let sDay = chipValue(ddStartDay);
+        let eDay = chipValue(ddEndDay);
+
+        if (sDay && sMonth && sYear && sDay > daysInMonth(sMonth, sYear)) {
+            const max = daysInMonth(sMonth, sYear);
+            setChipValue(ddStartDay, null);
+            sDay = null;
+            showDateError('เดือนที่เลือก (เริ่มใช้งบ) มี ' + max + ' วัน — เลือกวันที่ 1-' + max);
+        }
+        if (eDay && eMonth && eYear && eDay > daysInMonth(eMonth, eYear)) {
+            const max = daysInMonth(eMonth, eYear);
+            setChipValue(ddEndDay, null);
+            eDay = null;
+            showDateError('เดือนที่เลือก (สิ้นสุดการใช้งบ) มี ' + max + ' วัน — เลือกวันที่ 1-' + max);
+        }
+
+        startDateHidden.value = (sDay && sMonth && sYear) ? (sYear + '-' + pad2(sMonth) + '-' + pad2(sDay)) : '';
+        endDateHidden.value   = (eDay && eMonth && eYear) ? (eYear + '-' + pad2(eMonth) + '-' + pad2(eDay)) : '';
+    }
+
+    [ddStartDay, ddStartMonth, ddEndDay, ddEndMonth].forEach(function (dd) {
+        if (!dd) return;
+        dd.addEventListener('yp-dd:change', function () { hideDateError(); recomputeDates(); });
+    });
+
+    form.addEventListener('submit', function (ev) {
+        hideDateError();
+        recomputeDates();
+        if (!startDateHidden.value || !endDateHidden.value) {
+            ev.preventDefault();
+            showDateError('กรุณาเลือกวันที่เริ่มใช้งบและวันที่สิ้นสุดการใช้งบให้ครบ');
+            return;
+        }
+        if (startDateHidden.value > endDateHidden.value) {
+            ev.preventDefault();
+            showDateError('วันที่เริ่มใช้งบต้องไม่มากกว่าวันที่สิ้นสุดการใช้งบ');
+        }
+    });
+
+    modal.addEventListener('show.bs.modal', function (ev) {
+        hideDateError();
+        const btn      = ev.relatedTarget;
+        const mode     = btn && btn.dataset.planMode;
+        const today    = new Date();
+        const thisYear = today.getFullYear();
+        const nextYear = thisYear + 1;
+
+        if (mode === 'create') {
+            if (planIdInput)  planIdInput.value  = '';
+            if (nameInput)    nameInput.value    = 'งบประมาณประจำปี ';
+            if (totalInput)   totalInput.value   = '';
+            if (centralInput) centralInput.value = '';
+            if (deptPreview)  deptPreview.value  = '';
+
+            startYearInput.value = thisYear;
+            endYearInput.value   = nextYear;
+            setChipValue(ddStartDay,   today.getDate());
+            setChipValue(ddStartMonth, today.getMonth() + 1);
+            setChipValue(ddEndDay,     null);
+            setChipValue(ddEndMonth,   today.getMonth() + 1);
+            recomputeDates();
+            return;
+        }
+
+        if (!btn) return;  // edit แต่ไม่รู้ plan ไหน — ปล่อยฟอร์มไว้ตามเดิม กันเขียนทับผิดๆ
+        const total   = Number(btn.dataset.planTotal) || 0;
+        const central = Number(btn.dataset.planCentral) || 0;
+        if (planIdInput)  planIdInput.value  = btn.dataset.planId || '';
+        if (nameInput)    nameInput.value    = btn.dataset.planName || '';
+        if (totalInput)   totalInput.value   = btn.dataset.planTotal || '';
+        if (centralInput) centralInput.value = btn.dataset.planCentral || '';
+        if (deptPreview)  deptPreview.value  = total - central;
+
+        const start = btn.dataset.planStart ? new Date(btn.dataset.planStart + 'T00:00:00') : null;
+        const end   = btn.dataset.planEnd   ? new Date(btn.dataset.planEnd   + 'T00:00:00')   : null;
+
+        startYearInput.value = start ? start.getFullYear() : thisYear;
+        endYearInput.value   = end   ? end.getFullYear()   : nextYear;
+        setChipValue(ddStartDay,   start ? start.getDate() : null);
+        setChipValue(ddStartMonth, start ? start.getMonth() + 1 : null);
+        setChipValue(ddEndDay,     end ? end.getDate() : null);
+        setChipValue(ddEndMonth,   end ? end.getMonth() + 1 : null);
+        recomputeDates();
+    });
+})();
+
+// ── Yearly plan modal: preview ส่วนกอง = ทั้งปี − ส่วนกลาง (2026-07-31)
+//    v2.28: ypDeptPreview เปลี่ยนจาก <strong> (textContent) เป็น <input type="number"> (ตาม
+//    ypTotal/ypCentral) เพื่อให้หน้าตาตรงกัน — set .value ไม่ใช่ .textContent (number input ไม่มี text node) ──
 (function initYearlyPlanPreview() {
     const total   = document.getElementById('ypTotal');
     const central = document.getElementById('ypCentral');
@@ -246,7 +715,7 @@ document.addEventListener('click', function (e) {
 
     function update() {
         const dept = (Number(total.value) || 0) - (Number(central.value) || 0);
-        preview.textContent = '฿' + dept.toLocaleString('en-US', { maximumFractionDigits: 0 });
+        preview.value = dept;
     }
     total.addEventListener('input', update);
     central.addEventListener('input', update);

@@ -98,7 +98,6 @@
 
         setVal('ed_name',             isEdit ? d.name : '');
         setVal('ed_phone',            isEdit ? d.phone : '');
-        setChecked('ed_active',       !isEdit || d.active === 'true');
         setVal('ed_user_id',          isEdit ? (d.userId || '') : '');
         setVal('ed_national_id',      isEdit ? (d.nationalId || '') : '');
         setVal('ed_addr_line',        isEdit ? (d.addrLine || '') : '');
@@ -107,24 +106,134 @@
         setVal('ed_addr_province',    isEdit ? (d.addrProvince || '') : '');
         setVal('ed_addr_postal',      isEdit ? (d.addrPostal || '') : '');
 
-        document.getElementById('ed_avatar_hint')?.classList.toggle('d-none', !isEdit);
-        document.getElementById('ed_idcard_hint')?.classList.toggle('d-none', !isEdit);
-        const avEl = document.getElementById('ed_avatar_current');
-        if (avEl) {
-            if (isEdit && d.avatar) { avEl.href = d.avatar; avEl.style.display = ''; }
-            else { avEl.style.display = 'none'; }
-        }
-        const idEl = document.getElementById('ed_idcard_current');
-        if (idEl) {
-            if (isEdit && d.idcard) { idEl.href = d.idcard; idEl.style.display = ''; }
-            else { idEl.style.display = 'none'; }
-        }
-
         // <input type=file> ไม่ยอมให้ set .value เป็นไฟล์ผ่าน JS — reset ทุกครั้งที่เปิด (ทั้ง 2
         // โหมด) กันไฟล์ที่เคยเลือกไว้ค้างจากการเปิด modal รอบก่อนหน้า (add ครั้งก่อน/edit คนละคน)
-        const avFile = document.getElementById('ed_avatar_file'); if (avFile) avFile.value = '';
-        const idFile = document.getElementById('ed_idcard_file'); if (idFile) idFile.value = '';
+        // แล้ว prefill preview จากรูปเดิมถ้ามี (edit mode)
+        const avatarFile = document.getElementById('profileImage');
+        if (avatarFile) avatarFile.value = '';
+        setAvatarPreview(isEdit ? d.avatar : '');
+
+        const idcardFile = document.getElementById('idcardFile');
+        if (idcardFile) idcardFile.value = '';
+        setIdcardState(isEdit && d.idcard ? { existingUrl: d.idcard } : null);
     }
+
+    // ── Avatar circle (#addDriverModal .profile-upload) ──────────────────
+    // ย้ายมาจาก inline <script> เดิมในเทมเพลต (2 บั๊ก: reader ถูกอ้างนอก scope ที่ประกาศ →
+    // ปุ่มลบรูปไม่เคยทำงาน, input ไม่มี name= → เลือกรูปแล้วไม่เคยถูก submit เลย) — แก้ทั้งคู่ที่นี่
+    function setAvatarPreview(url) {
+        const preview     = document.getElementById('profilePreview');
+        const placeholder = document.getElementById('profilePlaceholder');
+        if (!preview || !placeholder) return;
+        if (url) {
+            preview.src = url;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+            placeholder.style.display = 'flex';
+        }
+    }
+
+    (function bindAvatarUpload() {
+        const input = document.getElementById('profileImage');
+        const removeBtn = document.getElementById('removeProfile');
+        if (!input || !removeBtn) return;
+        input.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => setAvatarPreview(e.target.result);
+            reader.readAsDataURL(file);
+        });
+        removeBtn.addEventListener('click', function () {
+            input.value = '';
+            setAvatarPreview('');
+        });
+    })();
+
+    // ── รูปบัตรประชาชน (#addDriverModal #idcardDropzone/#idcardUploadCard) ─
+    // toggle state ว่าง (dropzone, คลิกเปิด file picker ผ่าน <label for>) ↔ อัปโหลดแล้ว
+    // (การ์ด + progress จำลอง) — ย้ายมาจาก inline <script> เดิมที่อ้าง id ผิด (fileInput/
+    // dropzoneArea/uploadedCard ฯลฯ ไม่มีอยู่จริงในหน้านี้เลย โยนไฟล์เดิมทิ้งทั้งก้อน)
+    // preview URL ของรูปบัตรที่กำลังโชว์ในการ์ด — ใช้ตอนคลิกเปิด #idcardPreviewModal
+    // (ไฟล์เพิ่งเลือก = blob URL ต้อง revoke ตัวเก่าเองกัน memory leak, ไฟล์เดิม = URL จริงจาก server)
+    let idcardObjectUrl = '';
+    let idcardPreviewUrl = '';
+
+    function setIdcardState(state) {
+        // state: null = ว่าง · {file} = เพิ่งเลือกจาก input · {existingUrl} = ไฟล์เดิม (edit mode)
+        const card   = document.getElementById('idcardUploadCard');
+        const zone   = document.getElementById('idcardDropzone');
+        const nameEl = document.getElementById('idcardFileName');
+        const bar    = document.getElementById('idcardProgressBar');
+        if (!card || !zone) return;
+        if (idcardObjectUrl) { URL.revokeObjectURL(idcardObjectUrl); idcardObjectUrl = ''; }
+        if (!state) {
+            card.classList.add('d-none');
+            zone.classList.remove('d-none');
+            idcardPreviewUrl = '';
+            return;
+        }
+        card.classList.remove('d-none');
+        zone.classList.add('d-none');
+        if (state.file) {
+            nameEl.textContent = state.file.name;
+            idcardObjectUrl = URL.createObjectURL(state.file);
+            idcardPreviewUrl = idcardObjectUrl;
+            if (bar) {
+                bar.style.width = '0%';
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 20;
+                    if (progress >= 100) { progress = 100; clearInterval(interval); }
+                    bar.style.width = progress + '%';
+                }, 80);
+            }
+        } else {
+            nameEl.textContent = 'รูปบัตรประชาชน (ไฟล์ปัจจุบัน)';
+            idcardPreviewUrl = state.existingUrl;
+            if (bar) bar.style.width = '100%';
+        }
+    }
+
+    (function bindIdcardUpload() {
+        const input = document.getElementById('idcardFile');
+        const removeBtn = document.getElementById('idcardRemoveBtn');
+        if (!input || !removeBtn) return;
+        input.addEventListener('change', function () {
+            const file = this.files[0];
+            if (file) setIdcardState({ file });
+        });
+        removeBtn.addEventListener('click', function (e) {
+            e.stopPropagation(); // กันคลิกทะลุไปเปิด preview modal (ปุ่มอยู่ในการ์ดเดียวกัน)
+            input.value = '';
+            setIdcardState(null);
+        });
+    })();
+
+    // คลิกการ์ด "อัปโหลดแล้ว" → เปิด #idcardPreviewModal โชว์รูปเต็ม (กว้างพอดีจอ)
+    // ใช้ได้ทั้งไฟล์เพิ่งเลือก (blob URL) และไฟล์เดิมตอน edit (URL จริงจาก server)
+    // — modal นี้ปิด backdrop ของ Bootstrap เอง (data-bs-backdrop="false", ดู CSS overlay ของ
+    // ตัวเองในเทมเพลต) เลยต้องทำ click-outside-to-close เอง: คลิกตรงพื้นหลังมืด (target ตรง
+    // modal root เอง ไม่ใช่ลูกข้างในอย่างรูป/ปุ่ม) ให้ปิด
+    (function bindIdcardPreview() {
+        const card    = document.getElementById('idcardUploadCard');
+        const modalEl = document.getElementById('idcardPreviewModal');
+        const img     = document.getElementById('idcardPreviewImg');
+        if (!card || !modalEl || !img || !window.bootstrap) return;
+        card.addEventListener('click', function () {
+            if (!idcardPreviewUrl) return;
+            img.src = idcardPreviewUrl;
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+        modalEl.addEventListener('click', function (e) {
+            if (e.target === modalEl) {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+            }
+        });
+    })();
 
     function composeAddress(d) {
         const parts = [];
@@ -157,6 +266,25 @@
             setText('dd_name', row.dataset.name);
         });
     }
+
+    // สถานะคนขับ (คอลัมน์ "สถานะ" ในตาราง) — ย้ายออกจาก modal (เดิม checkbox "สถานะใช้งาน")
+    // มาเป็นปุ่มกดตรงในตาราง คงหน้าตา .bb-status-inline เดิมทุกอย่าง แค่ทำให้กดสลับได้ทันที
+    // (AJAX เดียว ไม่เปิด modal — mirror pattern เดียวกับ fixDone() ใน vehicle_admin.js)
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.mf-driver-toggle-active');
+        if (!btn) return;
+        const row = driverRowOf(btn);
+        if (!row) return;
+        fetch(`/vehicle/admin/driver/${row.dataset.id}/toggle-active`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.ok) return;
+                row.dataset.active = data.active ? 'true' : 'false';
+                btn.classList.toggle('is-ok', data.active);
+                btn.classList.toggle('is-neutral', !data.active);
+                btn.innerHTML = `<span class="material-symbols-rounded">${data.active ? 'check_circle' : 'circle'}</span>${data.active ? 'พร้อมขับรถ' : 'ไม่พร้อมขับรถ'}`;
+            });
+    });
 
     // Driver Detail (read-only) + ปุ่มแก้ไขในนั้น
     let detailRow = null;
@@ -301,6 +429,59 @@
         });
     }
     bindFleetTabs();
+
+    // "งานในสัปดาห์" (คอลัมน์คนขับ) — chevron ทุกแถวคุมสัปดาห์เดียวกันทั้งตาราง ไม่ใช่ต่อแถว
+    // (server render สัปดาห์ปัจจุบันมาให้ตั้งต้นแล้ว ผ่าน #fleetDriverTable[data-week-start])
+    // คลิก prev/next → fetch /vehicle/admin/driver-week แล้ว re-render ทุกแถวพร้อมกัน
+    (function bindFleetWeekNav() {
+        const table = document.getElementById('fleetDriverTable');
+        if (!table) return;
+        let weekStart = table.dataset.weekStart || '';
+        const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+        // ต้อง build string เองจาก local Y/M/D — ห้ามใช้ .toISOString() (แปลงเป็น UTC ก่อน
+        // slice ทำให้วันที่เพี้ยนไป 1 วันเมื่อ browser อยู่ timezone +7 เช่น ICT — "next" เจอบั๊กนี้
+        // แล้วดันวันตกไปอยู่ "เสาร์" ของสัปดาห์เดิม ทำให้กดแล้วเหมือนไม่ขยับเลย)
+        function toIsoDate(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function render(label, statusByDriver) {
+            document.querySelectorAll('#fleetDriverTable .fleet-week-label').forEach(function (el) {
+                el.textContent = label;
+            });
+            document.querySelectorAll('#fleetDriverTable .fleet-driver-row').forEach(function (row) {
+                const daysEl = row.querySelector('.fleet-week-days');
+                if (!daysEl) return;
+                const statuses = (statusByDriver && statusByDriver[row.dataset.id]) || Array(7).fill('off');
+                daysEl.innerHTML = statuses.map(function (status, i) {
+                    const cls = status && status !== 'off' ? ' is-' + status : '';
+                    return `<span class="fleet-day${cls}">${dayLabels[i]}</span>`;
+                }).join('');
+            });
+        }
+
+        function goToWeek(newWeekStart) {
+            fetch(`/vehicle/admin/driver-week?week_start=${newWeekStart}`)
+                .then(r => r.json())
+                .then(function (data) {
+                    if (!data.ok) return;
+                    weekStart = data.weekStart;
+                    render(data.label, data.drivers);
+                });
+        }
+
+        table.addEventListener('click', function (e) {
+            const btn = e.target.closest('.fleet-week-nav');
+            if (!btn || !weekStart) return;
+            const d = new Date(weekStart + 'T00:00:00');
+            d.setDate(d.getDate() + (btn.dataset.dir === 'prev' ? -7 : 7));
+            goToWeek(toIsoDate(d));
+        });
+    })();
 
     // Stepper "เพิ่มรถใหม่" (#addVehicleModal) — pattern เดียวกับ .ui-stepper ใน vehicle_book.html
     // (min 1, ไม่มี max) — sync hidden input #fleetCapacityInput ด้วย ไม่งั้น capacity ไม่ถูกส่งไป

@@ -1,114 +1,243 @@
-{# OT Cost Management — Admin Page (Vercel-flavored, vc-* design system) #}
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>จัดการค่าล่วงเวลา (OT) - BBCenter</title>
-    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
-    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/components.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_cost.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
-</head>
-<body>
+{% extends '_base_ue.html' %}
+
+{% block title %}<title>จัดการค่าล่วงเวลา (OT) - BBCenter</title>{% endblock %}
+{% block page_title %}ค่าล่วงเวลา{% endblock %}
+
 {% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
 {% set TH_DAYS   = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'] %}
+{% include '_shared/tab2.html' %}
 
-<div class="container-fluid container-p-y">
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-    {% set active_menu = 'cost' %}
-    {% include '_shared/sidebar.html' %}
+{% block head %}
+<style>
+/* ════════════════════════════════════════════════
+   vehicle_cost.html — audit-rule pass (2026-08-06)
+   ของที่ไม่มี bb-* เทียบเท่า (component-guide เช็คแล้ว "missing") → คง class/id เดิม
+   (JS hook ใน vehicle_ot.js ยังใช้ selector พวกนี้อยู่) แค่ retokenize --vc-* → --bb-*/px
+   ════════════════════════════════════════════════ */
 
-    <main class="main-content vc-scope">
-        {% set page_section = 'ผู้ดูแลระบบ' %}
-        {% set page_title = 'ค่าล่วงเวลา' %}
-        {% include '_shared/header.html' %}
+/* ── filter popover: trigger ใช้ .ue-chip เฉยๆ (class ล้วน ไม่ใส่ data-ue-chip-* กัน
+   bb-components.js auto-init ชนกับ toggle เดิมของ vehicle_ot.js) + ส่วนที่ ue-chip-pop ไม่มี ── */
+.cost-filter { position: relative; flex: 0 0 auto; }
+.cost-filter-dot { position: absolute; top: 8px; right: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--bb-accent-dk); }
+.cost-filter-sheet { position: absolute; top: calc(100% + 6px); right: 0; z-index: 1000; width: 320px; max-width: calc(100vw - 32px);
+  display: flex; flex-direction: column; gap: 12px; }
+.cost-filter-sheet[hidden] { display: none; }
+.cost-filter-field { display: flex; flex-direction: column; gap: 5px; }
+.cost-filter-seg { display: flex; align-items: center; gap: 8px; width: 100%; }
+.cost-filter-seg-label { flex: 0 0 28px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--bb-n500); }
+.cost-filter-arrow-row { display: flex; justify-content: center; color: var(--bb-n500); }
+.cost-filter-sheet-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 2px; padding-top: 12px; border-top: 1px solid var(--bb-n200); }
+@media (max-width: 767.98px) { .cost-filter-sheet { width: 100%; left: 0; right: 0; } }
 
-        <div class="container-xxl px-4 pt-3 pb-5">
+/* ── OT slot editor rows (add/edit modal) — grid header + row align กัน ── */
+.cost-slot-head, .cost-slot-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr 32px; gap: 8px; align-items: center; }
+.cost-slot-head { padding: 0 8px 4px; margin-bottom: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--bb-n500); }
+.cost-slot-row { padding: 8px; border: 1px solid var(--bb-n300); border-radius: var(--bb-r-surface); }
+.cost-slot-row .bb-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.cost-slot-row .bb-input { background: transparent; border-color: transparent; }
+.cost-slot-row .bb-input:hover { border-color: var(--bb-n300); }
+.cost-slot-row .bb-input:focus { background: #fff; border-color: var(--bb-accent-dk); }
+.cost-slot-row-remove { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; }
+.cost-slot-row-hint { grid-column: 1 / -1; font-size: 12px; color: var(--bb-mut); margin: 0; }
+.cost-slot-row-hint.is-invalid { color: var(--bb-dg); }
+@media (max-width: 575px) {
+  .cost-slot-head { display: none; }
+  .cost-slot-row { grid-template-columns: 1fr 1fr auto; padding: 12px; background: var(--bb-n50); align-items: end; }
+  .cost-slot-row .bb-label { position: static; width: auto; height: auto; margin: 0; clip: auto; overflow: visible; }
+  .cost-slot-row .bb-input { background: #fff; border-color: var(--bb-n300); }
+  .cost-slot-row > [data-col-full] { grid-column: 1 / -1; }
+}
 
-            {# ── Flash messages ─────────────────────────── #}
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                <div class="vc-stack" style="margin-bottom: var(--vc-space-4);">
-                    {% for category, message in messages %}
-                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            {% endwith %}
+/* ── Rate config modal — rate band editor rows ── */
+.cost-rate-head, .cost-rate-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr .9fr 32px; gap: 8px; align-items: center; }
+.cost-rate-head { padding: 0 8px 4px; margin-bottom: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--bb-n500); }
+.cost-rate-row { padding: 8px; border: 1px solid var(--bb-n300); border-radius: var(--bb-r-surface); }
+.cost-rate-row .bb-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.cost-rate-row .bb-input { background: transparent; border-color: transparent; }
+.cost-rate-row .bb-input:hover { border-color: var(--bb-n300); }
+.cost-rate-row .bb-input:focus { background: #fff; border-color: var(--bb-accent-dk); }
+.cost-rate-row.is-removed { opacity: .4; pointer-events: none; }
+.cost-rate-row-remove { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; }
+.cost-rate-row-remove .material-symbols-rounded { color: var(--bb-dg); }
+.cost-rate-row-remove:hover { background: var(--bb-dg-bg); }
+.cost-rate-modal-header { align-items: flex-start; }
+.cost-rate-modal-heading { display: flex; flex-direction: column; gap: 2px; }
+@media (max-width: 575px) {
+  .cost-rate-head { display: none; }
+  .cost-rate-row { grid-template-columns: 1fr 1fr auto; padding: 12px; background: var(--bb-n50); align-items: end; }
+  .cost-rate-row .bb-label { position: static; width: auto; height: auto; margin: 0; clip: auto; overflow: visible; }
+  .cost-rate-row .bb-input { background: #fff; border-color: var(--bb-n300); }
+  .cost-rate-row > [data-col-full] { grid-column: 1 / -1; }
+}
 
-            {# ── Page header ────────────────────────────── #}
+/* ── total box (slot editor summary) ── */
+.cost-total-box { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; margin-top: 12px; background: var(--bb-n50); border: 1px solid var(--bb-n200); border-radius: var(--bb-r-surface); }
+.cost-total-box-label { font-size: 14px; font-weight: 500; color: var(--bb-mut); }
+.cost-total-box-hours { font-size: 12px; color: var(--bb-mut); }
+.cost-total-box-amount { font-size: 16px; font-weight: 700; color: var(--bb-str); }
+
+/* ── date picker (budget-datepick trigger + va-cal popover) — ported จาก vehicle_admin.css ── */
+.budget-datepick { position: relative; }
+.budget-date-btn { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; cursor: pointer; }
+.budget-date-label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--bb-n400); font-family: var(--bb-num-font); font-feature-settings: "tnum" 1; }
+.budget-date-btn--filled .budget-date-label { color: var(--bb-str); }
+.budget-date-btn[aria-expanded="true"] { border-color: var(--bb-ink); box-shadow: var(--bb-ring); }
+.budget-datepick.is-invalid .budget-date-btn { border-color: var(--bb-dg); }
+.va-cal { position: absolute; top: calc(100% + 6px); z-index: 1060; width: 280px; padding: 12px; background: #fff; border: 1px solid var(--bb-n300); border-radius: 12px; box-shadow: var(--bb-shadow-lg); }
+.va-cal[hidden] { display: none; }
+.va-cal--start { left: 0; right: auto; }
+.va-cal--end { right: 0; left: auto; }
+.va-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.va-cal-title { font-size: 14px; font-weight: 600; color: var(--bb-str); }
+.va-cal-nav { width: 28px; height: 28px; border: none; border-radius: 999px; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--bb-mut); }
+.va-cal-nav:hover { background: var(--bb-n100); color: var(--bb-str); }
+.va-cal-nav:active { transform: scale(.92); }
+.va-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.va-cal-dow { margin-bottom: 2px; }
+.va-cal-dow-cell { text-align: center; font-size: 11px; font-weight: 600; color: var(--bb-mut); padding: 4px 0; }
+.va-cal-dow-cell--sun { color: var(--bb-dg-tx); }
+.va-cal-cell { text-align: center; font-size: 13px; padding: 6px 0; border-radius: 8px; cursor: pointer; color: var(--bb-str); background: none; border: none; font-family: inherit; }
+.va-cal-cell--empty { cursor: default; }
+.va-cal-cell--sun { color: var(--bb-dg-tx); }
+.va-cal-cell:not(.va-cal-cell--empty):hover { background: var(--bb-n100); }
+.va-cal-cell:not(.va-cal-cell--empty):active { transform: scale(.92); }
+.va-cal-cell--today:not(.va-cal-cell--active) { box-shadow: inset 0 0 0 1px var(--bb-accent-dk); }
+.va-cal-cell--active, .va-cal-cell--active:hover { background: var(--bb-ink); color: #fff; }
+.va-cal-cell--active.va-cal-cell--sun { color: #fff; }
+.va-cal-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--bb-accent-dk); margin: 2px auto 0; }
+.va-cal-cell--active .va-cal-dot { background: #fff; }
+
+/* ── row action overflow menu — portal-to-body (กัน overflow clip) ── */
+.cost-action-more { display: inline-flex; }
+.cost-action-menu { min-width: 210px; padding: 4px; background: #fff; border: 1px solid var(--bb-n300); border-radius: var(--bb-r-surface); box-shadow: var(--bb-shadow-lg); }
+.cost-action-menu[hidden] { display: none; }
+.cost-action-menu.is-portal { position: fixed; z-index: 1080; }
+.cost-action-menu form { margin: 0; }
+.cost-action-divider { height: 1px; margin: 4px 0; border: 0; background: var(--bb-n200); }
+.cost-action-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; background: transparent; border: none; border-radius: 6px; font-family: inherit; font-size: 14px; color: var(--bb-str); text-align: left; white-space: nowrap; cursor: pointer; }
+.cost-action-item .material-symbols-rounded { color: var(--bb-mut); font-size: 18px; flex: 0 0 auto; }
+.cost-action-item:hover { background: var(--bb-n100); }
+.cost-action-item--danger { color: var(--bb-dg-tx); }
+.cost-action-item--danger .material-symbols-rounded { color: var(--bb-dg-tx); }
+.cost-action-item--danger:hover { background: var(--bb-dg-bg); }
+
+/* ── receipt preview modal + print sheet ── */
+.cost-receipt-dialog { max-width: 840px; }
+.cost-receipt-scroll { max-height: 76vh; overflow-y: auto; background: var(--bb-n50); padding: 16px; }
+.cost-receipt-page { font-family: 'Sarabun', sans-serif; background: #fff; color: #18181B; width: 190mm; max-width: 100%; margin: 0 auto 16px; padding: 14mm 16mm; border: 1px solid var(--bb-n200); font-size: 13px; line-height: 1.7; }
+.cost-receipt-page:last-child { margin-bottom: 0; }
+.cost-print-title { text-align: center; font-size: 1.4rem; font-weight: 700; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #18181B; }
+.rcpt-head { display: flex; flex-direction: column; gap: 6px; font-size: .9rem; margin-bottom: 10px; }
+.rcpt-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.rcpt-k { color: #52525B; white-space: nowrap; }
+.rcpt-v { font-weight: 500; border-bottom: 1px dotted #A1A1AA; min-width: 60px; padding: 0 4px; }
+.rcpt-v.rcpt-grow { flex: 1; min-width: 120px; }
+.cost-print-intro { margin: 12px 0 10px; font-size: .85rem; color: #3F3F46; }
+.cost-print-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.cost-print-table th { border: 1px solid #18181B; padding: 6px 10px; font-weight: 700; background: #F4F4F5; }
+.cost-print-table th.desc { text-align: center; }
+.cost-print-table th.money { text-align: right; width: 130px; }
+.cost-print-table td { border: 1px solid #D4D4D8; padding: 5px 10px; }
+.cost-print-table td.rcpt-money { text-align: right; font-variant-numeric: tabular-nums; }
+.cost-print-table tfoot td { border: 1px solid #18181B; font-weight: 700; padding: 8px 10px; }
+.cost-print-sign { margin-top: 40px; text-align: right; }
+.cost-print-sign-inner { display: inline-block; text-align: center; min-width: 280px; }
+.cost-print-sign-line { padding-top: 6px; font-size: .9rem; }
+.cost-print-sign-name { font-size: .85rem; margin-top: 6px; color: #3F3F46; }
+.rcpt-idcard { margin-top: 24px; }
+.rcpt-idcard img { max-width: 280px; height: auto; border: 1px solid var(--bb-n200); border-radius: 4px; }
+/* ── illustration (empty state + confirm modal) — page contract 2026-08-07, §3/§6 ── */
+.mf-illust { color: #C9C9C9; }
+.mf-confirm-card {
+    border-radius: 20px; /* exception เฉพาะ confirm modal — ดู design_guideline.md §14 drift ledger */
+    max-width: 340px;
+    margin: auto;
+    padding: 32px 28px 28px;
+    text-align: center;
+    box-shadow: var(--bb-shadow-lg);
+}
+.mf-confirm-title { margin: 0; font-size: 14px; font-weight: 500; color: var(--bb-mut); }
+.mf-confirm-name  { margin: 4px 0 0; font-size: 22px; font-weight: 700; color: var(--bb-str); }
+.mf-confirm-desc  { margin: 10px 0 0; font-size: 14px; color: var(--bb-mut); line-height: 1.6; }
+
+@media print {
+    body > *:not(#receiptPreviewModal) { display: none !important; }
+    .modal-backdrop { display: none !important; }
+    #receiptPreviewModal { position: static !important; display: block !important; overflow: visible !important; background: #fff; }
+    #receiptPreviewModal .modal-dialog { max-width: none; width: auto; margin: 0; }
+    #receiptPreviewModal .modal-content { border: 0; box-shadow: none; }
+    .rcpt-chrome { display: none !important; }
+    .cost-receipt-scroll { max-height: none !important; overflow: visible !important; padding: 0 !important; background: #fff !important; }
+    .cost-receipt-page { border: 0; width: auto; margin: 0; padding: 10mm; page-break-after: always; }
+    .cost-receipt-page:last-child { page-break-after: auto; }
+    @page { margin: 8mm; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% include '_shared/illustrations.html' %}
+
+            {# ── Page subtitle + actions ────────────────────────────── #}
             <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
-                <div>
-                    <h1 class="fw-bold pt-3">ค่าล่วงเวลา</h1>
-                    <p class="text-muted small mb-0">อนุมัติ · บันทึกการจ่าย · ออกใบเสร็จคนขับ</p>
-                </div>
+                <p class="text-muted small mb-0">อนุมัติ · บันทึกการจ่าย · ออกใบเสร็จคนขับ</p>
                 <div class="d-flex gap-2 flex-wrap">
-                    <button type="button" class="btn-zen-outline" id="printAllBtn" title="พิมพ์ใบเสร็จคนขับ (ตาม tab ที่เลือก)">
-                        <i data-lucide="printer"></i>พิมพ์
+                    <button type="button" class="bb-btn is-sec" id="printAllBtn" title="พิมพ์ใบเสร็จคนขับ (ตาม tab ที่เลือก)">
+                        <span class="material-symbols-rounded">print</span>พิมพ์
                     </button>
                     <a id="exportLink" href="{{ url_for('admincost.cost_export', from_month=from_month, from_year=from_year, to_month=to_month, to_year=to_year, driver_id=sel_driver or '', status=sel_status, budget_type=sel_budget_type, budget_sub=sel_budget_sub) }}"
-                        class="btn-zen-outline" title="ดาวน์โหลด Excel">
-                        <i data-lucide="download"></i>Excel
+                        class="bb-btn is-sec" title="ดาวน์โหลด Excel">
+                        <span class="material-symbols-rounded">download</span>Excel
                     </a>
-                    <button type="button" class="btn-zen-outline" data-bs-toggle="modal" data-bs-target="#rateConfigModal" title="แก้ไขอัตราค่าตอบแทน OT">
-                        <i data-lucide="settings-2"></i>ตั้งค่าอัตรา
+                    <button type="button" class="bb-btn is-sec" data-bs-toggle="modal" data-bs-target="#rateConfigModal" title="แก้ไขอัตราค่าตอบแทน OT">
+                        <span class="material-symbols-rounded">settings</span>ตั้งค่าอัตรา
                     </button>
-                    <button type="button" class="btn-zen" id="addOtBtn" title="เพิ่ม OT ด้วยตนเอง">
-                        <i data-lucide="plus"></i>เพิ่ม OT
+                    <button type="button" class="bb-btn is-pri" id="addOtBtn" title="เพิ่ม OT ด้วยตนเอง">
+                        <span class="material-symbols-rounded">add</span>เพิ่ม OT
                     </button>
                 </div>
             </div>
 
-            {# ── Toolbar: status chips (scroll) + filter button (popover) — แถวเดียว ── #}
+            {# ── Toolbar: status tabs (tab2) + filter button (popover) — แถวเดียว ── #}
             {# filter_active ส่งมาจาก view (รวม budget filter) #}
-            <form method="get" action="{{ url_for('admincost.cost_summary') }}" class="cost-toolbar" id="filterForm">
+            <form method="get" action="{{ url_for('admincost.cost_summary') }}" class="cost-toolbar d-flex align-items-end flex-wrap gap-3 mb-4" id="filterForm">
                 <input type="hidden" name="status" id="statusInput" value="{{ sel_status }}">
 
-                <div class="cost-toolbar-row">
-                    {# status chips — เลื่อนแนวนอนได้ #}
-                    <div class="cost-tabs" id="costTabs" role="tablist" aria-label="กรองสถานะ">
-                        <button type="button" class="cost-chip {% if not sel_status %}is-active{% endif %}" data-status="" role="tab">
+                <div class="d-flex align-items-end gap-3 flex-grow-1" style="min-width:0;">
+                    {# status tabs — tab2 (JS underline slide ผูกอัตโนมัติจาก _shared/tab2.html) #}
+                    <div class="tab2-tabs flex-grow-1" id="costTabs" role="tablist" aria-label="กรองสถานะ" style="min-width:0;">
+                        <div class="tab2-tab cost-chip{% if not sel_status %} active is-active{% endif %}" data-status="" role="tab">
                             ทั้งหมด <span class="cost-chip-cnt">{{ counts.all }}</span>
-                        </button>
-                        <button type="button" class="cost-chip {% if sel_status == 'unpaid' %}is-active{% endif %}" data-status="unpaid" role="tab">
+                        </div>
+                        <div class="tab2-tab cost-chip{% if sel_status == 'unpaid' %} active is-active{% endif %}" data-status="unpaid" role="tab">
                             ยังไม่จ่าย <span class="cost-chip-cnt">{{ counts.unpaid }}</span>
-                        </button>
-                        <button type="button" class="cost-chip {% if sel_status == 'paid' %}is-active{% endif %}" data-status="paid" role="tab">
+                        </div>
+                        <div class="tab2-tab cost-chip{% if sel_status == 'paid' %} active is-active{% endif %}" data-status="paid" role="tab">
                             จ่ายแล้ว <span class="cost-chip-cnt">{{ counts.paid }}</span>
-                        </button>
-                        <button type="button" class="cost-chip {% if sel_status == 'self_paid' %}is-active{% endif %}" data-status="self_paid" role="tab">
+                        </div>
+                        <div class="tab2-tab cost-chip{% if sel_status == 'self_paid' %} active is-active{% endif %}" data-status="self_paid" role="tab">
                             ผู้ใช้จ่ายเอง <span class="cost-chip-cnt">{{ counts.self_paid }}</span>
-                        </button>
-                        <button type="button" class="cost-chip {% if sel_status == 'deleted' %}is-active{% endif %}" data-status="deleted" role="tab">
+                        </div>
+                        <div class="tab2-tab cost-chip{% if sel_status == 'deleted' %} active is-active{% endif %}" data-status="deleted" role="tab">
                             ลบ <span class="cost-chip-cnt">{{ counts.deleted }}</span>
-                        </button>
+                        </div>
                     </div>
 
-                    {# filter button → popover (ไม่ขยับ ชิดขวาเสมอ) #}
+                    {# filter button → popover (ไม่ขยับ ชิดขวาเสมอ) — styled ผ่าน .ue-chip/.ue-chip-pop
+                       class ล้วน (ไม่ใส่ data-ue-chip-*) กัน bb-components.js auto-init ชนกับ toggle เดิม #}
                     <div class="cost-filter">
-                        <button type="button" class="btn-zen-outline cost-filter-btn {% if filter_active %}is-active{% endif %}"
+                        <button type="button" class="ue-chip cost-filter-btn{% if filter_active %} is-on is-active{% endif %}"
                                 id="costFilterBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="costFilterSheet">
-                            <i data-lucide="sliders-horizontal" class="vc-icon-sm"></i>
+                            <span class="material-symbols-rounded">tune</span>
                             ตัวกรอง
                             {% if filter_active %}<span class="cost-filter-dot" aria-hidden="true"></span>{% endif %}
                         </button>
 
-                        <div class="cost-filter-sheet" id="costFilterSheet" role="dialog" aria-label="ตัวกรอง" hidden>
+                        <div class="ue-chip-pop cost-filter-sheet" id="costFilterSheet" role="dialog" aria-label="ตัวกรอง" hidden>
                             {# บรรทัด 1: คนขับ เต็มความกว้าง #}
                             <div class="cost-filter-field">
-                                <span class="vc-filter-label cost-filter-driver-label">
-                                    คนขับ
-                                </span>
-                                <select name="driver_id" class="vc-filter-select cost-filter-driver-select" data-dropdown>
+                                <label class="bb-label">คนขับ</label>
+                                <select name="driver_id" class="bb-input" data-dropdown>
                                     <option value="">ทุกคน</option>
                                     {% for d in drivers %}
                                     <option value="{{ d.id }}" {% if sel_driver == d.id %}selected{% endif %}>{{ d.name }}</option>
@@ -118,8 +247,8 @@
 
                             {# งบ — type → sub (cascade) อิง booking ที่ผูก OT #}
                             <div class="cost-filter-field" id="filterBudgetTypeWrap">
-                                <span class="vc-filter-label">งบ</span>
-                                <select name="budget_type" id="filterBudgetType" class="vc-filter-select" data-dropdown>
+                                <label class="bb-label">งบ</label>
+                                <select name="budget_type" id="filterBudgetType" class="bb-input" data-dropdown>
                                     <option value="">ทั้งหมด</option>
                                     <option value="central"    {% if sel_budget_type=='central'    %}selected{% endif %}>ส่วนกลาง</option>
                                     <option value="department" {% if sel_budget_type=='department' %}selected{% endif %}>ส่วนกอง</option>
@@ -127,8 +256,8 @@
                                 </select>
                             </div>
                             <div class="cost-filter-field" id="filterBudgetSubWrap"{% if sel_budget_type not in ['central','department'] %} style="display:none"{% endif %}>
-                                <span class="vc-filter-label">หมวด/กอง</span>
-                                <select name="budget_sub" id="filterBudgetSub" class="vc-filter-select" data-dropdown>
+                                <label class="bb-label">หมวด/กอง</label>
+                                <select name="budget_sub" id="filterBudgetSub" class="bb-input" data-dropdown>
                                     <option value="">ทั้งหมด</option>
                                 </select>
                             </div>
@@ -136,12 +265,12 @@
                             {# บรรทัด 2: ช่วงจาก #}
                             <div class="cost-filter-seg">
                                 <span class="cost-filter-seg-label">จาก</span>
-                                <select name="from_month" class="vc-filter-select" data-dropdown aria-label="จาก เดือน">
+                                <select name="from_month" class="bb-input" data-dropdown aria-label="จาก เดือน">
                                     {% for m in range(1, 13) %}
                                     <option value="{{ m }}" {% if m == from_month %}selected{% endif %}>{{ TH_MONTHS[m-1] }}</option>
                                     {% endfor %}
                                 </select>
-                                <select name="from_year" class="vc-filter-select" data-dropdown aria-label="จาก ปี">
+                                <select name="from_year" class="bb-input" data-dropdown aria-label="จาก ปี">
                                     {% for y in range(now.year - 2, now.year + 2) %}
                                     <option value="{{ y }}" {% if y == from_year %}selected{% endif %}>{{ y + 543 }}</option>
                                     {% endfor %}
@@ -150,18 +279,18 @@
 
                             {# บรรทัด 3: arrow-down กลาง #}
                             <div class="cost-filter-arrow-row">
-                                <i data-lucide="arrow-down" class="vc-icon-sm"></i>
+                                <span class="material-symbols-rounded">arrow_downward</span>
                             </div>
 
                             {# บรรทัด 4: ช่วงถึง #}
                             <div class="cost-filter-seg">
                                 <span class="cost-filter-seg-label">ถึง</span>
-                                <select name="to_month" class="vc-filter-select" data-dropdown aria-label="ถึง เดือน">
+                                <select name="to_month" class="bb-input" data-dropdown aria-label="ถึง เดือน">
                                     {% for m in range(1, 13) %}
                                     <option value="{{ m }}" {% if m == to_month %}selected{% endif %}>{{ TH_MONTHS[m-1] }}</option>
                                     {% endfor %}
                                 </select>
-                                <select name="to_year" class="vc-filter-select" data-dropdown aria-label="ถึง ปี">
+                                <select name="to_year" class="bb-input" data-dropdown aria-label="ถึง ปี">
                                     {% for y in range(now.year - 2, now.year + 2) %}
                                     <option value="{{ y }}" {% if y == to_year %}selected{% endif %}>{{ y + 543 }}</option>
                                     {% endfor %}
@@ -169,10 +298,10 @@
                             </div>
 
                             <div class="cost-filter-sheet-actions">
-                                <button type="button" class="btn-zen-outline" id="costFilterClear">
-                                    <i data-lucide="x"></i> ล้าง
+                                <button type="button" class="bb-btn is-sec" id="costFilterClear">
+                                    <span class="material-symbols-rounded">close</span> ล้าง
                                 </button>
-                                <button type="submit" class="btn-zen">ใช้ตัวกรอง</button>
+                                <button type="submit" class="bb-btn is-pri">ใช้ตัวกรอง</button>
                             </div>
                         </div>
                     </div>
@@ -183,24 +312,24 @@
             <div id="costResults">
 
                 {# ── Summary KPI strip ── #}
-                <div class="cost-kpi-strip">
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="kpi-tile"><i data-lucide="wallet"></i></span>
+                <div class="d-flex align-items-center gap-4 flex-wrap mb-3 pb-3" style="border-bottom:1px solid var(--bb-n200);">
+                    <div class="bb-kpi is-ghost">
+                        <span class="bb-kpi-tile"><span class="material-symbols-rounded">account_balance_wallet</span></span>
                         <div>
-                            <div class="text-muted" style="font-size:13px">ยังไม่จ่าย</div>
+                            <div class="bb-kpi-label">ยังไม่จ่าย</div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="kpi-num vc-mono">฿{{ '{:,.0f}'.format(kpi_unpaid) }}</span>
+                                <span class="bb-kpi-value bb-num" style="font-size:1.5rem;">฿{{ '{:,.0f}'.format(kpi_unpaid) }}</span>
                                 <span class="text-muted" style="font-size:12px">{{ counts.unpaid }} รายการ</span>
                             </div>
                         </div>
                     </div>
                     <div class="vr"></div>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="kpi-tile"><i data-lucide="circle-check-big"></i></span>
+                    <div class="bb-kpi is-ghost">
+                        <span class="bb-kpi-tile"><span class="material-symbols-rounded">check_circle</span></span>
                         <div>
-                            <div class="text-muted" style="font-size:13px">จ่ายแล้ว</div>
+                            <div class="bb-kpi-label">จ่ายแล้ว</div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="kpi-num vc-mono">฿{{ '{:,.0f}'.format(kpi_paid) }}</span>
+                                <span class="bb-kpi-value bb-num" style="font-size:1.5rem;">฿{{ '{:,.0f}'.format(kpi_paid) }}</span>
                                 <span class="text-muted" style="font-size:12px">{{ counts.paid }} รายการ</span>
                             </div>
                         </div>
@@ -209,28 +338,27 @@
 
                 {# ── Rate reference — quiet inline strip ── #}
                 {% if rate_configs %}
-                <div class="cost-rate-ref">
-                    <span class="cost-rate-ref-label">
-                        <i data-lucide="clock" class="vc-icon-sm"></i>
+                <div class="d-flex align-items-center gap-3 flex-wrap mb-4">
+                    <span class="d-inline-flex align-items-center gap-1" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--bb-n500);">
+                        <span class="material-symbols-rounded" style="font-size:14px;">schedule</span>
                         อัตรา OT
                     </span>
-                    <div class="cost-rate-ref-list">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
                         {% for cfg in rate_configs %}
-                        <span class="cost-rate-ref-item" title="{{ cfg.label }}">
-                            {% if cfg.day_of_week is not none %}<b class="cost-rate-ref-day">{{ TH_DAYS[cfg.day_of_week] }}</b>{% endif %}
-                            {{ cfg.start_time }}–{{ cfg.end_time }}
-                            <b class="cost-rate-ref-rate">฿{{ cfg.rate|int }}</b>
+                        <span class="bb-badge is-neutral" title="{{ cfg.label }}">
+                            {% if cfg.day_of_week is not none %}<b>{{ TH_DAYS[cfg.day_of_week] }}</b>{% endif %}
+                            {{ cfg.start_time }}–{{ cfg.end_time }} · ฿{{ cfg.rate|int }}
                         </span>
                         {% endfor %}
                     </div>
                 </div>
                 {% endif %}
 
-            <div class="zen-card" id="otCard">
+            <div class="bb-card" id="otCard">
 
                 {% if ots %}
                 <div class="table-responsive">
-                    <table class="table data-table mb-0" id="otTable">
+                    <table class="bb-table mb-0" id="otTable">
                         <thead>
                             <tr>
                                 <th style="width:120px;">วันที่</th>
@@ -241,110 +369,110 @@
                                 <th class="text-end" style="width:70px;">ชม.</th>
                                 <th class="text-end" style="width:110px;">ยอด</th>
                                 <th style="width:120px;">สถานะ</th>
-                                <th class="vc-table-actions"></th>
+                                <th class="bb-table-actions"></th>
                             </tr>
                         </thead>
                         <tbody>
                         {% for ot in ots %}
                         <tr data-status="{{ ot.status }}" data-ot-id="{{ ot.id }}">
                             <td>
-                                <div class="vc-td-strong">
+                                <div class="bb-cell-strong">
                                     {{ '%02d'|format(ot.date.day) }} {{ TH_MONTHS[ot.date.month - 1] }} {{ ot.date.year + 543 }}
                                 </div>
                             </td>
                             <td>
                                 <span class="d-flex align-items-center gap-2">
-                                    <span class="vc-avatar">{{ (ot.driver.name if ot.driver else '?')[0] }}</span>
+                                    <span class="bb-avatar">{{ (ot.driver.name if ot.driver else '?')[0] }}</span>
                                     <span>
-                                        <span class="vc-td-strong d-block">{{ ot.driver.name if ot.driver else '—' }}</span>
+                                        <span class="bb-cell-strong d-block">{{ ot.driver.name if ot.driver else '—' }}</span>
                                         {% if ot.driver and ot.driver.user and ot.driver.user.phone %}
-                                        <span class="vc-td-muted" style="font-size:var(--vc-text-xs)">{{ ot.driver.user.phone }}</span>
+                                        <span class="bb-cell-sub">{{ ot.driver.user.phone }}</span>
                                         {% endif %}
                                     </span>
                                 </span>
                             </td>
                             <td>
-                                <div class="vc-td-strong vc-mono">BK-{{ ot.booking.id if ot.booking else '—' }}</div>
+                                <div class="bb-cell-strong bb-num">BK-{{ ot.booking.id if ot.booking else '—' }}</div>
                                 {% if ot.booking %}
-                                <div class="vc-td-muted" style="font-size: var(--vc-text-xs);">
+                                <div class="bb-cell-sub">
                                     {{ ot.booking.destination|truncate(28, true, '…') }}
                                 </div>
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="vc-td-strong">{{ ot.budget_label }}</div>
+                                <div class="bb-cell-strong">{{ ot.budget_label }}</div>
                                 {% if ot.budget_sub %}
-                                <div class="vc-td-muted" style="font-size: var(--vc-text-xs);">{{ ot.budget_sub }}</div>
+                                <div class="bb-cell-sub">{{ ot.budget_sub }}</div>
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="cost-slot-list">
+                                <div class="d-flex flex-column align-items-start gap-1">
                                 {% for slot in ot.slots %}
-                                    {% if 'เช้า' in slot.slot_label %}{% set sc = 'cost-slot-morning' %}
-                                    {% elif 'หัวค่ำ' in slot.slot_label or 'เย็น' in slot.slot_label %}{% set sc = 'cost-slot-evening' %}
-                                    {% else %}{% set sc = 'cost-slot-night' %}{% endif %}
-                                    <span class="cost-slot-tag {{ sc }}" title="{{ slot.start_time }}–{{ slot.end_time }} · ฿{{ slot.rate|int }}/ชม.">{{ slot.slot_label }}</span>
+                                    {% if 'เช้า' in slot.slot_label %}{% set sc = 'is-wr' %}
+                                    {% elif 'หัวค่ำ' in slot.slot_label or 'เย็น' in slot.slot_label %}{% set sc = 'is-accent' %}
+                                    {% else %}{% set sc = 'is-info' %}{% endif %}
+                                    <span class="bb-badge {{ sc }}" title="{{ slot.start_time }}–{{ slot.end_time }} · ฿{{ slot.rate|int }}/ชม.">{{ slot.slot_label }}</span>
                                 {% endfor %}
                                 </div>
                             </td>
-                            <td class="vc-td-num vc-td-strong">{{ '{:,.2f}'.format(ot.total_hours) }}</td>
-                            <td class="vc-td-num vc-td-strong vc-mono">฿{{ '{:,.0f}'.format(ot.total_amount) }}</td>
+                            <td class="bb-cell-num bb-cell-strong">{{ '{:,.2f}'.format(ot.total_hours) }}</td>
+                            <td class="bb-cell-num bb-cell-strong bb-num">฿{{ '{:,.0f}'.format(ot.total_amount) }}</td>
                             <td>
                                 {% if ot.is_deleted %}
-                                    <span class="badge-pill b-neutral">ลบแล้ว</span>
+                                    <span class="bb-status is-neutral">ลบแล้ว</span>
                                 {% elif ot.no_receipt %}
-                                    <span class="badge-pill b-neutral">ผู้ใช้จ่ายเอง</span>
+                                    <span class="bb-status is-neutral">ผู้ใช้จ่ายเอง</span>
                                 {% elif ot.status == 'paid' %}
-                                    <span class="badge-pill b-full">จ่ายแล้ว</span>
+                                    <span class="bb-status is-ok">จ่ายแล้ว</span>
                                 {% else %}
-                                    <span class="badge-pill b-unpaid">ยังไม่จ่าย</span>
+                                    <span class="bb-status is-wr">ยังไม่จ่าย</span>
                                 {% endif %}
                             </td>
-                            <td class="vc-table-actions">
+                            <td class="bb-table-actions">
                                 <div class="cost-action-group">
                                     {% if ot.is_deleted %}
                                     {# ── tab ลบ: กู้คืนได้อย่างเดียว ── #}
                                     <form method="POST" action="{{ url_for('admincost.ot_restore', ot_id=ot.id) }}" class="d-inline js-cost-action">
-                                        <button type="submit" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" title="กู้คืน">
-                                            <i data-lucide="rotate-ccw" class="vc-icon-sm"></i>
+                                        <button type="submit" class="bb-btn is-ghost is-icon is-sm" title="กู้คืน">
+                                            <span class="material-symbols-rounded">restore</span>
                                         </button>
                                     </form>
                                     {% else %}
                                     {# ── ปุ่มหลัก inline ── #}
                                     <form method="POST" action="{{ url_for('admincost.ot_mark_paid', ot_id=ot.id) }}" class="d-inline js-cost-action">
-                                        <button type="submit" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm"
+                                        <button type="submit" class="bb-btn is-ghost is-icon is-sm"
                                                 title="{{ 'ยกเลิกการจ่าย' if ot.status == 'paid' else 'บันทึกการจ่าย' }}">
-                                            <i data-lucide="{{ 'undo-2' if ot.status == 'paid' else 'grid-2x2-check' }}" class="vc-icon-sm"></i>
+                                            <span class="material-symbols-rounded">{{ 'undo' if ot.status == 'paid' else 'check_circle' }}</span>
                                         </button>
                                     </form>
-                                    <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" data-cost-action="edit" data-ot-id="{{ ot.id }}" title="แก้ไข">
-                                        <i data-lucide="pencil" class="vc-icon-sm"></i>
+                                    <button type="button" class="bb-btn is-ghost is-icon is-sm" data-cost-action="edit" data-ot-id="{{ ot.id }}" title="แก้ไข">
+                                        <span class="material-symbols-rounded">edit</span>
                                     </button>
 
                                     {# ── overflow menu (action รอง) — portal-to-body กัน clip ── #}
                                     <div class="cost-action-more">
-                                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm cost-menu-toggle"
+                                        <button type="button" class="bb-btn is-ghost is-icon is-sm cost-menu-toggle"
                                                 data-cost-menu aria-haspopup="true" aria-expanded="false" title="เพิ่มเติม">
-                                            <i data-lucide="ellipsis-vertical" class="vc-icon-sm"></i>
+                                            <span class="material-symbols-rounded">more_vert</span>
                                         </button>
                                         <div class="cost-action-menu" hidden>
                                             <form method="POST" action="{{ url_for('admincost.ot_toggle_no_receipt', ot_id=ot.id) }}" class="js-cost-action">
                                                 <button type="submit" class="cost-action-item">
-                                                    <i data-lucide="{{ 'undo-2' if ot.no_receipt else 'user-round-check' }}" class="vc-icon-sm"></i>
+                                                    <span class="material-symbols-rounded">{{ 'undo' if ot.no_receipt else 'person' }}</span>
                                                     {{ 'นำกลับเข้ารายการออกใบ' if ot.no_receipt else 'ย้ายไปผู้ใช้จ่ายเอง' }}
                                                 </button>
                                             </form>
                                             {% if not ot.no_receipt %}
                                             <button type="button" class="cost-action-item" data-cost-action="print" data-ot-id="{{ ot.id }}">
-                                                <i data-lucide="printer" class="vc-icon-sm"></i>
+                                                <span class="material-symbols-rounded">print</span>
                                                 ดูตัวอย่าง/พิมพ์ใบเสร็จ
                                             </button>
                                             {% endif %}
                                             <hr class="cost-action-divider">
                                             <form method="POST" action="{{ url_for('admincost.ot_delete', ot_id=ot.id) }}" class="js-cost-action"
-                                                  data-confirm="ลบ {{ ot.ot_number }} ใช่ไหม? (กู้คืนได้ใน tab ลบ)">
+                                                  data-confirm-name="{{ ot.ot_number }}">
                                                 <button type="submit" class="cost-action-item cost-action-item--danger">
-                                                    <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                                                    <span class="material-symbols-rounded">delete</span>
                                                     ลบ
                                                 </button>
                                             </form>
@@ -361,12 +489,10 @@
 
 
                 {% else %}
-                <div class="vc-empty">
-                    <div class="vc-empty-icon">
-                        <i data-lucide="clock-arrow-down"></i>
-                    </div>
-                    <p class="vc-empty-title">ไม่มีข้อมูล OT ในช่วงที่เลือก</p>
-                    <p class="vc-empty-desc">OT จะถูกสร้างอัตโนมัติเมื่อคนขับปิดงาน (บันทึกเลขไมล์ end)</p>
+                <div class="bb-empty">
+                    <svg width="140" height="172" viewBox="0 0 185 227" class="mf-illust d-block mx-auto mb-3"><use href="#illust-anxious"></use></svg>
+                    <p class="bb-empty-title">ไม่มีข้อมูล OT ในช่วงที่เลือก</p>
+                    <p class="bb-empty-desc">OT จะถูกสร้างอัตโนมัติเมื่อคนขับปิดงาน (บันทึกเลขไมล์ end)</p>
                 </div>
                 {% endif %}
 
@@ -376,16 +502,16 @@
 
             {# ── OT monthly pivot: driver × month ── #}
             {% if ot_pivot %}
-            <div class="zen-card mt-4" id="otPivotCard">
+            <div class="bb-card mt-4" id="otPivotCard">
                 <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
-                    <span style="font-weight:600; font-size:var(--vc-text-sm);">สรุปรายเดือน {{ from_year + 543 }}</span>
-                    <span class="vc-td-muted" style="font-size:var(--vc-text-xs);">เฉพาะ OT ที่ไม่ถูกลบ</span>
+                    <span style="font-weight:600; font-size:14px;">สรุปรายเดือน {{ from_year + 543 }}</span>
+                    <span class="bb-cell-muted" style="font-size:12px;">เฉพาะ OT ที่ไม่ถูกลบ</span>
                 </div>
                 <div class="table-responsive">
-                    <table class="table data-table mb-0">
+                    <table class="bb-table mb-0">
                         <thead>
                             <tr>
-                                <th class="vc-pivot-td-sticky" style="min-width:130px; background:var(--vc-bg);">คนขับ</th>
+                                <th class="vc-pivot-td-sticky" style="min-width:130px; background:#fff;">คนขับ</th>
                                 {% for m in range(1, 13) %}
                                 <th class="text-end" style="min-width:82px;">{{ TH_MONTHS[m-1] }}</th>
                                 {% endfor %}
@@ -395,40 +521,40 @@
                         <tbody>
                             {% for did, months in ot_pivot.items() %}
                             <tr>
-                                <td class="vc-pivot-td-sticky" style="background:var(--vc-bg);">{{ ot_pivot_labels[did] }}</td>
+                                <td class="vc-pivot-td-sticky" style="background:#fff;">{{ ot_pivot_labels[did] }}</td>
                                 {% for m in range(1, 13) %}
                                 {% set cell = months.get(m) %}
-                                <td class="vc-td-num">
+                                <td class="bb-cell-num">
                                     {% if cell %}
-                                    <div class="vc-td-strong vc-mono" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(cell.amount) }}</div>
-                                    <div class="vc-td-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(cell.hours) }}ชม.</div>
+                                    <div class="bb-cell-strong bb-num" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(cell.amount) }}</div>
+                                    <div class="bb-cell-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(cell.hours) }}ชม.</div>
                                     {% else %}
-                                    <span class="vc-td-muted" style="font-size:0.8125rem;">—</span>
+                                    <span class="bb-cell-muted" style="font-size:0.8125rem;">—</span>
                                     {% endif %}
                                 </td>
                                 {% endfor %}
-                                <td class="vc-td-num">
-                                    <div class="vc-td-strong vc-mono" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(ot_pivot_row_totals[did].amount) }}</div>
-                                    <div class="vc-td-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(ot_pivot_row_totals[did].hours) }}ชม.</div>
+                                <td class="bb-cell-num">
+                                    <div class="bb-cell-strong bb-num" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(ot_pivot_row_totals[did].amount) }}</div>
+                                    <div class="bb-cell-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(ot_pivot_row_totals[did].hours) }}ชม.</div>
                                 </td>
                             </tr>
                             {% endfor %}
                             <tr class="vc-pivot-row-summary">
-                                <td class="vc-pivot-td-sticky" style="background:var(--vc-bg-subtle);">รวมทั้งหมด</td>
+                                <td class="vc-pivot-td-sticky" style="background:var(--bb-n50);">รวมทั้งหมด</td>
                                 {% for m in range(1, 13) %}
                                 {% set col = ot_pivot_col_totals[m] %}
-                                <td class="vc-td-num">
+                                <td class="bb-cell-num">
                                     {% if col.amount > 0 %}
-                                    <div class="vc-td-strong vc-mono" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(col.amount) }}</div>
-                                    <div class="vc-td-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(col.hours) }}ชม.</div>
+                                    <div class="bb-cell-strong bb-num" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(col.amount) }}</div>
+                                    <div class="bb-cell-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(col.hours) }}ชม.</div>
                                     {% else %}
-                                    <span class="vc-td-muted" style="font-size:0.8125rem;">—</span>
+                                    <span class="bb-cell-muted" style="font-size:0.8125rem;">—</span>
                                     {% endif %}
                                 </td>
                                 {% endfor %}
-                                <td class="vc-td-num">
-                                    <div class="vc-td-strong vc-mono" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(ot_grand_amount) }}</div>
-                                    <div class="vc-td-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(ot_grand_hours) }}ชม.</div>
+                                <td class="bb-cell-num">
+                                    <div class="bb-cell-strong bb-num" style="font-size:0.8125rem;">฿{{ '{:,.0f}'.format(ot_grand_amount) }}</div>
+                                    <div class="bb-cell-muted" style="font-size:0.75rem;">{{ '{:,.1f}'.format(ot_grand_hours) }}ชม.</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -439,16 +565,18 @@
 
             {# ── OT แยกตามประเภทงาน ── #}
             {% if ot_by_expense %}
-            <div class="vc-card mt-4" style="border:1px solid var(--vc-border);">
+            <div class="bb-card mt-4" style="padding:16px;">
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <i data-lucide="pie-chart" style="width:16px;height:16px;color:var(--vc-icon);"></i>
-                    <span class="vc-label">OT แยกตามประเภทงาน</span>
+                    <span class="material-symbols-rounded" style="font-size:16px;color:var(--bb-mut);">pie_chart</span>
+                    <span class="bb-label" style="margin:0;">OT แยกตามประเภทงาน</span>
                 </div>
                 {% if uncollected_count > 0 %}
-                <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-3" style="border-radius:var(--vc-radius-sm);font-size:0.875rem;">
-                    <i data-lucide="alert-triangle" style="width:15px;height:15px;flex-shrink:0;"></i>
-                    <span>OT งานส่วนตัวที่ยังไม่เรียกเก็บ: <strong>{{ uncollected_count }} รายการ (฿{{ '{:,.2f}'.format(uncollected_sum) }})</strong>
-                    — <a href="{{ url_for('admincost.cost_summary', budget_type='personal', status='unpaid') }}" class="alert-link">ดูรายการ</a></span>
+                <div class="bb-callout is-wr mb-3">
+                    <span class="material-symbols-rounded">warning</span>
+                    <div class="bb-callout-body">
+                        OT งานส่วนตัวที่ยังไม่เรียกเก็บ: <strong>{{ uncollected_count }} รายการ (฿{{ '{:,.2f}'.format(uncollected_sum) }})</strong>
+                        — <a href="{{ url_for('admincost.cost_summary', budget_type='personal', status='unpaid') }}" style="color:var(--bb-accent-dk);font-weight:600;">ดูรายการ</a>
+                    </div>
                 </div>
                 {% endif %}
                 {# config-driven table ย้ายไป controller เป็น components.Table → ot_expense_table #}
@@ -456,21 +584,41 @@
             </div>
             {% endif %}
 
-        </div>
-    </main>
-</div>
+{% endblock %}
 
+
+{% block modals %}
+{# ════════════════════════════════════════════════
+   MODAL: Confirm — illustration card (page contract W3, 2026-08-07)
+   ใช้ร่วมกับทุกฟอร์มที่มี data-confirm-name บน .js-cost-action (ตอนนี้มีแค่ ot_delete)
+   eyebrow/desc เป็น static ของ "ยืนยันการลบ" — ถ้ามี action อื่นต้อง confirm ในอนาคต
+   ที่ไม่ใช่ "ลบ" ให้ทำ eyebrow/desc เป็น data-attribute แยกแทน (ยังไม่ทำตอนนี้ ไม่ over-engineer)
+   ════════════════════════════════════════════════ #}
+<div class="modal fade" id="costConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content mf-confirm-card border-0">
+            <svg width="140" height="172" viewBox="0 0 185 227" class="mf-illust d-block mx-auto mb-3"><use href="#illust-anxious"></use></svg>
+            <p class="mf-confirm-title">ยืนยันการลบ</p>
+            <p class="mf-confirm-name" id="costConfirmName"></p>
+            <p class="mf-confirm-desc">ย้ายไปแท็บ "ลบ" — กู้คืนได้ภายหลัง</p>
+            <div class="d-flex justify-content-center gap-2 mt-4">
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                <button type="button" class="bb-btn is-danger" id="costConfirmBtn" title="ยืนยันการลบ">ลบเลย</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {# ════════════════════════════════════════════════
    MODAL: แก้ไข OT
    ════════════════════════════════════════════════ #}
-<div class="modal fade vc-modal" id="editOtModal" tabindex="-1">
+<div class="modal fade" id="editOtModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:600px;">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title d-flex align-items-center gap-2">
-                    <span class="kpi-tile" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
-                        <i data-lucide="pencil"></i>
+                    <span class="bb-kpi-tile" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
+                        <span class="material-symbols-rounded">edit</span>
                     </span>
                     <span id="editModalTitle">แก้ไข OT</span>
                 </h5>
@@ -479,32 +627,32 @@
             <form method="POST" id="editOtForm">
                 <div class="modal-body">
 
-                    <div class="vc-form-row" style="margin-bottom: var(--vc-space-4);">
-                        <div class="vc-form-group" style="flex: 1.4;">
-                            <label class="vc-label">คนขับ</label>
-                            <select name="driver_id" class="vc-select" id="editDriverId">
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="bb-field" style="flex: 1.4; margin-bottom:0;">
+                            <label class="bb-label">คนขับ</label>
+                            <select name="driver_id" class="bb-input" id="editDriverId">
                                 {% for d in drivers %}
                                 <option value="{{ d.id }}">{{ d.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="vc-form-group" style="flex: 1;">
-                            <label class="vc-label">วันที่</label>
+                        <div class="bb-field" style="flex: 1; margin-bottom:0;">
+                            <label class="bb-label">วันที่</label>
                             <div class="budget-datepick" data-datepick>
-                                <button type="button" class="vc-input budget-date-btn" data-datepick-btn
+                                <button type="button" class="bb-input budget-date-btn" data-datepick-btn
                                         aria-haspopup="dialog" aria-expanded="false" aria-label="เลือกวันที่ OT">
-                                    <i data-lucide="calendar" class="vc-icon-sm"></i>
+                                    <span class="material-symbols-rounded" style="font-size:16px;">calendar_month</span>
                                     <span class="budget-date-label" data-datepick-label>เลือกวันที่</span>
                                 </button>
                                 <input type="hidden" name="date" id="editDate" data-datepick-input data-datepick-required>
                                 <div class="va-cal va-cal--end" data-datepick-pop role="dialog" aria-label="เลือกวันที่ OT" hidden>
                                     <div class="va-cal-head">
                                         <button type="button" class="va-cal-nav" data-cal-prev aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
-                                            <i data-lucide="chevron-left" class="vc-icon-sm"></i>
+                                            <span class="material-symbols-rounded">chevron_left</span>
                                         </button>
                                         <span class="va-cal-title" data-cal-title></span>
                                         <button type="button" class="va-cal-nav" data-cal-next aria-label="เดือนถัดไป" title="เดือนถัดไป">
-                                            <i data-lucide="chevron-right" class="vc-icon-sm"></i>
+                                            <span class="material-symbols-rounded">chevron_right</span>
                                         </button>
                                     </div>
                                     <div class="va-cal-grid va-cal-dow" data-cal-dow></div>
@@ -514,10 +662,10 @@
                         </div>
                     </div>
 
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--vc-space-2);">
-                        <label class="vc-label" style="margin: 0;">ช่วงเวลา OT</label>
-                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm cost-slot-add-btn" id="addSlotBtn" title="เพิ่มช่วง">
-                            <i data-lucide="plus" class="vc-icon-sm"></i>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="bb-label" style="margin: 0;">ช่วงเวลา OT</label>
+                        <button type="button" class="bb-btn is-ghost is-sm cost-slot-add-btn" id="addSlotBtn" title="เพิ่มช่วง">
+                            <span class="material-symbols-rounded">add</span>
                             เพิ่มช่วง
                         </button>
                     </div>
@@ -530,7 +678,7 @@
                         <span class="cost-slot-head-spacer" aria-hidden="true"></span>
                     </div>
 
-                    <div id="editSlotsContainer" style="display:flex; flex-direction:column; gap: var(--vc-space-2);"></div>
+                    <div id="editSlotsContainer" class="d-flex flex-column gap-2"></div>
 
                     <div class="cost-total-box">
                         <span class="cost-total-box-label">รวมทั้งหมด</span>
@@ -540,15 +688,15 @@
                         </div>
                     </div>
 
-                    <div class="vc-form-group" style="margin-top: var(--vc-space-4); margin-bottom: 0;">
-                        <label class="vc-label">หมายเหตุ</label>
-                        <textarea name="note" class="vc-textarea" id="editNote" rows="2" placeholder="เช่น ส่งของด่วน"></textarea>
+                    <div class="bb-field" style="margin-top: 16px; margin-bottom: 0;">
+                        <label class="bb-label">หมายเหตุ</label>
+                        <textarea name="note" class="bb-input" id="editNote" rows="2" placeholder="เช่น ส่งของด่วน"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-zen-outline" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn-zen">
-                        <i data-lucide="save"></i>
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri">
+                        <span class="material-symbols-rounded">save</span>
                         บันทึก
                     </button>
                 </div>
@@ -562,13 +710,13 @@
    MODAL: เพิ่ม OT (manual standalone — booking_id=None)
    layout เหมือน editOtModal — ต่าง action=ot_create + ids prefix add*
    ════════════════════════════════════════════════ #}
-<div class="modal fade vc-modal" id="addOtModal" tabindex="-1">
+<div class="modal fade" id="addOtModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title d-flex align-items-center gap-2">
-                    <span class="kpi-tile" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
-                        <i data-lucide="plus"></i>
+                    <span class="bb-kpi-tile" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
+                        <span class="material-symbols-rounded">add</span>
                     </span>
                     <span>เพิ่ม OT</span>
                 </h5>
@@ -577,32 +725,32 @@
             <form method="POST" id="addOtForm" action="{{ url_for('admincost.ot_create') }}">
                 <div class="modal-body">
 
-                    <div class="vc-form-row" style="margin-bottom: var(--vc-space-4);">
-                        <div class="vc-form-group" style="flex: 1.4;">
-                            <label class="vc-label">คนขับ</label>
-                            <select name="driver_id" class="vc-select" id="addDriverId">
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="bb-field" style="flex: 1.4; margin-bottom:0;">
+                            <label class="bb-label">คนขับ</label>
+                            <select name="driver_id" class="bb-input" id="addDriverId">
                                 {% for d in drivers %}
                                 <option value="{{ d.id }}">{{ d.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="vc-form-group" style="flex: 1;">
-                            <label class="vc-label">วันที่</label>
+                        <div class="bb-field" style="flex: 1; margin-bottom:0;">
+                            <label class="bb-label">วันที่</label>
                             <div class="budget-datepick" data-datepick>
-                                <button type="button" class="vc-input budget-date-btn" data-datepick-btn
+                                <button type="button" class="bb-input budget-date-btn" data-datepick-btn
                                         aria-haspopup="dialog" aria-expanded="false" aria-label="เลือกวันที่ OT">
-                                    <i data-lucide="calendar" class="vc-icon-sm"></i>
+                                    <span class="material-symbols-rounded" style="font-size:16px;">calendar_month</span>
                                     <span class="budget-date-label" data-datepick-label>เลือกวันที่</span>
                                 </button>
                                 <input type="hidden" name="date" id="addDate" data-datepick-input data-datepick-required>
                                 <div class="va-cal va-cal--end" data-datepick-pop role="dialog" aria-label="เลือกวันที่ OT" hidden>
                                     <div class="va-cal-head">
                                         <button type="button" class="va-cal-nav" data-cal-prev aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า">
-                                            <i data-lucide="chevron-left" class="vc-icon-sm"></i>
+                                            <span class="material-symbols-rounded">chevron_left</span>
                                         </button>
                                         <span class="va-cal-title" data-cal-title></span>
                                         <button type="button" class="va-cal-nav" data-cal-next aria-label="เดือนถัดไป" title="เดือนถัดไป">
-                                            <i data-lucide="chevron-right" class="vc-icon-sm"></i>
+                                            <span class="material-symbols-rounded">chevron_right</span>
                                         </button>
                                     </div>
                                     <div class="va-cal-grid va-cal-dow" data-cal-dow></div>
@@ -612,10 +760,10 @@
                         </div>
                     </div>
 
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--vc-space-2);">
-                        <label class="vc-label" style="margin: 0;">ช่วงเวลา OT</label>
-                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm cost-slot-add-btn" id="addOtSlotBtn" title="เพิ่มช่วง">
-                            <i data-lucide="plus" class="vc-icon-sm"></i>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="bb-label" style="margin: 0;">ช่วงเวลา OT</label>
+                        <button type="button" class="bb-btn is-ghost is-sm cost-slot-add-btn" id="addOtSlotBtn" title="เพิ่มช่วง">
+                            <span class="material-symbols-rounded">add</span>
                             เพิ่มช่วง
                         </button>
                     </div>
@@ -628,7 +776,7 @@
                         <span class="cost-slot-head-spacer" aria-hidden="true"></span>
                     </div>
 
-                    <div id="addSlotsContainer" style="display:flex; flex-direction:column; gap: var(--vc-space-2);"></div>
+                    <div id="addSlotsContainer" class="d-flex flex-column gap-2"></div>
 
                     <div class="cost-total-box">
                         <span class="cost-total-box-label">รวมทั้งหมด</span>
@@ -638,15 +786,15 @@
                         </div>
                     </div>
 
-                    <div class="vc-form-group" style="margin-top: var(--vc-space-4); margin-bottom: 0;">
-                        <label class="vc-label">หมายเหตุ</label>
-                        <textarea name="note" class="vc-textarea" id="addNote" rows="2" placeholder="เช่น ส่งของด่วน"></textarea>
+                    <div class="bb-field" style="margin-top: 16px; margin-bottom: 0;">
+                        <label class="bb-label">หมายเหตุ</label>
+                        <textarea name="note" class="bb-input" id="addNote" rows="2" placeholder="เช่น ส่งของด่วน"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-zen-outline" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn-zen">
-                        <i data-lucide="plus"></i>
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri">
+                        <span class="material-symbols-rounded">add</span>
                         เพิ่ม OT
                     </button>
                 </div>
@@ -659,27 +807,27 @@
 {# ════════════════════════════════════════════════
    MODAL: อัตรา OT
    ════════════════════════════════════════════════ #}
-<div class="modal fade vc-modal" id="rateConfigModal" tabindex="-1">
+<div class="modal fade" id="rateConfigModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header cost-rate-modal-header">
                 <div class="cost-rate-modal-heading">
                     <h5 class="modal-title d-flex align-items-center gap-2">
-                        <span class="kpi-tile" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
-                            <i data-lucide="settings-2"></i>
+                        <span class="bb-kpi-tile" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
+                            <span class="material-symbols-rounded">settings</span>
                         </span>
                         แก้ไขอัตรา OT
                     </h5>
-                    <p class="vc-modal-subtitle ms-4 mt-1">มีผลกับ OT ใหม่เท่านั้น</p>
+                    <p class="ms-4 mt-1 mb-0" style="font-size:12px;color:var(--bb-mut);">มีผลกับ OT ใหม่เท่านั้น</p>
                 </div>
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
             </div>
             <form method="POST" action="{{ url_for('admincost.ot_rate_config_update') }}" id="rateConfigForm">
                 <div class="modal-body">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--vc-space-2);">
-                        <label class="vc-label" style="margin:0;">ช่วงอัตรา OT</label>
-                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-sm" id="addRateBtn" title="เพิ่มช่วงอัตรา">
-                            <i data-lucide="plus" class="vc-icon-sm"></i>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="bb-label" style="margin:0;">ช่วงอัตรา OT</label>
+                        <button type="button" class="bb-btn is-ghost is-sm" id="addRateBtn" title="เพิ่มช่วงอัตรา">
+                            <span class="material-symbols-rounded">add</span>
                             เพิ่มช่วง
                         </button>
                     </div>
@@ -694,17 +842,17 @@
                         <span class="cost-rate-head-spacer" aria-hidden="true"></span>
                     </div>
 
-                    <div id="rateConfigContainer" style="display:flex; flex-direction:column; gap: var(--vc-space-2);">
+                    <div id="rateConfigContainer" class="d-flex flex-column gap-2">
                         {% for cfg in rate_configs %}
                         <div class="cost-rate-row" data-cfg-id="{{ cfg.id }}">
                             <input type="hidden" name="cfg_id[]" value="{{ cfg.id }}">
                             <div class="cost-rate-row-field" data-col-full>
-                                <label class="vc-label">ชื่อ Band</label>
-                                <input type="text" name="cfg_label[]" class="vc-input" value="{{ cfg.label }}" required>
+                                <label class="bb-label">ชื่อ Band</label>
+                                <input type="text" name="cfg_label[]" class="bb-input" value="{{ cfg.label }}" required>
                             </div>
                             <div class="cost-rate-row-field cost-rate-row-day">
-                                <label class="vc-label">เฉพาะวัน</label>
-                                <select name="cfg_day[]" class="vc-select">
+                                <label class="bb-label">เฉพาะวัน</label>
+                                <select name="cfg_day[]" class="bb-input">
                                     <option value="" {% if cfg.day_of_week is none %}selected{% endif %}>ทุกวัน</option>
                                     {% for i in range(7) %}
                                     <option value="{{ i }}" {% if cfg.day_of_week == i %}selected{% endif %}>{{ TH_DAYS[i] }}</option>
@@ -712,27 +860,27 @@
                                 </select>
                             </div>
                             <div class="cost-rate-row-field">
-                                <label class="vc-label">เริ่ม</label>
-                                <input type="time" name="cfg_start[]" class="vc-input" value="{{ cfg.start_time }}" required>
+                                <label class="bb-label">เริ่ม</label>
+                                <input type="time" name="cfg_start[]" class="bb-input" value="{{ cfg.start_time }}" required>
                             </div>
                             <div class="cost-rate-row-field">
-                                <label class="vc-label">สิ้นสุด</label>
-                                <input type="time" name="cfg_end[]" class="vc-input" value="{{ cfg.end_time }}" required>
+                                <label class="bb-label">สิ้นสุด</label>
+                                <input type="time" name="cfg_end[]" class="bb-input" value="{{ cfg.end_time }}" required>
                             </div>
                             <div class="cost-rate-row-field">
-                                <label class="vc-label">฿/ชม.</label>
-                                <input type="number" name="cfg_rate[]" class="vc-input" value="{{ cfg.rate|int }}" min="0" step="1" required>
+                                <label class="bb-label">฿/ชม.</label>
+                                <input type="number" name="cfg_rate[]" class="bb-input" value="{{ cfg.rate|int }}" min="0" step="1" required>
                             </div>
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm cost-rate-row-remove js-rate-remove" title="ลบช่วงนี้">
-                                <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                            <button type="button" class="bb-btn is-ghost is-icon is-sm cost-rate-row-remove js-rate-remove" title="ลบช่วงนี้">
+                                <span class="material-symbols-rounded">delete</span>
                             </button>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-zen-outline" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn-zen">บันทึก</button>
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri">บันทึก</button>
                 </div>
             </form>
         </div>
@@ -744,15 +892,15 @@
    MODAL: ดูตัวอย่างใบเสร็จ (preview ก่อนพิมพ์)
    #receiptHost = JS render หน้าใบเสร็จ (1+ หน้า) ลงตรงนี้
    ════════════════════════════════════════════════ #}
-<div class="modal fade vc-modal" id="receiptPreviewModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="receiptPreviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg cost-receipt-dialog">
         <div class="modal-content">
             <div class="modal-header rcpt-chrome">
                 <h5 class="modal-title d-flex align-items-center gap-2">
-                    <span class="kpi-tile" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
-                        <i data-lucide="receipt-text"></i>
+                    <span class="bb-kpi-tile" style="width:32px;height:32px;border-radius:8px;flex-shrink:0;">
+                        <span class="material-symbols-rounded">receipt_long</span>
                     </span>
-                    ตัวอย่างใบเสร็จ <span id="receiptPreviewCount" class="vc-td-muted" style="font-weight:400; font-size:var(--vc-text-sm);"></span>
+                    ตัวอย่างใบเสร็จ <span id="receiptPreviewCount" class="bb-cell-muted" style="font-weight:400; font-size:14px;"></span>
                 </h5>
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด" title="ปิด"></button>
             </div>
@@ -760,17 +908,19 @@
                 <div id="receiptHost"></div>
             </div>
             <div class="modal-footer rcpt-chrome">
-                <button type="button" class="btn-zen-outline" data-bs-dismiss="modal">ปิด</button>
-                <button type="button" class="btn-zen" id="receiptPrintBtn">
-                    <i data-lucide="printer"></i>
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ปิด</button>
+                <button type="button" class="bb-btn is-pri" id="receiptPrintBtn">
+                    <span class="material-symbols-rounded">print</span>
                     พิมพ์
                 </button>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
 
+{% block scripts %}
 {# ════════════════════════════════════════════════
    DATA สำหรับ JS (JSON injection — ไม่ใช่ inline logic)
    ════════════════════════════════════════════════ #}
@@ -828,8 +978,6 @@
     };
     window.COST_FILTER_SUB = {{ sel_budget_sub | tojson }};
 </script>
-<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_ot.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>
-</body>
-</html>
+{% endblock %}

@@ -5,11 +5,12 @@ Tests สำหรับ services/vehicle/budget_service.py — core money/ledge
 set_budget_amount, manual_adjust, set_active,
 verify_cache_integrity และ invariant: used_amount == SUM(log ที่ไม่ใช่ set_budget)
 """
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 
-from models import db, VehicleBudgetLog
+from models import db, VehicleBudgetLog, VehicleBudgetYearlyPlan
 import services.vehicle.budget_service as bs
 from conftest import SNAP
 
@@ -205,3 +206,136 @@ def test_verify_cache_integrity_detects_drift(make_budget, make_mileage):
     drift = bs.verify_cache_integrity()
     assert len(drift) == 1
     assert drift[0][0] == b.id                   # (budget_id, cached, real_sum)
+
+
+# ──────────────────────────────────────────────────────────────
+# set_yearly_plan (v2.28: name param)
+# ──────────────────────────────────────────────────────────────
+def test_set_yearly_plan_creates_with_name(session):
+    plan = bs.set_yearly_plan(
+        None, 2569, 500000, 200000,
+        date(2026, 3, 1), date(2027, 2, 28), name='งบพิเศษ ทริปดูงานต่างประเทศ',
+    )
+    session.commit()
+
+    assert plan.id is not None
+    assert plan.name == 'งบพิเศษ ทริปดูงานต่างประเทศ'
+
+
+def test_set_yearly_plan_update_keeps_old_name_when_blank(session):
+    plan = bs.set_yearly_plan(
+        None, 2569, 500000, 200000,
+        date(2026, 3, 1), date(2027, 2, 28), name='งบประมาณประจำปี 2569',
+    )
+    session.commit()
+
+    bs.set_yearly_plan(
+        plan.id, 2569, 600000, 250000,
+        date(2026, 3, 1), date(2027, 2, 28), name='',
+    )
+    session.commit()
+
+    assert plan.name == 'งบประมาณประจำปี 2569'   # ไม่ถูกเขียนทับด้วยค่าว่าง
+    assert plan.total_amount == Decimal('600000')
+
+
+# ──────────────────────────────────────────────────────────────
+# set_default_plan
+# ──────────────────────────────────────────────────────────────
+def _make_plan(session, start_date, end_date, name='plan'):
+    p = VehicleBudgetYearlyPlan(
+        fiscal_year=start_date.year, total_amount=100000, central_allocation=50000,
+        start_date=start_date, end_date=end_date, name=name,
+    )
+    session.add(p)
+    session.commit()
+    return p
+
+
+def test_set_default_plan_covering_today_succeeds(session):
+    today = date.today()
+    plan = _make_plan(session, today - timedelta(days=10), today + timedelta(days=10))
+
+    bs.set_default_plan(plan.id)
+    session.commit()
+
+    assert plan.is_default is True
+
+
+def test_set_default_plan_rejects_out_of_range_plan(session):
+    today = date.today()
+    plan = _make_plan(session, today + timedelta(days=5), today + timedelta(days=20))  # ยังไม่เริ่ม
+
+    with pytest.raises(ValueError):
+        bs.set_default_plan(plan.id)
+    assert plan.is_default is False
+
+
+def test_set_default_plan_unsets_previous_default(session):
+    today = date.today()
+    plan_a = _make_plan(session, today - timedelta(days=10), today + timedelta(days=10), name='a')
+    plan_b = _make_plan(session, today - timedelta(days=1), today + timedelta(days=1), name='b')
+
+    bs.set_default_plan(plan_a.id)
+    session.commit()
+    bs.set_default_plan(plan_b.id)
+    session.commit()
+
+    assert plan_a.is_default is False
+    assert plan_b.is_default is True
+
+
+# ──────────────────────────────────────────────────────────────
+# delete_budget (v2.29 — hard delete, เฉพาะงบที่ไม่เคยหักเงินจริง)
+# ──────────────────────────────────────────────────────────────
+def test_delete_budget_removes_row_when_never_used(session, make_budget):
+    b = make_budget(budget_amount=1000, used_amount=0)
+    bid = b.id
+
+    bs.delete_budget(b)
+    session.commit()
+
+    from models import VehicleBudget
+    assert VehicleBudget.query.get(bid) is None
+
+
+def test_delete_budget_allows_when_only_set_budget_log(session, make_budget):
+    b = make_budget(budget_amount=1000, used_amount=0)
+    bs.set_budget_amount(b, 2000, note='แก้เพดานก่อนลบ')
+    session.commit()
+    bid = b.id
+
+    bs.delete_budget(b)
+    session.commit()
+
+    from models import VehicleBudget
+    assert VehicleBudget.query.get(bid) is None
+    assert VehicleBudgetLog.query.filter_by(budget_id=bid).count() == 0
+
+
+def test_delete_budget_blocks_when_has_deduct_log(session, make_budget, make_mileage):
+    b = make_budget(used_amount=0)
+    _, m = make_mileage()
+    bs.deduct_for_mileage(m, b, 350, snap=SNAP)
+    session.commit()
+    bid = b.id
+
+    with pytest.raises(ValueError):
+        bs.delete_budget(b)
+
+    from models import VehicleBudget
+    assert VehicleBudget.query.get(bid) is not None
+    assert VehicleBudgetLog.query.filter_by(budget_id=bid).count() == 1
+
+
+def test_delete_budget_blocks_when_has_adjust_log(session, make_budget):
+    b = make_budget(used_amount=0)
+    bs.manual_adjust(b, 100, note='ปรับมือ')
+    session.commit()
+    bid = b.id
+
+    with pytest.raises(ValueError):
+        bs.delete_budget(b)
+
+    from models import VehicleBudget
+    assert VehicleBudget.query.get(bid) is not None

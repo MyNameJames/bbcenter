@@ -1244,62 +1244,91 @@ async function fixDone(vehicleId) {
 let adminDetailModal = null;
 let _adminEditId     = null;
 
-const STATUS_CSS_KEY = {
-    pending:          'pending',
-    waiting_approver: 'approver',
-    forwarded:        'approver',
-    approved:         'approved',
-    in_progress:      'approved',
-    completed:        'approved',
-    rejected:         'rejected',
-    cancelled:        'rejected',
-};
+/* สถานะ ∈ {waiting_approver, approved} เท่านั้น = admin จัดรถ+คนขับแล้วจริง — ก่อนหน้านั้นยังไม่มีข้อมูลให้โชว์
+   (ชุดเดียวกับ VEHICLE_ASSIGNED_STATUSES ใน vehicle.js — ไฟล์แยกกันคนละหน้า ไม่แชร์ module) */
+const VEHICLE_ASSIGNED_STATUSES = ['waiting_approver', 'approved'];
+
+function _adminSortByTime(arr) {
+    return [...arr].sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+}
 
 function openAdminBookingDetail(id) {
     const b = bookings.find(x => x.id === id);
     if (!b) return;
 
-    const sb       = STATUS_BADGE[b.status]  || STATUS_BADGE.pending;
-    const si       = STATUS_ICON[b.status]   || STATUS_ICON.pending;
-    const cssKey   = STATUS_CSS_KEY[b.status] || 'pending';
+    const groupMembers = b.tripGroup
+        ? _adminSortByTime(bookings.filter(x => x.tripGroup === b.tripGroup && x.status !== 'rejected'))
+        : [];
+    const isGroup = groupMembers.length > 1;
+    const members = isGroup ? groupMembers : [b];
+    const rep     = isGroup ? (members.find(x => x.vehicleLabel) || b) : b;
 
-    const pill = document.getElementById('detailStatusPill');
-    pill.className = `bk-detail-status bk-detail-status--${cssKey}`;
-    document.getElementById('detailStatusIcon').outerHTML =
-        `<span class="material-symbols-rounded" id="detailStatusIcon">${si.icon}</span>`;
-    document.getElementById('detailStatusText').textContent = sb.label;
+    const tone  = PT_TONE[b.status]          || PT_TONE.pending;
+    const sb    = STATUS_BADGE[b.status]     || STATUS_BADGE.pending;
+    const si    = STATUS_ICON[b.status]      || STATUS_ICON.pending;
+    const label = isGroup ? 'ใช้รถร่วมกัน' : sb.label;
+    // const icon  = isGroup ? 'group' : si.icon;
 
     const [y, m, d] = b.startIso.split('T')[0].split('-').map(Number);
     const dow = new Date(y, m - 1, d).getDay();
     document.getElementById('detailDateLine').textContent =
         `วัน${TH_DAYS_F[dow]} ที่ ${d} ${TH_MON_F[m]}`;
 
-    document.getElementById('detailTime').textContent  = `${b.start} – ${b.end}`;
-    document.getElementById('detailPlate').innerHTML   = esc(b.vehicleLabel || 'รอ Admin กำหนด');
+    const badge = document.getElementById('detailStatusBadge');
+    badge.className   = `py-1 px-2 me-2 bb-badge ${isGroup ? 'is-ok' : sb.cls}`;
+    badge.textContent = label;
+    document.getElementById('detailTimeText').textContent = `${b.start}–${b.end} ${ptDuration(b)}`;
+    const avatar = document.getElementById('detailStatusAvatar');
+    avatar.style.background = tone.bg;
+    avatar.style.color      = tone.fg;
+    // document.getElementById('detailStatusIcon').textContent = icon;
 
-    const driverLine = document.getElementById('detailDriverLine');
-    if (b.needDriver) {
-        document.getElementById('detailDriver').textContent = b.driverLabel || 'รอ Admin มอบหมาย';
-        driverLine.style.display = '';
+    // รถ + คนขับ — โชว์เฉพาะ status ที่ admin จัดรถ/คนขับแล้ว
+    const vdSection = document.getElementById('detailVehicleDriverSection');
+    if (VEHICLE_ASSIGNED_STATUSES.includes(rep.status)) {
+        vdSection.classList.remove('d-none');
+        document.getElementById('detailPlate').textContent = ptPlate(rep.vehicleLabel);
+        document.getElementById('detailVehicleModel').textContent = rep.vehicleLabel ? rep.vehicleLabel.split(' · ')[0] : '';
+
+        const driverLine = document.getElementById('detailDriverLine');
+        if (rep.needDriver) {
+            driverLine.classList.remove('d-none');
+            document.getElementById('detailDriverName').textContent  = rep.driverLabel || 'รอ Admin มอบหมาย';
+            document.getElementById('detailDriverPhone').textContent = rep.driverPhone || '';
+            const callBtn = document.getElementById('detailDriverCallBtn');
+            callBtn.onclick  = rep.driverPhone ? () => { window.location.href = `tel:${rep.driverPhone}`; } : null;
+            callBtn.disabled = !rep.driverPhone;
+        } else {
+            driverLine.classList.add('d-none');
+        }
     } else {
-        driverLine.style.display = 'none';
+        vdSection.classList.add('d-none');
     }
 
-    document.getElementById('detailMemberCount').textContent = `${b.pax || 1} คน`;
-    document.getElementById('detailMembersList').innerHTML = `
-        <div class="bk-detail-member" style="flex-direction:column;align-items:flex-start;gap:4px;padding:8px 0;">
-            <div><span style="color:var(--vc-fg-subtle);font-size:.78rem;">ผู้จอง</span> ${esc(b.booker)}</div>
-            <div><span style="color:var(--vc-fg-subtle);font-size:.78rem;">วัตถุประสงค์</span> ${esc(b.purpose)}</div>
-            <div><span style="color:var(--vc-fg-subtle);font-size:.78rem;">ปลายทาง</span> ${esc(b.dest)}</div>
-            ${b.pickup ? `<div><span style="color:var(--vc-fg-subtle);font-size:.78rem;">จุดรับ</span> ${esc(b.pickup)}</div>` : ''}
-        </div>`;
+    // ผู้โดยสาร — การ์ดเส้นประต่อคน (pickup → dest, purpose | pax | เวลา, note) — เหมือนฝั่ง user
+    // คนแรกไม่มีเส้นประบน — hr.bk-divider ของ header ทำหน้าที่คั่นไปแล้ว (กันเส้นประซ้อนกัน 2 เส้น)
+    document.getElementById('detailMembersList').innerHTML = members.map((mm, idx) => `
+        <div class="py-3 mt-2 ms-1 ps-2"${idx > 0 ? ' style="border-top:1px dashed var(--bb-n300);"' : ''}>
+            <span class="fw-semibold" style="color:var(--bb-str)">${esc(mm.booker || '–')}</span>
+            <div class="bb-subtext">${mm.pickup ? `${esc(mm.pickup)} → ` : ''}${esc(mm.dest || '–')}</div>
+            <div class="bb-subtext d-flex align-items-center gap-1 pt-1">
+                ${esc(mm.purpose || '–')}
+                <span>|</span>
+                <span class="material-symbols-rounded">directions_run</span>${mm.pax || '–'} รูป/คน
+                <span>|</span>
+                <span class="material-symbols-rounded">schedule</span>${mm.start}–${mm.end} ${ptDuration(mm)}
+            </div>
+            ${mm.note ? `<div class="bb-subtext pt-2">หมายเหตุ: ${esc(mm.note)}</div>` : ''}
+        </div>`
+    ).join('');
 
     const canEdit = !['in_progress','completed','cancelled'].includes(b.status);
     const actDiv  = document.getElementById('detailActions');
-    // ไม่มีปุ่มแก้ไข = ปุ่ม "ปิด" fallback กันไม่มีทางปิด modal (เอาปุ่ม X ออกแล้ว, 2026-08-03 — modal_pattern.md)
+    // ไม่มีปุ่มแก้ไข = ซ่อนแถวปุ่มไปเลย ไม่โชว์ปุ่ม "ปิด" เดี่ยวๆ (2026-08-05: ปิดผ่าน backdrop/Escape แทน)
     actDiv.innerHTML = canEdit
         ? `<button class="btn btn-sm btn-outline-primary" onclick="openAdminEdit(${b.id})">แก้ไข</button>`
-        : `<button type="button" class="bb-btn is-sec is-sm" data-bs-dismiss="modal" title="ปิด">ปิด</button>`;
+        : '';
+    actDiv.classList.toggle('d-none', !actDiv.innerHTML);
 
     document.getElementById('detailEditSection').classList.add('d-none');
 
@@ -1317,6 +1346,7 @@ function openAdminEdit(id) {
     document.getElementById('editPurpose').value = b.purpose || '';
     document.getElementById('editPax').value     = b.pax     || 1;
     document.getElementById('editPickup').value  = b.pickup  || '';
+    document.getElementById('editNote').value    = b.note    || '';
     document.getElementById('detailEditSection').classList.remove('d-none');
     document.getElementById('detailActions').innerHTML = '';
 }
@@ -1336,6 +1366,7 @@ async function saveAdminEdit() {
     fd.append('purpose',          document.getElementById('editPurpose').value);
     fd.append('passenger_count',  document.getElementById('editPax').value);
     fd.append('pickup_location',  document.getElementById('editPickup').value);
+    fd.append('note',             document.getElementById('editNote').value);
     try {
         const res  = await fetch(b.editUrl, { method: 'POST', body: fd });
         const data = await res.json();
@@ -1347,6 +1378,7 @@ async function saveAdminEdit() {
             purpose:  document.getElementById('editPurpose').value,
             pax:      parseInt(document.getElementById('editPax').value) || b.pax,
             pickup:   document.getElementById('editPickup').value,
+            note:     document.getElementById('editNote').value,
         });
         renderAll();
         showToast(data.msg || 'บันทึกแล้ว');

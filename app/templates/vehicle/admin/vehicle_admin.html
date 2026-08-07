@@ -538,6 +538,8 @@ window.BOOKINGS_DATA = [
     driverId:    {{ b.driver_id or 'null' }},
     vehicleLabel: {{ ((b.assigned_vehicle.brand ~ ' ' ~ b.assigned_vehicle.model ~ ' · ' ~ b.assigned_vehicle.license_plate) if b.assigned_vehicle else '') | tojson }},
     driverLabel:  {{ (b.driver.name if b.driver else '') | tojson }},
+    driverPhone:  {{ (b.driver.phone if b.driver else '') | tojson }},
+    note:        {{ (b.note or '') | tojson }},
     expType:     {{ (b.expense_type or '') | tojson }},
     expSub:      {{ (b.central_category or b.trip_department or '') | tojson }},
     deptName:    {{ (b.trip_department or (b.user.department or '')) | tojson }},

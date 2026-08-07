@@ -1,86 +1,72 @@
-{# room-modal-book.html — Modal จองห้องประชุม
+{# room_book.html — Modal จองห้องประชุม + แก้ไข (รวมเป็น modal เดียว, migrate 2026-08-05)
    วิธีใช้: {% include 'room/modals/room_book.html' %}
-   JS validation อยู่ใน room.js (bookingForm)
+   JS: bkBindBookingControls() ผูก widget · openBookingModal()=สร้างใหม่ · openEditBookingModal()=แก้ไข
+       ทั้งคู่เรียก bkSetMode('create'|'edit') สลับปุ่ม/form.action ให้ตรงโหมด (อยู่ใน room.js)
+   data-create-action = URL เริ่มต้น (สร้างใหม่) — เก็บไว้คืนค่า action หลัง edit ครั้งก่อนเปลี่ยนมันไปแล้ว
+   Pattern ก็อปจาก vehicle/modals/vehicle_book.html
 #}
 <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered bk-modal-dialog">
-        <div class="card modal-content border-0 bk-modal-content">
-            <form action="{{ url_for('room.book_room') }}" method="POST" id="bookingForm" novalidate>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="card modal-content border-0">
+            <form action="{{ url_for('room.book_room') }}"
+                  data-create-action="{{ url_for('room.book_room') }}"
+                  method="POST" id="bookingForm" novalidate>
 
                 <input type="hidden" name="start_time" id="bk_start_datetime">
                 <input type="hidden" name="end_time"   id="bk_end_datetime">
 
-                <div class="card-header bg-white d-flex align-items-start">
-                    <div class="d-flex align-items-start gap-3 flex-grow-1">
-                        <span class="ps-1 pt-1"><i data-lucide="folder-plus" style="width:22px;height:22px;color:var(--vc-fg-muted);"></i></span>
+                {# header ตาม pattern vehicle_book.html — eyebrow + ชื่อใหญ่ + สังกัด + avatar ขวา #}
+                <div style="padding:14px 20px 0">
+                    <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
                         <div>
-                            <div class="bk-row-main">จองห้องประชุม</div>
-                            <div class="bk-row-sub">{{ current_user.full_name or current_user.username }}{% if current_user.department %} · {{ current_user.department }}{% endif %}</div>
+                            <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)">#แบบฟอร์มจองห้องประชุม</div>
+                            <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)">{{ current_user.full_name or current_user.username }}</div>
+                            <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
+                                <span style="font-size:.8125rem;color:var(--bb-mut)">สังกัด {{ current_user.department or '-' }}</span>
+                            </div>
+                        </div>
+                        <div class="bb-avatar flex-shrink-0" style="width:4.5rem;height:4.5rem;background:var(--bb-n100);color:var(--bb-mut)">
+                            <span class="material-symbols-rounded" style="font-size:2.5rem">mindfulness</span>
                         </div>
                     </div>
-                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="card-body">
                     <hr class="bk-divider">
 
                     <div class="mb-2">
-                        <label class="form-label mb-1"><small>เลือกห้องประชุม :</small></label>
-                        <div class="bk-field-wrap">
-                            <select name="room_name" id="bk_room_name" class="form-select" required>
-                                <option value="">-- เลือกห้องประชุม --</option>
-                                {% for room in room_choices %}
-                                <option value="{{ room }}">{{ room }}</option>
-                                {% endfor %}
-                            </select>
-                            <div class="invalid-feedback">กรุณาเลือกห้องประชุม</div>
-                        </div>
+                        <label class="form-label" for="bk_room_name">เลือกห้องประชุม</label>
+                        <select name="room_name" id="bk_room_name" class="form-select" required>
+                            <option value="">-- เลือกห้องประชุม --</option>
+                            {% for room in room_choices %}
+                            <option value="{{ room }}">{{ room }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">กรุณาเลือกห้องประชุม</div>
                     </div>
 
                     <div class="mb-2">
-                        <label for="bk_title" class="form-label mb-1"><small>หัวข้อการประชุม :</small></label>
-                        <div class="bk-field-wrap">
-                            <input type="text" name="title" id="bk_title" class="form-control pe-5"
+                        <label class="form-label" for="bk_title">หัวข้อการประชุม</label>
+                        <div class="bb-field-box">
+                            <span class="material-symbols-rounded bb-field-box-icon">sell</span>
+                            <input type="text" name="title" id="bk_title" class="form-control" autocomplete="off"
                                 placeholder="เช่น ประชุมแผนกประจำเดือน" required>
-                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                            <div class="invalid-feedback">กรุณาระบุหัวข้อการประชุม</div>
                         </div>
+                        <div class="invalid-feedback">กรุณาระบุหัวข้อการประชุม</div>
+                    </div>
+
+                    <div class="form-group mb-3 mt-3">
+                        {{ component(date_field) }}
+                        <div class="bk-inline-err" id="bk_date_err" hidden>กรุณาเลือกวันที่ประชุม</div>
                     </div>
 
                     <div class="mb-2">
-                        <label for="bk_date" class="form-label mb-1"><small>วันที่ประชุม :</small></label>
-                        <div class="bk-field-wrap">
-                            <input type="date" class="form-control" id="bk_date" required>
-                            <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                            <div class="invalid-feedback">กรุณาเลือกวันที่</div>
-                        </div>
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label mb-1"><small>ช่วงเวลา :</small></label>
-                        <div class="row justify-content-between align-items-center gx-2">
-                            <div class="col-5">
-                                <div class="bk-field-wrap">
-                                    <input type="time" id="bk_start_time" class="form-control" required>
-                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                                    <div class="invalid-feedback">กรุณาระบุเวลาเริ่ม</div>
-                                </div>
-                            </div>
-                            <span class="col-auto d-flex align-items-center"><i data-lucide="arrow-right" style="width:16px;height:16px;color:var(--vc-fg-subtle);"></i></span>
-                            <div class="col-5">
-                                <div class="bk-field-wrap">
-                                    <input type="time" id="bk_end_time" class="form-control" required>
-                                    <i data-lucide="check-circle-2" class="bk-valid-icon" style="width:16px;height:16px;"></i>
-                                    <div class="invalid-feedback">กรุณาระบุเวลาสิ้นสุด</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="bk_duration_preview" class="bk-duration-preview" aria-live="polite"></div>
+                        {{ component(time_range_field) }}
                     </div>
 
                     <div class="bk-info-note col-12 rounded-2 py-3 px-3 mt-3">
                         <div class="row">
-                            <span class="col-1 pe-1"><i data-lucide="info" style="width:16px;height:16px;"></i></span>
+                            <span class="col-1 pe-1"><span class="material-symbols-rounded" style="font-size:16px">info</span></span>
                             <div class="col">
                                 <div class="row">
                                     <small class="fw-bold">หมายเหตุ :</small>
@@ -91,11 +77,11 @@
                     </div>
                 </div>
 
-                <div class="card-footer bg-white d-flex justify-content-end gap-2 pt-2 pb-3">
-                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
-                    <button type="submit" class="vc-btn vc-btn-primary" title="ยืนยันการจองห้อง">
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-end gap-2 pt-2 pb-3">
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri" id="bkSubmitBtn" title="ยืนยันการจองห้อง">
                         ยืนยันการจอง
-                        <i data-lucide="arrow-right" class="vc-icon-sm"></i>
+                        <span class="material-symbols-rounded vc-icon-sm">arrow_forward</span>
                     </button>
                 </div>
 

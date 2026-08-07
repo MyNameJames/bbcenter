@@ -9,7 +9,7 @@ Migration: 2026-05-06_add-vehicle-budget-log.sql
 - mileage_log()        : deduct_for_mileage()
 - driver_mileage()     : deduct_for_mileage()
 - override_fuel()      : rededuct_for_mileage()
-- budget_manage() POST : set_budget_amount()
+- budget_manage() POST : set_budget_amount(), set_yearly_plan(), set_default_plan(), delete_budget()
 """
 from decimal import Decimal
 from sqlalchemy import func
@@ -159,8 +159,21 @@ def set_active(budget: VehicleBudget, active: bool, *, note: str = ''):
     )
 
 
+def delete_budget(budget: VehicleBudget):
+    """ลบงบย่อยทิ้งถาวร (v2.29) — เฉพาะงบที่ไม่เคยมีการหักเงิน/ปรับยอดจริง กัน ledger สูญหาย
+    บล็อกถ้ามี log event_type อื่นนอกจาก 'set_budget' (deduct/refund/adjust/top_up/set_active/
+    set_inactive) — 'set_budget' ล้วนแปลว่างบนี้แค่ถูกตั้ง/แก้เพดาน ไม่เคยมีธุรกรรมจริงเกิดขึ้น
+    ลบ log ที่เหลือทั้งหมดคู่กับตัว budget เอง (ไม่ orphan log ค้าง)"""
+    logs = VehicleBudgetLog.query.filter_by(budget_id=budget.id).all()
+    if any(l.event_type != 'set_budget' for l in logs):
+        raise ValueError('งบนี้เคยมีการหักเงิน/ปรับยอดแล้ว ลบไม่ได้ — ปิดใช้งานแทน')
+    for l in logs:
+        db.session.delete(l)
+    db.session.delete(budget)
+
+
 def set_yearly_plan(plan_id, fiscal_year: int, total_amount, central_allocation,
-                     start_date, end_date, *,
+                     start_date, end_date, *, name='',
                      central_allocated_sum=0, dept_allocated_sum=0):
     """สร้าง/แก้ไข VehicleBudgetYearlyPlan (v2.26 — upsert ตาม plan_id ตรงๆ แทน fiscal_year ที่เลิก
     unique แล้ว. plan_id=None → สร้างแถวใหม่เสมอ; มีค่า → แก้ไขแถวเดิม).
@@ -169,7 +182,8 @@ def set_yearly_plan(plan_id, fiscal_year: int, total_amount, central_allocation,
     ต่ำกว่าที่จัดสรรไปแล้วในงบย่อย (central_allocated_sum/dept_allocated_sum ส่งมาจาก view — filter
     VehicleBudget.yearly_plan_id ตรงๆ — กันเลขติดลบ/เข้าใจผิดเรื่องเงินที่จัดสรรไปแล้ว, ตกลงกับผู้ใช้
     2026-07-31). ไม่มี ledger table แยก (ต่างจาก VehicleBudget) เพราะเป็นค่าตั้งเป้าระดับปี ไม่ใช่
-    transaction — ไม่มี note param"""
+    transaction — ไม่มี note param.
+    v2.28: `name` = free-text label (งบประจำปี vs งบพิเศษ) — optional, ไม่ validate เนื้อหา"""
     total_amount       = Decimal(str(total_amount))
     central_allocation = Decimal(str(central_allocation))
     if total_amount < 0 or central_allocation < 0:
@@ -192,6 +206,7 @@ def set_yearly_plan(plan_id, fiscal_year: int, total_amount, central_allocation,
         plan.start_date         = start_date
         plan.end_date           = end_date
         plan.fiscal_year        = fiscal_year
+        plan.name               = name or plan.name
     else:
         plan = VehicleBudgetYearlyPlan(
             fiscal_year=fiscal_year,
@@ -199,8 +214,28 @@ def set_yearly_plan(plan_id, fiscal_year: int, total_amount, central_allocation,
             central_allocation=central_allocation,
             start_date=start_date,
             end_date=end_date,
+            name=name or None,
         )
         db.session.add(plan)
+    return plan
+
+
+def set_default_plan(plan_id: int):
+    """ตั้ง plan เดียวให้เป็น default (auto-select เมื่อเข้า budget_manage โดยไม่มี ?plan_id=).
+    v2.28 — invariant "มีได้แค่ 1 plan ที่ is_default=True": unset ของเก่าทั้งหมดก่อน แล้ว set ตัวใหม่
+    ตัวเดียวใน transaction เดียวกัน. block ถ้า plan ที่เลือกไม่ครอบวันนี้ (start_date<=today<=end_date)
+    — ป้องกัน default ไปเป็น plan ที่หมดอายุ/ยังไม่เริ่ม ต้องไปแก้ period ก่อนถึงตั้ง default ได้"""
+    plan = VehicleBudgetYearlyPlan.query.get(plan_id)
+    if not plan:
+        raise ValueError('ไม่พบก้อนงบนี้')
+    today = get_bkk_time().date()
+    if not (plan.start_date <= today <= plan.end_date):
+        raise ValueError('ตั้งเป็นค่าเริ่มต้นได้เฉพาะก้อนงบที่ครอบวันนี้ — ไปปรับช่วงเวลาก่อน')
+
+    VehicleBudgetYearlyPlan.query.filter(
+        VehicleBudgetYearlyPlan.id != plan.id
+    ).update({'is_default': False})
+    plan.is_default = True
     return plan
 
 

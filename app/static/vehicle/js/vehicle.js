@@ -21,8 +21,8 @@ document.addEventListener('keydown', (ev) => {
 // ปิด popover "+N รายการ" เมื่อคลิกนอกพื้นที่ popover (trigger เองมี stopPropagation
 // อยู่แล้วเลยไม่ถูก listener นี้ตัดตอนตอนเปิด/toggle)
 document.addEventListener('click', (ev) => {
-    if (ev.target.closest('.popover.vc-cal-pop')) return;
-    if (!document.querySelector('.popover.vc-cal-pop.show')) return;
+    if (ev.target.closest('.popover.bb-daypop')) return;
+    if (!document.querySelector('.popover.bb-daypop.show')) return;
     document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
         bootstrap.Popover.getInstance(el)?.hide();
     });
@@ -416,9 +416,6 @@ function createCell(day, year, month, isOtherMonth, isToday=false) {
     const totalV=window.TOTAL_VEHICLES||0;
     const vehiclesLeft=totalV-activeOnDay;
     let html=`<span class="date-number">${day}</span>`;
-    if(!isOtherMonth&&totalV>0){
-        if(vehiclesLeft<=0) html+=`<span class="vehicle-full-badge">รถเต็ม</span>`;
-    }
 
     if(!isOtherMonth){
         /* Phase F (2026-05-23): 1=dot · 2-3=short bar · 4+=long bar
@@ -434,7 +431,7 @@ function createCell(day, year, month, isOtherMonth, isToday=false) {
 
     cell.innerHTML=html;
     cell.querySelectorAll('[data-bs-toggle="popover"]').forEach(el=>{
-        new bootstrap.Popover(el,{trigger:'click',container:'body',sanitize:false,customClass:'vc-cal-pop'});
+        new bootstrap.Popover(el,{trigger:'click',container:'body',sanitize:false,customClass:'bb-daypop'});
     });
 
     cell.addEventListener('click',()=>{
@@ -516,33 +513,33 @@ function buildDesktopEventCards(dayEvents, ds) {
     });
 
     // 2. Then overflow trigger BELOW chips (Google/Apple Calendar convention)
+    // 2026-08-05: popup แสดงครบทุกรายการของวันนั้น (ไม่ใช่แค่ส่วนเกิน maxShow) —
+    // ผู้ใช้ดูง่ายกว่าเดิมที่ต้องกลับไปดู 2 อันแรกที่ calendar-cell เอง
+    // ป้ายปุ่ม trigger ยังนับตามส่วนเกินเหมือนเดิม (ไม่เปลี่ยนตามที่ตกลง)
     if(displayItems.length>maxShow){
-        const extra=displayItems.slice(maxShow);
-        const popContent=extra.map(item=>{
+        const extraCount=displayItems.length-maxShow;
+        const popContent=displayItems.map(item=>{
             if(item.type==='group'){
                 const f=item.members[0];
-                return `<div class="vc-cal-pop-row" data-id="${f.id}"
+                return `<div class="bb-daypop-row bb-daypop-row--group m-1 px-2 py-1" data-id="${f.id}"
                     onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${f.id}),200)">
-                    <span class="vc-cal-pop-dot vc-cal-pop-dot--group" title="ใช้รถร่วมกัน"></span>
-                    <span class="vc-cal-pop-time">${f.time}</span>
-                    <span class="vc-cal-pop-dest"><i data-lucide="users" class="vc-cal-pop-dest-icon"></i>ใช้รถร่วมกัน (${item.members.length})</span>
+                    <span class="bb-daypop-time pe-1">${f.time}</span>
+                    <span class="bb-daypop-dest">ใช้รถร่วมกัน (${item.members.length})</span>
                 </div>`;
             }
             const e=item.e;
             const dotKey=STATUS_DOT[e.status]||'pending';
-            const statusLabel=STATUS_LABEL[e.status]||e.status;
-            return `<div class="vc-cal-pop-row" data-id="${e.id}"
+            return `<div class="bb-daypop-row bb-daypop-row--${dotKey} m-1 px-2 py-1" data-id="${e.id}"
                 onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${e.id}),200)">
-                <span class="vc-cal-pop-dot vc-cal-pop-dot--${dotKey}" title="${statusLabel}"></span>
-                <span class="vc-cal-pop-time">${e.time}</span>
-                <span class="vc-cal-pop-dest">${e.dest}</span>
+                <span class="bb-daypop-time">${e.time}</span>
+                <span class="bb-daypop-dest">${e.dest}</span>
             </div>`;
         }).join('');
 
         html+=`<div class="event-more vc-cal-more popover-trigger" data-ds="${ds}"
             data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true"
             data-bs-content="${popContent.replace(/"/g,'&quot;')}"
-            onclick="event.stopPropagation()">+${extra.length} รายการ<i data-lucide="chevron-down" class="vc-cal-more-icon"></i></div>`;
+            onclick="event.stopPropagation()">+${extraCount} รายการ<span class="material-symbols-rounded vc-cal-more-icon">expand_more</span></div>`;
     }
 
     return html;
@@ -598,7 +595,7 @@ function updateMobileList(dateObj) {
     if(!dayEvents.length){
         content.innerHTML=`
         <div class="vrc-m-empty">
-            <div class="vrc-m-empty-icon"><i data-lucide="calendar-x"></i></div>
+            <div class="vrc-m-empty-icon"><span class="material-symbols-rounded">event_busy</span></div>
             <div class="vrc-m-empty-title">ไม่มีการจองในวันนี้</div>
             <div class="vrc-m-empty-sub">แตะปุ่ม “จองรถ” ด้านบนเพื่อเพิ่มการจองใหม่</div>
         </div>`;
@@ -649,7 +646,7 @@ function updateMobileList(dateObj) {
                                     data-bs-toggle="collapse" data-bs-target="#${collapseId}"
                                     aria-label="ขยาย/ยุบสมาชิกในกลุ่ม"
                                     onclick="event.stopPropagation();">
-                                <i data-lucide="chevron-down"></i>
+                                <span class="material-symbols-rounded">expand_more</span>
                             </button>
                         </div>
                         ${_mlTripMeta(totalPax, minTime, maxTimeEnd)}
@@ -713,7 +710,7 @@ function openMoreEvents(dateStr) {
                     <span class="${STATUS_BADGE[e.status]||'vc-badge vc-badge-neutral vc-badge-dot'}">${STATUS_LABEL[e.status]||e.status}</span>
                 </div>
                 <div class="d-flex align-items-center gap-1" style="font-size:.78rem;margin-top:3px;opacity:.75;">
-                    <i data-lucide="user" class="vc-icon-sm"></i>${e.booker}
+                    <span class="material-symbols-rounded vc-icon-sm">person</span>${e.booker}
                 </div>
             </div>`).join('')+`</div>`;
     moreEventsModal.show();
@@ -729,15 +726,8 @@ function _thaiDateFull(dateStr) {
 function _esc(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-// Premium plate render: plate code = monospace span, brand = muted. Returns HTML (consumer ต้องใช้ .innerHTML).
-function _plateLabel(e) {
-    if (!e.car) return 'รอ Admin กำหนด';
-    const match = e.car.match(/\(([^)]+)\)/);
-    const plate = match ? match[1] : '';
-    const brand = e.car.replace(/\s*\([^)]*\)/, '').trim();
-    if (!plate) return _esc(brand);
-    return `<span class="bk-detail-plate-code">${_esc(plate)}</span><span class="bk-detail-plate-brand">${_esc(brand)}</span>`;
-}
+/* สถานะ ∈ {waiting_approver, approved} เท่านั้น = admin จัดรถ+คนขับแล้วจริง — ก่อนหน้านั้นยังไม่มีข้อมูลให้โชว์ */
+const VEHICLE_ASSIGNED_STATUSES = ['waiting_approver', 'approved'];
 
 function openEventDetail(eventId) {
     const e = mockEvents.find(b => b.id === eventId);
@@ -751,49 +741,59 @@ function openEventDetail(eventId) {
     const members = isGroup ? groupMembers : [e];
     const rep     = isGroup ? (members.find(b => b.car) || e) : e;
 
-    // Status pill (แทน header circle dot เดิม)
-    const statusKey      = isGroup ? 'group' : (STATUS_DOT[e.status]   || 'approved');
-    const statusLabel    = isGroup ? 'ใช้รถร่วมกัน' : (STATUS_LABEL[e.status] || 'อนุมัติแล้ว');
-    const statusIconName = isGroup ? 'users'   : (STATUS_ICON[e.status]  || 'circle-check');
-    // const statusPill = document.getElementById('detailStatusPill');
-    // statusPill.className = `bk-detail-status bk-detail-status--${statusKey}`;
-    // document.getElementById('detailStatusIcon').outerHTML =
-    //     `<i id="detailStatusIcon" data-lucide="${statusIconName}"></i>`;
-    // document.getElementById('detailStatusText').textContent = statusLabel;
+    // Header: status badge + avatar (tone ตาม status จริงเสมอ — group แค่เปลี่ยน label/icon)
+    const tone  = STATUS_TONE[e.status] || STATUS_TONE.pending;
+    const label = isGroup ? 'ใช้รถร่วมกัน' : (STATUS_LABEL[e.status] || e.status);
+    // const icon  = isGroup ? 'group' : (BB_STATUS_ICON[e.status] || 'schedule');
 
     document.getElementById('detailDateLine').textContent = _thaiDateFull(e.date);
-    // document.getElementById('detailTime').textContent     = `${e.time} – ${e.timeEnd}`;
-    // document.getElementById('detailPlate').innerHTML      = _plateLabel(rep);
+    const badge = document.getElementById('detailStatusBadge');
+    badge.className   = `py-1 px-2 me-2 bb-badge ${BB_STATUS_TONE[e.status] || 'is-wr'}`;
+    badge.textContent = label;
+    document.getElementById('detailTimeText').textContent =
+        `${e.time}–${e.timeEnd} (${calcDuration(e.time, e.timeEnd)})`;
+    const avatar = document.getElementById('detailStatusAvatar');
+    avatar.style.background = tone.bg;
+    avatar.style.color      = tone.fg;
+    // document.getElementById('detailStatusIcon').textContent = icon;
 
-    // const driverLine = document.getElementById('detailDriverLine');
-    // if (rep.needDriver) {
-    //     document.getElementById('detailDriver').textContent = rep.driver || 'รอ Admin มอบหมาย';
-    //     driverLine.style.display = '';
-    // } else {
-    //     driverLine.style.display = 'none';
-    // }
+    // รถ + คนขับ — โชว์เฉพาะ status ที่ admin จัดรถ/คนขับแล้ว
+    const vdSection = document.getElementById('detailVehicleDriverSection');
+    if (VEHICLE_ASSIGNED_STATUSES.includes(rep.status)) {
+        vdSection.classList.remove('d-none');
+        const carMatch = (rep.car || '').match(/\(([^)]+)\)/);
+        document.getElementById('detailPlate').textContent = carMatch ? carMatch[1] : 'รอ Admin กำหนด';
+        document.getElementById('detailVehicleModel').textContent = (rep.car || '').replace(/\s*\([^)]*\)/, '').trim();
 
-    // Section count
-    document.getElementById('detailMemberCount').textContent = `${members.length} คน`;
+        const driverLine = document.getElementById('detailDriverLine');
+        if (rep.needDriver) {
+            driverLine.classList.remove('d-none');
+            document.getElementById('detailDriverName').textContent  = rep.driverName || 'รอ Admin มอบหมาย';
+            document.getElementById('detailDriverPhone').textContent = rep.driverPhone || '';
+            const callBtn = document.getElementById('detailDriverCallBtn');
+            callBtn.onclick = rep.driverPhone ? () => { window.location.href = `tel:${rep.driverPhone}`; } : null;
+            callBtn.disabled = !rep.driverPhone;
+        } else {
+            driverLine.classList.add('d-none');
+        }
+    } else {
+        vdSection.classList.add('d-none');
+    }
 
-    // Premium member tiles — bordered cards with avatar ring + stagger (--bk-i)
+    // ผู้โดยสาร — การ์ดเส้นประต่อคน (pickup → dest, purpose | pax | เวลา, note)
+    // คนแรกไม่มีเส้นประบน — hr.bk-divider ของ header ทำหน้าที่คั่นไปแล้ว (กันเส้นประซ้อนกัน 2 เส้น)
     document.getElementById('detailMembersList').innerHTML = members.map((m, idx) => `
-        <div class="bk-detail-member" style="--bk-i:${idx}">
-            <div class="bk-detail-member-body">
-                <div class="bk-detail-member-head ">
-                    <span class="bk-detail-member-name text-truncate">${m.booker || '–'}</span>
-                    <span class="vc-badge vc-badge-neutral flex-shrink-0 d-inline-flex align-items-center gap-1">
-                        <i data-lucide="users" class="vc-icon-sm"></i>${m.pax || '–'}
-                    </span>
-                </div>
-                <div class="bk-detail-member-trip p-0 m-0">
-                    <span class="text-truncate">${m.purpose || '–'}</span>
-                    <i data-lucide="arrow-right" class="vc-icon-sm flex-shrink-0"></i>
-                    <span class="text-truncate">${m.dest || '–'}</span>
-                </div>
-                ${m.pickup && m.pickup.trim() ? `
-                <div class="bk-detail-member-pickup text-truncate">ขึ้นรถที่: ${m.pickup}</div>` : ''}
+        <div class="py-3 mt-2 ms-1 ps-2"${idx > 0 ? ' style="border-top:1px dashed var(--bb-n300);"' : ''}>
+            <span class="fw-semibold" style="color:var(--bb-str)">${_esc(m.booker || '–')}</span>
+            <div class="bb-subtext">${m.pickup ? `${_esc(m.pickup)} → ` : ''}${_esc(m.dest || '–')}</div>
+            <div class="bb-subtext d-flex align-items-center gap-1 pt-1">
+                ${_esc(m.purpose || '–')}
+                <span>|</span>
+                <span class="material-symbols-rounded">directions_run</span>${m.pax || '–'} รูป/คน
+                <span>|</span>
+                <span class="material-symbols-rounded">schedule</span>${m.time}–${m.timeEnd} (${calcDuration(m.time, m.timeEnd)})
             </div>
+            ${m.note ? `<div class="bb-subtext pt-2">หมายเหตุ: ${_esc(m.note)}</div>` : ''}
         </div>`
     ).join('');
 
@@ -808,22 +808,20 @@ function openEventDetail(eventId) {
             <form action="${e.cancelUrl}" method="POST"
                 onsubmit="return confirm('ยืนยันยกเลิกการจอง #${e.id}? — แจ้ง Admin/Approver/Driver/ผู้ร่วมเดินทาง')">
                 <button type="submit" class="bb-btn is-danger-sec is-sm" title="ยกเลิกการจองนี้">
-                    <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                    <span class="material-symbols-rounded vc-icon-sm">delete</span>
                     ยกเลิกการจอง
                 </button>
             </form>
             ${showEdit ? `
             <button type="button" class="bb-btn is-sec is-sm" title="แก้ไขการจอง"
                 onclick="eventDetailModal.hide();setTimeout(()=>openEditBookingModal(${e.id}),300)">
-                <i data-lucide="pencil" class="vc-icon-sm"></i>
+                <span class="material-symbols-rounded vc-icon-sm">edit</span>
                 แก้ไข
             </button>` : ''}`;
     }
-    // ไม่มี action ใด (isGroup / ไม่ใช่เจ้าของ / แก้ไข-ยกเลิกไม่ได้แล้ว) — ปุ่ม "ปิด" fallback กันไม่มีทางปิด modal
-    // เพราะเอาปุ่ม X ออกแล้ว (modal_pattern.md: ปิดผ่านปุ่มใน footer/backdrop เท่านั้น)
-    if (!actDiv.innerHTML) {
-        actDiv.innerHTML = `<button type="button" class="bb-btn is-sec is-sm" data-bs-dismiss="modal" title="ปิด">ปิด</button>`;
-    }
+    // ไม่มี action ใด (isGroup / ไม่ใช่เจ้าของ / แก้ไข-ยกเลิกไม่ได้แล้ว) — ซ่อนแถวปุ่มไปเลย ไม่โชว์ปุ่ม "ปิด" เดี่ยวๆ
+    // (2026-08-05: เปลี่ยนจาก fallback ปุ่มปิด — ปิดผ่าน backdrop/Escape แทน, ปุ่ม X เดิมก็เอาออกไปแล้ว)
+    actDiv.classList.toggle('d-none', !actDiv.innerHTML);
 
     eventDetailModal.show();
 }
@@ -836,9 +834,8 @@ function bkSetMode(mode) {
     if (btn) {
         btn.title = isEdit ? 'บันทึกการแก้ไข' : 'ส่งคำขอจองรถ';
         btn.innerHTML = isEdit
-            ? 'บันทึก <i data-lucide="check" class="vc-icon-sm"></i>'
-            : 'ส่งคำขอ <i data-lucide="arrow-right" class="vc-icon-sm"></i>';
-        initIcons(btn);
+            ? 'บันทึก <span class="material-symbols-rounded vc-icon-sm">check</span>'
+            : 'ส่งคำขอ <span class="material-symbols-rounded vc-icon-sm">arrow_forward</span>';
     }
     const note = document.getElementById('bk_info_note_text');
     if (note) {
@@ -863,6 +860,7 @@ function openEditBookingModal(eventId) {
     document.getElementById('bk_purpose').value           = e.purpose || '';
     window.bkSetPax?.(e.pax || 1);
     document.getElementById('bk_pickup_location').value   = e.pickup  || '';
+    document.getElementById('bk_note').value               = e.note   || '';
     bkSetDate(e.date);
     bkSetTimeRange(e.time || '08:00', e.timeEnd || '17:00');
 
@@ -903,6 +901,7 @@ function openDuplicateModal(eventId) {
     setVal('bk_destination',     e.dest    || '');
     window.bkSetPax?.(e.pax || 1);
     setVal('bk_pickup_location', e.pickup  || '');
+    setVal('bk_note',            e.note    || '');
 }
 
 /* ── Expose for HTML-string onclick handlers ── */

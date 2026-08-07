@@ -3,6 +3,23 @@
 {% block title %}<title>บันทึกเลขไมล์ (Admin) - BBCenter</title>{% endblock %}
 {% block page_title %}บันทึกเลขไมล์{% endblock %}
 
+{% block head %}
+<style>
+    /* thead — page contract 2026-08-07: พื้นขาว เหลือแค่เส้นบน-ล่าง n200, text mut ไม่ bold
+       แทน default .bb-table thead (พื้น n50/pill) ของ components.css — scope เฉพาะผลลัพธ์ในหน้านี้
+       ผ่าน #bbMlResults (ยังไม่ promote เข้า components.css จนกว่าจะใช้ ≥2 หน้า ดู design_guideline.md §5) */
+    #bbMlResults .bb-table thead th {
+        background: #fff;
+        border-top: 1px solid var(--bb-n200);
+        border-bottom: 1px solid var(--bb-n200);
+        color: var(--bb-mut);
+        font-weight: 500;
+    }
+    /* illustration (empty state) — เทาอ่อนกว่า n300 ปกติเล็กน้อยเพื่อไม่แย่ง content (page contract) */
+    .mf-illust { color: #C9C9C9; }
+</style>
+{% endblock %}
+
 {% block content %}
 {% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
 {% set TH_MONTH_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'] %}
@@ -14,6 +31,7 @@
 {% from '_components/bb/search.html' import bb_search %}
 {% from '_components/bb/button.html' import bb_button %}
 {% from '_components/bb/ue_chip.html' import ue_chip, ue_chip_dd, ue_chip_opt %}
+{% include '_shared/illustrations.html' %}
 
         {# ── Zone 2: Toolbar (tabs + filter) — ขึ้นก่อน KPI ตามที่ขอ (2026-07-07) ─────────── #}
         <form method="get" action="{{ url_for('vehicle.mileage_log') }}" class="bb-ml-toolbar" id="filterForm">
@@ -146,7 +164,7 @@
                 <span class="d-inline-flex align-items-center gap-2">
                     <span class="fw-bold fs-5 mb-1 bb-text-str"><span id="selCount">0</span> ทริปที่เลือก</span>
                     <button type="button" class="bb-badge is-neutral border-0 px-2 py-1" style="cursor:pointer" onclick="clearSelection()">
-                        <i data-lucide="x" class="pe-3"></i> ยกเลิกการเลือก
+                        <span class="material-symbols-rounded pe-3">close</span> ยกเลิกการเลือก
                     </button>
                 </span>
                 <span class="fs-6 p-0 m-0 bb-text-mut">ระยะทางรวมทั้งหมด <span id="selDistance">0</span> กม. เป็นค่าน้ำมันทั้งหมด <span id="selCost">0</span> บาท</span>
@@ -239,7 +257,7 @@
                         <span class="bb-tooltip">
                             <a href="{{ url_for('fuel.admin_fuel', vehicle_id=b.assigned_vehicle_id) }}"
                                class="bb-icon-btn is-accent">
-                                <i data-lucide="fuel"></i>
+                                <span class="material-symbols-rounded">local_gas_station</span>
                             </a>
                             <span class="bb-tooltip-pop">
                                 เลขไมล์เติมน้ำมัน{% if r.refuel_odo %} · <b>{{ '{:,}'.format(r.refuel_odo) }}</b>{% endif %}
@@ -256,7 +274,7 @@
                         {# ot_mismatch = ช่วง OT หลุดกรอบเวลาทริป → ตัวเลขมาจากเวลาชุดเก่า (2026-07-27) #}
                         {% if r.ot_mismatch %}
                         <span class="bb-tooltip">
-                            <span class="bb-badge is-wr">{{ '{:.2f}'.format(r.ot_hours) }} ชม. <i data-lucide="alert-triangle"></i></span>
+                            <span class="bb-badge is-wr">{{ '{:.2f}'.format(r.ot_hours) }} ชม. <span class="material-symbols-rounded">warning</span></span>
                             <span class="bb-tooltip-pop">ช่วง OT ไม่ตรงกับเวลาทริป — ตรวจสอบก่อนจ่าย</span>
                         </span>
                         {% else %}
@@ -269,7 +287,7 @@
                     <td class="bb-ml-col-actions">
                         <div class="bb-table-actions">
                             <span class="bb-icon-btn" role="button" tabindex="0" onclick="openMileage(this)" title="เมนู">
-                                <i data-lucide="more-vertical"></i>
+                                <span class="material-symbols-rounded">more_vert</span>
                             </span>
                         </div>
                     </td>
@@ -337,23 +355,23 @@
                             <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
                                 <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)">{{ b.start_datetime.strftime('%H:%M') }} – {{ b.end_datetime.strftime('%H:%M') }}</span>
                                 {% if r.status_key == 'complete' %}
-                                <span class="bb-status is-ok"><i data-lucide="check-circle"></i>กรอกเลขไมล์ครบ</span>
+                                <span class="bb-status is-ok"><span class="material-symbols-rounded">check_circle</span>กรอกเลขไมล์ครบ</span>
                                 {% elif r.status_key == 'partial' %}
-                                <span class="bb-status is-wr"><i data-lucide="clock"></i>รอกรอกไมล์กลับ</span>
+                                <span class="bb-status is-wr"><span class="material-symbols-rounded">schedule</span>รอกรอกไมล์กลับ</span>
                                 {% else %}
-                                <span class="bb-status is-neutral"><i data-lucide="circle"></i>รอกรอกไมล์ออก</span>
+                                <span class="bb-status is-neutral"><span class="material-symbols-rounded">circle</span>รอกรอกไมล์ออก</span>
                                 {% endif %}
                             </div>
                         </div>
                         <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem;background:{% if r.status_key == 'complete' %}var(--bb-ok-bg){% elif r.status_key == 'partial' %}var(--bb-wr-bg){% else %}var(--bb-n100){% endif %}">
-                            <i data-lucide="bike" style="width:1.75rem;height:1.75rem;color:{% if r.status_key == 'complete' %}var(--bb-ok){% elif r.status_key == 'partial' %}var(--bb-wr){% else %}var(--bb-mut){% endif %}"></i>
+                            <span class="material-symbols-rounded" style="font-size:1.75rem;color:{% if r.status_key == 'complete' %}var(--bb-ok){% elif r.status_key == 'partial' %}var(--bb-wr){% else %}var(--bb-mut){% endif %}">two_wheeler</span>
                         </div>
                     </div>
 
                     <div class="bb-timeline">
                         <div class="bb-tl-item done" style="padding-left:2rem">
                             <span class="bb-avatar" style="position:absolute;left:0;top:-2px;width:1.5rem;height:1.5rem;background:var(--bb-n100)">
-                                <i data-lucide="user" style="width:.8125rem;height:.8125rem;color:var(--bb-mut)"></i>
+                                <span class="material-symbols-rounded" style="font-size:.8125rem;color:var(--bb-mut)">person</span>
                             </span>
                             <div class="bb-tl-title">{{ driver_first or '—' }}</div>
                             <div class="bb-tl-desc">{% if b.assigned_vehicle %}{{ b.assigned_vehicle.license_plate }} → {% endif %}{{ b.destination or '—' }}</div>
@@ -363,17 +381,17 @@
                                     <div class="text-muted d-flex align-items-center flex-wrap gap-1" style="font-size:.8125rem">
                                         <span class="bb-num">{% if m and m.odometer_start %}{{ '{:,}'.format(m.odometer_start) }}{% else %}-{% endif %} → {% if m and m.odometer_end %}{{ '{:,}'.format(m.odometer_end) }}{% else %}-{% endif %}</span>
                                         <span class="text-body-tertiary">|</span>
-                                        <i data-lucide="plane-landing" style="width:.875rem;height:.875rem"></i>&nbsp;{% if r.distance %}{{ '{:,}'.format(r.distance) }}{% else %}-{% endif %} กม.
-                                        <i data-lucide="dot" style="width:.875rem;height:.875rem"></i>
-                                        <i data-lucide="fuel" style="width:.875rem;height:.875rem"></i>&nbsp;฿{% if r.fuel_cost %}{{ '{:,.0f}'.format(r.fuel_cost) }}{% else %}-{% endif %}
+                                        <span class="material-symbols-rounded" style="font-size:.875rem">flight_land</span>&nbsp;{% if r.distance %}{{ '{:,}'.format(r.distance) }}{% else %}-{% endif %} กม.
+                                        <span class="material-symbols-rounded" style="font-size:.875rem">fiber_manual_record</span>
+                                        <span class="material-symbols-rounded" style="font-size:.875rem">local_gas_station</span>&nbsp;฿{% if r.fuel_cost %}{{ '{:,.0f}'.format(r.fuel_cost) }}{% else %}-{% endif %}
                                     </div>
                                 </div>
                                 {% if r.status_key == 'none' %}
-                                <button type="button" class="bb-btn is-pri is-icon" onclick="openMileage(this)" title="กรอกไมล์ออก"><i data-lucide="pencil"></i></button>
+                                <button type="button" class="bb-btn is-pri is-icon" onclick="openMileage(this)" title="กรอกไมล์ออก"><span class="material-symbols-rounded">edit</span></button>
                                 {% elif r.status_key == 'partial' %}
-                                <button type="button" class="bb-btn is-pri is-icon" onclick="openMileage(this)" title="กรอกไมล์กลับ"><i data-lucide="pencil"></i></button>
+                                <button type="button" class="bb-btn is-pri is-icon" onclick="openMileage(this)" title="กรอกไมล์กลับ"><span class="material-symbols-rounded">edit</span></button>
                                 {% else %}
-                                <button type="button" class="bb-btn is-sec is-icon" onclick="openMileage(this)" title="แก้ไขเลขไมล์"><i data-lucide="pencil"></i></button>
+                                <button type="button" class="bb-btn is-sec is-icon" onclick="openMileage(this)" title="แก้ไขเลขไมล์"><span class="material-symbols-rounded">edit</span></button>
                                 {% endif %}
                             </div>
                         </div>
@@ -385,7 +403,7 @@
 
         {% else %}
         <div class="bb-empty mt-3">
-            <div class="bb-empty-icon"><i data-lucide="note-stack"></i></div>
+            <svg width="140" height="172" viewBox="0 0 185 227" class="mf-illust d-block mx-auto mb-3"><use href="#illust-anxious"></use></svg>
             <div class="bb-empty-title">ไม่พบรายการ</div>
             <div class="bb-empty-desc">ไม่มี booking ที่อนุมัติแล้วตามเงื่อนไขที่กรอง</div>
         </div>
@@ -417,7 +435,7 @@
                             </div>
                         </div>
                         <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem" id="mmAvatar">
-                            <i data-lucide="bus" style="width:1.75rem;height:1.75rem"></i>
+                            <span class="material-symbols-rounded" style="font-size:1.75rem">directions_bus</span>
                         </div>
                     </div>
 
@@ -437,7 +455,7 @@
                                         <div class="bb-field mb-0">
                                             <label class="bb-label" for="mmOdoStart">เลขไมล์ออก</label>
                                             <div class="bb-input-wrap">
-                                                <i data-lucide="gauge"></i>
+                                                <span class="material-symbols-rounded">speed</span>
                                                 <input id="mmOdoStart" name="odometer_start" type="number" class="bb-input" min="0" placeholder="0">
                                             </div>
                                         </div>
@@ -446,7 +464,7 @@
                                         <div class="bb-field mb-0">
                                             <label class="bb-label" for="mmOdoEnd">เลขไมล์กลับ</label>
                                             <div class="bb-input-wrap">
-                                                <i data-lucide="gauge"></i>
+                                                <span class="material-symbols-rounded">speed</span>
                                                 <input id="mmOdoEnd" name="odometer_end" type="number" class="bb-input" min="0" placeholder="0">
                                             </div>
                                             <div id="mmOdoEndErr" class="bb-hint is-error" style="display:none;">ต้องมากกว่าเลขไมล์ออก</div>
@@ -454,9 +472,9 @@
                                     </div>
                                 </div>
                                 <div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-2" style="font-size:.8125rem">
-                                    <i data-lucide="plane-landing" style="width:.875rem;height:.875rem"></i>&nbsp;<span id="mmDistance">-</span> กม.
-                                    <i data-lucide="dot" style="width:.875rem;height:.875rem"></i>
-                                    <i data-lucide="fuel" style="width:.875rem;height:.875rem"></i>&nbsp;฿<span id="mmCost">-</span>
+                                    <span class="material-symbols-rounded" style="font-size:.875rem">flight_land</span>&nbsp;<span id="mmDistance">-</span> กม.
+                                    <span class="material-symbols-rounded" style="font-size:.875rem">fiber_manual_record</span>
+                                    <span class="material-symbols-rounded" style="font-size:.875rem">local_gas_station</span>&nbsp;฿<span id="mmCost">-</span>
                                 </div>
                             </div>
                         </div>
@@ -468,7 +486,7 @@
                             <div class="bb-tl-desc" id="mmOtTimeRange">—</div>
                             {# เตือนเมื่อช่วง OT หลุดกรอบเวลาทริป — ตัวเลขเงินมาจากเวลาชุดเก่า (2026-07-27) #}
                             <div class="bb-callout is-dg mt-2 mb-0" id="mmOtMismatch" style="display:none">
-                                <i data-lucide="alert-triangle"></i>
+                                <span class="material-symbols-rounded">warning</span>
                                 <div class="bb-callout-body">
                                     <div class="bb-callout-title">ช่วง OT ไม่ตรงกับเวลาทริป</div>
                                     <div id="mmOtMismatchDetail"></div>

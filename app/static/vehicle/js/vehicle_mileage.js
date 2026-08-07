@@ -221,9 +221,9 @@ function openMileage(btn) {
 
     const avatar = document.getElementById('mmAvatar');
     avatar.style.background = `var(${bg})`;
-    // <i data-lucide> ถูก ms-icons.js แปลงเป็น <span class="material-symbols-rounded" data-lucide="..."> แล้ว
-    // ('svg, i' เจอ null เพราะ tag เดิมไม่เหลือแล้วหลัง shim ทำงาน)
-    const avatarIcon = avatar.querySelector('svg, i, [data-lucide]');
+    // ไอคอนเขียน material-symbols-rounded ตรงๆ แล้ว (ไม่ผ่าน data-lucide shim อีกต่อไป,
+    // page contract 2026-08-07 §4) — เผื่อ markup เก่าที่ยังไม่ migrate จุดอื่นด้วย 3 selector
+    const avatarIcon = avatar.querySelector('.material-symbols-rounded, [data-lucide], svg, i');
     if (avatarIcon) avatarIcon.style.color = `var(${AVATAR_ICON_COLOR[state]})`;
 
     clearEndError();

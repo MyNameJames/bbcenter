@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from datetime import datetime, date
 from models import db, RoomBooking
+from components import DateField, TimeRangeField
 from views.core.notification_service import notify_room_booked
 
 room_bp = Blueprint('room', __name__)
@@ -18,7 +19,18 @@ ROOM_CHOICES = list(ROOM_COLORS.keys())
 @login_required
 def index():
     bookings = RoomBooking.query.order_by(RoomBooking.start_time.asc()).all()
-    return render_template('room/room.html', bookings=bookings, room_choices=ROOM_CHOICES)
+    date_field = DateField('date', label='วันที่ประชุม :',
+                            placeholder='เลือกวันที่ประชุม', id='bk_date_field')
+    time_range_field = TimeRangeField(start='09:00', end='10:00', step=15,
+                                       label='ช่วงเวลาประชุม', show_duration=True,
+                                       id='bk_timerange_field')
+    return render_template(
+        'room/room.html',
+        bookings=bookings,
+        room_choices=ROOM_CHOICES,
+        date_field=date_field,
+        time_range_field=time_range_field,
+    )
 
 
 @room_bp.route('/room/book', methods=['POST'])

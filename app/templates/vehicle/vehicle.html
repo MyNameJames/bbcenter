@@ -29,11 +29,11 @@
         <div class="d-flex align-items-center gap-2">
             <button type="button" class="bb-btn is-sec " id="todayBtn">วันนี้</button>
             <button type="button" class="bb-btn is-sec is-icon" id="prevMonthBtn" title="เดือนก่อนหน้า">
-                <i data-lucide="chevron-left"></i>
+                <span class="material-symbols-rounded">chevron_left</span>
             </button>
             <h4 class="cal-month-label text-center mb-0 fw-bold" id="currentMonthLabel"></h4>
             <button type="button" class="bb-btn is-sec is-icon" id="nextMonthBtn" title="เดือนถัดไป">
-                <i data-lucide="chevron-right"></i>
+                <span class="material-symbols-rounded">chevron_right</span>
             </button>
         </div>
     </div>
@@ -85,7 +85,7 @@
                 </div>
                 <button type="button" class="bb-btn is-pri" id="mobileDateCountBtn"
                         onclick="openBookingModal()" title="จองรถ">
-                    <i data-lucide="plus"></i>
+                    <span class="material-symbols-rounded">add</span>
                     จองรถ
                 </button>
             </div>
@@ -147,6 +147,8 @@ window.BOOKINGS = [
     car:        {{ (b.assigned_vehicle.brand ~ ' ' ~ b.assigned_vehicle.model ~ ' (' ~ b.assigned_vehicle.license_plate ~ ')' if b.assigned_vehicle else '') | tojson }},
     driver:     {{ (b.driver.name ~ ' ' ~ b.driver.phone if b.driver else '') | tojson }},
     driverName: {{ (b.driver.name if b.driver else '') | tojson }},
+    driverPhone: {{ (b.driver.phone if b.driver else '') | tojson }},
+    note:       {{ (b.note or '') | tojson }},
     tripGroup:  {{ (b.trip_group or '') | tojson }},
     detailUrl:  "{{ url_for('vehicle.detail_booking', booking_id=b.id) }}",
     editUrl:    "{{ url_for('vehicle.edit_booking', booking_id=b.id) }}",

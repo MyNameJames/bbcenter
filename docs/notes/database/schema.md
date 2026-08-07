@@ -1,6 +1,6 @@
 # Database Schema
 
-> **Snapshot ของ models ณ 2026-07-31** — 26 tables (table list ครบ; v2.21 ลบ `trip_passenger`, v2.24 เพิ่ม `vehicle_budget_yearly_plan`, v2.25 เพิ่ม column `vehicle.vehicle_type`, v2.26 เพิ่ม `vehicle_budget_yearly_plan.start_date`/`end_date` + drop unique บน `fiscal_year` + `vehicle_budget.yearly_plan_id` FK)
+> **Snapshot ของ models ณ 2026-08-06** — 26 tables (table list ครบ; v2.21 ลบ `trip_passenger`, v2.24 เพิ่ม `vehicle_budget_yearly_plan`, v2.25 เพิ่ม column `vehicle.vehicle_type`, v2.26 เพิ่ม `vehicle_budget_yearly_plan.start_date`/`end_date` + drop unique บน `fiscal_year` + `vehicle_budget.yearly_plan_id` FK, v2.27 เพิ่ม `vehicle_booking.note`, v2.28 เพิ่ม `vehicle_budget_yearly_plan.name`/`is_default` + ขยาย UniqueConstraint บน `vehicle_budget` ให้รวม `yearly_plan_id`)
 > 🗂️ **2026-06-07: `models.py` แตกเป็น package [`models/`](../../../app/models/) ตาม domain** (base/user/common/repair/maintenance/room/vehicle/vehicle_budget/vehicle_ot/vehicle_fuel). path `models.py` ในหัวข้อ ### ทั้งหมดด้านล่าง **ตายแล้ว** — class ย้ายไปไฟล์ domain (ดู mapping ที่ [INDEX.md §Database Models](../INDEX.md#-database-models)). โครง schema/column **ไม่เปลี่ยน** (refactor ย้าย class ล้วน ไม่แตะ DB)
 > ⚠️ **DRIFT (ตรวจ 2026-06-02):** line-ref `models.py:NNN` ในหัวข้อ ### **ผิด 17/27 tables** ตั้งแต่ก่อน refactor + ตอนนี้ path เปลี่ยนเป็น package ด้วย → **ต้อง full re-sync (db-helper) ก่อนเชื่อ line ในไฟล์นี้** — table names + column + ภาพรวมยังถูก
 > ส่วนบน = ตารางปัจจุบัน · ส่วนล่าง = ประวัติ + เหตุผลทุก version
@@ -160,6 +160,7 @@
 | `trip_department` | String(100) | legacy string |
 | `trip_department_id` | FK → vehicle_department | **canonical** |
 | `pickup_location` | String(200) | |
+| `note` | String(300) nullable | หมายเหตุผู้จอง — user-entered remark (v2.27, 2026-08-05) |
 | `snap_vehicle_plate` | String(20) | **snapshot** เมื่อ assign |
 | `snap_driver_name` | String(100) | **snapshot** |
 | `is_ad_hoc` | Boolean NOT NULL default False | True = driver สร้างเองจาก /driver (งานนอกระบบ) — filter ออกจาก /vehicle calendar; ยังแสดงในหน้า admin (v2.11) |
@@ -206,8 +207,8 @@
 | `is_active` | Boolean NOT NULL default True | False → block approve_booking + top_up/manual_adjust; KPI ไม่นับ; mileage deduct/refund ไม่ block (v2.9) |
 | `yearly_plan_id` | FK → vehicle_budget_yearly_plan nullable | **v2.26** — ผูกงบย่อยนี้กับ "เงินก้อนประจำปี" ต้นทางแบบ FK ชัดเจน (แทนการอิงแค่ `fiscal_year` เท่ากันแบบหลวมๆ). งบเก่าก่อน feature นี้ = NULL ไม่ backfill (admin ปิดใช้งานเอง); งบใหม่ตั้ง FK นี้เสมอตอนสร้าง (เลือกจาก dropdown ปีงบ) |
 
-**Constraint:** `UNIQUE(budget_type_id, department_id, year, month)`
-**Index:** `ix_vb_yearly_plan(yearly_plan_id)` (v2.26)
+**Constraint:** `UNIQUE(budget_type_id, department_id, year, month, yearly_plan_id)` (v2.28 — เดิม `UNIQUE(budget_type_id, department_id, year, month)` ไม่มี `yearly_plan_id` ร่วม; เพิ่มเข้ามาให้แผนกเดียวกัน+เดือนเดียวกัน สร้างได้ทั้งงบประจำปีและงบพิเศษพร้อมกัน — คนละ plan = คนละ row)
+**Index:** `ix_vb_yearly_plan(yearly_plan_id)` (v2.26), `ix_vb_active_period(department_id, budget_type_id, is_active, start_date, end_date)` (v2.13)
 **Props:** `.remaining`, `.percent_used`
 
 > ตั้งแต่ v2.8: `used_amount` เป็น **cache** ของ `SUM(vehicle_budget_log.change_amount)` — ทุก mutation ต้องผ่าน `BudgetService` ที่ append row ใน `vehicle_budget_log` (ห้าม mutate `used_amount` ตรง)
@@ -245,10 +246,12 @@
 | `end_date` | Date **NOT NULL** | **v2.26** — วันสิ้นสุดของ plan แบบ explicit (เดิม implicit เสมอ = 28/29 ก.พ. ของ `fiscal_year+1`); ปกติคาดว่า ~12 เดือน แต่ DB ไม่บังคับ |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime onupdate | |
+| `name` | String(100) nullable | **v2.28** — free-text label แยก "งบพิเศษ ทริป X" ออกจาก "งบประมาณประจำปี" (ไม่ทำ enum/type column — free text ตามที่เจ้าของเลือก). งบเก่าก่อน v2.28 = NULL จนกว่า admin จะแก้ผ่าน UI |
+| `is_default` | Boolean NOT NULL default False | **v2.28** — plan ที่หน้า `budget_manage` auto-select เมื่อเข้าหน้าโดยไม่ระบุ `?plan_id=`. Invariant "มีได้แค่ 1 plan ที่ `is_default=True`" บังคับที่ service layer (`set_default_plan()`) **ไม่ใช่ DB constraint** |
 
 **Props:** `.dept_allocation` = `total_amount - central_allocation` (คำนวณเสมอ **ไม่เก็บเป็น column** — บังคับ total = central + dept ตลอดเวลา กันข้อมูลไม่ตรงกัน)
 **FK มาจาก `vehicle_budget`:** `vehicle_budget.yearly_plan_id` ชี้มาที่ตารางนี้ (v2.26 — เดิมไม่มี FK เชื่อมกันด้วย `fiscal_year` value เฉยๆ)
-**สถานะ:** มี mutation logic เต็มแล้ว — `budget_service.set_yearly_plan()` + modal `yearlyPlanModal` ใน `vehicle_budget.html` (เพิ่มก่อน v2.26 นี้อีกที่ 2026-07-31 — โน้ต "query-only" เดิมของ v2.24 ล้าสมัยแล้ว)
+**สถานะ:** มี mutation logic เต็มแล้ว — `budget_service.set_yearly_plan()` + modal `yearlyPlanModal` ใน `vehicle_budget.html` (เพิ่มก่อน v2.26 นี้อีกที่ 2026-07-31 — โน้ต "query-only" เดิมของ v2.24 ล้าสมัยแล้ว). v2.28 เพิ่ม "งบพิเศษ" — plan หลายก้อนพร้อมกันได้แล้ว (ไม่ใช่ 1 ปีงบ = 1 plan อีกต่อไป)
 
 ### `vehicle_service_log` — [models.py:382](../../../app/models.py#L382)
 | Field | Type | Note |
@@ -426,7 +429,7 @@
 
 ## Room (1)
 
-### `room_booking` — [models.py:215](../../../app/models.py#L215)
+### `room_booking` — [models/room.py:7](../../../app/models/room.py#L7)
 | Field | Type | Note |
 |-------|------|------|
 | `id` | Integer PK | |
@@ -559,6 +562,8 @@ INSERT INTO budget_type (id, name) VALUES (1, 'central'), (2, 'department');
 | v2.24 | 2026-07-30 | 26 | `vehicle_budget_yearly_plan` new table — เพดานเงินก้อนใหญ่ทั้งปี (`total_amount`) + แบ่งส่วนกลาง (`central_allocation`) รองรับ UI "เงินก้อนประจำปี" ใน `vehicle_budget.html` (query-only รอบนี้ ยังไม่มี mutation) |
 | v2.25 | 2026-07-31 | 26 | `vehicle` + `vehicle_type` — ประเภทรถ (`pickup`/`van`/`truck6`) รองรับ chip selector ใน addVehicleModal redesign (`vehicle_fleet.html`) |
 | v2.26 | 2026-07-31 | 26 | `vehicle_budget_yearly_plan` + explicit `start_date`/`end_date` (drop UNIQUE บน `fiscal_year`); `vehicle_budget` + `yearly_plan_id` FK — เลิก hardcode ปีงบเริ่ม มี.ค. ในโค้ด, ผูกงบย่อยกับ plan ต้นทางด้วย FK ตรงๆ |
+| v2.27 | 2026-08-05 | 26 | `vehicle_booking` + `note` — หมายเหตุผู้จอง, ทำ orphan input เดิมใน bookingModal ให้เป็น DB-backed field จริง รองรับ eventDetailModal redesign |
+| v2.28 | 2026-08-06 | 26 | `vehicle_budget_yearly_plan` + `name`/`is_default` — รองรับ "งบพิเศษ" แยกจากงบประจำปี + auto-select plan ค่าเริ่มต้น; `vehicle_budget` UniqueConstraint ขยายรวม `yearly_plan_id` — แผนก+ประเภทงบ+เดือนเดียวกันมีได้หลาย row ถ้าคนละ plan (table rebuild) |
 
 ---
 
@@ -1182,6 +1187,52 @@ App: `vehicle_cost.py` — route `ot_create` (POST `/admin/ot/create`, standalon
 **ผลต่อ pivot/forecast logic:** `_build_budget_pivot()`/`_build_pivot_summary()`/`_calc_budget_forecast()` ใน `views/vehicle/vehicle_budget.py` เปลี่ยนจากคำนวณช่วงเดือนจากสูตร march-hardcode ไปใช้ `plan.start_date`/`plan.end_date` ตรงๆ และ cap ที่จัดสรรแล้ว (`central_cap_fy`/`dept_cap_fy`) เปลี่ยนจาก filter (year,month) ให้ตรงชุดปีงบ ไปเป็น filter `VehicleBudget.yearly_plan_id == plan.id` ตรงๆ (ง่ายและถูกต้องกว่าเดิม)
 
 **Note:** table count คงที่ 26 · `vehicle_budget_yearly_plan` "สถานะ query-only" ที่บันทึกไว้ใน v2.24 **ล้าสมัยแล้ว** — มี mutation logic เต็มแล้ว (`budget_service.set_yearly_plan()`, modal `yearlyPlanModal`, เพิ่มเข้ามาก่อน v2.26 นี้อีกที)
+
+---
+
+## v2.27 — VehicleBooking `note` (2026-08-05)
+
+*Migration: [2026-08-05_vehicle-booking-add-note.sql](../../../app/migrations/2026-08-05_vehicle-booking-add-note.sql)*
+
+**บริบทธุรกิจ:** ระหว่าง redesign `eventDetailModal` (`vehicle_detail.html`) พบว่าช่อง "หมายเหตุ" ใน bookingModal (`vehicle_book.html`) มีอยู่แล้วในหน้า UI มาตั้งแต่เดิม แต่เป็น **orphan input** — ไม่มี `name` attribute เลย ไม่เคยถูกส่งขึ้น server หรือเก็บที่ไหน (dead UI element) ผู้ใช้ยืนยันให้ทำเป็น field จริงที่ผูกกับ DB แทน
+
+### `vehicle_booking` + 1 field
+
+| Field | เหตุผล |
+|-------|--------|
+| `note` String(300) nullable | หมายเหตุผู้จอง (remark ที่ผู้จองพิมพ์เอง) — wire เข้า booking-create modal (`vehicle_book.html`), user-edit route (`edit_booking`), และ admin-edit route (`admin_edit_booking`). Nullable, ไม่ backfill — ตาม convention field text ที่เป็น optional ตัวอื่นในตารางนี้ (เช่น `pickup_location`) |
+
+**Note:** table count คงที่ 26 · ไม่มี index ใหม่ (ไม่ใช่ field ที่ใช้ filter/query)
+
+---
+
+## v2.28 — VehicleBudgetYearlyPlan flexible (name + is_default) + VehicleBudget UniqueConstraint ขยาย (2026-08-06)
+
+*Migration: [2026-08-06_vehicle-budget-yearly-plan-flexible.sql](../../../app/migrations/2026-08-06_vehicle-budget-yearly-plan-flexible.sql)*
+
+**บริบทธุรกิจ:** "เงินก้อนประจำปี" (`VehicleBudgetYearlyPlan`, v2.24/v2.26) เดิมผูกกับความเข้าใจ "1 ปีงบ = 1 ก้อน" (label auto-gen จาก `fiscal_year`) เจ้าของต้องการเปิดให้สร้าง **"งบพิเศษ"** แยกจากงบประจำปีได้ทุกเมื่อ (เช่น ทริปดูงานต่างประเทศ — ตั้งช่วงเวลาของตัวเอง หักงบของตัวเอง แยกจากงบประจำปีปกติ) โดยไม่ต้องมีตารางใหม่ — ระหว่าง design consult ยืนยันแล้วว่าโครง `VehicleBudgetYearlyPlan` → `VehicleBudget` เดิมรองรับได้เลย ทั้ง `set_yearly_plan()` (ไม่มีเช็ก "1 ปี 1 plan" อยู่แล้วตั้งแต่ `fiscal_year` เลิก UNIQUE ใน v2.26), `_lookup_budget_for_booking()` (เลือกงบที่ `start_date` ล่าสุดเมื่อซ้อนกันอยู่แล้ว), และ `_build_budget_pivot()` (เดินตามช่วง `start_date`–`end_date` ของ plan อยู่แล้ว ไม่ล็อก 12 เดือน) — จุดเดียวที่ชนจริงคือ `VehicleBudget.__table_args__` UniqueConstraint ที่ไม่มี `yearly_plan_id` ร่วม ดู [spec: 2026-08-06_budget-flexible-plan.md](../doc/2026-08-06_budget-flexible-plan.md)
+
+### `vehicle_budget_yearly_plan` — 2 field ใหม่
+
+| Field | เหตุผล |
+|-------|--------|
+| `name` String(100) nullable | แยก "งบพิเศษ ทริป X" ออกจาก "งบประมาณประจำปี" — เดิม label auto-gen จาก `fiscal_year` เท่านั้น แยกไม่ได้ว่าก้อนไหนเป็นก้อนพิเศษ. **จงใจไม่ทำ `plan_type` enum/column แยก** — เจ้าของยืนยันว่า free text พอ (ยืดหยุ่นกว่า ไม่ต้องเพิ่ม migration ทุกครั้งที่มีประเภทใหม่) |
+| `is_default` Boolean NOT NULL default False | ระบุ plan เดียวที่หน้า `budget_manage` จะ auto-select ให้เมื่อเข้าหน้าโดยไม่ระบุ `?plan_id=` (ก่อนหน้านี้ fallback ไปงบที่ `start_date` ล่าสุดที่ยังครอบวันนี้เสมอ — ตอนนี้ admin เลือก default เองได้ชัดเจน). Invariant "มีได้แค่ 1 plan ที่ `is_default=True`" **บังคับที่ service layer** (`set_default_plan()`) ไม่ใช่ DB-level constraint — เหตุผลเดียวกับที่ระบบอื่นในโค้ดเบสใช้ pattern "unset ทั้งหมดก่อน set ตัวใหม่ใน 1 transaction" แทนการพึ่ง DB partial-unique-index (SQLite รองรับ partial index ได้จริง แต่ทีมเลือก enforce ที่ service เพื่อคุม error message/validation message ได้เอง) |
+
+### `vehicle_budget` — แก้ UniqueConstraint
+
+```
+เดิม: UNIQUE(budget_type_id, department_id, year, month)
+ใหม่: UNIQUE(budget_type_id, department_id, year, month, yearly_plan_id)
+```
+
+**เหตุผล:** เดิมแผนก+ประเภทงบ+เดือนเดียวกัน = 1 row เท่านั้นทั้งระบบ (งบประจำปีชนกับงบพิเศษไม่ได้ถ้าตกเดือนเดียวกัน) ตอนนี้แผนกเดียวกันมีทั้งงบประจำปีปกติและงบพิเศษ (เช่น งบทริปดูงาน) ในเดือนปฏิทินเดียวกันได้พร้อมกัน — แยกกันด้วย `yearly_plan_id` (envelope ต้นทาง) เป็น 2 row คนละแถว
+
+**ผลข้างเคียงที่ต้องรู้:** งบเก่าก่อน v2.26 ที่ `yearly_plan_id IS NULL` ไม่กระทบ — SQL (SQLite/Postgres) ถือว่า NULL แต่ละแถวไม่เท่ากันเองสำหรับ UNIQUE constraint จึงไม่เคยชนกันเองอยู่แล้ว และจะยังไม่ชนหลัง migration นี้เช่นกัน
+
+**SQLite migration note:** เปลี่ยน UniqueConstraint ต้อง rebuild ตาราง (SQLite ไม่รองรับ `DROP CONSTRAINT`) — pattern เดียวกับที่ v2.26 ใช้ rebuild `vehicle_budget_yearly_plan` ตอน drop UNIQUE บน `fiscal_year`; migration นี้ recreate index เดิมทั้ง 2 ตัวที่หายไปตอน rebuild กลับด้วย (`ix_vb_yearly_plan`, `ix_vb_active_period`) ส่วน `name`/`is_default` บน `vehicle_budget_yearly_plan` เป็น `ALTER TABLE ... ADD COLUMN` ธรรมดา ไม่ต้อง rebuild
+
+**Note:** table count คงที่ 26 · backfill `is_default=0` ทุก row เดิม (explicit แม้ server_default จัดการให้อยู่แล้ว) · `name` เดิมปล่อย NULL ไม่ backfill ข้อความ (admin กรอกเองผ่าน UI รอบแก้ครั้งถัดไป)
 
 ---
 

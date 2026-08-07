@@ -1,7 +1,7 @@
 # INDEX — Routes
 
 > Part ของ INDEX.md แยก เพื่อ token budget — [กลับ hub](INDEX.md)
-> **อัปเดตล่าสุด:** 2026-07-31
+> **อัปเดตล่าสุด:** 2026-08-06
 
 ---
 
@@ -40,7 +40,7 @@
 |--------|------|-----------|
 | GET | `/vehicle` | [vehicle_booking.py:29](../../app/views/vehicle/vehicle_booking.py#L29) — `index()`. query `?copy_from=<id>` (ทำซ้ำ: JS เปิด modal จองรถ prefill จาก `window.BOOKINGS`) / `?new=1` (เปิด modal เปล่า) — handler ใน vehicle.js **2026-06-16** |
 | POST | `/vehicle/book` | [vehicle_booking.py:57](../../app/views/vehicle/vehicle_booking.py#L57) | `book_vehicle_simple()` |
-| GET/POST | `/vehicle/edit/<id>` | [vehicle_booking.py:118](../../app/views/vehicle/vehicle_booking.py#L118) | `edit_booking()` |
+| GET/POST | `/vehicle/edit/<id>` | [vehicle_booking.py:128](../../app/views/vehicle/vehicle_booking.py#L128) | `edit_booking()`. **2026-08-05:** รับ `note` เพิ่ม (ผูก `#eventDetailModal` redesign — `VehicleBooking.note` คอลัมน์ใหม่) |
 | POST | `/vehicle/delete/<id>` | [vehicle_booking.py:174](../../app/views/vehicle/vehicle_booking.py#L174) — ลบ booking (hard delete). owner: pending/rejected เท่านั้น; admin: ทุกสถานะ ยกเว้นถ้ามี `mileage.budget_deducted_at` → blocked (กัน ledger orphan) **2026-06-12** |
 | POST | `/vehicle/cancel/<id>` | [vehicle_booking.py:238](../../app/views/vehicle/vehicle_booking.py#L238) — route parse+call เท่านั้น ตั้งแต่ **Phase 2 (2026-07-19)** — logic ทั้งหมดอยู่ใน `booking_service.cancel()`: user ยกเลิกได้เฉพาะ `status=='pending'`; admin: pending/waiting_approver/approved ไม่มี time guard; **block ทุกคน (รวม admin) ถ้ามีใครในทริปเดียวกันมี mileage start entry แล้ว** (`odometer_start` ไม่ null — เข้มกว่าเดิมที่เช็กแค่ `budget_deducted_at`, **REQ-1 Phase 3.5**); **trip-group cancel → reset สมาชิกที่เหลือทุกคนเป็น pending** (all-or-nothing ไม่มี skip/partial อีกต่อไป, REQ-1); notify (owner/admin/approver/driver/mate in-app) + Telegram อยู่ใน `booking_service.cancel()` เองแล้ว (**Phase 4**, param `notify=True` default). **ไม่มี refund งบทุกกรณี** (REQ-2, จารึกเป็น spec ทางการใน [vehicle_product_spec.md](vehicle_product_spec.md) §9) |
 | GET | `/vehicle/detail/<id>` | [vehicle_booking.py:272](../../app/views/vehicle/vehicle_booking.py#L272) — **2026-06-07: redirect → `/vehicle?detail=<id>`** (detail page ลบ, แสดงผ่าน modal `vehicle/modals/vehicle_detail.html` + JS deeplink); เก็บ permission check |
@@ -54,30 +54,32 @@
 ### vehicle (admin — shared `/vehicle/admin/*`)
 | Method | Path | File:Line |
 |--------|------|-----------|
-| GET | `/vehicle/admin` | [vehicle_admin.py:248](../../app/views/vehicle/vehicle_admin.py#L248) — `admin_trips()` |
-| POST | `/vehicle/admin/booking/<id>/notify` | [vehicle_admin.py:344](../../app/views/vehicle/vehicle_admin.py#L344) — `admin_notify_booking()` manual re-send ปุ่มเดียว ไม่มี service รองรับ (out of scope Clean Architecture refactor — narrow scope ที่ตกลงกัน Phase 4) |
-| POST | `/vehicle/admin/booking/<id>/revert` | [vehicle_admin.py:349](../../app/views/vehicle/vehicle_admin.py#L349) — `admin_revert_booking()` → `booking_service.revert()` (**Phase 2**). Guard: ห้ามถ้ามี `mileage.budget_deducted_at`; ห้ามถ้า `trip_group` set (**2026-07-31** — ไปทาง `ungroup()` แทน); source ∈ {approved, waiting_approver, rejected} เท่านั้น; เคลียร์ reject_reason + **`assigned_vehicle_id`/`driver_id`** (**2026-07-31**, เดิมเปลี่ยนแค่ status) + set updated_by; คืน JSON `{ok, msg}`. UI trigger: ปุ่ม ghost ใน `#assignModal` (`vehicle_admin.js::triggerRevertFromModal()`, **2026-07-31** — เดิม route มีแต่ไม่มีปุ่มเรียก) |
-| POST | `/vehicle/admin/vehicle/<id>/repair` | [vehicle_admin.py:378](../../app/views/vehicle/vehicle_admin.py#L378) — `admin_vehicle_repair()` |
-| POST | `/vehicle/admin/vehicle/<id>/fix-done` | [vehicle_admin.py:392](../../app/views/vehicle/vehicle_admin.py#L392) — `admin_vehicle_fix_done()` |
-| POST | `/vehicle/admin/booking/<id>/swap` | [vehicle_admin.py:409](../../app/views/vehicle/vehicle_admin.py#L409) — `admin_swap_vehicle()`. **2026-06-20:** เพิ่ม `check_vehicle_conflict` guard (block 400 ถ้ารถทับช่วงเวลา) |
-| POST | `/vehicle/admin/merge` | [vehicle_admin.py:423](../../app/views/vehicle/vehicle_admin.py#L423) — `admin_merge()` รวมทริป. **2026-06-20:** เพิ่ม conflict guard ก่อน commit. **2026-07-31:** แยก 2 ทางด้วย `new_ids` (id ที่ยังไม่ใช่สมาชิก `trip_group` เดิม) — มี id ใหม่จริง + กลุ่มเดิมมีสมาชิกอยู่แล้ว → `booking_svc.merge_into_group()` (งานเดิมไม่ถูกแตะ, ผ่าน `guard_budget()`/`apply_transition()` จริง); ไม่งั้น = ทาง "รวมทริปใหม่/แก้ไขกลุ่มเดิม" เดิม (ไม่ถูกแตะ). ⚠️ **BUG-3 (พบ Phase 4, 2026-07-19, ยังไม่แก้ — เฉพาะทาง "รวมทริปใหม่" เดิมเท่านั้น)**: เซ็ต `booking.status` ตรง ไม่ผ่าน `apply_transition()`/`booking_service.*` เลย — ไม่เคยเรียก `guard_budget()` ต่างจาก approve path อื่นทุกจุด (central/personal merge ได้ `status='approved'` ทันทีไม่เช็คงบ) ดู [masterplan Bug Log](log/2026-07-19_clean_architecture_masterplan.md) |
-| POST | `/vehicle/admin/assign/<id>` | [vehicle_admin.py:517](../../app/views/vehicle/vehicle_admin.py#L517) — `admin_assign()` → `booking_service.assign_resources()`+`approve_from_pending()`/`reject_from_pending()` (**Phase 2/4**). **2026-06-20:** conflict guard เฉพาะทริปอิสระที่ approve; **2026-06-21:** `check_vehicle_active` guard |
-| POST | `/vehicle/admin/edit/<id>` | [vehicle_booking.py:159](../../app/views/vehicle/vehicle_booking.py#L159) | `admin_edit_booking()` — **2026-06-21** AJAX admin แก้ข้อมูลจอง (start/end datetime, destination, purpose, pax, pickup). Block ถ้า status ∈ {in_progress, completed, cancelled}. คืน JSON `{ok, msg}` |
+| GET | `/vehicle/admin` | [vehicle_admin.py:342](../../app/views/vehicle/vehicle_admin.py#L342) — `admin_trips()` |
+| POST | `/vehicle/admin/booking/<id>/notify` | [vehicle_admin.py:428](../../app/views/vehicle/vehicle_admin.py#L428) — `admin_notify_booking()` manual re-send ปุ่มเดียว ไม่มี service รองรับ (out of scope Clean Architecture refactor — narrow scope ที่ตกลงกัน Phase 4) |
+| POST | `/vehicle/admin/booking/<id>/revert` | [vehicle_admin.py:445](../../app/views/vehicle/vehicle_admin.py#L445) — `admin_revert_booking()` → `booking_service.revert()` (**Phase 2**). Guard: ห้ามถ้ามี `mileage.budget_deducted_at`; ห้ามถ้า `trip_group` set (**2026-07-31** — ไปทาง `ungroup()` แทน); source ∈ {approved, waiting_approver, rejected} เท่านั้น; เคลียร์ reject_reason + **`assigned_vehicle_id`/`driver_id`** (**2026-07-31**, เดิมเปลี่ยนแค่ status) + set updated_by; คืน JSON `{ok, msg}`. UI trigger: ปุ่ม ghost ใน `#assignModal` (`vehicle_admin.js::triggerRevertFromModal()`, **2026-07-31** — เดิม route มีแต่ไม่มีปุ่มเรียก) |
+| POST | `/vehicle/admin/vehicle/<id>/repair` | [vehicle_admin.py:462](../../app/views/vehicle/vehicle_admin.py#L462) — `admin_vehicle_repair()` |
+| POST | `/vehicle/admin/vehicle/<id>/fix-done` | [vehicle_admin.py:476](../../app/views/vehicle/vehicle_admin.py#L476) — `admin_vehicle_fix_done()` |
+| POST | `/vehicle/admin/driver/<id>/toggle-active` | [vehicle_admin.py:489](../../app/views/vehicle/vehicle_admin.py#L489) — `admin_driver_toggle_active()` — **เพิ่ม 2026-08-05** สลับ `Driver.is_active` ทันที (ปุ่มสถานะในตาราง manage_fleet คอลัมน์คนขับ ไม่ต้องเปิด modal) — mirror pattern `admin_vehicle_fix_done`, plain attribute ไม่ใช่ money/workflow เลยไม่ผ่าน service (ADR 0001) |
+| GET | `/vehicle/admin/driver-week` | [vehicle_admin.py:314](../../app/views/vehicle/vehicle_admin.py#L314) — `admin_driver_week()` — **เพิ่ม 2026-08-05** AJAX สลับสัปดาห์ "งานในสัปดาห์" (chevron ซ้าย-ขวา คอลัมน์คนขับ manage_fleet) `?week_start=YYYY-MM-DD` → `{ok, weekStart, label, drivers:{id:[status×7]}}` ผ่าน `_compute_driver_week_status()` — ดู INDEX_code.md § Key Functions |
+| POST | `/vehicle/admin/booking/<id>/swap` | [vehicle_admin.py:504](../../app/views/vehicle/vehicle_admin.py#L504) — `admin_swap_vehicle()`. **2026-06-20:** เพิ่ม `check_vehicle_conflict` guard (block 400 ถ้ารถทับช่วงเวลา) |
+| POST | `/vehicle/admin/merge` | [vehicle_admin.py:529](../../app/views/vehicle/vehicle_admin.py#L529) — `admin_merge()` รวมทริป. **2026-06-20:** เพิ่ม conflict guard ก่อน commit. **2026-07-31:** แยก 2 ทางด้วย `new_ids` (id ที่ยังไม่ใช่สมาชิก `trip_group` เดิม) — มี id ใหม่จริง + กลุ่มเดิมมีสมาชิกอยู่แล้ว → `booking_svc.merge_into_group()` (งานเดิมไม่ถูกแตะ, ผ่าน `guard_budget()`/`apply_transition()` จริง); ไม่งั้น = ทาง "รวมทริปใหม่/แก้ไขกลุ่มเดิม" เดิม (ไม่ถูกแตะ). ⚠️ **BUG-3 (พบ Phase 4, 2026-07-19, ยังไม่แก้ — เฉพาะทาง "รวมทริปใหม่" เดิมเท่านั้น)**: เซ็ต `booking.status` ตรง ไม่ผ่าน `apply_transition()`/`booking_service.*` เลย — ไม่เคยเรียก `guard_budget()` ต่างจาก approve path อื่นทุกจุด (central/personal merge ได้ `status='approved'` ทันทีไม่เช็คงบ) ดู [masterplan Bug Log](log/2026-07-19_clean_architecture_masterplan.md) |
+| POST | `/vehicle/admin/assign/<id>` | [vehicle_admin.py:635](../../app/views/vehicle/vehicle_admin.py#L635) — `admin_assign()` → `booking_service.assign_resources()`+`approve_from_pending()`/`reject_from_pending()` (**Phase 2/4**). **2026-06-20:** conflict guard เฉพาะทริปอิสระที่ approve; **2026-06-21:** `check_vehicle_active` guard |
+| POST | `/vehicle/admin/edit/<id>` | [vehicle_booking.py:170](../../app/views/vehicle/vehicle_booking.py#L170) | `admin_edit_booking()` — **2026-06-21** AJAX admin แก้ข้อมูลจอง (start/end datetime, destination, purpose, pax, pickup**, note — เพิ่ม 2026-08-05**). Block ถ้า status ∈ {in_progress, completed, cancelled}. คืน JSON `{ok, msg}` |
 | GET/POST | `/vehicle/mileage` | [vehicle_mileage.py:344](../../app/views/vehicle/vehicle_mileage.py#L344) — `mileage_log()` (POST branch → `_handle_mileage_post()`, **Phase 5**; POST รองรับ `entry_type='both'` เพิ่มด้วย — ดู INDEX_code.md) |
 | GET | `/vehicle/mileage/export` | [vehicle_mileage.py:508](../../app/views/vehicle/vehicle_mileage.py#L508) — `mileage_export()` Excel export ตาม filter (แตก `_filter_and_calc_mileage_rows`/`_build_mileage_workbook`, **Phase 5**). Query param ที่รับ: `date_start`/`date_end`/`vehicle_id`/`driver_id`/`status_filter` (**ตัด `cost_min`/`cost_max` ออกแล้ว 2026-07-27**) |
-| GET | `/api/admin/bookings` | [vehicle_admin.py:747](../../app/views/vehicle/vehicle_admin.py#L747) — `api_admin_bookings()` |
-| POST | `/api/check-merge` | [vehicle_admin.py:638](../../app/views/vehicle/vehicle_admin.py#L638) — `api_check_merge()` (**DEBT-5** — 75 logic-line เกิน 60, legacy ตั้งใจไม่แตะ) |
+| GET | `/api/admin/bookings` | [vehicle_admin.py:865](../../app/views/vehicle/vehicle_admin.py#L865) — `api_admin_bookings()` |
+| POST | `/api/check-merge` | [vehicle_admin.py:756](../../app/views/vehicle/vehicle_admin.py#L756) — `api_check_merge()` (**DEBT-5** — 75 logic-line เกิน 60, legacy ตั้งใจไม่แตะ) |
 
 ### adminfleet (`/admin/manage-fleet`, `/admin/budget`)
 | Method | Path | File:Line |
 |--------|------|-----------|
-| GET/POST | `/admin/manage-fleet` | [vehicle_admin.py:211](../../app/views/vehicle/vehicle_admin.py#L211) — `manage_fleet()` |
-| POST | `/admin/manage-fleet/service` | [vehicle_admin.py:613](../../app/views/vehicle/vehicle_admin.py#L613) — `update_vehicle_service()` |
-| GET | `/api/vehicle/<vid>/history` | [vehicle_admin.py:582](../../app/views/vehicle/vehicle_admin.py#L582) — `vehicle_history()` |
-| GET/POST | `/admin/budget` | [vehicle_budget.py:439](../../app/views/vehicle/vehicle_budget.py#L439) — `budget_manage()` (POST action dispatch dict → `_handle_set_budget`/`_handle_top_up`/`_handle_manual_adjust`/`_handle_toggle_active`/`_handle_extend_period`/`_handle_cancel_booking`; `_handle_cancel_booking` → `booking_service.cancel(notify=False)`, **ปิด DEBT-3, Phase 3.5**) |
-| GET | `/admin/budget/personal` | [vehicle_budget.py:683](../../app/views/vehicle/vehicle_budget.py#L683) — `budget_personal()` |
-| POST | `/admin/budget/personal/mark_paid` | [vehicle_budget.py:749](../../app/views/vehicle/vehicle_budget.py#L749) — `budget_personal_mark_paid()` |
-| POST | `/admin/budget/personal/mark_unpaid` | [vehicle_budget.py:777](../../app/views/vehicle/vehicle_budget.py#L777) — `budget_personal_mark_unpaid()` |
+| GET/POST | `/admin/manage-fleet` | [vehicle_admin.py:278](../../app/views/vehicle/vehicle_admin.py#L278) — `manage_fleet()` |
+| POST | `/admin/manage-fleet/service` | [vehicle_admin.py:731](../../app/views/vehicle/vehicle_admin.py#L731) — `update_vehicle_service()` |
+| GET | `/api/vehicle/<vid>/history` | [vehicle_admin.py:700](../../app/views/vehicle/vehicle_admin.py#L700) — `vehicle_history()` |
+| GET/POST | `/admin/budget` | [vehicle_budget.py:557](../../app/views/vehicle/vehicle_budget.py#L557) — `budget_manage()` (POST action dispatch dict → `_handle_set_budget`/`_handle_top_up`/`_handle_manual_adjust`/`_handle_toggle_active`/`_handle_extend_period`/`_handle_cancel_booking`/`_handle_set_yearly_plan`/`_handle_set_default_plan`/`_handle_delete_budget` **(v2.29)**; `_handle_cancel_booking` → `booking_service.cancel(notify=False)`, **ปิด DEBT-3, Phase 3.5**. GET params: `?plan_id=` (v2.28) — `?plan_year=` server-side filter ตัดออกแล้ว v2.29 (chip "ปี" filter ฝั่ง client แทน)) |
+| GET | `/admin/budget/personal` | [vehicle_budget.py:937](../../app/views/vehicle/vehicle_budget.py#L937) — `budget_personal()` |
+| POST | `/admin/budget/personal/mark_paid` | [vehicle_budget.py:1003](../../app/views/vehicle/vehicle_budget.py#L1003) — `budget_personal_mark_paid()` |
+| POST | `/admin/budget/personal/mark_unpaid` | [vehicle_budget.py:1031](../../app/views/vehicle/vehicle_budget.py#L1031) — `budget_personal_mark_unpaid()` |
 
 ### admincost
 | Method | Path | File:Line |

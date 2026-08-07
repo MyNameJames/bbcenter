@@ -1,16 +1,19 @@
 /* ============================================================
-   vehicle_calendar.css — หน้าปฏิทินการจองรถ (vehicle.html) เท่านั้น
+   vehicle_calendar.css — ปฏิทินการจองรถ (vehicle.html) + ปฏิทินจองห้องประชุม (room.html)
    ─────────────────────────────────────────────────────────────
    Phase 1 migrate (2026-07-28): shell → _base_ue.html · token → --bb-*
    แทนที่ทั้งหมดของ: vehicle.css (block ปฏิทิน/mobile/bk-*) + vehicle_zendenta.css (ลบแล้ว)
 
-   ⚠️ vehicle.css **ไม่ถูกแตะ** — room.html/room.js + อีก 10 หน้ายังใช้ class ชุดเดียวกันอยู่
-      หน้านี้เลิกโหลด vehicle.css แล้ว จึง port เฉพาะที่หน้านี้ใช้มาไว้ที่เดียว
+   2026-08-05: room.html migrate ตาม vehicle.html design ทั้งหมด → โหลดไฟล์นี้ร่วมด้วย (ก่อน room.css
+   ที่ override เฉพาะ room-specific bits) แทน vehicle.css เดิม — room.js ใช้ class ชุดเดียวกันเป๊ะ
+   (calendar-grid/calendar-cell/event-card/vrc-m-*/bk-*) ไม่มี custom class เพิ่ม
+
+   ⚠️ vehicle.css **ไม่ถูกแตะ** — อีก ~10 หน้า legacy อื่นยังใช้ class ชุดเดียวกันอยู่
 
    ยังพึ่งไฟล์เก่าอยู่ (modal 4 ตัว = เฟสถัดไป):
      tokens.css (--vc-*) · badge.css (.vc-badge) · vehicle_admin.css (.va-cal)
 
-   ห้าม rename class ในไฟล์นี้ — vehicle.js ผูกชื่อไว้ตรงๆ
+   ห้าม rename class ในไฟล์นี้ — vehicle.js **และ room.js** ผูกชื่อไว้ตรงๆ
    token: --bb-* เท่านั้น · ห้าม hex literal · radius binary 8/pill
    ============================================================ */
 
@@ -232,8 +235,8 @@
     transition: background .12s;
 }
 .vrc-m-evt-toggle:hover { background: var(--bb-n100); }
-.vrc-m-evt-toggle i { width: 16px; height: 16px; transition: transform .2s ease; }
-.vrc-m-evt-toggle:not(.collapsed) i { transform: rotate(180deg); }
+.vrc-m-evt-toggle .material-symbols-rounded { font-size: 16px; transition: transform .2s ease; }
+.vrc-m-evt-toggle:not(.collapsed) .material-symbols-rounded { transform: rotate(180deg); }
 .grp-toggle .grp-chevron { transition: transform .2s ease; }
 .grp-toggle:not(.collapsed) .grp-chevron { transform: rotate(180deg); }
 
@@ -671,49 +674,11 @@
 .bk-switch { width: 2.2em; height: 1.2em; cursor: pointer; }
 
 /* ── Detail modal ──────────────────────────────────────────── */
-.bk-detail-dialog { max-width: 440px; }
-.bk-detail-content {
-    border: 1px solid var(--bb-n200);
-    border-radius: var(--bb-r-surface);
-    overflow: hidden;
-    animation: bk-content-rise .35s cubic-bezier(.16,1,.3,1) .05s both;
-}
+/* .bk-detail-title/-divider/-info/-row/-icon/-text ยังใช้จริงที่ room/modals/room_detail.html
+   (shared CSS ข้าม domain) — vehicle_detail.html เลิกใช้ตั้งแต่ redesign 2026-08-05 (header/vehicle/
+   driver/members เปลี่ยนไปใช้ inline-style ตาม design_guideline.md v2.1 ไม่ต้องมี dedicated class) */
 .bk-detail-title { font-size: 16px; font-weight: 600; color: var(--bb-str); }
 .bk-detail-divider { margin: 0; border-top: 1px solid var(--bb-n200); }
-
-.bk-detail-content .bk-detail-head {
-    position: relative;
-    padding: 20px 24px 16px;
-    background: var(--bb-n0);
-}
-.bk-detail-content .bk-detail-eyebrow {
-    margin-bottom: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--bb-mut);
-}
-/* status pill — icon + label เสมอ (§12) · ไม่มีเส้นขอบ */
-.bk-detail-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    height: 24px;
-    margin-top: 10px;
-    padding: 0 10px;
-    border-radius: var(--bb-r-surface);
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1;
-    animation: bk-pill-in .35s cubic-bezier(.16,1,.3,1) .15s both;
-}
-.bk-detail-status [data-lucide],
-.bk-detail-status svg.lucide { width: 14px; height: 14px; }
-.bk-detail-status--approved  { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
-.bk-detail-status--pending   { background: var(--bb-wr-bg);   color: var(--bb-wr-tx); }
-.bk-detail-status--approver  { background: var(--bb-info-bg); color: var(--bb-info-tx); }
-.bk-detail-status--rejected  { background: var(--bb-dg-bg);   color: var(--bb-dg-tx); }
-.bk-detail-status--group     { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
-.bk-detail-status--completed { background: var(--bb-ok-bg);   color: var(--bb-ok-tx); }
 
 .bk-detail-info {
     display: flex;
@@ -731,97 +696,12 @@
     color: var(--bb-str);
     font-feature-settings: 'tnum';
 }
-.bk-detail-row--primary .bk-detail-text { font-weight: 600; }   /* แยกชั้นด้วย weight แทนขนาด — เหมือน .bb-table th/td */
-.bk-detail-row--primary .bk-detail-icon { color: var(--bb-str); }
-.bk-detail-plate-code  { font-family: var(--bb-num-font); margin-right: 8px; }
-.bk-detail-plate-brand { color: var(--bb-mut); font-weight: 500; }
+.bk-detail-section-label { font-size: 14px; font-weight: 500; color: var(--bb-mut); }   /* room_detail.html "ผู้จอง" */
 
-.bk-detail-section-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 18px 24px 10px;
-    background: var(--bb-n50);
-}
-.bk-detail-section-label { font-size: 14px; font-weight: 500; color: var(--bb-mut); }
-.bk-detail-section-count { font-size: 13px; color: var(--bb-mut); font-family: var(--bb-num-font); }
-
-.bk-detail-members {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 4px 16px 16px;
-    background: var(--bb-n50);
-}
-.bk-detail-member {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid var(--bb-n200);
-    border-radius: var(--bb-r-surface);
-    background: var(--bb-n50);
-    transition: border-color .15s, background .15s;
-    animation: bk-member-in .3s cubic-bezier(.16,1,.3,1) both;
-    animation-delay: calc(.25s + var(--bk-i, 0) * .05s);
-}
-.bk-detail-member:hover { border-color: var(--bb-n400); }
-.bk-detail-member-avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--bb-n200);
-    border-radius: 50%;
-    background: var(--bb-n0);
-    color: var(--bb-mut);
-}
-.bk-detail-member-avatar [data-lucide],
-.bk-detail-member-avatar svg.lucide { width: 14px; height: 14px; }
-.bk-detail-member-body {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-.bk-detail-member-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-.bk-detail-member-name { min-width: 0; font-size: 15px; font-weight: 500; color: var(--bb-str); }
-.bk-detail-member-trip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    overflow: hidden;
-    font-size: 14px;
-    color: var(--bb-mut);
-}
-.bk-detail-member-pickup { margin-top: 2px; font-size: 13px; color: var(--bb-mut); }
-
-.bk-detail-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 14px 20px;
-    background: var(--bb-n50);
-}
-
-@keyframes bk-content-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes bk-pill-in      { from { opacity: 0; transform: translateY(-4px) scale(.95); } to { opacity: 1; transform: none; } }
-@keyframes bk-row-in       { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
-@keyframes bk-member-in    { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes bk-row-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-    .bk-detail-content,
-    .bk-detail-status,
     .bk-detail-row,
-    .bk-detail-member,
     .vrc-m-list .bb-card,
     .vrc-m-hero { animation: none; }
 }

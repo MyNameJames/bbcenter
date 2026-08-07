@@ -391,7 +391,7 @@ sidebar→drawer · ตารางกว้าง 3 กลยุทธ์ (hori
 | 6 | **Dropdown** | `.bb-select` (trigger) · `.bb-menu`>`.bb-menu-rich`(title+desc+`.bb-check`)/`.bb-menu-item`(.is-on) · `.ue-chip-pop` | trigger = pill outline (เหมือน chip §4) · menu = **radius 8** + `shadow-lg` `0 12px 32px rgba(0,0,0,.14)` · rich = title 14/600 + desc 13 mut + check วงกลม `accent` fill (ตัวขาวทับได้) · plain item = `.is-on` พื้น `n50` + ตัวหนา (ไม่ fill accent-bg) · **panel ต้อง portal→body + `position:fixed`** กัน overflow/transform ancestor clip |
 | 7 | **Card** | `.bb-card` (+`.bb-card-head`/`.bb-card-body`) | surface ขาว + border `n200` **radius 8** · head แยกด้วย hairline + action link · ❌ ห้าม `border-left` สีพิเศษ |
 | 8 | **KPI** | `.bb-kpi` (+`.is-ghost`) > `.bb-kpi-tile` + `.bb-kpi-label` + `.bb-kpi-value`(`.bb-num`) + `.bb-kpi-den`/`.bb-kpi-delta.is-up/.is-down` | icon tile 54px **radius 8** ซ้าย · label mut บน · เลข **Inter 26/800** tracking −0.5px (§3 kpi-hero) + denominator mut · delta สี semantic (**ต้องมีลูกศร icon คู่** — `is-up` เขียวชน accent) · **card** = กรอบ **radius 8** (เดิม 4px hardcode → §14) · **ghost** = ไม่มีกรอบ · ค่าเปลี่ยน → animate `countUp` + `bump` (`ue-motion.js`) |
-| 9 | **Table** | `.bb-table` (v2 canonical) > thead pill `n50` · `.bb-th.sortable` (icon `chevrons-up-down`+hover) vs `<th>` เปล่า · `.bb-check` · `.bb-cell-id/strong/num`(`.bb-num`) · inline status icon | ❌ ไม่มี zebra/เส้นตั้ง · hairline `n100` แนวนอน · hover `#FBFCFE` · checkbox เลือก = `str` fill · `.sortable` = กดกรองได้, `<th>` เปล่า = กรองไม่ได้ · mobile = overflow-x scroll |
+| 9 | **Table** | `.bb-table` (v2 canonical) > thead **พื้นโปร่งใส (ขาว) + border-bottom `n200`** เท่านั้น (ตรวจกับ `components.css` จริงแล้ว 2026-08-07 — ไม่ใช่ pill `n50` ตามที่เอกสารเคยเขียน) · `.bb-th.sortable` (icon `chevrons-up-down`+hover) vs `<th>` เปล่า · `.bb-check` · `.bb-cell-id/strong/num`(`.bb-num`) · inline status icon | ❌ ไม่มี zebra/เส้นตั้ง · hairline `n200` แนวนอน · hover `var(--bb-n50)` · checkbox เลือก = `str` fill · `.sortable` = กดกรองได้, `<th>` เปล่า = กรองไม่ได้ · mobile = overflow-x scroll |
 | 10 | **Badge** | `.bb-badge` + `.is-neutral`/`.is-accent` | tag/count · `.is-accent` = tint `accent-bg` + ตัว `accent-dk` — **คนละตัวกับ status** |
 | 11 | **Status** | `.bb-status` + `.is-ok/wr/dg/info/neutral` · inline = `.bb-status-inline` | **badge radius 8** (กดไม่ได้ → ไม่ใช่ pill) · pad 6/10 · 13px/600 · **icon + label เสมอ** · map: รออนุมัติ=wr · อนุมัติ=info · ปิดงาน=ok · ยกเลิก=dg · ร่าง=neutral · ⛔ **`.bb-dot` ถูกลบแล้ว** (§2) · ไม่ส่ง icon = ใช้ icon ประจำ tone · ใน table ใช้ `inline` (ไม่มีพื้น) |
 | 12 | **Pagination** | `.bb-pag` > `.bb-pag-info` + `.bb-pag-right`>(`.bb-pag-size` + `.bb-pag-nav`>`.bb-pg`) | info ซ้าย (เลข Inter 600) + nav ขวา · **ปุ่ม pill 36px** border `n300` · active = **`ink` fill** + ตัวขาว · `.bb-pag-size` = แถวต่อหน้า · prev/next chevron |
@@ -400,7 +400,7 @@ sidebar→drawer · ตารางกว้าง 3 กลยุทธ์ (hori
 | 15 | **Section** ★ | `.bb-section` + `.bb-section-title` | บล็อกย่อยใน drawer/card คั่นด้วย **hairline ไม่ใช่กรอบซ้อนกรอบ** · title 16/700 · py 20 |
 | 16 | **DescList** ★ | `.bb-desc` > `.bb-desc-label` + `.bb-desc-value` (+`.is-num`/`.is-stack`) | grid 2 คอลัมน์ label ซ้าย(`mut`) / value ขวา(ink 600) · **⛔ ห้ามใช้ `<table>`** (ไม่มีหัวคอลัมน์ ไม่ sort ไม่ scan ข้ามแถว) · `.is-stack` = ค่ายาวซ้อนบน-ล่าง |
 | + | **Timeline** | `.bb-timeline` > `.bb-tl-item.done/.cur/.todo` > `.bb-tl-dot`+`.bb-tl-time/.bb-tl-title/.bb-tl-desc` | เส้นแนวตั้ง hairline · dot: `ok`=done · `accent`=cur · ขาว+border=todo · time Inter |
-| + | **Empty** | `.bb-empty` > `.bb-empty-icon` + title + desc + action | icon tile กลาง **radius 8** + title 16/700 + desc mut + ปุ่ม pri |
+| + | **Empty** | `.bb-empty` > `.bb-empty-icon` + title + desc + action | icon tile กลาง **radius 8** + title 16/700 + desc mut + ปุ่ม pri. **variant illustration (2026-08-07):** แทน `.bb-empty-icon` ด้วย SVG character จาก `_shared/illustrations.html` (`#illust-anxious`, สี `#C9C9C9`) — 3 ขนาดตามบริบท (96/140/56px), ดู [vehicle_admin_page_contract.md §6](vehicle_admin_page_contract.md); ยังไม่ promote เข้า `components.css` (page-scoped, 4 หน้า vehicle admin เท่านั้นตอนนี้) |
 | + | **Loading** | `.bb-skeleton`/`.ml2-skel-*` · `.bb-spinner`(+`.is-sm`) | skeleton พื้น `n100` **radius 8** (เดิม 6 → §14) · shimmer gradient `n100→n200→n100` (ข้อยกเว้นเดียวที่อนุญาต gradient) · spinner วง + top `accent` · inline = spinner-sm + text |
 | + | **Motion** | `ue-motion.js` → `countUp` · `staggerRows` · `showSkeleton` · CSS `ml2FrameIn/RowIn/DotPop/Bump/Shimmer` | page entry `frameIn .5s cubic-bezier(.2,.8,.2,1)` · row stagger + dotPop ตอนโหลด · ปุ่ม hover `translateY(-1px)` / active `scale(.97)` · **บังคับมี `@media (prefers-reduced-motion: reduce)` ปิดทุกตัว** |
 
@@ -434,6 +434,7 @@ sidebar→drawer · ตารางกว้าง 3 กลยุทธ์ (hori
 |---|---|---|---|
 | mileage | `_base_ue.html` ✅ | `.bb-*` + `.ue-chip` ✅ | เขียว ✅ |
 | manage-fleet | `_base_ue.html` ✅ (2026-07-29) | legacy `.vc-*` (reskin modal/table เฟสถัดไป) | `--bb-*` เฉพาะ `vehicle_fleet.css` ✅ — `design-system.css`/`vehicle_admin.css`/`vehicle_fuel.css` ยังโหลดชั่วคราว |
+| cost | `_base_ue.html` ✅ (2026-08-06) | `.bb-*` + `.tab2`/`.ue-chip` (table/tabs/filter/KPI/modal chrome) ✅ — widget ที่ไม่มี bb เทียบเท่า (slot/rate row editor, date picker, action menu, receipt print) คงชื่อ class เดิม (JS hook) แค่ retokenize `--bb-*` ผ่าน `{% block head %}` scoped style | `--bb-*` ล้วน — `vehicle_cost.css` ไม่โหลดแล้ว (orphan) |
 | ที่เหลือทั้งหมด | `_shared/sidebar.html`+`header.html` | legacy `--vc-*`/`.zen-*` | น้ำเงิน/indigo |
 
 **ลำดับที่แนะนำเวลาแตะหน้าใหม่:** shell → token → component → density. อย่าทำครึ่งๆ ในหน้าเดียว (เช่นเปลี่ยน token แต่ไม่เปลี่ยน shell) — จะได้หน้าที่ไม่ใช่ทั้งเก่าทั้งใหม่
@@ -513,9 +514,18 @@ gap ที่ทำให้ [`vehicle_mileage.html`](../../app/templates/vehicl
 
 - **`vehicle_mileage.html` desktop table status badges (คอลัมน์ "สถานะ") ไม่มี icon** — label อย่างเดียว โดยตั้งใจ (ผู้ใช้ตัดสินใจ 2026-07-22, ไม่แก้ §12 core rule) → **ขัด §12 "icon + label เสมอ"** ไว้เป็นข้อยกเว้นเฉพาะหน้านี้ ไม่ใช่ pattern ใหม่ทั้งระบบ. Mobile card list (หน้าเดียวกัน) ยังมี icon+label ตามเดิม — asymmetry desktop/mobile ตั้งใจ ไม่ใช่ bug
 
-### ⚠️ ค้างตรวจ (2026-07-22) — ยังไม่เคาะ
+### ✅ เคาะแล้ว (2026-08-05)
 
-- **`.ue-chip` active/selected ไม่เปลี่ยนสีแล้ว** — §12 row 4 ("Filter") spec เดิมเขียนไว้ว่า "chip active = border+text `accent-dk` ไม่ fill พื้น + icon `FILL 1`" แต่โค้ดจริงตอนนี้ (`ue.css` § CHIP, session mileage layout-flatten 2026-07-22) **ตัด `.ue-chip.is-on`/`.ue-chip-dd.is-open/.is-active` border+color→`accent-dk` ทิ้งทั้งหมด** — chip ที่เลือกค่าแล้วยังคงสี base (`n50`/`n700`) เหมือนไม่ active (เหลือแค่ icon fill + label/badge count เป็นสัญญาณ). ไม่ทราบว่าเป็นการตัดสินใจ conscious หรือ side-effect ของการทำ base restyle (flat gray) — **ต้อง human ยืนยัน**: (a) แก้ §12 row 4 ให้ตรงกับโค้ดใหม่ (accept) หรือ (b) เพิ่ม border/color กลับเข้า `.ue-chip.is-on` ให้ตรง spec เดิม (revert).
+- **`vehicle_fleet.html` `#addDriverModal` — avatar upload circle + id-card dropzone/uploaded-card เป็น custom CSS เฉพาะหน้า ไม่ใช่ canonical component** (ผู้ใช้ตัดสินใจตรงๆ ระหว่าง redesign: "custom เฉพาะหน้านี้" สำหรับ avatar, "สร้างใหม่ตามภาพเป๊ะ" สำหรับ id-card) — แม้ CHEATSHEET §Form/Input มี `Upload()` component อยู่แล้วที่ทำ dropzone↔file-list ใกล้เคียงกัน แต่ไม่มี progress-bar state + ไม่รองรับ prefill ไฟล์เดิมจาก server (edit mode) ตามที่ภาพต้นแบบต้องการ. **retokenize เป็น `--bb-*` ครบแล้ว** (ไม่มี hex literal เหลือ) และ radius ตาม binary rule (§5: card/icon-box=`8`, avatar/progress-bar=`pill`) — แค่ยังไม่ formalize เข้า `components.css`/CHEATSHEET/gallery. ถ้ามีหน้าอื่นต้องการ pattern เดียวกันอีก → ค่อย promote เป็น component จริงตอนนั้น (ไม่ใช่ตอนนี้)
+
+### ✅ เคาะแล้ว (2026-08-07)
+
+- **Confirm modal (illustration card) — `border-radius:20px` เป็น exception จากกฎ binary radius (§5: `0`/`8`/`999` เท่านั้น)** — ตัดสินใจตรงๆ ระหว่าง redesign `vehicle_fleet.html` `#deleteVehicleModal`/`#deleteDriverModal`: ภาพต้นแบบ (illustration card, ผู้ใช้ส่งมาให้ดู) โค้งนุ่มกว่า `8` ชัดเจน ใช้ `8` แล้วดูคมเกินจนไม่ตรง reference. รายละเอียดเต็ม (class, ขนาด, สี illustration) → [vehicle_admin_page_contract.md §1.2](vehicle_admin_page_contract.md). ตอนนี้เป็น page-scoped (`.mf-confirm-card`, `vehicle_fleet.html` เท่านั้น) — ใช้ซ้ำ ≥2 หน้า → ค่อย promote เป็น component ทางการ + เพิ่ม exception นี้เข้า §5 formal
+- **Empty state ได้ illustration variant ใหม่ (SVG character, ไม่ใช่ icon tile เดิม)** — `_shared/illustrations.html` (`#illust-anxious`) 3 ขนาดตามบริบท (96/140/56px) ใช้แทน `.bb-empty-icon` tile ใน 4 หน้า vehicle admin ที่กำลัง migrate — ดู [vehicle_admin_page_contract.md §6](vehicle_admin_page_contract.md)
+
+### ✅ ปิดแล้ว (2026-08-07) — เดิม "⚠️ ค้างตรวจ (2026-07-22)"
+
+- **`.ue-chip` active/selected สี** — เช็กโค้ดจริงตอน apply page contract ให้ `vehicle_mileage.html` (§2): `ue.css` § CHIP (บรรทัด 103-104, comment ระบุแก้ 2026-07-28) **มี `border-color`/`color: var(--bb-accent-dk)` บน `.ue-chip.is-on`/`.ue-chip-dd.is-active > .ue-chip` อยู่แล้ว** ตรง spec §12 row 4 เป๊ะ (ไม่ fill พื้น, icon `FILL 1` คู่กัน) — ข้อกังวลเดิม (2026-07-22) ถูกแก้ไปแล้วในโค้ดตั้งแต่ 2026-07-28 แค่ไม่มีใครมาปิด entry นี้ ไม่ต้องแก้อะไรเพิ่ม
 
 ### ⏸ ค้าง — งานที่ redesign v2.1 ยังไม่ได้แตะ
 

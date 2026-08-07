@@ -1158,6 +1158,103 @@ body.bb-drawer-lock { overflow: hidden; }
 .bb-mcal-pdest { flex: 1; min-width: 0; font-size: .8rem; font-weight: 500; color: var(--bb-str); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bb-mcal-pchev { color: var(--bb-ph); width: .9375rem; height: .9375rem; flex-shrink: 0; }
 
+/* ─────────────────────────────────────────────────────────────
+   DAY-CELL OVERFLOW POPOVER (bb-daypop) — ย้ายจาก vercel.css .vc-cal-pop (2026-08-05)
+   popover "+N รายการ" ของ calendar-cell ในหน้า vehicle user-facing (pages/vehicle.js)
+   คนละตัวกับ .bb-mcal-pop (overflow popover ของ macro bb_calendar) — ห้ามใช้ชื่อซ้ำ
+   ───────────────────────────────────────────────────────────── */
+.popover.bb-daypop {
+    background: #fff;
+    border: 1px solid var(--bb-n200);
+    border-radius: var(--bb-r-surface);
+    box-shadow: var(--bb-shadow-lg);
+    width: 200px;
+    max-width: 200px;
+}
+.popover.bb-daypop .popover-header { display: none; }
+.popover.bb-daypop .popover-body {
+    position: relative;
+    z-index: 2;
+    padding: 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+.popover.bb-daypop .popover-arrow::before { border-color: var(--bb-n200) !important; }
+.popover.bb-daypop .popover-arrow::after  { border-color: #fff !important; }
+
+/* arrow ทรงกล่องคำพูด (สี่เหลี่ยมหมุน 45° + shadow ตัวเอง) แทน triangle เดิม — เฉพาะ
+   placement=top (ทิศเดียวที่ใช้จริง สั่งจาก JS ตรงๆ ไม่ใช้ auto แล้ว) — สีขาวคงที่ + อยู่ใต้
+   popover-body (z-index ต่ำกว่า) เพื่อไม่ให้เห็นรอยต่อกับแถวล่างสุด (2026-08-05) */
+.popover.bb-daypop.bs-popover-top > .popover-arrow,
+.popover.bb-daypop[data-popper-placement^="top"] > .popover-arrow {
+    width: 14px !important;
+    height: 14px !important;
+    bottom: -7px !important;
+    z-index: 1;
+}
+.popover.bb-daypop.bs-popover-top > .popover-arrow::before,
+.popover.bb-daypop[data-popper-placement^="top"] > .popover-arrow::before {
+    display: none !important;
+}
+.popover.bb-daypop.bs-popover-top > .popover-arrow::after,
+.popover.bb-daypop[data-popper-placement^="top"] > .popover-arrow::after {
+    top: 0 !important; left: 0 !important; bottom: auto !important;
+    width: 14px !important; height: 14px !important;
+    border: none !important;
+    border-right: 1px solid var(--bb-n200) !important;
+    border-bottom: 1px solid var(--bb-n200) !important;
+    background: #fff !important;
+    transform: rotate(45deg) !important;
+    box-shadow: 4px 4px 8px -2px rgba(0,0,0,.14) !important;
+}
+
+.bb-daypop-row {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: center;
+    column-gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--bb-n200);
+    cursor: pointer;
+    transition: background 80ms;
+}
+.bb-daypop-row:last-child { border-bottom: none; }
+.bb-daypop-row:hover      { background: var(--bb-n50); }
+/* ทั้ง row เปลี่ยนสีตามสถานะ ทั้ง background + ตัวอักษร (2026-08-05) — ไม่ใช้ dot แล้ว
+   เพราะ dot สีเปลี่ยนแต่ row ไม่เปลี่ยนทำให้ดูเหมือนสถานะไม่อัปเดต */
+.bb-daypop-row--pending  { background: var(--bb-wr-bg); }
+.bb-daypop-row--approver { background: var(--bb-info-bg); }
+.bb-daypop-row--approved { background: var(--bb-ok-bg); }
+.bb-daypop-row--rejected { background: var(--bb-dg-bg); }
+.bb-daypop-row--group    { background: var(--bb-accent-bg); }
+.bb-daypop-row--pending  .bb-daypop-time, .bb-daypop-row--pending  .bb-daypop-dest { color: var(--bb-wr-tx); }
+.bb-daypop-row--approver .bb-daypop-time, .bb-daypop-row--approver .bb-daypop-dest { color: var(--bb-info-tx); }
+.bb-daypop-row--approved .bb-daypop-time, .bb-daypop-row--approved .bb-daypop-dest { color: var(--bb-ok-tx); }
+.bb-daypop-row--rejected .bb-daypop-time, .bb-daypop-row--rejected .bb-daypop-dest { color: var(--bb-dg-tx); }
+.bb-daypop-row--group    .bb-daypop-time, .bb-daypop-row--group    .bb-daypop-dest { color: var(--bb-accent-dk); }
+
+.bb-daypop-time {
+    font-family: var(--vc-font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--bb-str);
+    font-variant-numeric: tabular-nums;
+}
+.bb-daypop-dest {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--bb-mut);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bb-daypop-dest-icon {
+    font-size: 12px;
+    vertical-align: -2px;
+    margin-right: 3px;
+    color: inherit;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    MILEAGE PAGE (bb-ml-*) — ย้ายจาก static/vehicle/css/vehicle_mileage.css (2026-07-01)
    page-specific ของหน้าเลขไมล์: toolbar · filter override · table · modal · cards

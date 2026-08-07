@@ -1,50 +1,50 @@
-{# room-modal-detail.html — Modal รายละเอียดการจองห้อง
+{# room_detail.html — Modal รายละเอียดการจองห้อง (migrate 2026-08-05: header → eyebrow+avatar ตาม vehicle_detail.html)
    JS: openEventDetail() อยู่ใน room.js
 #}
 <div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable bk-modal-dialog">
-        <div class="modal-content bk-modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="card modal-content border-0">
 
-            <div class="card-header bg-white border-0 pt-4 pb-3 px-4">
-                <div class="d-flex align-items-start gap-3">
-                    <div id="detailHeaderDot" class="room-detail-dot flex-shrink-0">
-                        <i id="detailHeaderIcon" data-lucide="people-roof" style="width:20px;height:20px;"></i>
+            {# ── Header: eyebrow + วันที่ + avatar ── #}
+            <div style="padding:14px 20px 0">
+                <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                    <div>
+                        <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)">#รายละเอียดการจองห้องประชุม</div>
+                        <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)" id="detailDateLine"></div>
                     </div>
-                    <div class="flex-grow-1">
-                        <div class="bk-detail-title">รายละเอียดการจองห้อง</div>
-                        <div id="detailDateLine" class="bk-detail-date"></div>
+                    <div id="detailStatusAvatar" class="bb-avatar flex-shrink-0" style="width:4.5rem;height:4.5rem;background:var(--bb-info-bg);color:var(--bb-info-tx)">
+                        <span class="material-symbols-rounded" style="font-size:2.5rem">mindfulness</span>
                     </div>
-                    <button type="button" class="btn-close bk-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
             </div>
 
-            <div class="bk-detail-divider"></div>
+            <div class="card-body">
+                <hr class="bk-divider">
 
-            <div class="bk-detail-info">
-                <div class="bk-detail-row">
-                    <i data-lucide="clock" class="bk-detail-icon"></i>
-                    <span id="detailTime" class="bk-detail-text"></span>
+                <div class="bk-detail-info">
+                    <div class="bk-detail-row">
+                        <span class="material-symbols-rounded bk-detail-icon">schedule</span>
+                        <span id="detailTime" class="bk-detail-text"></span>
+                    </div>
+                    <div class="bk-detail-row">
+                        <span class="material-symbols-rounded bk-detail-icon">add_home</span>
+                        <span id="detailRoom" class="bk-detail-text"></span>
+                    </div>
+                    <div class="bk-detail-row">
+                        <span class="material-symbols-rounded bk-detail-icon">sell</span>
+                        <span id="detailTitle" class="bk-detail-text"></span>
+                    </div>
                 </div>
-                <div class="bk-detail-row">
-                    <i data-lucide="door-open" class="bk-detail-icon"></i>
-                    <span id="detailRoom" class="bk-detail-text"></span>
+
+                <hr class="bk-detail-divider">
+
+                <div class="pt-3 pb-2">
+                    <span class="bk-detail-section-label">ผู้จอง</span>
                 </div>
-                <div class="bk-detail-row">
-                    <i data-lucide="file-text" class="bk-detail-icon"></i>
-                    <span id="detailTitle" class="bk-detail-text"></span>
-                </div>
-            </div>
 
-            <div class="bk-detail-divider"></div>
+                <div id="detailBookerBlock" class="pb-2"></div>
 
-            <div class="px-4 pt-4 pb-2">
-                <span class="bk-detail-section-label">ผู้จอง</span>
-            </div>
-
-            <div id="detailBookerBlock" class="px-4 pb-2"></div>
-
-            <div class="card-footer border-0 bg-white pb-3 pt-2">
-                <div id="detailActions" class="d-flex justify-content-end gap-2"></div>
+                <div id="detailActions" class="d-flex justify-content-end gap-2 mt-3"></div>
             </div>
 
         </div>

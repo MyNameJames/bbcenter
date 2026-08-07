@@ -23,12 +23,38 @@
     .fleet-table .bb-avatar [data-lucide],
     .fleet-table .bb-avatar .material-symbols-rounded { width: 24px; height: 24px; font-size: 24px; }
 
-    /* งานในสัปดาห์ (7 วัน toggle) — CSS พร้อมใช้ แต่ table จริงยังโชว์ "—" (ยังไม่มี per-day data
-       source จริง — driver_jobs มีแค่ count/เดือน) รอ scope งาน weekly-schedule แยกต่างหาก
+    /* thead — page contract 2026-08-07 (W1): พื้นขาว เหลือแค่เส้นบน-ล่าง n200, text mut ไม่ bold
+       แทน default .bb-table thead (พื้น n50/pill) ของ components.css — override เฉพาะหน้านี้ก่อน
+       (จุดเดียว ยังไม่ promote เข้า components.css จนกว่าจะใช้ ≥2 หน้า ตาม design_guideline.md §5 rule) */
+    .fleet-table thead th {
+        background: #fff;
+        border-top: 1px solid var(--bb-n200);
+        border-bottom: 1px solid var(--bb-n200);
+        color: var(--bb-mut);
+        font-weight: 500;
+    }
+
+    /* illustration (empty state + confirm modal) — เทาอ่อนกว่า n300 ปกติเล็กน้อยเพื่อไม่แย่ง content
+       (page contract 2026-08-07) · ขนาดกำหนดที่ width/height ของ <svg> เอง ไม่ใช่ font-size */
+    .mf-illust { color: #C9C9C9; }
+    .mf-confirm-card {
+        border-radius: 20px; /* exception เฉพาะ confirm modal — ดู design_guideline.md §14 drift ledger */
+        max-width: 340px;
+        margin: auto;
+        padding: 32px 28px 28px;
+        text-align: center;
+        box-shadow: var(--bb-shadow-lg);
+    }
+    .mf-confirm-title { margin: 0; font-size: 14px; font-weight: 500; color: var(--bb-mut); }
+    .mf-confirm-name  { margin: 4px 0 0; font-size: 22px; font-weight: 700; color: var(--bb-str); }
+    .mf-confirm-desc  { margin: 10px 0 0; font-size: 14px; color: var(--bb-mut); line-height: 1.6; }
+
+    /* งานในสัปดาห์ (7 วัน toggle) — ผูกข้อมูลจริงแล้ว (2026-08-05, ดู _compute_driver_week_status
+       ใน views/vehicle/vehicle_admin.py) chevron ซ้าย-ขวา สลับสัปดาห์จริงผ่าน AJAX
        สีตาม design guideline v2.1 (ink = active ไม่ใช่ฟ้าตามภาพต้นฉบับ — เขียวเก็บไว้ 2 หน้าที่เดิม) */
     .fleet-week { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
     .fleet-week-label { font-size: 12px; font-weight: 500; color: var(--bb-mut); white-space: nowrap; text-align: center; }
-    .fleet-week-days-row { display: inline-flex; align-items: center; gap: 4px; }
+    .fleet-week-days-row { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
     .fleet-week-nav {
         display: inline-flex; align-items: center; justify-content: center;
         width: 24px; height: 24px; padding: 0; border: none; background: transparent;
@@ -36,16 +62,17 @@
     }
     .fleet-week-nav [data-lucide] { width: 16px; height: 16px; }
     .fleet-week-nav:hover { background: var(--bb-n100); color: var(--bb-str); }
-    .fleet-week-days { display: inline-flex; gap: 4px; }
+    .fleet-week-days { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
     .fleet-day {
         display: inline-flex; align-items: center; justify-content: center;
         width: 28px; height: 28px; border-radius: var(--bb-r-pill);
         background: var(--bb-n100); color: var(--bb-n500);
         font-size: 11px; font-weight: 600;
     }
-    /* ดำ = มาทำงานปกติตามเวลา · ส้ม(wr) = วันนั้นมี OT */
-    .fleet-day.is-on { background: var(--bb-ink); color: #fff; }
-    .fleet-day.is-wr { background: var(--bb-wr); color: #fff; }
+    /* ดำ = มีงาน+ขับจริง · ส้ม(wr) = มีงาน+ขับจริง+OT · ฟ้า(info) = มีงานแต่ไม่ได้ขับ */
+    .fleet-day.is-on { background: var(--bb-ink); color: var(--bb-n0); }
+    .fleet-day.is-wr { background: var(--bb-wr); color: var(--bb-n0); }
+    .fleet-day.is-info { background: var(--bb-info); color: var(--bb-n0); }
 
     /* Mockup เท่านั้น — เส้นประคั่น section เหมือน bk-divider (assignModal/bookingModal)
        ไม่ import จาก vehicle_calendar.css ตรงๆ เพราะหน้านี้ไม่โหลดไฟล์นั้น (ไม่เกี่ยวกับ calendar) */
@@ -73,101 +100,105 @@
         background: #fff;
     }
 
-    .profile-upload{
-    width:140px;
-    height:140px;
-    margin:auto;
-    position:relative;
-}
+    /* Driver avatar upload circle (#addDriverModal) — custom เฉพาะหน้านี้ (ไม่ใช่ canonical
+       component เพราะยังไม่มี "avatar uploader" ใน CHEATSHEET) — retokenize เป็น --bb-* ล้วน
+       radius = pill ตาม §5 (avatar อยู่ในกลุ่ม "กดได้") */
+    .profile-upload{ width:140px; height:140px; margin:auto; position:relative; }
+    .profile-upload img{
+        width:100%; height:100%; border-radius:var(--bb-r-pill); object-fit:cover;
+        display:none; border:1px solid var(--bb-n200);
+    }
+    .profile-placeholder{
+        width:100%; height:100%; border-radius:var(--bb-r-pill); background:var(--bb-n100);
+        display:flex; align-items:center; justify-content:center; border:1px solid var(--bb-n200);
+    }
+    .profile-placeholder .material-symbols-rounded{ font-size:72px; color:var(--bb-mut); }
+    .upload-btn, .remove-btn{
+        position:absolute; width:42px; height:42px; border:none; border-radius:var(--bb-r-pill);
+        display:flex; align-items:center; justify-content:center; cursor:pointer;
+        color:var(--bb-n0); transition:.2s;
+    }
+    .upload-btn{ right:2px; bottom:2px; background:var(--bb-ink); }
+    .upload-btn:hover{ background:var(--bb-ink-h); }
+    .remove-btn{ left:2px; bottom:2px; background:var(--bb-ink); }
+    .remove-btn:hover{ background:var(--bb-ink-h); }
+    .upload-btn .material-symbols-rounded, .remove-btn .material-symbols-rounded{ font-size:20px; }
 
-.profile-upload img{
-    width:100%;
-    height:100%;
-    border-radius:50%;
-    object-fit:cover;
-    display:none;
-    border:1px solid #e5e7eb;
-}
+    /* Driver ID-card upload (dropzone ว่าง ↔ การ์ดอัปโหลดเสร็จ) — custom เฉพาะหน้านี้ตามภาพ
+       mockup ต้นแบบ (ยังไม่ formalize เข้า Upload() component — CHEATSHEET §Form/Input มี
+       Upload() อยู่แล้วแต่ไม่มี progress-bar state) — retokenize เป็น --bb-* ล้วน
+       radius = surface(8) ตาม §5 (การ์ด/ไอคอนกล่อง ไม่ใช่ของกดได้) */
+    .file-card {
+        border: 1px solid var(--bb-n200);
+        border-radius: var(--bb-r-surface);
+        padding: 12px 16px;
+        background-color: var(--bb-n0);
+        transition: all 0.2s ease;
+    }
+    .file-icon-box {
+        width: 44px; height: 44px;
+        background-color: var(--bb-accent-bg);
+        border-radius: var(--bb-r-surface);
+        color: var(--bb-accent-dk);
+        font-size: 1.3rem;
+    }
+    .file-name {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--bb-str);
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-remove {
+        background: none; border: none; color: var(--bb-mut);
+        font-size: 1.1rem; padding: 0; cursor: pointer; line-height: 1;
+    }
+    .btn-remove:hover { color: var(--bb-str); }
+    .custom-progress {
+        height: 4px; background-color: var(--bb-n100);
+        border-radius: var(--bb-r-pill); overflow: hidden;
+    }
+    .custom-progress .progress-bar { background-color: var(--bb-accent); border-radius: var(--bb-r-pill); }
+    .file-card-empty {
+        border: 1.5px dashed var(--bb-n300) !important;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
 
-.profile-placeholder{
-    width:100%;
-    height:100%;
-    border-radius:50%;
-    background:#f3f4f6;
+    /* Driver table — สถานะ badge เดิม (.bb-status-inline) ทำเป็น <button> คลิกสลับ
+       พร้อม/ไม่พร้อมขับรถได้ทันที — reset ปุ่มเปล่าให้หน้าตาเหมือน span เดิมทุกอย่าง */
+    .fleet-status-toggle {
+        border: none; background: none; padding: 0; margin: 0;
+        font: inherit; cursor: pointer;
+    }
 
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    /* คลิกการ์ด "อัปโหลดแล้ว" (#idcardUploadCard) → เปิด #idcardPreviewModal ดูรูปเต็ม
+       (ปุ่มลบ #idcardRemoveBtn อยู่ในการ์ดเดียวกัน กันคลิกทะลุด้วย JS ไม่ใช่ CSS) */
+    #idcardUploadCard { cursor: pointer; }
+    .idcard-preview-close {
+        position: absolute; top: 12px; right: 12px;
+        width: 36px; height: 36px; border: none; border-radius: var(--bb-r-pill);
+        background: var(--bb-ink); color: var(--bb-n0);
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .idcard-preview-close:hover { background: var(--bb-ink-h); }
+    .idcard-preview-close .material-symbols-rounded { font-size: 20px; }
 
-    border:1px solid #e5e7eb;
-}
-
-.profile-placeholder .material-symbols-rounded{
-    font-size:72px;
-    color:#9ca3af;
-}
-
-.upload-btn,
-.remove-btn{
-
-    position:absolute;
-
-    width:42px;
-    height:42px;
-
-    border:none;
-    border-radius:50%;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    cursor:pointer;
-
-    color:#fff;
-
-    transition:.2s;
-}
-
-/* เพิ่มรูป */
-
-.upload-btn{
-
-    right:2px;
-    bottom:2px;
-
-    background:#000;
-}
-
-.upload-btn:hover{
-    background:#222;
-}
-
-/* ลบรูป */
-
-.remove-btn{
-
-    left:2px;
-    bottom:2px;
-
-    background:#000;
-}
-
-.remove-btn:hover{
-    background:#222;
-}
-
-.upload-btn .material-symbols-rounded,
-.remove-btn .material-symbols-rounded{
-
-    font-size:20px;
-}
+    /* หน้านี้ modal ไม่มี backdrop มืดของ Bootstrap อยู่แล้ว (convention เดิม — เงาแทนขอบ ไม่มี
+       dim พื้นหลัง) เปิด #idcardPreviewModal ซ้อนบน #addDriverModal ที่เปิดอยู่ก่อนเลยดูเป็นชั้น
+       เดียวกัน — ใส่ overlay มืดของตัวเอง (data-bs-backdrop="false" ปิด backdrop ของ Bootstrap
+       ไปแล้ว กันซ้อนสองชั้น) + ดัน z-index ให้เหนือ modal อื่นที่อาจเปิดค้างอยู่แน่ๆ */
+    #idcardPreviewModal {
+        z-index: 1090;
+        background: rgba(0, 0, 0, .6);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 {% include '_shared/tab2.html' %}
 {% from '_shared/tab2.html' import tab2_tabs %}
+{% include '_shared/illustrations.html' %}
 
 <div class="pt-3 pb-3" id="fleetTabWrap">
     {{ tab2_tabs([
@@ -255,12 +286,10 @@
             </table>
         </div>
         {% else %}
-        <div class="vc-empty">
-            <div class="vc-empty-icon">
-                <span class="material-symbols-rounded" style="font-size:20px;">directions_car</span>
-            </div>
-            <p class="vc-empty-title">ยังไม่มีรถในระบบ</p>
-            <p class="vc-empty-desc">เพิ่มรถคันแรกเพื่อเริ่มจัดการกองยานพาหนะ</p>
+        <div class="bb-empty py-4">
+            <svg width="96" height="118" viewBox="0 0 185 227" class="mf-illust d-block mx-auto mb-3"><use href="#illust-anxious"></use></svg>
+            <p class="bb-empty-title">ยังไม่มีรถในระบบ</p>
+            <p class="bb-empty-desc">เพิ่มรถคันแรกเพื่อเริ่มจัดการกองยานพาหนะ</p>
             <button type="button" class="bb-btn is-pri"
                     data-bs-toggle="modal" data-bs-target="#addVehicleModal"
                     title="เพิ่มรถใหม่">
@@ -278,9 +307,12 @@
 <div id="fleetPanelDrivers" class="d-none">
 
     {# ── คนขับ — bb-table (promoted จาก mockup → ใช้จริง, ผูก drivers จริง, 2026-07-30)
-       "งานในสัปดาห์" ยังโชว์ "—" เท่านั้น — ไม่มี per-day data source จริง (driver_jobs มีแค่
-       count/เดือน ไม่ใช่ schedule รายวัน) ต้อง scope แยก (นิยาม OT + week-nav) ก่อนต่อของจริง #}
-    <div class="fleet-table" id="fleetDriverTable">
+       "งานในสัปดาห์" ผูกข้อมูลจริงแล้ว (2026-08-05) — ดู _compute_driver_week_status()
+       ใน views/vehicle/vehicle_admin.py: งาน=VehicleBooking.status='approved' (ครอบ is_ad_hoc
+       ด้วย) + representative row (assigned_vehicle_id ไม่ว่าง) เท่านั้น ตาม vehicle_product_spec.md
+       priority ต่อวัน: ขับจริง+OT(is-wr) > ขับจริง(is-on) > มีงานไม่ได้ขับ(is-info) > ไม่มีงาน(off)
+       วันอนาคตของสัปดาห์นี้ = off เสมอ (ยังไม่ถึงวันจริง) #}
+    <div class="fleet-table" id="fleetDriverTable" data-week-start="{{ week_start }}">
         <div class="d-flex gap-2 pb-3">
             <button type="button" class="bb-btn is-pri" title="เพิ่มคนขับในระบบ"
                     data-bs-toggle="modal" data-bs-target="#addDriverModal">
@@ -330,26 +362,48 @@
                         <td class="bb-cell-strong">
                             {{ d.name }}
                             <span class="bb-cell-sub">{{ d.phone or '—' }}</span>
-                        </td>
-                        <td><span style="color:var(--bb-mut)">—</span></td>
-                        <td>
-                            {% if d.is_active %}
-                            <span class="bb-status-inline is-ok"><span class="material-symbols-rounded">check_circle</span>พร้อมขับรถ</span>
-                            {% else %}
-                            <span class="bb-status-inline is-neutral"><span class="material-symbols-rounded">circle</span>ไม่พร้อมขับรถ</span>
+                            {% if d.linked_user %}
+                            <span class="bb-badge is-neutral mt-1">@{{ d.linked_user.username }}</span>
                             {% endif %}
                         </td>
                         <td>
+                            {# chevron ทุกแถวคุม "สัปดาห์ปัจจุบัน" ตัวเดียวกันร่วมกันทั้งตาราง
+                               (ไม่ใช่ต่อแถว) — คลิกที่ปุ่มไหนก็ได้ ทุกแถว re-render พร้อมกันผ่าน
+                               vehicle_fleet.js (fetch /vehicle/admin/driver-week) #}
+                            <div class="fleet-week">
+                                <div class="fleet-week-days-row">
+                                    <button type="button" class="fleet-week-nav" data-dir="prev" title="สัปดาห์ก่อนหน้า">
+                                        <span class="material-symbols-rounded">chevron_left</span>
+                                    </button>
+                                    <span class="fleet-week-label">{{ week_label }}</span>
+                                    <button type="button" class="fleet-week-nav" data-dir="next" title="สัปดาห์ถัดไป">
+                                        <span class="material-symbols-rounded">chevron_right</span>
+                                    </button>
+                                </div>
+                                <div class="fleet-week-days">
+                                    {% set day_labels = ['S','M','T','W','T','F','S'] %}
+                                    {% for status in driver_week_status.get(d.id, ['off']*7) %}
+                                    <span class="fleet-day{% if status != 'off' %} is-{{ status }}{% endif %}">{{ day_labels[loop.index0] }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <button type="button" class="bb-status-inline fleet-status-toggle mf-driver-toggle-active {{ 'is-ok' if d.is_active else 'is-neutral' }}" title="กดเพื่อสลับสถานะ">
+                                <span class="material-symbols-rounded">{{ 'check_circle' if d.is_active else 'circle' }}</span>{{ 'พร้อมขับรถ' if d.is_active else 'ไม่พร้อมขับรถ' }}
+                            </button>
+                        </td>
+                        <td>
                             <div class="d-flex gap-1">
-                                <button type="button" class="bb-btn is-sec is-icon mf-driver-view"
+                                <!-- <button type="button" class="bb-btn is-sec is-icon mf-driver-view"
                                         data-bs-toggle="modal" data-bs-target="#driverDetailModal" title="ดูข้อมูล">
                                     <span class="material-symbols-rounded">visibility</span>
-                                </button>
+                                </button> -->
                                 <button type="button" class="bb-btn is-sec is-icon mf-driver-edit"
                                         data-bs-toggle="modal" data-bs-target="#addDriverModal" title="แก้ไข">
                                     <span class="material-symbols-rounded">edit</span>
                                 </button>
-                                <button type="button" class="bb-btn is-sec is-icon mf-driver-delete"
+                                <button type="button" class="bb-btn is-sec is-icon mf-driver-delete text-danger"
                                         data-bs-toggle="modal" data-bs-target="#deleteDriverModal" title="ลบ">
                                     <span class="material-symbols-rounded">delete</span>
                                 </button>
@@ -361,12 +415,10 @@
             </table>
         </div>
         {% else %}
-        <div class="vc-empty">
-            <div class="vc-empty-icon">
-                <span class="material-symbols-rounded" style="font-size:20px;">group</span>
-            </div>
-            <p class="vc-empty-title">ยังไม่มีคนขับ</p>
-            <p class="vc-empty-desc">เพิ่มคนขับเพื่อให้สามารถมอบหมายงานได้</p>
+        <div class="bb-empty py-4">
+            <svg width="96" height="118" viewBox="0 0 185 227" class="mf-illust d-block mx-auto mb-3"><use href="#illust-anxious"></use></svg>
+            <p class="bb-empty-title">ยังไม่มีคนขับ</p>
+            <p class="bb-empty-desc">เพิ่มคนขับเพื่อให้สามารถมอบหมายงานได้</p>
             <button type="button" class="bb-btn is-pri"
                     data-bs-toggle="modal" data-bs-target="#addDriverModal" title="เพิ่มคนขับใหม่">
                 <span class="material-symbols-rounded">add</span>
@@ -375,49 +427,6 @@
         </div>
         {% endif %}
     </div>
-
-        {# ── Approvers (read-only) ── #}
-        <div class="vc-card">
-            <div class="vc-card-head">
-                <h3 class="vc-card-head-title">
-                    <i data-lucide="shield-check" class="vc-icon-sm"></i>
-                    ผู้อนุมัติประจำกอง
-                    <span class="vc-card-head-meta">{{ approvers|length }} คน</span>
-                </h3>
-                <div class="vc-card-head-actions">
-                    <span class="mf-readonly-note">
-                        <i data-lucide="lock" class="vc-icon-sm"></i>
-                        ดูได้อย่างเดียว
-                    </span>
-                </div>
-            </div>
-
-            {% if approvers %}
-            <div class="mf-stagger">
-                {% for row in approvers %}
-                <div class="mf-approver-row vc-list-item">
-                    <p class="mf-approver-name">{{ row.user.full_name or row.user.username }}</p>
-                    <div class="mf-approver-meta">
-                        <span class="mf-username-chip">@{{ row.user.username }}</span>
-                        <span class="mf-dept-chip">{{ row.dept.name }}</span>
-                        {% if row.user.email %}
-                        <span class="vc-dot-sep">·</span>
-                        <span>{{ row.user.email }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="vc-empty">
-                <div class="vc-empty-icon">
-                    <i data-lucide="shield-check" style="width:20px;height:20px;"></i>
-                </div>
-                <p class="vc-empty-title">ยังไม่มีผู้อนุมัติในระบบ</p>
-                <p class="vc-empty-desc">ติดต่อ superadmin เพื่อกำหนดผู้อนุมัติ</p>
-            </div>
-            {% endif %}
-        </div>
 
 </div>
 {% endblock %}
@@ -539,9 +548,9 @@
 
                     <div id="avServiceSection" class="d-none">
                         <hr class="fleet-divider">
-                        <div class="text-uppercase mb-2" style="font-size:.75rem;color:var(--bb-mut)">
-                            <span class="material-symbols-rounded" style="font-size:14px;vertical-align:-2px">build</span>
-                            นัดซ่อม / ต่อภาษี
+                        <div class="mb-2">
+                            <label class="form-label fw-bold mb-0 text-dark">นัดซ่อม / ต่อภาษี</label>
+                            <div class="form-text mt-1 text-secondary" style="font-size: 0.875rem;"><span class="text-danger">*</span> ข้อมูลสำหรับการนัดซ่อมและต่อภาษี</div>
                         </div>
                         <div class="row g-2 mb-2">
                             <div class="col-4">
@@ -589,7 +598,7 @@
    relatedTarget เอง (ไม่ใช่ data-bs-toggle) — เข้า handler เดียวกันได้เพราะ driverRowOf() ใช้
    .closest() ซึ่ง match ตัวเองได้ถ้า element ที่ส่งมาตรง selector อยู่แล้ว #}
 <div class="modal fade" id="addDriverModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered ">
         <div class="card modal-content border-0">
             <form action="/admin/manage-fleet" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add_driver" id="ed_action">
@@ -609,45 +618,24 @@
                 </div>
 
                 <div class="card-body">
-
                     <hr class="fleet-divider mb-2">
-                    
                     <div class="row g-2 mb-3 mt-2">
                         <div class="col-12 text-center">
-<div class="profile-upload">
-
-    <img id="profilePreview" src="" alt="Profile">
-
-    <div id="profilePlaceholder" class="profile-placeholder">
-        <span class="material-symbols-rounded">face</span>
-    </div>
-
-    <!-- ลบรูป -->
-    <button
-        type="button"
-        id="removeProfile"
-        class="remove-btn"
-       
-    >
-        <span class="material-symbols-rounded">delete</span>
-    </button>
-
-    <!-- เพิ่มรูป -->
-    <label for="profileImage" class="upload-btn">
-        <span class="material-symbols-rounded">add</span>
-    </label>
-
-    <input
-        type="file"
-        id="profileImage"
-        accept="image/*"
-        hidden
-    >
-
-</div>
+                            <div class="profile-upload">
+                                <img id="profilePreview" src="" alt="Profile">
+                                <div id="profilePlaceholder" class="profile-placeholder">
+                                    <span class="material-symbols-rounded">face</span>
+                                </div>
+                                <button type="button" id="removeProfile" class="remove-btn">
+                                    <span class="material-symbols-rounded">delete</span>
+                                </button>
+                                <label for="profileImage" class="upload-btn">
+                                    <span class="material-symbols-rounded">add</span>
+                                </label>
+                                <input type="file" id="profileImage" name="avatar_image" accept="image/*" hidden>
+                            </div>
                         </div>
                     </div>
-                    
                     
                     <hr class="fleet-divider">
 
@@ -662,38 +650,72 @@
 
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label" for="ed_national_id">เลขบัตรประชาชน</label>
-                            <div class="bb-field-box">
-                                <input type="text" id="ed_national_id" name="national_id" class="form-control" autocomplete="off" inputmode="numeric" maxlength="13" placeholder="X XXXX XXXXX XX X">
-                            </div>
-                        </div>
-                        <div class="col-6">
                             <label class="form-label" for="ed_phone">เบอร์โทร</label>
                             <div class="bb-field-box">
                                 <input type="text" id="ed_phone" name="phone" class="form-control" autocomplete="off" placeholder="081-234-5678">
                             </div>
-                        </div>
-                    </div>
 
-                    <div class="row g-2 mb-3">
+                        </div>
                         <div class="col-6">
                             <label class="form-label" for="ed_user_id">ผูก User Account</label>
-                            <select class="form-select" id="ed_user_id" name="user_id">
+                            <select class="bb-field-box form-select" id="ed_user_id" name="user_id">
                                 <option value="">— ไม่ผูก —</option>
                                 {% for u in users %}
                                 <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-6">
-
-                        </div>
                     </div>
 
                     <hr class="fleet-divider">
+                    <div class=" my-4">
+                    <!-- Header Labels -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold mb-0 text-dark">ที่อยู่ตามบัตรประชาชน</label>
+                        <div class="form-text mt-1 text-secondary" style="font-size: 0.875rem;"><span class="text-danger">*</span> เอกสารจำเป็นต่อการทำเรื่องเบิกเงิน</div>
+                    </div>
 
-                    <div class="text-uppercase mb-2" style="font-size:.75rem;color:var(--bb-mut)">
-                        ที่อยู่ตามบัตรประชาชน
+                    {# state 2 — อัปโหลดเสร็จแล้ว (ไฟล์เดิม/ไฟล์ที่เพิ่งเลือก) — ซ่อนโดย default,
+                       toggle ผ่าน vehicle_fleet.js (เลือกไฟล์ใหม่ / prefill ตอน edit ถ้ามีรูปเดิม) #}
+                    <div class="file-card shadow-sm d-none" id="idcardUploadCard">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="file-icon-box d-flex align-items-center justify-content-center flex-shrink-0">
+                                <span class="material-symbols-rounded">landscape_2</span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="file-name text-truncate" id="idcardFileName">—</span>
+                                    <button type="button" class="btn-remove ms-2" aria-label="ลบไฟล์" id="idcardRemoveBtn">
+                                        <span class="material-symbols-rounded" style="font-size:1.1rem">close</span>
+                                    </button>
+                                </div>
+                                <div class="custom-progress">
+                                    <div class="progress-bar" id="idcardProgressBar" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {# state 1 — ว่าง (ยังไม่มีไฟล์) — click เปิด file picker ผ่าน <label for> #}
+                    <label class="file-card file-card-empty w-100" id="idcardDropzone" for="idcardFile">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="file-icon-box d-flex align-items-center justify-content-center flex-shrink-0">
+                                <span class="material-symbols-rounded">cloud_upload</span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">คลิกอัปโหลดรูปบัตรประชาชน</div>
+                                <div class="bb-subtext text-truncate">JPG, PNG (ไม่เกิน 5MB)</div>
+                            </div>
+                        </div>
+                        <input type="file" id="idcardFile" name="id_card_image" accept="image/*" hidden>
+                    </label>
+                </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                        <label class="form-label" for="ed_national_id">เลขบัตรประชาชน</label>
+                            <div class="bb-field-box">
+                                <input type="text" id="ed_national_id" name="national_id" class="form-control" autocomplete="off" inputmode="numeric" maxlength="13" placeholder="X XXXX XXXXX XX X">
+                            </div>
+                        </div>
                     </div>
                     <div class="row g-2 mb-2">
                         <div class="col-12">
@@ -732,31 +754,6 @@
                         </div>
                     </div>
 
-                    <hr class="fleet-divider">
-
-                    <div class="row g-2 mb-2 mt-3">
-                        <div class="col-6">
-                            <label class="form-label">รูปโปรไฟล์คนขับ <span id="ed_avatar_hint" class="d-none" style="color:var(--bb-mut);font-weight:400">(เว้นว่าง = ใช้รูปเดิม)</span></label>
-                            <input type="file" id="ed_avatar_file" name="avatar_image" accept="image/*" class="form-control">
-                            <a href="#" id="ed_avatar_current" class="d-inline-flex align-items-center gap-1 mt-1" style="display:none;font-size:.8125rem;color:var(--bb-accent-dk)" target="_blank" rel="noopener">
-                                <span class="material-symbols-rounded" style="font-size:16px">image</span>รูปปัจจุบัน
-                            </a>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">รูปบัตรประชาชน <span id="ed_idcard_hint" class="d-none" style="color:var(--bb-mut);font-weight:400">(เว้นว่าง = ใช้รูปเดิม)</span></label>
-                            <input type="file" id="ed_idcard_file" name="id_card_image" accept="image/*" class="form-control">
-                            <a href="#" id="ed_idcard_current" class="d-inline-flex align-items-center gap-1 mt-1" style="display:none;font-size:.8125rem;color:var(--bb-accent-dk)" target="_blank" rel="noopener">
-                                <span class="material-symbols-rounded" style="font-size:16px">image</span>รูปปัจจุบัน
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="mf-switch-row mt-1">
-                        <span class="form-label mb-0">สถานะใช้งาน</span>
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" id="ed_active" name="is_active" value="1" checked>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="card-footer bg-white border-top-0 d-flex justify-content-end gap-2 pt-2 pb-3">
@@ -768,31 +765,37 @@
     </div>
 </div>
 
-{# ── Delete Vehicle ── #}
-<div class="modal fade vc-modal" id="deleteVehicleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
+{# ── Preview รูปบัตรประชาชน — คลิกที่ #idcardUploadCard ใน #addDriverModal เปิดขึ้นมา
+   กว้างพอดีจอ (max-width min(92vw,900px), รูป max-height 85vh object-fit:contain) · ไม่มี
+   header/footer ปกติ — ปุ่มปิดลอยที่มุมขวาบน "ข้างในภาพ" (.idcard-preview-close) แทน #}
+<div class="modal fade" id="idcardPreviewModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-transparent border-0 p-2" style="box-shadow:none">
+            <div class="position-relative">
+                <img id="idcardPreviewImg" src="" alt="รูปบัตรประชาชน"
+                     style="width:100%;max-height:85vh;object-fit:contain;border-radius:var(--bb-r-surface);display:block;box-shadow:var(--bb-shadow-lg)">
+                <button type="button" class="idcard-preview-close" data-bs-dismiss="modal" aria-label="ปิด">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Delete Vehicle — illustration confirm card (page contract W3, 2026-08-07) ── #}
+<div class="modal fade" id="deleteVehicleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content mf-confirm-card border-0">
             <form id="deleteVehicleForm" action="/admin/manage-fleet" method="POST">
                 <input type="hidden" name="action" value="delete_vehicle">
                 <input type="hidden" name="vehicle_id" id="dv_id">
-                <div class="modal-header">
-                    <h5 class="modal-title" style="color: var(--vc-red);">
-                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
-                        ลบรถ
-                    </h5>
-                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
-                </div>
-                <div class="modal-body" style="text-align: center;">
-                    <p class="vc-td-muted" style="margin-bottom: 4px;">ต้องการลบรถ</p>
-                    <p style="font-weight: 600; color: var(--vc-fg); margin-bottom: var(--vc-space-2);" id="dv_name"></p>
-                    <p class="vc-td-muted" style="font-size: var(--vc-text-xs); margin: 0;">ข้อมูลจะถูกลบถาวร ไม่สามารถกู้คืนได้</p>
-                </div>
-                <div class="modal-footer" style="justify-content: center;">
-                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="vc-btn vc-btn-danger">
-                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
-                        ลบเลย
-                    </button>
+                <svg width="140" height="172" viewBox="0 0 185 227" class="mf-illust d-block mx-auto mb-3"><use href="#illust-anxious"></use></svg>
+                <p class="mf-confirm-title">ลบรถคันนี้ใช่ไหม</p>
+                <p class="mf-confirm-name" id="dv_name"></p>
+                <p class="mf-confirm-desc">ข้อมูลจะถูกลบถาวร<br>ไม่สามารถกู้คืนได้</p>
+                <div class="d-flex justify-content-center gap-2 mt-4">
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-danger" title="ลบรถคันนี้ถาวร">ลบเลย</button>
                 </div>
             </form>
         </div>
@@ -856,38 +859,27 @@
     </div>
 </div>
 
-{# ── Delete Driver ── #}
-<div class="modal fade vc-modal" id="deleteDriverModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
+{# ── Delete Driver — illustration confirm card (page contract W3, 2026-08-07) ── #}
+<div class="modal fade" id="deleteDriverModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content mf-confirm-card border-0">
             <form action="/admin/manage-fleet" method="POST">
                 <input type="hidden" name="action" value="delete_driver">
                 <input type="hidden" name="driver_id" id="dd_id">
-                <div class="modal-header">
-                    <h5 class="modal-title" style="color: var(--vc-red);">
-                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
-                        ลบคนขับ
-                    </h5>
-                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="ปิด"></button>
-                </div>
-                <div class="modal-body" style="text-align: center;">
-                    <p class="vc-td-muted" style="margin-bottom: 4px;">ต้องการลบพนักงานขับรถ</p>
-                    <p style="font-weight: 600; color: var(--vc-fg); margin-bottom: var(--vc-space-2);" id="dd_name"></p>
-                    <p class="vc-td-muted" style="font-size: var(--vc-text-xs); margin: 0;">ออกจากระบบหรือไม่?</p>
-                </div>
-                <div class="modal-footer" style="justify-content: center;">
-                    <button type="button" class="vc-btn vc-btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="vc-btn vc-btn-danger">
-                        <i data-lucide="trash-2" class="vc-icon-sm"></i>
-                        ลบเลย
-                    </button>
+                <svg width="140" height="172" viewBox="0 0 185 227" class="mf-illust d-block mx-auto mb-3"><use href="#illust-anxious"></use></svg>
+                <p class="mf-confirm-title">ลบคนขับนี้ใช่ไหม</p>
+                <p class="mf-confirm-name" id="dd_name"></p>
+                <p class="mf-confirm-desc">ออกจากระบบและลบข้อมูลถาวร<br>ไม่สามารถกู้คืนได้</p>
+                <div class="d-flex justify-content-center gap-2 mt-4">
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal" title="ยกเลิก">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-danger" title="ลบคนขับนี้ถาวร">ลบเลย</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{# ── Vehicle History ── #}
+<!-- {# ── Vehicle History ── #}
 <div class="modal fade vc-modal" id="vehicleHistoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -927,60 +919,7 @@
             </div>
         </div>
     </div>
-</div>
-
-<script >
-const input = document.getElementById('profileImage');
-const preview = document.getElementById('profilePreview');
-const placeholder = document.getElementById('profilePlaceholder');
-
-input.addEventListener('change', function () {
-
-    const file = this.files[0];
-
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-
-        preview.src = e.target.result;
-        preview.style.display = 'block';
-
-        placeholder.style.display = 'none';
-
-    };
-
-    reader.readAsDataURL(file);
-
-});
-
-const removeBtn = document.getElementById("removeProfile");
-
-reader.onload = function(e){
-
-    preview.src = e.target.result;
-    preview.style.display = "block";
-
-    placeholder.style.display = "none";
-
-    removeBtn.style.display = "flex";
-};
-
-removeBtn.addEventListener("click", function(){
-
-    input.value = "";
-
-    preview.src = "";
-    preview.style.display = "none";
-
-    placeholder.style.display = "flex";
-
-    removeBtn.style.display = "none";
-
-});
-
-</script>
+</div> -->
 
 {% endblock %}
 

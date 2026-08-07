@@ -46,7 +46,8 @@
         'diversity-3': 'diversity_3', 'space-dashboard': 'space_dashboard', 'layout-dashboard': 'space_dashboard',
         'eye': 'visibility', 'eye-off': 'visibility_off', 'save': 'save', 'send': 'send',
         'award': 'workspace_premium', 'refresh-cw': 'refresh', 'star': 'star', 'heart': 'favorite',
-        'banknote': 'payments', 'draft': 'draft', 'lock': 'lock'
+        'banknote': 'payments', 'draft': 'draft', 'lock': 'lock',
+        'printer': 'print', 'receipt-text': 'receipt_long', 'rotate-ccw': 'restore', 'undo-2': 'undo'
     };
 
     var msName = function (lucide) { return MAP[lucide] || String(lucide).replace(/-/g, '_'); };

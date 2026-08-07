@@ -1,13 +1,9 @@
 /* ══════════════════════════════════════════════════
    pages/room.js — BB Center room booking calendar (ES module)
-   Calendar + booking + edit + detail. Pattern จาก pages/vehicle.js
+   Calendar + booking (create+edit merged) + detail. Migrate 2026-08-05: bb-* token +
+   Material Symbols icon (แทน vc-* + Lucide) · date/time ผ่าน DateField/TimeRangeField
+   component (core/js/bb-components.js) แทน flatpickr/native input. Pattern จาก pages/vehicle.js
 ══════════════════════════════════════════════════ */
-
-import { initIcons, bindModalReinit } from '../../core/js/icons.js';
-bindModalReinit();
-document.addEventListener('shown.bs.popover', () => {
-    document.querySelectorAll('.popover').forEach(tip => initIcons(tip));
-});
 
 document.addEventListener('keydown', (ev) => {
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
@@ -36,7 +32,7 @@ let currentDate = new Date();
 currentDate.setDate(1);
 let selectedDate = new Date();
 let calendarCollapsed = false;
-let bookingModal, editBookingModal, eventDetailModal;
+let bookingModal, eventDetailModal;
 
 const mockEvents = window.BOOKINGS || [];
 
@@ -50,10 +46,8 @@ function sortByTime(arr) {
 
 /* ── Init ──────────────────────────────────────── */
 bookingModal     = new bootstrap.Modal(document.getElementById('bookingModal'));
-editBookingModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
 eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
 
-initFlatpickr();
 renderCalendar();
 initMobileScrollCollapse();
 
@@ -95,16 +89,41 @@ if (calBody) {
     new MutationObserver(hideOtherMonthEvents).observe(calBody, { childList: true, subtree: true });
 }
 
-/* ── bookingForm validation ────────────────────── */
+/* ── Booking modal — DateField/TimeRangeField (component กลาง) ─────────────
+   2026-08-05: date/time ย้ายจาก native input → DateField/TimeRangeField
+   (core/js/bb-components.js, event 'bb-datefield:change'/'bb-timerangefield:change') ── */
+function bkDateFieldEl() { return document.getElementById('bk_date_field'); }
+function bkTimeRangeEl() { return document.getElementById('bk_timerange_field'); }
+function bkSetDate(ds) { bkDateFieldEl()?.__bbSetValue(ds); }
+function bkClearDate()  { bkDateFieldEl()?.__bbClear(); }
+function bkSetTimeRange(start, end) { bkTimeRangeEl()?.__bbSetRange(start, end); }
+
+/* จอง+แก้ไข ใช้ #bookingForm เดียวกัน (2026-08-05) — สลับปุ่ม/form.action ตามโหมด
+   create ใช้ data-create-action ที่ template เก็บไว้ (กัน action ค้างจาก edit ครั้งก่อน) */
+function bkSetMode(mode) {
+    const isEdit = mode === 'edit';
+    const btn = document.getElementById('bkSubmitBtn');
+    if (btn) {
+        btn.title = isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันการจองห้อง';
+        btn.innerHTML = isEdit
+            ? 'บันทึก <span class="material-symbols-rounded vc-icon-sm">check</span>'
+            : 'ยืนยันการจอง <span class="material-symbols-rounded vc-icon-sm">arrow_forward</span>';
+    }
+}
+
 document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     this.classList.add('was-validated');
+    const date = bkDateFieldEl()?.__bbGetValue() || '';
+    if (!date) {
+        const err = document.getElementById('bk_date_err');
+        if (err) err.hidden = false;
+        return;
+    }
     if (!this.checkValidity()) return;
-    const date   = document.getElementById('bk_date').value;
-    const tStart = document.getElementById('bk_start_time').value;
-    const tEnd   = document.getElementById('bk_end_time').value;
-    document.getElementById('bk_start_datetime').value = date + 'T' + tStart;
-    document.getElementById('bk_end_datetime').value   = date + 'T' + tEnd;
+    const range = bkTimeRangeEl()?.__bbGetRange() || {};
+    document.getElementById('bk_start_datetime').value = date + 'T' + range.start;
+    document.getElementById('bk_end_datetime').value   = date + 'T' + range.end;
     this.submit();
 });
 document.querySelectorAll('#bookingForm [required]').forEach(field => {
@@ -118,16 +137,9 @@ document.getElementById('bookingModal')?.addEventListener('hidden.bs.modal', fun
         f.classList.remove('was-validated');
         f.reset();
         f.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
+        const err = document.getElementById('bk_date_err');
+        if (err) err.hidden = true;
     }
-});
-
-document.getElementById('editBookingForm')?.addEventListener('submit', function(e) {
-    this.classList.add('was-validated');
-    if (!this.checkValidity()) e.preventDefault();
-});
-document.getElementById('editBookingModal')?.addEventListener('hidden.bs.modal', function() {
-    const f = document.getElementById('editBookingForm');
-    if (f) f.classList.remove('was-validated');
 });
 
 /* ── Mobile scroll collapse ────────────────────── */
@@ -165,60 +177,6 @@ function expandCalendar() {
     });
 }
 
-/* ── Flatpickr (booking modal time pickers) ────── */
-function initFlatpickr() {
-    const bkDate = document.getElementById('bk_date');
-    if (bkDate) {
-        const today = new Date();
-        const pad   = n => String(n).padStart(2, '0');
-        bkDate.min  = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-    }
-    const bkStart = document.getElementById('bk_start_time');
-    const bkEnd   = document.getElementById('bk_end_time');
-    const bkDur   = document.getElementById('bk_duration_preview');
-    const updateDuration = () => {
-        if (!bkDur) return;
-        const s = bkStart?.value, e = bkEnd?.value;
-        if (!s || !e || e <= s) { bkDur.textContent = ''; return; }
-        const [sh, sm] = s.split(':').map(Number);
-        const [eh, em] = e.split(':').map(Number);
-        const mins = (eh * 60 + em) - (sh * 60 + sm);
-        const h = Math.floor(mins / 60), m = mins % 60;
-        const parts = [];
-        if (h) parts.push(`${h} ชม.`);
-        if (m) parts.push(`${m} นาที`);
-        bkDur.textContent = `ระยะเวลา ${parts.join(' ')}`;
-    };
-    if (bkStart && bkEnd) {
-        bkStart.addEventListener('change', () => {
-            bkEnd.min = bkStart.value;
-            if (bkEnd.value && bkEnd.value <= bkStart.value) bkEnd.value = '';
-            updateDuration();
-        });
-        bkEnd.addEventListener('change', updateDuration);
-    }
-}
-
-function initFlatpickrInEditModal() {
-    const sEl = document.querySelector('#editBookingModal #editStartDatetime');
-    const eEl = document.querySelector('#editBookingModal #editEndDatetime');
-    if (!sEl || !eEl || sEl._flatpickr) return;
-    const eFp = flatpickr(eEl, {
-        enableTime:true, time_24hr:true, minuteIncrement:5,
-        locale:'th', dateFormat:'Y-m-d\\TH:i', altInput:true, altFormat:'d/m/Y H:i'
-    });
-    flatpickr(sEl, {
-        enableTime:true, time_24hr:true, minuteIncrement:5,
-        locale:'th', dateFormat:'Y-m-d\\TH:i', altInput:true, altFormat:'d/m/Y H:i',
-        onChange(sel) {
-            if (!sel.length) return;
-            const d=sel[0], ds=flatpickr.formatDate(d,'Y-m-d');
-            eFp.set('minDate', ds + 'T00:00');
-            eFp.set('maxDate', ds + 'T23:59');
-        }
-    });
-}
-
 /* ── Calendar render ──────────────────────────── */
 function renderCalendar() {
     const year = currentDate.getFullYear(), month = currentDate.getMonth();
@@ -241,7 +199,6 @@ function renderCalendar() {
     for (let i = 1; i <= fill; i++) createCell(i, year, month + 1, true);
     if (calendarCollapsed) collapseCalendarCells();
     updateMobileList(selectedDate || today);
-    initIcons(calBody);
 }
 
 function createCell(day, year, month, isOtherMonth, isToday = false) {
@@ -308,14 +265,14 @@ function buildDesktopEventCards(dayEvents, ds) {
         const popContent = extra.map(e => {
             const kind = roomKind(e.room);
             return `<div class="d-flex align-items-center gap-2 mb-1 pb-1"
-                style="border-bottom:1px solid var(--vc-border);cursor:pointer;"
+                style="border-bottom:1px solid var(--bb-n200);cursor:pointer;"
                 onclick="bootstrap.Popover.getInstance(document.querySelector('[data-ds=\\'${ds}\\']'))?.hide(); setTimeout(()=>openEventDetail(${e.id}),200)">
-                <span class="vc-badge room-badge--${kind}" style="font-size:.7rem;">${e.room || ''}</span>
+                <span class="bb-badge ${kind === 'small' ? 'is-info' : 'is-wr'}" style="font-size:.7rem;">${e.room || ''}</span>
                 <span style="font-size:.75rem;font-weight:600;">${e.time}</span>
                 <span class="text-truncate" style="font-size:.72rem;max-width:110px;">${e.title}</span>
             </div>`;
         }).join('');
-        html += `<div class="event-more popover-trigger" data-ds="${ds}"
+        html += `<div class="event-more vc-cal-more popover-trigger" data-ds="${ds}"
             data-bs-toggle="popover" data-bs-placement="auto" data-bs-html="true"
             data-bs-title="<span style='font-size:.8rem;font-weight:600;'>+${extra.length} รายการ</span>"
             data-bs-content="${popContent.replace(/"/g, '&quot;')}"
@@ -324,7 +281,10 @@ function buildDesktopEventCards(dayEvents, ds) {
 
     dayEvents.slice(0, maxShow).forEach(e => {
         const kind = roomKind(e.room);
-        html += `<div class="event-card room-${kind} p-1" style="border-radius:4px;"
+        const tone = kind === 'small'
+            ? 'background:var(--bb-info-bg);color:var(--bb-info-tx);'
+            : 'background:var(--bb-wr-bg);color:var(--bb-wr-tx);';
+        html += `<div class="event-card p-1" style="border-radius:4px;${tone}"
             onclick="event.stopPropagation(); openEventDetail(${e.id})">
             <div class="row g-1 d-flex align-items-center text-truncate">
                 <span class="col-auto" style="font-size:.72rem;font-weight:600;">${e.time}</span>
@@ -359,44 +319,47 @@ function updateMobileList(dateObj) {
     const content = document.getElementById('mobileListContent');
 
     if (!dayEvents.length) {
-        content.innerHTML = `<div class="room-mobile-empty">
-            <i data-lucide="calendar-x"></i>
-            <small>ไม่มีการจองในวันนี้</small>
+        content.innerHTML = `<div class="vrc-m-empty">
+            <div class="vrc-m-empty-icon"><span class="material-symbols-rounded">event_busy</span></div>
+            <div class="vrc-m-empty-title">ไม่มีการจองในวันนี้</div>
+            <div class="vrc-m-empty-sub">แตะปุ่ม “จองห้อง” ด้านบนเพื่อเพิ่มการจองใหม่</div>
         </div>`;
-        initIcons(content);
         return;
     }
 
     let html = '';
     dayEvents.forEach(e => {
         const kind = roomKind(e.room);
+        const tone = kind === 'small'
+            ? 'background:var(--bb-info-bg);color:var(--bb-info-tx)'
+            : 'background:var(--bb-wr-bg);color:var(--bb-wr-tx)';
         html += `
         <div class="card mb-2" onclick="openEventDetail(${e.id})" style="cursor:pointer;">
             <div class="card-body py-2 px-3">
                 <div class="d-flex align-items-center gap-3">
 
-                    <div class="room-list-dot room-list-dot--${kind}">
-                        <i data-lucide="door-open" class="vc-icon-sm"></i>
+                    <div class="bb-avatar flex-shrink-0" style="width:36px;height:36px;${tone}">
+                        <span class="material-symbols-rounded vc-icon-sm">add_home</span>
                     </div>
 
                     <div class="flex-grow-1 overflow-hidden">
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--vc-fg);">${e.title}</span>
-                            <span class="vc-badge room-badge--${kind} flex-shrink-0" style="font-size:.68rem;">${e.room}</span>
+                            <span class="fw-semibold text-truncate" style="font-size:.88rem;color:var(--bb-str);">${e.title}</span>
+                            <span class="bb-badge ${kind === 'small' ? 'is-info' : 'is-wr'} flex-shrink-0" style="font-size:.68rem;">${e.room}</span>
                         </div>
-                        <div class="d-flex align-items-center gap-1 flex-wrap" style="font-size:.75rem;color:var(--vc-fg-muted);">
-                            <i data-lucide="user" class="vc-icon-sm"></i>${e.booker}
+                        <div class="d-flex align-items-center gap-1 flex-wrap" style="font-size:.75rem;color:var(--bb-mut);">
+                            <span class="material-symbols-rounded">face</span>${e.booker}
                             <span class="mx-1">·</span>
-                            <i data-lucide="clock" class="vc-icon-sm"></i>${e.time} – ${e.timeEnd}
+                            <span class="material-symbols-rounded vc-icon-sm">schedule</span>${e.time} – ${e.timeEnd}
                         </div>
                     </div>
 
                     ${e.isOwner ? `
                     <div class="flex-shrink-0">
-                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm"
+                        <button type="button" class="bb-btn is-sec is-icon is-sm"
                                 title="แก้ไขการจอง"
                                 onclick="event.stopPropagation(); openEditBookingModal(${e.id})">
-                            <i data-lucide="pencil" class="vc-icon-sm"></i>
+                            <span class="material-symbols-rounded vc-icon-sm">edit</span>
                         </button>
                     </div>` : ''}
 
@@ -406,7 +369,6 @@ function updateMobileList(dateObj) {
     });
 
     content.innerHTML = html;
-    initIcons(content);
 }
 
 function _thaiDateFull(dateStr) {
@@ -420,10 +382,11 @@ function openEventDetail(eventId) {
     if (!e) return;
 
     const kind = roomKind(e.room);
-    const headerDot = document.getElementById('detailHeaderDot');
-    headerDot.className = `room-detail-dot room-detail-dot--${kind} flex-shrink-0`;
-    document.getElementById('detailHeaderIcon').outerHTML =
-        `<i id="detailHeaderIcon" data-lucide="door-open" style="width:20px;height:20px;"></i>`;
+    const avatar = document.getElementById('detailStatusAvatar');
+    if (avatar) {
+        avatar.style.background = kind === 'small' ? 'var(--bb-info-bg)' : 'var(--bb-wr-bg)';
+        avatar.style.color      = kind === 'small' ? 'var(--bb-info-tx)' : 'var(--bb-wr-tx)';
+    }
 
     document.getElementById('detailDateLine').textContent = _thaiDateFull(e.date);
     document.getElementById('detailTime').textContent  = `${e.time} – ${e.timeEnd}`;
@@ -432,12 +395,12 @@ function openEventDetail(eventId) {
 
     document.getElementById('detailBookerBlock').innerHTML = `
         <div class="d-flex align-items-center gap-3 py-2">
-            <div class="room-list-dot room-list-dot--${kind} flex-shrink-0">
-                <i data-lucide="user" class="vc-icon-sm"></i>
+            <div class="bb-avatar flex-shrink-0" style="width:2.25rem;height:2.25rem;background:var(--bb-n100);color:var(--bb-mut)">
+                <span class="material-symbols-rounded">face</span>
             </div>
             <div class="flex-grow-1 overflow-hidden">
-                <div class="fw-semibold text-truncate" style="font-size:.9rem;color:var(--vc-fg);">${e.booker || '–'}</div>
-                <div class="text-truncate" style="font-size:.78rem;color:var(--vc-fg-muted);">${e.dept || ''}</div>
+                <div class="fw-semibold text-truncate" style="font-size:.9rem;color:var(--bb-str);">${e.booker || '–'}</div>
+                <div class="text-truncate" style="font-size:.78rem;color:var(--bb-mut);">${e.dept || ''}</div>
             </div>
         </div>`;
 
@@ -445,19 +408,20 @@ function openEventDetail(eventId) {
     actDiv.innerHTML = '';
     if (e.isOwner) {
         actDiv.innerHTML = `
-            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" title="แก้ไขการจอง"
+            <button type="button" class="bb-btn is-sec is-sm" title="แก้ไขการจอง"
                 onclick="eventDetailModal.hide();setTimeout(()=>openEditBookingModal(${e.id}),300)">
-                <i data-lucide="pencil" class="vc-icon-sm"></i>
+                <span class="material-symbols-rounded vc-icon-sm">edit</span>
                 แก้ไข
             </button>
             <form action="${e.deleteUrl}" method="POST"
                 onsubmit="return confirm('ยืนยันยกเลิกการจองห้องนี้?')">
-                <button type="submit" class="vc-btn vc-btn-danger vc-btn-sm" title="ยกเลิกการจอง">
-                    <i data-lucide="trash-2" class="vc-icon-sm"></i>
+                <button type="submit" class="bb-btn is-danger is-sm" title="ยกเลิกการจอง">
+                    <span class="material-symbols-rounded vc-icon-sm">delete</span>
                     ยกเลิก
                 </button>
             </form>`;
     }
+    actDiv.classList.toggle('d-none', !actDiv.innerHTML);
 
     eventDetailModal.show();
 }
@@ -467,20 +431,22 @@ function openEditBookingModal(eventId) {
     if (!e) return;
     eventDetailModal?.hide();
 
-    const form = document.getElementById('editBookingForm');
+    const form = document.getElementById('bookingForm');
     form.action = e.editUrl;
     form.classList.remove('was-validated');
-    document.getElementById('editRoomName').value = e.room || '';
-    document.getElementById('editTitle').value    = e.title || '';
+    form.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
 
-    initFlatpickrInEditModal();
-    setTimeout(() => {
-        const sd = document.getElementById('editStartDatetime')?._flatpickr;
-        const ed = document.getElementById('editEndDatetime')?._flatpickr;
-        if (sd) sd.setDate(`${e.date}T${e.time}`);
-        if (ed) ed.setDate(`${e.date}T${e.timeEnd}`);
-        editBookingModal.show();
-    }, 50);
+    document.getElementById('bk_room_name').value = e.room  || '';
+    document.getElementById('bk_title').value     = e.title || '';
+    bkSetDate(e.date);
+    bkSetTimeRange(e.time || '09:00', e.timeEnd || '10:00');
+
+    form.querySelectorAll('[required]').forEach(field => {
+        if (field.value) field.classList.add('is-valid');
+    });
+
+    bkSetMode('edit');
+    bookingModal.show();
 }
 
 function openBookingModal(dateStr = null) {
@@ -490,23 +456,23 @@ function openBookingModal(dateStr = null) {
         ? `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`
         : null);
 
-    const bkDate  = document.getElementById('bk_date');
-    const bkStart = document.getElementById('bk_start_time');
-    const bkEnd   = document.getElementById('bk_end_time');
-    if (ds && bkDate) bkDate.value = ds;
-    if (bkStart && !bkStart.value) bkStart.value = '09:00';
-    if (bkEnd && !bkEnd.value)     bkEnd.value   = '10:00';
+    const form = document.getElementById('bookingForm');
+    form.action = form.dataset.createAction;   // คืนค่า action กัน edit ครั้งก่อนค้างไว้
 
+    if (ds) bkSetDate(ds); else bkClearDate();
+    bkSetTimeRange('09:00', '10:00');
+
+    bkSetMode('create');
     bookingModal.show();
 }
 
-/* ── ทำซ้ำ: เปิด modal จองใหม่ prefill ห้อง+หัวข้อเดิม (เว้นวัน/เวลา) ── */
+/* ── ทำซ้ำ: เปิด modal จองใหม่ prefill ห้อง+หัวข้อเดิม (เว้นวัน/เวลา) — ใช้โดยปุ่ม "ทำซ้ำ" ใน dashboard.html
+   (url_for('room.index', copy_from=b.id) ผูกไว้ที่ auth_view.py) ── */
 function openDuplicateModal(eventId) {
     const e = mockEvents.find(b => b.id === eventId);
     if (!e) return;
     openBookingModal();   // modal เปล่า: set เวลา default
-    const bkDate = document.getElementById('bk_date');
-    if (bkDate) bkDate.value = '';   // เว้นวันให้เลือกใหม่
+    bkClearDate();         // เว้นวันให้เลือกใหม่
     const title = document.getElementById('bk_title');
     if (title) title.value = e.title || '';
     // ห้องเดิม — เลือกถ้ายังมีในตัวเลือก (กันห้องถูกปิด)

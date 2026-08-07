@@ -3,178 +3,118 @@
       และ vehicle/admin/vehicle_admin.html (admin, ไม่โหลด vehicle_calendar.css/vehicle.css เลย — .bk-detail-*
       ไม่มี custom style ที่นั่น, JS: vehicle_admin.js) — แก้ไฟล์นี้ต้องเช็กทั้ง 2 ฝั่งเสมอ
    JS: openEventDetail() (user, vehicle.js) / openAdminBookingDetail()+openAdminEdit() (admin, vehicle_admin.js)
-   2026-05-23 premium redesign: eyebrow + hero date (date-first hierarchy);
-   status pill = full-radius + matching border + bk-pill-in anim;
-   info rows reorder = plate (primary) → driver → time + tabular-nums + monospace plate;
-   members = card tiles with avatar ring + stagger animation.
-   2026-08-03 (user-facing scope เท่านั้น): ตัดปุ่มปิด X (CSS ใน vehicle_calendar.css) ตาม modal_pattern.md —
-   footer โชว์ปุ่ม "ปิด" เสมอเมื่อไม่มี action อื่น (openEventDetail()/openAdminBookingDetail() เพิ่ม fallback เดียวกัน),
-   ไม่ยุบ footer หายแบบเดิม. #detailEditSection **ยังใช้งานจริงฝั่ง admin** (openAdminEdit()/cancelAdminEdit()/
-   saveAdminEdit() ใน vehicle_admin.js) — ห้ามลบ.
-   Scoped via .bk-detail-content (ไม่ leak ไป room-modal-detail.html ที่ใช้ classes ซ้อนกัน).
+   2026-08-05 redesign (เชื่อมข้อมูลจริงเข้า mockup): header (eyebrow/date/status badge+duration/status avatar),
+   บล็อกรถ+คนขับ (#detailVehicleDriverSection) โชว์เฉพาะ status ∈ {waiting_approver, approved} เท่านั้น —
+   ทั้งฝั่ง user (openEventDetail) และ admin (openAdminBookingDetail) ต้องเซ็ต class d-none/ลบเองตาม status.
+   ผู้โดยสารแต่ละคน = การ์ดเส้นประ (ไม่ใช่ bordered tile เดิม) รวม note ต่อคน (VehicleBooking.note, เพิ่มคอลัมน์
+   2026-08-05 — migration app/migrations/2026-08-05_vehicle-booking-add-note.sql). คนแรกไม่มีเส้นประบน
+   (hr.bk-divider ของ header คั่นไปแล้ว กันเส้นประซ้อนกัน 2 เส้น).
+   #detailEditSection **ยังใช้งานจริงฝั่ง admin** (openAdminEdit()/cancelAdminEdit()/saveAdminEdit() ใน
+   vehicle_admin.js) — ห้ามลบ. Footer #detailActions ไม่มี action ใด = ซ่อนทั้งแถว (d-none) — เลิกโชว์ปุ่ม
+   "ปิด" เดี่ยวๆ แล้ว (2026-08-05, กลับกฎเดิมของไฟล์นี้เอง — 2026-08-03 เคยเพิ่ม fallback นี้ไว้ ไม่ใช่กฎจาก
+   modal_pattern.md — ปิดผ่าน backdrop/Escape แทน, ปุ่ม X ก็เอาออกแล้ว).
 #}
 <div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="card modal-content border-0">
 
-            {# ── Header: eyebrow + hero date + status pill ── #}
-            <div class="bk-detail-head">
-                <!-- <div class="bk-detail-eyebrow">การจองรถ</div> -->
-                <!-- <span id="detailStatusPill" class="bk-detail-status bk-detail-status--approved"> -->
-                    <!-- <i id="detailStatusIcon" data-lucide="circle-check"></i> -->
-                    <!-- <span id="detailStatusText">อนุมัติแล้ว</span> -->
-                </span>
-                <!-- <h3 id="detailDateLine" class="bk-detail-date text-header text-accent fw-bold pt-2"></h3> -->
-            </div>
-
+            {# ── Header: eyebrow + date + status badge + duration + status avatar ── #}
             <div style="padding:14px 20px 0">
                 <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
                     <div>
                         <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)">#แบบฟอร์มจองรถ</div>
                         <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)" id="detailDateLine"></div>
                         <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
-                            <span style="font-size:.8125rem;color:var(--bb-mut)">สถานะ : <span class="py-1 px-2 me-2 bb-badge is-wr" style="font-size:11px;">รออนุมัติ</span><span class="ps-2 fw-semibold" style="color:var(--bb-str);  border-left:1px solid var(--bb-n500);">12:00–17:00 (5 ชม.)</span></span>
+                            <span style="font-size:.8125rem;color:var(--bb-mut)">สถานะ :
+                                <span id="detailStatusBadge" class="py-1 px-2 me-2 bb-badge" style="font-size:11px;"></span>
+                                <span id="detailTimeText" class="ps-2 fw-semibold" style="color:var(--bb-str); border-left:1px solid var(--bb-n500);"></span>
+                            </span>
                         </div>
                     </div>
-                    <div class="bb-avatar flex-shrink-0 is-wr" style="width:4.5rem;height:4.5rem;background:var(--bb-wr-bg);color:var(--bb-wr-tx)">
-                        <span class="material-symbols-rounded" style="font-size:2.5rem">hail</span>
+                    <div id="detailStatusAvatar" class="bb-avatar flex-shrink-0" style="width:4.5rem;height:4.5rem">
+                        <span id="detailStatusIcon" class="material-symbols-rounded" style="font-size:2.5rem">hail</span>
                     </div>
                 </div>
             </div>
 
             <div class="card-body">
-                <hr class="bk-divider">    
-                
-                <div class="d-flex row p-2 m-1 d-flex gap-3">
+                <hr class="bk-divider">
 
-                    <div class="d-flex gap-3" style="cursor:pointer;">
-                        <div class="bb-avatar flex-shrink-0" style="width:2.25rem;height:2.25rem;background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded">directions_car</span></div>
-                        <div class="flex-grow-1" style="min-width:0">
-                            <div class="d-flex justify-content-start align-items-center gap-2">
-                                <span class="fw-semibold" style="color:var(--bb-str)">1นจ9208</span>
-                            </div>
-                            <div class="bb-subtext">TOYOTA All New Commuter</div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <div class="bb-card d-flex row p-2 m-1 d-flex gap-3">
-                   <div class="d-flex gap-3 justify-content-start align-items-start" style="cursor:pointer;">
-                        <div class="bb-avatar flex-shrink-0" style="width:2.25rem;height:2.25rem;background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded">face</span></div>
-                        <div class="flex-grow-1" style="min-width:0">
-                            <div class="d-flex justify-content-between align-items-center gap-2">
-                                <div class="d-flex flex-column" style="min-width:0">
-                                <span class="fw-semibold" style="color:var(--bb-str)">ธิกรณ์ หงโสภา</span>
-                                <div class="bb-subtext">092-420-2896</div>
-                            </div>
-                            <button type="button" class="bb-btn is-pri is-sm flex-shrink-0" style="white-space:nowrap" onclick="">โทร</button>
+                {# ── รถ + คนขับ — โชว์เฉพาะ status ∈ {waiting_approver, approved} (admin จัดรถ/คนขับแล้วเท่านั้น) ── #}
+                <div id="detailVehicleDriverSection" class="d-none">
+                    <div class="d-flex row p-2 m-1 d-flex gap-3">
+                        <div class="d-flex gap-3">
+                            <div class="bb-avatar flex-shrink-0" style="width:2.25rem;height:2.25rem;background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded">directions_car</span></div>
+                            <div class="flex-grow-1" style="min-width:0">
+                                <div class="d-flex justify-content-start align-items-center gap-2">
+                                    <span id="detailPlate" class="fw-semibold" style="color:var(--bb-str)"></span>
+                                </div>
+                                <div id="detailVehicleModel" class="bb-subtext"></div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-
-                <div class="py-3 mt-2 ms-1 ps-2" style="border-top:1px dashed var(--bb-n300);">
-                    <span class="fw-semibold" style="color:var(--bb-str)">พระมหาจตุพร ธมฺมาโภ</span>
-                    <div class="bb-subtext">หน้าอาคารเรียน 1 → วัดพระธรรมกาย</div>
-                    <div class="bb-subtext d-flex align-items-center gap-1 pt-1">
-                        เรียนหนังสือ
-                        <span>|</span>
-                        <span class="material-symbols-rounded">directions_run</span>3 รูป/คน
-                        <span>|</span>
-                        <span class="material-symbols-rounded">schedule</span>12:00–17:00 (5 ชม.)
-                    </div>
-                    <div class="bb-subtext pt-2">หมายเหตุ: เครื่องลงเวลา 09:00 น.</div>
-                </div>
-                <div class="py-3 mt-2 ms-1 ps-2" style="border-top:1px dashed var(--bb-n300);">
-                    <span class="fw-semibold" style="color:var(--bb-str)">พระมหาจตุพร ธมฺมาโภ</span>
-                    <div class="bb-subtext">หน้าอาคารเรียน 1 → วัดพระธรรมกาย</div>
-                    <div class="bb-subtext d-flex align-items-center gap-1 pt-1">
-                        เรียนหนังสือ
-                        <span>|</span>
-                        <span class="material-symbols-rounded">directions_run</span>3 รูป/คน
-                        <span>|</span>
-                        <span class="material-symbols-rounded">schedule</span>12:00–17:00 (5 ชม.)
-                    </div>
-                    <div class="bb-subtext pt-2">หมายเหตุ: เครื่องลงเวลา 09:00 น.</div>
-                </div>
-                <div class="d-flex justify-content-between align-items-center gap-2 mt-4">
-                    <div class="d-flex gap-2 ms-auto">
-                        <button type="button" class="bb-btn is-sec" style="color: var(--bb-dg-tx);" ><span class="material-symbols-rounded">delete</span>ลบการจองนี้</button>
-                        <button type="button" class="bb-btn is-pri"><span class="material-symbols-rounded">edit</span>แก้ไข</button>
+                    <div id="detailDriverLine" class="bb-card d-flex row p-2 m-1 d-flex gap-3">
+                        <div class="d-flex gap-3 justify-content-start align-items-start">
+                            <div class="bb-avatar flex-shrink-0" style="width:2.25rem;height:2.25rem;background:var(--bb-n100);color:var(--bb-mut)"><span class="material-symbols-rounded">face</span></div>
+                            <div class="flex-grow-1" style="min-width:0">
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div class="d-flex flex-column" style="min-width:0">
+                                        <span id="detailDriverName" class="fw-semibold" style="color:var(--bb-str)"></span>
+                                        <div id="detailDriverPhone" class="bb-subtext"></div>
+                                    </div>
+                                    <button type="button" id="detailDriverCallBtn" class="bb-btn is-pri is-sm flex-shrink-0" style="white-space:nowrap">โทร</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-            </div>
+                {# ── ผู้โดยสาร (JS inject — การ์ดเส้นประต่อคน, รวม note) ── #}
+                <div id="detailMembersList"></div>
 
-
-            {# ── Info rows: plate (primary) → driver → time ── #}
-            <!-- <div class="bk-detail-info">
-                <div class="bk-detail-row bk-detail-row--primary">
-                    <i data-lucide="car" class="bk-detail-icon"></i>
-                    <span id="detailPlate" class="bk-detail-text"></span>
-                </div>
-                <div id="detailDriverLine" class="bk-detail-row">
-                    <i data-lucide="user" class="bk-detail-icon"></i>
-                    <span id="detailDriver" class="bk-detail-text"></span>
-                </div>
-                <div class="bk-detail-row">
-                    <i data-lucide="clock" class="bk-detail-icon"></i>
-                    <span id="detailTime" class="bk-detail-text"></span>
-                </div>
-            </div> -->
-
-            <div class="bk-detail-divider"></div>
-
-            {# ── Section header: ผู้โดยสาร (label ซ้าย, count ขวา) ── #}
-            <div class="bk-detail-section-header">
-                <span class="bk-detail-section-label">ผู้โดยสาร</span>
-                <span id="detailMemberCount" class="bk-detail-section-count">1 คน</span>
-            </div>
-
-            {# ── Members list (JS inject — bk-detail-member tiles) ── #}
-            <div id="detailMembersList" class="bk-detail-members">
-            </div>
-
-            {# ── Edit form (admin only — toggled by openAdminEdit()/cancelAdminEdit() ใน vehicle_admin.js, หน้า vehicle_admin.html) ── #}
-            <div id="detailEditSection" class="d-none px-3 pb-3">
-                <div class="bk-detail-divider mb-3"></div>
-                <div class="row g-2">
-                    <div class="col-6">
-                        <label class="form-label small fw-semibold mb-1">วันเริ่ม</label>
-                        <input type="datetime-local" id="editStart" class="form-control form-control-sm">
+                {# ── Edit form (admin only — toggled by openAdminEdit()/cancelAdminEdit() ใน vehicle_admin.js, หน้า vehicle_admin.html) ── #}
+                <div id="detailEditSection" class="d-none pb-3">
+                    <div class="bk-detail-divider mb-3"></div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold mb-1">วันเริ่ม</label>
+                            <input type="datetime-local" id="editStart" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold mb-1">วันสิ้นสุด</label>
+                            <input type="datetime-local" id="editEnd" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold mb-1">ปลายทาง</label>
+                            <input type="text" id="editDest" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold mb-1">วัตถุประสงค์</label>
+                            <input type="text" id="editPurpose" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold mb-1">จำนวนผู้โดยสาร</label>
+                            <input type="number" id="editPax" class="form-control form-control-sm" min="1">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold mb-1">จุดขึ้นรถ</label>
+                            <input type="text" id="editPickup" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold mb-1">หมายเหตุ</label>
+                            <input type="text" id="editNote" class="form-control form-control-sm" maxlength="300">
+                        </div>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-semibold mb-1">วันสิ้นสุด</label>
-                        <input type="datetime-local" id="editEnd" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label small fw-semibold mb-1">ปลายทาง</label>
-                        <input type="text" id="editDest" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label small fw-semibold mb-1">วัตถุประสงค์</label>
-                        <input type="text" id="editPurpose" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-semibold mb-1">จำนวนผู้โดยสาร</label>
-                        <input type="number" id="editPax" class="form-control form-control-sm" min="1">
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-semibold mb-1">จุดขึ้นรถ</label>
-                        <input type="text" id="editPickup" class="form-control form-control-sm">
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" class="bb-btn is-sec is-sm" onclick="cancelAdminEdit()">ยกเลิก</button>
+                        <button type="button" class="bb-btn is-pri is-sm" onclick="saveAdminEdit()">บันทึก</button>
                     </div>
                 </div>
-                <div class="d-flex justify-content-end gap-2 mt-3">
-                    <button type="button" class="bb-btn is-sec is-sm" onclick="cancelAdminEdit()">ยกเลิก</button>
-                    <button type="button" class="bb-btn is-pri is-sm" onclick="saveAdminEdit()">บันทึก</button>
-                </div>
-            </div>
 
-            {# ── Footer actions: ยกเลิก/แก้ไข (single+owner+pending) — ไม่มี action ใด = ปุ่ม "ปิด" fallback (openEventDetail()) ── #}
-            <div class="bk-detail-footer">
-                <div id="detailActions" class="d-flex justify-content-end gap-2"></div>
+                {# ── Footer actions: ยกเลิก/แก้ไข (single+owner+pending) — ไม่มี action ใด = ปุ่ม "ปิด" fallback ── #}
+                <div id="detailActions" class="d-flex justify-content-end gap-2 mt-4"></div>
+
             </div>
 
         </div>

@@ -60,8 +60,10 @@ class VehicleBudget(db.Model):
     # ประวัติ used_amount + ledger ยังอยู่ครบ; KPI total/remaining ไม่นับ inactive
     is_active      = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
 
-    # 1 แผนก + 1 ประเภทงบ + 1 เดือน = 1 row เท่านั้น
-    __table_args__ = (db.UniqueConstraint('budget_type_id', 'department_id', 'year', 'month'),)
+    # 1 แผนก + 1 ประเภทงบ + 1 เดือน + 1 yearly_plan = 1 row (v2.28: เดิมไม่มี yearly_plan_id ร่วม
+    # constraint — แผนกเดียวกัน+เดือนเดียวกัน แต่คนละ plan (งบประจำปี vs งบพิเศษ) ต้องแยกเป็นคนละ row ได้
+    # NULL แต่ละแถวไม่เท่ากันเอง (SQL semantics) → งบเก่าก่อน v2.26 ที่ yearly_plan_id IS NULL ไม่กระทบ)
+    __table_args__ = (db.UniqueConstraint('budget_type_id', 'department_id', 'year', 'month', 'yearly_plan_id'),)
 
     @property
     def remaining(self):
@@ -149,6 +151,14 @@ class VehicleBudgetYearlyPlan(db.Model):
 
     created_at = db.Column(db.DateTime, default=get_bkk_time)
     updated_at = db.Column(db.DateTime, default=get_bkk_time, onupdate=get_bkk_time)
+
+    # v2.28 (2026-08-06): free-text label แยก "งบพิเศษ ทริป X" ออกจาก "งบประมาณประจำปี"
+    # เจตนา — ไม่ทำ enum/type column แยก (owner decision, ดู spec §7 out-of-scope)
+    name = db.Column(db.String(100), nullable=True)
+
+    # v2.28: plan ที่หน้า budget_manage auto-select เมื่อไม่มี ?plan_id= — invariant "มีได้แค่ 1
+    # plan ที่ is_default=True ในคราวเดียว" บังคับที่ service layer (set_default_plan()) ไม่ใช่ DB constraint
+    is_default = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
 
     @property
     def dept_allocation(self):

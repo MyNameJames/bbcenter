@@ -78,6 +78,7 @@ def book_vehicle_simple():
         passenger_count  = int(request.form.get('passenger_count', 1))
         need_driver      = request.form.get('need_driver') == 'on'
         pickup_location  = request.form.get('pickup_location', '').strip()
+        note             = request.form.get('note', '').strip()
 
         if start_dt < get_bkk_time():
             flash('ไม่สามารถจองย้อนหลังได้ กรุณาเลือกวันเวลาในอนาคต', 'warning')
@@ -102,6 +103,7 @@ def book_vehicle_simple():
             need_driver     = need_driver,
             status          = 'pending',
             pickup_location = pickup_location or None,
+            note            = note or None,
         )
         db.session.add(new_booking)
         db.session.flush()
@@ -144,6 +146,7 @@ def edit_booking(booking_id):
             booking.passenger_count = int(request.form.get('passenger_count', 1))
             booking.need_driver     = True if request.form.get('need_driver') else False
             booking.pickup_location = request.form.get('pickup_location', '').strip() or None
+            booking.note            = request.form.get('note', '').strip() or None
 
             db.session.commit()
             flash('อัปเดตข้อมูลการจองเรียบร้อยแล้ว', 'success')
@@ -185,6 +188,7 @@ def admin_edit_booking(booking_id):
         if pax:
             booking.passenger_count = int(pax)
         booking.pickup_location = request.form.get('pickup_location', '').strip() or None
+        booking.note            = request.form.get('note', '').strip() or None
         db.session.commit()
         return jsonify({'ok': True, 'msg': 'อัปเดตข้อมูลการจองแล้ว'})
     except Exception:

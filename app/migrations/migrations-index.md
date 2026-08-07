@@ -34,6 +34,8 @@
 | 2026-07-30 | [2026-07-30_add-vehicle-budget-yearly-plan.sql](2026-07-30_add-vehicle-budget-yearly-plan.sql) | `vehicle_budget_yearly_plan` (new) — เพดานเงินก้อนใหญ่ทั้งปี + แบ่งส่วนกลาง/ส่วนกอง รองรับ UI "เงินก้อนประจำปี" | [v2.24](../../docs/notes/database/schema.md#v224--vehiclebudgetyearlyplan-new-table-2026-07-30) |
 | 2026-07-31 | [2026-07-31_vehicle-add-vehicle-type.sql](2026-07-31_vehicle-add-vehicle-type.sql) | `vehicle` (+vehicle_type) — ประเภทรถ (pickup/van/truck6) รองรับ selector chip ใน addVehicleModal redesign | [v2.25](../../docs/notes/database/schema.md#v225--vehicle-vehicletype-2026-07-31) |
 | 2026-07-31 | [2026-07-31_vehicle-budget-yearly-plan-period-fk.sql](2026-07-31_vehicle-budget-yearly-plan-period-fk.sql) | `vehicle_budget_yearly_plan` (+start_date, +end_date NOT NULL, DROP UNIQUE on fiscal_year — table rebuild, backfill from old march-year rule), `vehicle_budget` (+yearly_plan_id FK nullable, +index) | [v2.26](../../docs/notes/database/schema.md#v226--vehiclebudgetyearlyplan-explicit-period--vehiclebudget-fk-link-2026-07-31) |
+| 2026-08-05 | [2026-08-05_vehicle-booking-add-note.sql](2026-08-05_vehicle-booking-add-note.sql) | `vehicle_booking` (+note) | [v2.27](../../docs/notes/database/schema.md#v227--vehiclebooking-note-2026-08-05) |
+| 2026-08-06 | [2026-08-06_vehicle-budget-yearly-plan-flexible.sql](2026-08-06_vehicle-budget-yearly-plan-flexible.sql) | `vehicle_budget_yearly_plan` (+name, +is_default), `vehicle_budget` (UniqueConstraint ขยายรวม `yearly_plan_id` — table rebuild, reindex `ix_vb_yearly_plan`+`ix_vb_active_period`) | [v2.28](../../docs/notes/database/schema.md#v228--vehiclebudgetyearlyplan-flexible-name--is_default--vehiclebudget-uniqueconstraint-ขยาย-2026-08-06) |
 
 ---
 

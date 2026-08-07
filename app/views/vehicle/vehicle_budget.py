@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, VehicleMileage,
                     SystemConfig, VehicleBudget, VehicleBudgetLog, VehicleDepartment,
                     BudgetType, Notification, VehicleBudgetYearlyPlan)
-from sqlalchemy import and_, extract, or_
+from sqlalchemy import and_, extract, func, or_
 from datetime import datetime, date, timedelta
 from calendar import monthrange
 from views.core.notification_service import (
@@ -28,6 +28,7 @@ def _handle_set_budget():
     amount      = float(request.form.get('budget_amount', 0))
     budget_type = request.form.get('budget_type', 'department')
     approver_id = request.form.get('approver_id') or None
+    note_extra  = (request.form.get('note') or '').strip()
     if approver_id:
         approver_id = int(approver_id)
 
@@ -55,11 +56,27 @@ def _handle_set_budget():
         department_id=dept_obj.id, yearly_plan_id=plan.id, budget_type_id=bt_obj.id
     ).first()
 
+    type_label = "ส่วนกลาง" if budget_type == 'central' else "งานกอง"
+
+    # กันตั้งเพดานเกินวงเงินที่ plan จัดสรรไว้ให้ประเภทนี้ (redesign 2026-08-07 — เดิมไม่มีการเช็กเลย
+    # แค่โชว์ progress bar เป็นข้อมูลประกอบ, ผู้ใช้ตัดสินใจให้บล็อกจริง) เทียบผลรวมงบย่อยอื่นในก้อนงบ
+    # +ประเภทเดียวกัน (ไม่รวมตัวเอง ถ้าเป็นการแก้ไข) กับ central_allocation/dept_allocation
+    pool = float(plan.central_allocation if budget_type == 'central' else plan.dept_allocation)
+    others_total = db.session.query(func.sum(VehicleBudget.budget_amount)).filter(
+        VehicleBudget.yearly_plan_id == plan.id,
+        VehicleBudget.budget_type_id == bt_obj.id,
+        VehicleBudget.id != (budget.id if budget else 0),
+    ).scalar() or 0
+    remaining = pool - float(others_total)
+    if amount > remaining:
+        flash(f'เกินวงเงิน{type_label}ของก้อนงบนี้ — เหลือจัดสรรได้อีก {remaining:,.0f} บาท', 'danger')
+        return
+
     if budget:
-        budget_svc.set_budget_amount(
-            budget, amount,
-            note=f'admin {current_user.username}: update budget {budget_type} {dept} plan#{plan.id} → {amount}',
-        )
+        note = f'admin {current_user.username}: update budget {budget_type} {dept} plan#{plan.id} → {amount}'
+        if note_extra:
+            note += f' | {note_extra}'
+        budget_svc.set_budget_amount(budget, amount, note=note)
         if budget_type == 'department':
             budget.approver_id = approver_id
     else:
@@ -73,12 +90,11 @@ def _handle_set_budget():
         )
         db.session.add(budget)
         db.session.flush()
-        budget_svc.set_budget_amount(
-            budget, amount,
-            note=f'admin {current_user.username}: create budget {budget_type} {dept} plan#{plan.id} = {amount}',
-        )
+        note = f'admin {current_user.username}: create budget {budget_type} {dept} plan#{plan.id} = {amount}'
+        if note_extra:
+            note += f' | {note_extra}'
+        budget_svc.set_budget_amount(budget, amount, note=note)
     db.session.commit()
-    type_label = "ส่วนกลาง" if budget_type == 'central' else "งานกอง"
     flash(f'ตั้งงบ{type_label} "{dept}" (ก้อนงบ {plan.fiscal_year + 543}) = {amount:,.0f} บาท เรียบร้อย', 'success')
 
 
@@ -153,6 +169,25 @@ def _handle_toggle_active():
         db.session.rollback()
         current_app.logger.exception('budget_manage:toggle_active failed')
         flash('เปลี่ยนสถานะไม่สำเร็จ เกิดข้อผิดพลาดภายในระบบ', 'danger')
+
+
+def _handle_delete_budget():
+    """ลบงบย่อยทิ้งถาวร (v2.29) — เชื่อมปุ่ม icon delete ในตาราง 'งบปิดแล้ว'
+    บล็อกที่ service layer ถ้างบนี้เคยมีการหักเงิน/ปรับยอดจริงแล้ว (ดู budget_svc.delete_budget)"""
+    try:
+        bid       = int(request.form.get('budget_id'))
+        budget    = VehicleBudget.query.get_or_404(bid)
+        dept_name = budget.department.name
+        budget_svc.delete_budget(budget)
+        db.session.commit()
+        flash(f'ลบงบ "{dept_name}" เรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'ลบไม่สำเร็จ: {e}', 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:delete_budget failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
 
 def _handle_extend_period():
@@ -230,6 +265,7 @@ def _handle_set_yearly_plan():
     pivot(fiscal_year) เดิมที่ต้อง compute ช่วงเดือนจาก march-hardcode)"""
     try:
         plan_id             = request.form.get('plan_id') or None
+        name                = (request.form.get('name') or '').strip()
         start_date_str      = (request.form.get('start_date') or '').strip()
         end_date_str        = (request.form.get('end_date') or '').strip()
         total_amount        = float(request.form.get('total_amount', 0))
@@ -255,11 +291,12 @@ def _handle_set_yearly_plan():
         budget_svc.set_yearly_plan(
             int(plan_id) if plan_id else None,
             fiscal_year, total_amount, central_allocation, start_date, end_date,
+            name=name,
             central_allocated_sum=central_allocated_sum,
             dept_allocated_sum=dept_allocated_sum,
         )
         db.session.commit()
-        flash(f'ตั้งเงินก้อนประจำปี {fiscal_year + 543} เรียบร้อย', 'success')
+        flash(f'ตั้ง "{name or ("เงินก้อนประจำปี " + str(fiscal_year + 543))}" เรียบร้อย', 'success')
     except ValueError as e:
         db.session.rollback()
         flash(f'บันทึกไม่สำเร็จ: {e}', 'danger')
@@ -267,6 +304,73 @@ def _handle_set_yearly_plan():
         db.session.rollback()
         current_app.logger.exception('budget_manage:set_yearly_plan failed')
         flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
+
+
+def _handle_set_default_plan():
+    """ตั้งก้อนงบให้เป็นค่าเริ่มต้น (v2.28) — เชื่อม radio ในตาราง 'รายชื่องบใหญ่'
+    (tab ใหม่). บล็อกถ้า plan ไม่ครอบวันนี้ (ดู budget_svc.set_default_plan)"""
+    try:
+        plan_id = int(request.form.get('plan_id'))
+        plan = budget_svc.set_default_plan(plan_id)
+        db.session.commit()
+        flash(f'ตั้ง "{plan.name or (str(plan.fiscal_year + 543))}" เป็นก้อนงบเริ่มต้นแล้ว', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'ตั้งค่าเริ่มต้นไม่สำเร็จ: {e}', 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:set_default_plan failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
+
+
+def _build_plan_list_rows(today):
+    """List ทุก VehicleBudgetYearlyPlan พร้อมยอดจัดสรร/ใช้ไปต่อ plan — ใช้ในตาราง 'รายชื่องบใหญ่'
+    (tab ใหม่ v2.28). allocated/used = SUM ของ VehicleBudget ที่ผูก yearly_plan_id นั้นตรงๆ (รวม
+    central+dept). covers_today กำหนดว่า radio 'ตั้งเป็นค่าเริ่มต้น' กดได้ไหม (ดู set_default_plan)
+
+    alloc_central/alloc_dept (2026-08-07): allocated แยกตาม budget_type — เดิม allocated รวมสอง
+    ประเภทปนกัน ใช้เทียบ central_allocation/dept_allocation ของ plan (คนละวงเงิน) ไม่ได้ตรง ๆ
+    เพิ่มไว้ให้ setBudgetModal (สร้างงบย่อยใหม่) โชว์วงเงินคงเหลือแยกประเภท + บล็อกเกินวงเงิน"""
+    plans = VehicleBudgetYearlyPlan.query.order_by(VehicleBudgetYearlyPlan.start_date.desc()).all()
+    if not plans:
+        return []
+
+    sum_rows = (db.session.query(
+                    VehicleBudget.yearly_plan_id,
+                    func.sum(VehicleBudget.budget_amount),
+                    func.sum(VehicleBudget.used_amount))
+                .filter(VehicleBudget.yearly_plan_id.isnot(None))
+                .group_by(VehicleBudget.yearly_plan_id)
+                .all())
+    sums_by_plan = {pid: (float(b or 0), float(u or 0)) for pid, b, u in sum_rows}
+
+    type_rows = (db.session.query(
+                    VehicleBudget.yearly_plan_id,
+                    BudgetType.name,
+                    func.sum(VehicleBudget.budget_amount))
+                .join(BudgetType, VehicleBudget.budget_type_id == BudgetType.id)
+                .filter(VehicleBudget.yearly_plan_id.isnot(None))
+                .group_by(VehicleBudget.yearly_plan_id, BudgetType.name)
+                .all())
+    alloc_by_type = {}
+    for pid, type_name, total in type_rows:
+        alloc_by_type.setdefault(pid, {'central': 0.0, 'department': 0.0})[type_name] = float(total or 0)
+
+    rows = []
+    for p in plans:
+        allocated, used = sums_by_plan.get(p.id, (0.0, 0.0))
+        by_type = alloc_by_type.get(p.id, {'central': 0.0, 'department': 0.0})
+        rows.append({
+            'plan':         p,
+            'allocated':    allocated,
+            'used':         used,
+            'alloc_central': by_type['central'],
+            'alloc_dept':    by_type['department'],
+            'covers_today': p.start_date <= today <= p.end_date,
+            'start_date_th': _fmt_date_th(p.start_date),
+            'end_date_th':   _fmt_date_th(p.end_date),
+        })
+    return rows
 
 
 def _build_pending_count_map(pending_bookings):
@@ -500,6 +604,8 @@ def budget_manage():
             'extend_period':   _handle_extend_period,
             'cancel_booking':  _handle_cancel_booking,
             'set_yearly_plan': _handle_set_yearly_plan,
+            'set_default_plan': _handle_set_default_plan,
+            'delete_budget':   _handle_delete_budget,
         }
         handler = _POST_HANDLERS.get(action)
         if handler:
@@ -529,22 +635,42 @@ def budget_manage():
     eligible_approvers = User.query.order_by(User.full_name).all()
 
     # "ก้อนงบ" ที่กำลังดู (v2.26 — เลิก compute fiscal_year_start_ad จาก sel_year/sel_month แบบ
-    # march-hardcode แล้ว) — เลือกผ่าน ?plan_id= ตรงๆ, ไม่ระบุ = plan ที่ครอบคลุมวันนี้, ถ้าไม่มีเลย
-    # (เช่นยังไม่เคยตั้ง หรือกำลังอยู่ระหว่างช่วงที่ไม่มี plan ครอบคลุม) = plan ล่าสุดที่มี
+    # march-hardcode แล้ว) — ลำดับความสำคัญ (v2.28): (1) ?plan_id= ที่ระบุมา (2) plan ที่
+    # is_default=True และยังครอบวันนี้อยู่ (3) plan ใดๆ ที่ครอบวันนี้ (fallback เดิม)
+    # (4) ไม่มีเลย → plan ล่าสุดที่มี (ยังไม่เคยตั้ง/ทุก plan หมดอายุแล้ว)
+    today   = now.date()
     plan_id = request.args.get('plan_id', type=int)
     if plan_id:
         yearly_plan = VehicleBudgetYearlyPlan.query.get(plan_id)
     else:
-        today = now.date()
         yearly_plan = (VehicleBudgetYearlyPlan.query
-                       .filter(VehicleBudgetYearlyPlan.start_date <= today,
+                       .filter(VehicleBudgetYearlyPlan.is_default.is_(True),
+                               VehicleBudgetYearlyPlan.start_date <= today,
                                VehicleBudgetYearlyPlan.end_date   >= today)
                        .first())
+        if not yearly_plan:
+            yearly_plan = (VehicleBudgetYearlyPlan.query
+                           .filter(VehicleBudgetYearlyPlan.start_date <= today,
+                                   VehicleBudgetYearlyPlan.end_date   >= today)
+                           .first())
     if not yearly_plan:
         yearly_plan = (VehicleBudgetYearlyPlan.query
                        .order_by(VehicleBudgetYearlyPlan.start_date.desc()).first())
 
-    # รายการ plan ทั้งหมด (สำหรับ chip "เลือกก้อนงบ" เหนือตารางรวม — แทน "ปีงบ" chip เดิม, v2.26)
+    # รายชื่องบใหญ่ (tab ใหม่ v2.28) — list ทุก plan พร้อมยอดจัดสรร/ใช้ไป + covers_today
+    # (ให้ radio 'ตั้งเป็นค่าเริ่มต้น' เปิด/ปิดใช้งาน) · ปี พ.ศ. ทั้งหมดที่มี plan ทับช่วงอยู่
+    # (สำหรับ chip "ปี" — derive จาก start_date/end_date จริง ไม่ใช้ fiscal_year label ที่พิมพ์เอง)
+    plan_list_rows = _build_plan_list_rows(today)
+    plan_year_options = sorted({
+        y + 543
+        for row in plan_list_rows
+        for y in range(row['plan'].start_date.year, row['plan'].end_date.year + 1)
+    }, reverse=True)
+
+    # รายการ plan ทั้งหมด (สำหรับ chip "งบ" เหนือตารางรวม) — v2.29: chip "ปี" เลิก navigate แล้ว
+    # (filter ฝั่ง client แทน ดู initPlanYearChip ใน vehicle_budget.js) จึงต้องส่ง plan_options
+    # แบบไม่กรองเสมอ — client ต้องมีตัวเลือกครบทุกปีอยู่ใน DOM ถึงจะซ่อน/โชว์เองได้
+    plan_year = request.args.get('plan_year', type=int)  # เหลือไว้แค่ตั้งค่า default ตอน page-load
     plan_options = VehicleBudgetYearlyPlan.query.order_by(VehicleBudgetYearlyPlan.start_date.desc()).all()
 
     if yearly_plan:
@@ -592,6 +718,9 @@ def budget_manage():
                            pivot=pivot,
                            yearly_plan=yearly_plan,
                            plan_options=plan_options,
+                           plan_list_rows=plan_list_rows,
+                           plan_year_options=plan_year_options,
+                           sel_plan_year=plan_year,
                            fallback_fiscal_year=fallback_fiscal_year,
                            now=now)
 

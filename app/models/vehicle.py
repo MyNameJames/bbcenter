@@ -83,6 +83,7 @@ class VehicleBooking(db.Model):
     trip_department_id = db.Column(db.Integer, db.ForeignKey('vehicle_department.id'), nullable=True)
     trip_department_ref = db.relationship('VehicleDepartment', foreign_keys=[trip_department_id])
     pickup_location    = db.Column(db.String(200), nullable=True)  # จุดขึ้นรถ
+    note                = db.Column(db.String(300), nullable=True)  # หมายเหตุผู้จอง (2026-08-05, eventDetailModal redesign)
 
     # Snapshot ณ เวลาที่ admin assign — ป้องกันข้อมูลหายเมื่อแก้/ลบรถ หรือคนขับ
     snap_vehicle_plate = db.Column(db.String(20), nullable=True)   # ทะเบียนรถ

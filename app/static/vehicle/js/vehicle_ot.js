@@ -410,13 +410,10 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeKebab()
 window.addEventListener('scroll', () => closeKebab(), true);
 window.addEventListener('resize', () => closeKebab());
 
-/* Row action forms (จ่าย/ย้าย/ลบ/กู้คืน) → AJAX POST → refresh table */
-document.addEventListener('submit', e => {
-    const form = e.target.closest('form.js-cost-action');
-    if (!form) return;
-    e.preventDefault();
-    if (form.dataset.confirm && !confirm(form.dataset.confirm)) return;
-    closeKebab();
+/* Row action forms (จ่าย/ย้าย/ลบ/กู้คืน) → AJAX POST → refresh table
+   data-confirm-name (ถ้ามี) = เปิด #costConfirmModal (illustration card, page contract 2026-08-07)
+   แทน confirm() เบราว์เซอร์ — ไม่มี = submit ตรงเลย (จ่าย/ย้าย/กู้คืน ไม่ต้อง confirm) */
+function submitCostAction(form) {
     fetch(form.action, {
         method: 'POST',
         headers: { 'X-Requested-With': 'fetch' },
@@ -424,7 +421,30 @@ document.addEventListener('submit', e => {
         credentials: 'same-origin'
     })
     .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return runFilter(false); })
-    .catch(() => { form.removeAttribute('data-confirm'); form.submit(); });
+    .catch(() => { form.removeAttribute('data-confirm-name'); form.submit(); });
+}
+
+function showCostConfirm(name, onConfirm) {
+    const modalEl = document.getElementById('costConfirmModal');
+    const btn = document.getElementById('costConfirmBtn');
+    if (!modalEl || !btn || !window.bootstrap) { onConfirm(); return; }
+    document.getElementById('costConfirmName').textContent = name;
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    const handler = () => { modal.hide(); onConfirm(); };
+    btn.addEventListener('click', handler, { once: true });
+    modal.show();
+}
+
+document.addEventListener('submit', e => {
+    const form = e.target.closest('form.js-cost-action');
+    if (!form) return;
+    e.preventDefault();
+    closeKebab();
+    if (form.dataset.confirmName) {
+        showCostConfirm(form.dataset.confirmName, () => submitCostAction(form));
+        return;
+    }
+    submitCostAction(form);
 });
 
 /* Edit modal form → AJAX POST → close modal → refresh */

@@ -126,6 +126,8 @@ h1.page-title{
 .ue-chip-pop{ position:fixed; z-index:1060; min-width:240px; max-width:320px;
   background:var(--bb-n0); border:1px solid var(--bb-n300); border-radius:16px;
   box-shadow:0 12px 32px rgba(0,0,0,.14); padding:8px; }
+/* option list ยาว (เช่น วันที่ 1-31) ต้องเลื่อนแทนดันความสูง popup ทะลุ viewport */
+.ue-chip-pop-body{ max-height:320px; overflow-y:auto; }
 .ue-chip-pop-head{ display:flex; align-items:center; justify-content:space-between; padding:8px 12px 6px; }
 .ue-chip-pop-title{ font-size:13px; font-weight:700; color:var(--bb-mut); text-transform:uppercase; letter-spacing:.4px; }
 .ue-chip-pop-clear{ color:var(--bb-mut); font-weight:600; font-size:14px; cursor:pointer; text-decoration:none; }

@@ -1,136 +1,117 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>จองห้องประชุม - BBCenter</title>
-    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
-    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='room/css/room.css') }}">
-</head>
-<body>
+{# room.html — ปฏิทินการจองห้องประชุม (user-facing)
+   Migrate 2026-08-05: shell → _base_ue.html · token → --bb-* · icon → Material Symbols
+   (เดิม standalone <html> + _shared/sidebar|header.html + vc-* token + Lucide icon)
+   Pattern ก็อปจาก vehicle/vehicle.html — ห้าม rename id/class ในหน้านี้ room.js ผูกชื่อ/ID ไว้ตรงๆ
+#}
+{% extends '_base_ue.html' %}
 
-<div class="container-fluid">
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+{% block title %}<title>จองห้องประชุม - BBCenter</title>{% endblock %}
+{% block page_title %}ปฏิทินการจองห้องประชุม{% endblock %}
 
-    {% set active_menu = 'room' %}
-    {% include '_shared/sidebar.html' %}
+{% block head %}
+{# tokens.css/badge.css = legacy พึ่งอยู่ (เหมือน vehicle.html) · vehicle_calendar.css = base grid/event-card/
+   mobile-list/.bk-* modal chrome (bb-* token) — room ไม่มี CSS แยกของตัวเองแล้ว (2026-08-05: room.css ลบทิ้ง
+   — room-badge/room-list-dot/event-card สีห้อง ทั้งหมดใช้ component กลาง bb-badge is-info/is-wr + bb-avatar
+   + inline var(--bb-info-bg)/var(--bb-wr-bg) แทน ไม่มี identity เฉพาะ room เหลือพอแยกไฟล์) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='core/css/tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='core/css/components/badge.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_calendar.css') }}">
+{% endblock %}
 
-    <main class="main-content vc-scope">
-        {% set page_section = 'บริการ' %}
-        {% set page_title = 'ปฏิทินการจองห้องประชุม' %}
-        {% include '_shared/header.html' %}
+{% block content %}
+<div id="calendarView">
 
-        <div id="calendarView" class="container-xxl px-3 pt-2">
+    {# Calendar toolbar — nav ซ้าย · เดือนกลาง · room legend ขวา (layout = Bootstrap flex utility) #}
+    <div class="d-none d-md-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 mt-5">
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="bb-btn is-sec" id="todayBtn">วันนี้</button>
+            <button type="button" class="bb-btn is-sec is-icon" id="prevMonthBtn" title="เดือนก่อนหน้า">
+                <span class="material-symbols-rounded">chevron_left</span>
+            </button>
+            <h4 class="cal-month-label text-center mb-0 fw-bold" id="currentMonthLabel"></h4>
+            <button type="button" class="bb-btn is-sec is-icon" id="nextMonthBtn" title="เดือนถัดไป">
+                <span class="material-symbols-rounded">chevron_right</span>
+            </button>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            {% for room in room_choices %}
+            <span class="bb-badge {{ 'is-info' if 'เล็ก' in room else 'is-wr' }}">{{ room }}</span>
+            {% endfor %}
+        </div>
+    </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                <div class="vc-stack px-3 pt-2" style="margin-bottom: var(--vc-space-4);">
-                    {% for category, message in messages %}
-                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            {% endwith %}
-
-            {# Calendar toolbar (desktop) — nav controls left · room legend right #}
-            <div class="cal-toolbar d-none d-md-grid pt-2">
-                <div class="cal-toolbar-left">
-                    <button type="button" class="vc-btn vc-btn-secondary" id="todayBtn">วันนี้</button>
-                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon" id="prevMonthBtn" title="เดือนก่อนหน้า">
-                        <i data-lucide="chevron-left"></i>
-                    </button>
-                    <h2 class="cal-month-label pt-2 fw-bold" id="currentMonthLabel"></h2>
-                    <button type="button" class="vc-btn vc-btn-secondary vc-btn-icon" id="nextMonthBtn" title="เดือนถัดไป">
-                        <i data-lucide="chevron-right"></i>
-                    </button>
-                </div>
-                <div></div>
-                <div class="d-flex align-items-center justify-content-end gap-2 room-legend">
-                    {% for room in room_choices %}
-                    <span class="vc-badge room-badge room-badge--{{ 'small' if 'เล็ก' in room else 'large' }}">
-                        <span class="room-dot"></span>{{ room }}
-                    </span>
-                    {% endfor %}
-                </div>
-            </div>
-
-            {# Mobile hero — month picker + room legend #}
-            <div class="vrc-m-hero d-md-none mb-3">
-                <div class="vrc-m-month d-flex align-items-center justify-content-between">
-                    <div class="vrc-m-month-label text-header fw-normal fs-6 pt-1" id="currentMonthLabelMobile"></div>
-                    <div class="vrc-m-month-controls">
-                        <button type="button" class="vrc-btn-icon" id="prevMonthBtnMobile" aria-label="เดือนก่อนหน้า">
-                            <i data-lucide="chevron-left"></i>
-                        </button>
-                        <button type="button" class="vrc-m-today-btn py-2 px-2 rounded-3" id="todayBtnMobile" aria-label="กระโดดไปวันนี้">
-                            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> วันนี้
-                        </button>
-                        <button type="button" class="vrc-btn-icon" id="nextMonthBtnMobile" aria-label="เดือนถัดไป">
-                            <i data-lucide="chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-2 pt-2 room-legend">
-                    {% for room in room_choices %}
-                    <span class="vc-badge room-badge room-badge--{{ 'small' if 'เล็ก' in room else 'large' }}">
-                        <span class="room-dot"></span>{{ room }}
-                    </span>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="flex-grow-1">
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <div class="vc-card overflow-hidden" role="grid" aria-label="ปฏิทินจองห้องประชุม">
-                            <div class="calendar-grid calendar-grid-head text-header border-bottom" role="row">
-                                <div class="calendar-header-cell text-danger" role="columnheader" aria-label="อาทิตย์"><span class="d-none d-md-inline">อาทิตย์</span><span class="d-md-none">อา</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="จันทร์"><span class="d-none d-md-inline">จันทร์</span><span class="d-md-none">จ</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="อังคาร"><span class="d-none d-md-inline">อังคาร</span><span class="d-md-none">อ</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="พุธ"><span class="d-none d-md-inline">พุธ</span><span class="d-md-none">พ</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="พฤหัสบดี"><span class="d-none d-md-inline">พฤหัสบดี</span><span class="d-md-none">พฤ</span></div>
-                                <div class="calendar-header-cell" role="columnheader" aria-label="ศุกร์"><span class="d-none d-md-inline">ศุกร์</span><span class="d-md-none">ศ</span></div>
-                                <div class="calendar-header-cell text-primary" role="columnheader" aria-label="เสาร์"><span class="d-none d-md-inline">เสาร์</span><span class="d-md-none">ส</span></div>
-                            </div>
-                            <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {# Mobile list #}
-                <div class="row d-md-none mb-3">
-                    <div class="col-12">
-                        <div class="vrc-m-daybar">
-                            <div class="vrc-m-daybar-text">
-                                <span class="vrc-m-daybar-label" id="mobileListDateLabel">รายการจอง</span>
-                                <span class="vrc-m-daybar-count" id="mobileDaybarCount"></span>
-                            </div>
-                            <button type="button" class="vc-btn vc-btn-primary py-3" id="mobileDateCountBtn"
-                                onclick="openBookingModal()" title="จองห้องประชุม">
-                                <i data-lucide="plus" class="vc-icon-sm"></i>
-                                จองห้อง
-                            </button>
-                        </div>
-                        <div class="mobile-list-section" id="mobileListSection">
-                            <div id="mobileListContent"></div>
-                        </div>
-                    </div>
-                </div>
+    {# Mobile hero — month picker + room legend (layout = Bootstrap flex utility) #}
+    <div class="d-md-none pt-2 pb-1 mb-3">
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <h6 class="vrc-m-month-label mb-0" id="currentMonthLabelMobile"></h6>
+            <div class="d-inline-flex align-items-center gap-2">
+                <button type="button" class="bb-btn is-sec is-icon" id="prevMonthBtnMobile" aria-label="เดือนก่อนหน้า">
+                    <span class="material-symbols-rounded">chevron_left</span>
+                </button>
+                <button type="button" class="bb-btn is-sec" id="todayBtnMobile" aria-label="กระโดดไปวันนี้">
+                    <span class="material-symbols-rounded">calendar_month</span> วันนี้
+                </button>
+                <button type="button" class="bb-btn is-sec is-icon" id="nextMonthBtnMobile" aria-label="เดือนถัดไป">
+                    <span class="material-symbols-rounded">chevron_right</span>
+                </button>
             </div>
         </div>
-    </main>
+        <div class="d-flex align-items-center gap-2 pt-2 flex-wrap">
+            {% for room in room_choices %}
+            <span class="bb-badge {{ 'is-info' if 'เล็ก' in room else 'is-wr' }}">{{ room }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Month grid #}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="bb-card overflow-hidden border-0" role="grid"
+                 aria-label="ปฏิทินการจองห้องประชุม — ใช้ปุ่มลูกศรซ้าย-ขวาเปลี่ยนเดือน, T เพื่อกระโดดไปวันนี้">
+                <div class="calendar-grid calendar-grid-head py-2" role="row">
+                    <div class="text-danger text-center fw-bold py-2 px-2" role="columnheader" aria-label="อาทิตย์"><span class="d-none d-md-inline">อาทิตย์</span><span class="d-md-none">อา</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="จันทร์"><span class="d-none d-md-inline">จันทร์</span><span class="d-md-none">จ</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="อังคาร"><span class="d-none d-md-inline">อังคาร</span><span class="d-md-none">อ</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="พุธ"><span class="d-none d-md-inline">พุธ</span><span class="d-md-none">พ</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="พฤหัสบดี"><span class="d-none d-md-inline">พฤหัสบดี</span><span class="d-md-none">พฤ</span></div>
+                    <div class="text-center fw-bold py-2 px-2" role="columnheader" aria-label="ศุกร์"><span class="d-none d-md-inline">ศุกร์</span><span class="d-md-none">ศ</span></div>
+                    <div class="text-primary text-center fw-bold py-2 px-2" role="columnheader" aria-label="เสาร์"><span class="d-none d-md-inline">เสาร์</span><span class="d-md-none">ส</span></div>
+                </div>
+                <div class="calendar-grid" id="calendarBody" role="rowgroup"></div>
+            </div>
+        </div>
+    </div>
+
+    {# Mobile day list — label + count + ปุ่มจองห้อง #}
+    <div class="row d-md-none mb-3">
+        <div class="col-12">
+            <div class="vrc-m-daybar d-flex align-items-center justify-content-between gap-3 py-3 px-1 mx-n1 mb-3">
+                <div class="vrc-m-daybar-text d-flex align-items-baseline gap-2">
+                    <span class="vrc-m-daybar-label" id="mobileListDateLabel">รายการจอง</span>
+                    <span class="vrc-m-daybar-count" id="mobileDaybarCount"></span>
+                </div>
+                <button type="button" class="bb-btn is-pri" id="mobileDateCountBtn"
+                        onclick="openBookingModal()" title="จองห้องประชุม">
+                    <span class="material-symbols-rounded">add</span>
+                    จองห้อง
+                </button>
+            </div>
+            <div class="mobile-list-section" id="mobileListSection">
+                <div id="mobileListContent"></div>
+            </div>
+        </div>
+    </div>
+
 </div>
+{% endblock %}
 
+{% block modals %}
+{# จอง + แก้ไข ใช้ modal เดียวกัน (2026-08-05 migrate) — ดูรายละเอียดใน room_book.html #}
+{% include 'room/modals/room_book.html' %}
+{% include 'room/modals/room_detail.html' %}
+{% endblock %}
 
+{% block scripts %}
 {# ══════════════════════════════════════════════════════════
    DATA INJECTION — Jinja2 → JavaScript
 ══════════════════════════════════════════════════════════ #}
@@ -155,19 +136,5 @@ window.BOOKINGS = [
 ];
 </script>
 
-
-{# ── Modals (แยกไฟล์ room-modal-*.html) ── #}
-{% include 'room/modals/room_book.html' %}
-{% include 'room/modals/room_edit.html' %}
-{% include 'room/modals/room_detail.html' %}
-
-
-<!-- Scripts -->
-<script src="{{ url_for('static', filename='vendor/jquery/jquery-3.7.1.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
 <script type="module" src="{{ url_for('static', filename='room/js/room.js') }}"></script>
-
-</body>
-</html>
+{% endblock %}
