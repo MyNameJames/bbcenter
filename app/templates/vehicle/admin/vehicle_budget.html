@@ -386,6 +386,20 @@
                                 <td class="bb-cell-num" style="font-weight:700">{{ '{:,.0f}'.format(_pmt_grand_total.v) }}</td>
                             </tr>
                         </tbody>
+                        {# แถว "เงินรับคืน" (2026-08-07) — สรุปยอดร่วมบุญ/ส่วนตัวรายเดือนของก้อนงบนี้ ต่อจากแถว
+                           รวมทั้งหมด ผูก pivot.personal (aggregate ตาม personal_paid_at ภายใน plan period
+                           อยู่แล้วจาก _build_personal_pivot) ไม่ผูก filter "ประเภทงบ" เหมือนแถวรวมทั้งหมด
+                           (ไม่ใช่ central/dept ไม่มี data-budget-type) #}
+                        <tbody>
+                            <tr>
+                                <td class="bb-cell-strong" style="position:sticky;left:0;z-index:1;background:#fff;color:var(--bb-mut)">เงินรับคืน</td>
+                                {% for (m, y) in pivot.fiscal_months %}
+                                {% set _pv = pivot.personal.get(m, 0) %}
+                                <td class="bb-cell-num" style="color:var(--bb-mut)">{{ '{:,.0f}'.format(_pv) if _pv else '—' }}</td>
+                                {% endfor %}
+                                <td class="bb-cell-num bb-cell-strong" style="color:var(--bb-mut)">{{ '{:,.0f}'.format(pivot.summary.personal.used) }}</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
                 {% else %}
@@ -439,7 +453,7 @@
                             <tr>
                                 <td><span class="bb-badge {{ 'is-ok' if _is_central else 'is-info' }}">{{ 'ส่วนกลาง' if _is_central else 'ส่วนกอง' }}</span></td>
                                 <td class="bb-cell-strong">{{ b.department }}<span class="bb-cell-sub">ระหว่างวันที่ {{ b.start_date_th or '—' }} - {{ b.end_date_th or '—' }}</span></td>
-                                <td>{% if _plan %}<span style="font-size:13px;color:var(--bb-mut)">ปีงบ {{ _plan.fiscal_year + 543 }}</span>{% else %}<span style="color:var(--bb-n300)">—</span>{% endif %}</td>
+                                <td>{% if _plan %}<span style="font-size:13px;color:var(--bb-mut)">{{ _plan.name or ('ปีงบ ' ~ (_plan.fiscal_year + 543)) }}</span>{% else %}<span style="color:var(--bb-n300)">—</span>{% endif %}</td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.budget_amount) }}</td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.used_amount) }}<span class="bb-cell-sub" style="color:{{ _pct_tone }}">({{ '{:.0f}'.format(b.pct) }}%)</span></td>
                                 <td>{% if _is_central %}Admin{% elif b.approver_name %}{{ b.approver_name }}{% else %}<span style="color:var(--bb-n300)">ยังไม่มีผู้อนุมัติ</span>{% endif %}</td>
@@ -527,7 +541,7 @@
                             <tr>
                                 <td><span class="bb-badge {{ 'is-ok' if _is_central else 'is-info' }}">{{ 'ส่วนกลาง' if _is_central else 'ส่วนกอง' }}</span></td>
                                 <td class="bb-cell-strong">{{ b.department }}<span class="bb-cell-sub">ระหว่างวันที่ {{ b.start_date_th or '—' }} - {{ b.end_date_th or '—' }}</span></td>
-                                <td>{% if _plan %}<span style="font-size:13px;color:var(--bb-mut)">ปีงบ {{ _plan.fiscal_year + 543 }}</span>{% else %}<span style="color:var(--bb-n300)">—</span>{% endif %}</td>
+                                <td>{% if _plan %}<span style="font-size:13px;color:var(--bb-mut)">{{ _plan.name or ('ปีงบ ' ~ (_plan.fiscal_year + 543)) }}</span>{% else %}<span style="color:var(--bb-n300)">—</span>{% endif %}</td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.budget_amount) }}</td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(b.used_amount) }}<span class="bb-cell-sub" style="color:{{ _pct_tone }}">({{ '{:.0f}'.format(_pct) }}%)</span></td>
                                 <td>{% if _is_central %}Admin{% elif b.approver_name %}{{ b.approver_name }}{% else %}<span style="color:var(--bb-n300)">ยังไม่มีผู้อนุมัติ</span>{% endif %}</td>
@@ -584,36 +598,8 @@
                รอบ 1: link ไปหน้า /admin/budget/personal เพื่อจัดการ.
                รอบ 2 (Phase 2E): embed table mileage + ปุ่ม "รับเงินแล้ว" inline.
             #}
-            {% set paid_count   = personal_rows|selectattr('is_paid')|list|length %}
-            {% set unpaid_count = personal_rows|rejectattr('is_paid')|list|length %}
             <section id="sectionPersonal">
-                <div class="d-flex align-items-center justify-content-between gap-3 mb-3 py-1">
-                    <div class="d-flex align-items-center gap-2">
-                        <span style="font-size:14px;font-weight:600;color:var(--bb-str)">งานส่วนตัว</span>
-                        <span class="bb-badge is-neutral">{{ personal_rows|length }} รายการ</span>
-                    </div>
-                    <span class="bb-num" style="font-size:13px;color:var(--bb-mut)">
-                        ฿{{ '{:,.0f}'.format(kpi.personal_received) }} รับแล้ว
-                        {% if kpi.personal_unpaid_amount %}
-                        <span class="mx-2" style="color:var(--bb-n300)">·</span>
-                        <span style="color:var(--bb-wr-tx)">฿{{ '{:,.0f}'.format(kpi.personal_unpaid_amount) }} ค้าง</span>
-                        {% endif %}
-                    </span>
-                </div>
-
                 {% if personal_rows %}
-                <nav class="bb-tabs mb-3" role="tablist" aria-label="กรองสถานะรับเงิน">
-                    <button type="button" class="bb-tab{% if not unpaid_count %} is-on{% endif %}"
-                            data-personal-filter="all" role="tab"
-                            title="แสดงทั้งหมด">ทั้งหมด</button>
-                    <button type="button" class="bb-tab{% if unpaid_count %} is-on{% endif %}"
-                            data-personal-filter="unpaid" role="tab"
-                            title="เฉพาะรายการที่ยังไม่ได้รับเงิน">ค้างรับ</button>
-                    <button type="button" class="bb-tab"
-                            data-personal-filter="paid" role="tab"
-                            title="เฉพาะรายการที่รับเงินแล้ว">รับแล้ว</button>
-                </nav>
-
                 <div class="table-responsive">
                     <table class="bb-table mb-0" data-sortable-table>
                         <thead>
@@ -628,8 +614,7 @@
                         </thead>
                         <tbody>
                             {% for r in personal_rows %}
-                            <tr data-personal-row="{{ 'paid' if r.is_paid else 'unpaid' }}"
-                                {% if unpaid_count and r.is_paid %}hidden{% endif %}>
+                            <tr>
                                 <td class="bb-cell-num" style="color:var(--bb-mut)">
                                     {{ r.date.strftime('%d/%m %H:%M') if r.date else '—' }}
                                 </td>
@@ -692,7 +677,11 @@
                v2.29: ตัด header row (ชื่อ+badge+ปุ่มสร้าง) ออกตามคำขอ — สร้างก้อนงบใหม่ยังทำได้ผ่าน
                ปุ่ม "ตั้งงบใหม่" โซนบนสุดของหน้า (เหลือทางเดียว ไม่ซ้ำซ้อน) เพิ่มคอลัมน์ action (icon
                แก้ไข) ก่อนคอลัมน์ radio — เปิด yearlyPlanModal พร้อมข้อมูลของแถวนั้นตรงๆ ผ่าน
-               data-plan-* (ดู initYearlyPlanModalMode ใน vehicle_budget.js) #}
+               data-plan-* (ดู initYearlyPlanModalMode ใน vehicle_budget.js)
+               v2.30 (2026-08-07): เพิ่ม icon delete ข้าง edit — ลบก้อนงบทิ้งถาวรพร้อมงบย่อยที่ผูกอยู่
+               (cascade) เชื่อม action=delete_plan → budget_svc.delete_yearly_plan() ที่ service
+               บล็อกเองถ้ามีงบย่อยที่ใช้ไปแล้ว (used_amount != 0) — client ซ่อนปุ่มไว้ก่อนถ้า row.used > 0
+               กันกดแล้วเจอ error message เปล่าๆ (server ยัง block ซ้ำอีกชั้นอยู่ดี) #}
             <section id="tabPanelPlans" data-budget-panel="plans" class="d-none">
                 {% if plan_list_rows %}
                 <div class="table-responsive">
@@ -721,6 +710,7 @@
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(row.allocated) }}</td>
                                 <td class="bb-cell-num">฿{{ '{:,.0f}'.format(row.used) }}</td>
                                 <td>
+                                    <div class="d-flex gap-2 align-items-center justify-content-end">
                                     <button type="button" class="bb-btn is-sec is-icon" data-plan-mode="edit"
                                             data-bs-toggle="modal" data-bs-target="#yearlyPlanModal"
                                             data-plan-id="{{ p.id }}"
@@ -733,6 +723,20 @@
                                             title="แก้ไขงบ">
                                         <span class="material-symbols-rounded">edit</span>
                                     </button>
+                                    {% if not row.used %}
+                                    <form method="POST" data-confirm-delete-plan
+                                          data-plan-name="{{ p.name or ('ปีงบ ' ~ (p.fiscal_year + 543)) }}">
+                                        <input type="hidden" name="action"  value="delete_plan">
+                                        <input type="hidden" name="year"   value="{{ sel_year }}">
+                                        <input type="hidden" name="month"  value="{{ sel_month }}">
+                                        <input type="hidden" name="plan_id" value="{{ p.id }}">
+                                        <button type="submit" class="bb-btn is-danger-sec is-icon"
+                                                title="ลบก้อนงบนี้ทิ้งถาวร">
+                                            <span class="material-symbols-rounded">delete</span>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    </div>
                                 </td>
                                 <td class="text-center">
                                     <form method="POST" data-set-default-form class="d-inline">
@@ -1408,7 +1412,7 @@
                             <label class="form-label" for="ypTotal">เงินก้อนทั้งปี (บาท)</label>
                             <div class="bb-field-box">
                                 <span class="material-symbols-rounded bb-field-box-icon border-end">sell</span>
-                                <input type="number" id="ypTotal" name="total_amount" class="form-control" min="0" step="1000" required autocomplete="off" placeholder="350,000" value="{{ yearly_plan.total_amount|int if yearly_plan and yearly_plan.total_amount else '' }}">
+                                <input type="text" inputmode="numeric" id="ypTotal" name="total_amount" class="form-control" required autocomplete="off" placeholder="350,000" value="{{ '{:,}'.format(yearly_plan.total_amount|int) if yearly_plan and yearly_plan.total_amount else '' }}">
                             </div>
                         </div>
                     </div>
@@ -1418,9 +1422,9 @@
                             <label class="form-label" for="ypCentral">งบส่วนกลาง (บาท)</label>
                             <div class="bb-field-box">
                                 <span class="material-symbols-rounded bb-field-box-icon border-end">sell</span>
-                                <input type="number" id="ypCentral" name="central_allocation" class="form-control"
-                                        min="0" step="1000" required autocomplete="off"
-                                        value="{{ yearly_plan.central_allocation|int if yearly_plan and yearly_plan.central_allocation else '' }}"
+                                <input type="text" inputmode="numeric" id="ypCentral" name="central_allocation" class="form-control"
+                                        required autocomplete="off"
+                                        value="{{ '{:,}'.format(yearly_plan.central_allocation|int) if yearly_plan and yearly_plan.central_allocation else '' }}"
                                         placeholder="">
                             </div>
                         </div>
@@ -1430,8 +1434,8 @@
                             <label class="form-label" for="ypDeptPreview">งบส่วนกอง (บาท)</label>
                             <div class="bb-field-box">
                                 <span class="material-symbols-rounded bb-field-box-icon border-end">sell</span>
-                                <input type="number" id="ypDeptPreview" class="form-control" disabled
-                                       value="{{ yearly_plan.dept_allocation|int if yearly_plan and yearly_plan.dept_allocation else '' }}"
+                                <input type="text" inputmode="numeric" id="ypDeptPreview" class="form-control" disabled
+                                       value="{{ '{:,}'.format(yearly_plan.dept_allocation|int) if yearly_plan and yearly_plan.dept_allocation else '' }}"
                                        placeholder="">
                             </div>
                         </div>

@@ -190,6 +190,26 @@ def _handle_delete_budget():
         flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
 
 
+def _handle_delete_plan():
+    """ลบเงินก้อนประจำปีทิ้งถาวร (v2.30) — เชื่อมปุ่ม icon delete ในแท็บ 'งบหลัก'
+    บล็อกที่ service layer ถ้ามีงบย่อยที่ผูกก้อนนี้ใช้ไปแล้ว (ดู budget_svc.delete_yearly_plan) —
+    ถ้าไม่บล็อก จะ cascade ลบงบย่อย + log ที่ผูกอยู่ทั้งหมดไปด้วย"""
+    try:
+        plan_id   = int(request.form.get('plan_id'))
+        plan      = VehicleBudgetYearlyPlan.query.get_or_404(plan_id)
+        plan_name = plan.name or f'ปีงบ {plan.fiscal_year + 543}'
+        budget_svc.delete_yearly_plan(plan)
+        db.session.commit()
+        flash(f'ลบ "{plan_name}" เรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(f'ลบไม่สำเร็จ: {e}', 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('budget_manage:delete_plan failed')
+        flash('เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง', 'danger')
+
+
 def _handle_extend_period():
     try:
         bid       = int(request.form.get('budget_id'))
@@ -268,8 +288,10 @@ def _handle_set_yearly_plan():
         name                = (request.form.get('name') or '').strip()
         start_date_str      = (request.form.get('start_date') or '').strip()
         end_date_str        = (request.form.get('end_date') or '').strip()
-        total_amount        = float(request.form.get('total_amount', 0))
-        central_allocation  = float(request.form.get('central_allocation', 0))
+        # ypTotal/ypCentral เป็น type="text" + comma mask ฝั่ง client (2026-08-07) — strip comma
+        # กันพลาดเผื่อ JS ไม่ทำงาน (float() ตรงๆ จะ ValueError ถ้ามี comma หลุดมา)
+        total_amount        = float((request.form.get('total_amount') or '0').replace(',', ''))
+        central_allocation  = float((request.form.get('central_allocation') or '0').replace(',', ''))
         if not start_date_str or not end_date_str:
             raise ValueError('ต้องระบุช่วงเวลาของเงินก้อนนี้')
         start_date = date.fromisoformat(start_date_str)
@@ -584,6 +606,10 @@ def _load_personal_rows(sel_year, sel_month, fuel_price):
             'is_paid':      (pm.personal_status == 1),
             'paid_at':      pm.personal_paid_at,
         })
+    # เรียงค้างรับขึ้นก่อนเสมอ (ต้องตามให้ทัน) แล้วค่อยเรียงวันที่ล่าสุดก่อนในแต่ละกลุ่ม (2026-08-07,
+    # ตัด status filter tab ออกจาก UI แล้ว — ใช้ sort แทนเพื่อให้ยังเห็นรายการค้างเด่นอยู่)
+    epoch = datetime(1970, 1, 1)
+    rows.sort(key=lambda r: (r['is_paid'], -(r['date'] - epoch).total_seconds() if r['date'] else 0))
     return rows
 
 
@@ -606,6 +632,7 @@ def budget_manage():
             'set_yearly_plan': _handle_set_yearly_plan,
             'set_default_plan': _handle_set_default_plan,
             'delete_budget':   _handle_delete_budget,
+            'delete_plan':     _handle_delete_plan,
         }
         handler = _POST_HANDLERS.get(action)
         if handler:
@@ -726,18 +753,24 @@ def budget_manage():
 
 
 
-def _build_central_dept_pivot(fy_start, fy_end):
+def _build_central_dept_pivot(fy_start, fy_end, plan_id):
     """งบช่วงเวลา (2026-06-06): pivot ดึง "ยอดหักจริงต่อเดือน" จาก ledger — used_amount เป็น
     ยอดสะสมทั้งช่วงงบ (ข้ามเดือน) → break down ต่อเดือนจาก created_at ของ event หัก/คืน/ปรับ
     (net change_amount). set_budget/set_active = 0 ตัดออกแล้ว (extract จาก _build_budget_pivot
     ตอน Phase 5, logic เดิม 100%)
+    bug fix (2026-08-07): เดิม filter แค่ created_at อยู่ในช่วง fy_start–fy_end ของ plan เท่านั้น
+    ไม่เช็ก yearly_plan_id — ถ้ามีก้อนงบอื่นที่ช่วงเวลาทับกัน (หรืองบเก่าที่ไม่ผูก plan ไหนเลย)
+    log ของงบนั้นก็หลุดเข้ามาปนใน "ภาพรวมทั้งปี" ของก้อนงบที่กำลังดูอยู่ผิดๆ — เพิ่ม filter
+    `VehicleBudget.yearly_plan_id == plan_id` ให้ตรงกับ cap_rows ใน _build_pivot_summary ที่กรอง
+    ด้วย FK ตรงๆ อยู่แล้ว
     คืน (central, dept, labels_c, labels_d, max_c, max_d)"""
     log_rows = (db.session.query(VehicleBudgetLog, VehicleBudget, BudgetType)
                 .join(VehicleBudget, VehicleBudgetLog.budget_id == VehicleBudget.id)
                 .join(BudgetType, VehicleBudget.budget_type_id == BudgetType.id)
                 .filter(VehicleBudgetLog.event_type.in_(['deduct', 'refund', 'adjust']),
                         VehicleBudgetLog.created_at >= fy_start,
-                        VehicleBudgetLog.created_at <  fy_end)
+                        VehicleBudgetLog.created_at <  fy_end,
+                        VehicleBudget.yearly_plan_id == plan_id)
                 .all())
 
     central, dept = {}, {}
@@ -881,7 +914,7 @@ def _build_budget_pivot(plan):
         if m > 12:
             m, y = 1, y + 1
 
-    central, dept, labels_c, labels_d, max_c, max_d = _build_central_dept_pivot(fy_start, fy_end)
+    central, dept, labels_c, labels_d, max_c, max_d = _build_central_dept_pivot(fy_start, fy_end, plan.id)
     personal, personal_by_user, personal_user_labels, max_p = _build_personal_pivot(fy_start, fy_end)
     summary = _build_pivot_summary(central, dept, personal, plan)
 

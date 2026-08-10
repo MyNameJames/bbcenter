@@ -215,11 +215,21 @@ def _build_mileage_rows(bookings, fuel_by_vehicle, ot_records_by_booking, f_stat
         ot_record       = ot_records_by_booking.get(b.id)
         ot_hours        = float(ot_record.total_hours)  if ot_record else 0
         ot_total_amount = float(ot_record.total_amount) if ot_record else 0
-        ot_slots = [
-            {'label': s.slot_label, 'rate': float(s.rate), 'hours': float(s.hours),
-             'amount': float(s.amount), 'start_time': s.start_time, 'end_time': s.end_time}
-            for s in ot_record.slots
-        ] if ot_record else []
+        # rate_type/already_claimed (2026-08-07): เดิมไม่ส่ง 2 ค่านี้ทำให้ mileageModal เขียน
+        # "บาท/ชม." ทับ flat_day band (คนละหน่วยเงิน) และโชว์ amount=0 โดยไม่บอกเหตุผลว่าคนขับ
+        # ได้เหมาไปแล้วในทริปก่อนหน้าของวันเดียวกัน (กติกา 6, domain/vehicle/ot.py) —
+        # rate_type ไม่ได้เก็บลง DriverOTSlot ตรงๆ ต้องอ่านผ่าน rate_config (fallback 'hourly'
+        # ถ้า config ถูกลบไปแล้ว) · already_claimed อนุมานจาก flat_day + amount=0 เพราะ "charge"
+        # ตอนสร้าง slot ก็ไม่ได้ persist เป็นคอลัมน์แยกเหมือนกัน
+        ot_slots = []
+        for s in (ot_record.slots if ot_record else []):
+            rate_type = s.rate_config.rate_type if s.rate_config else 'hourly'
+            ot_slots.append({
+                'label': s.slot_label, 'rate': float(s.rate), 'hours': float(s.hours),
+                'amount': float(s.amount), 'start_time': s.start_time, 'end_time': s.end_time,
+                'rate_type': rate_type,
+                'already_claimed': rate_type == 'flat_day' and float(s.amount) == 0,
+            })
         # ช่วง OT หลุดกรอบเวลาทริป = ค่า OT คำนวณจากเวลาชุดเก่า เชื่อตัวเลขไม่ได้ (2026-07-27)
         # เกิดกับ OT ที่จ่ายแล้ว/แอดมินแก้มือ ซึ่ง sync_ot_for_trip() ไม่คำนวณทับให้
         ot_mismatch = bool(ot_record) and not mileage_svc.ot_matches_trip(ot_record, m)

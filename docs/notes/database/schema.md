@@ -305,10 +305,11 @@
 | `label` | String(50) | ชื่อ time band เช่น "เช้ามืด" |
 | `start_time` | String(5) | เช่น "06:00" |
 | `end_time` | String(5) | เช่น "08:00" หรือ "24:00" |
-| `rate` | Numeric(8,2) | อัตรา OT ต่อชั่วโมง |
+| `rate` | Numeric(8,2) | อัตรา OT — **หน่วยขึ้นกับ `rate_type`** (ต่อชั่วโมง หรือ เหมาต่อวัน) |
 | `is_active` | Boolean | default True |
 | `day_of_week` | Integer nullable | NULL=ใช้ทุกวัน (default), 0=Mon ... 6=Sun (Python `weekday()`) — `auto_generate_ot()` override per-วัน (v2.10) |
 | `sort_order` | Integer | default 0 — ลำดับแสดงผล |
+| `rate_type` | String(10) NOT NULL | `'hourly'` (default) = บาท/ชม. · `'flat_day'` = เหมาจ่ายต่อ**วัน** คิดครั้งเดียวแม้ขับหลายทริป (v2.30) |
 
 **Seed rows:** เช้ามืด (06:00–08:00, ฿20), หัวค่ำ (17:00–19:00, ฿20), วิกาล >19:00 (19:00–24:00, ฿40), วิกาล <06:00 (00:00–06:00, ฿40)
 
@@ -564,6 +565,7 @@ INSERT INTO budget_type (id, name) VALUES (1, 'central'), (2, 'department');
 | v2.26 | 2026-07-31 | 26 | `vehicle_budget_yearly_plan` + explicit `start_date`/`end_date` (drop UNIQUE บน `fiscal_year`); `vehicle_budget` + `yearly_plan_id` FK — เลิก hardcode ปีงบเริ่ม มี.ค. ในโค้ด, ผูกงบย่อยกับ plan ต้นทางด้วย FK ตรงๆ |
 | v2.27 | 2026-08-05 | 26 | `vehicle_booking` + `note` — หมายเหตุผู้จอง, ทำ orphan input เดิมใน bookingModal ให้เป็น DB-backed field จริง รองรับ eventDetailModal redesign |
 | v2.28 | 2026-08-06 | 26 | `vehicle_budget_yearly_plan` + `name`/`is_default` — รองรับ "งบพิเศษ" แยกจากงบประจำปี + auto-select plan ค่าเริ่มต้น; `vehicle_budget` UniqueConstraint ขยายรวม `yearly_plan_id` — แผนก+ประเภทงบ+เดือนเดียวกันมีได้หลาย row ถ้าคนละ plan (table rebuild) |
+| v2.30 | 2026-08-07 | 26 | `ot_rate_config` + `rate_type` (`hourly`/`flat_day`) — ปิดบั๊กเงิน 2 ตัว: band วันอาทิตย์ที่ตั้งใจเป็นเหมาจ่ายแต่ระบบไม่มีแนวคิดนี้ + band ข้ามเที่ยงคืนที่สร้าง slot ไม่ได้ · เหมาจ่ายคิดต่อ**วัน** ไม่ใช่ต่อทริป — ดู [v2.30 detail](#v230--otrateconfig-rate_type-2026-08-07) |
 
 ---
 
@@ -1233,6 +1235,48 @@ App: `vehicle_cost.py` — route `ot_create` (POST `/admin/ot/create`, standalon
 **SQLite migration note:** เปลี่ยน UniqueConstraint ต้อง rebuild ตาราง (SQLite ไม่รองรับ `DROP CONSTRAINT`) — pattern เดียวกับที่ v2.26 ใช้ rebuild `vehicle_budget_yearly_plan` ตอน drop UNIQUE บน `fiscal_year`; migration นี้ recreate index เดิมทั้ง 2 ตัวที่หายไปตอน rebuild กลับด้วย (`ix_vb_yearly_plan`, `ix_vb_active_period`) ส่วน `name`/`is_default` บน `vehicle_budget_yearly_plan` เป็น `ALTER TABLE ... ADD COLUMN` ธรรมดา ไม่ต้อง rebuild
 
 **Note:** table count คงที่ 26 · backfill `is_default=0` ทุก row เดิม (explicit แม้ server_default จัดการให้อยู่แล้ว) · `name` เดิมปล่อย NULL ไม่ backfill ข้อความ (admin กรอกเองผ่าน UI รอบแก้ครั้งถัดไป)
+
+---
+
+## v2.30 — OTRateConfig `rate_type` (2026-08-07)
+
+*Migration: [2026-08-07_ot-rate-config-rate-type.sql](../../../app/migrations/2026-08-07_ot-rate-config-rate-type.sql)*
+
+**บริบทธุรกิจ:** กฎ OT จริงขององค์กรมี 2 หน่วยมาตั้งแต่ต้น — รายชั่วโมง (เช่น หลังเลิกงาน ฿20/ชม.) กับ **เหมาจ่ายรายวัน** (วันอาทิตย์ทั้งวัน ฿300) แต่โมเดลรองรับแค่รายชั่วโมง ทำให้ admin ต้อง workaround ด้วยการตั้ง band `00:00–00:00` (จงใจให้ช่วงเป็นศูนย์) ซึ่งกลายเป็นบั๊กเงียบหลัง refactor 2026-07-28 ที่บังคับทุก band เป็นรายชั่วโมง
+
+### บั๊กที่ปิด (ตรวจพบ 2026-08-07 ระหว่าง design consult หน้า `vehicle_cost.html`)
+
+| # | อาการ | สาเหตุ |
+|---|---|---|
+| B1 | OT วันอาทิตย์ = **0 บาท** ทุกครั้ง (ไม่ได้แม้เรทปกติ) | band ตั้ง `end_time='00:00'` → `build_ot_specs()` ได้ `band_e=0` → `ov_e > ov_s` เป็นเท็จเสมอ → ไม่มี slot · ซ้ำร้าย `_select_rate_configs_for_weekday()` เจอ band ของ weekday แล้ว**ไม่ fallback** ไป band ทั่วไป |
+| B2 | ช่วง 19:00–06:00 ไม่ได้ OT เลย | band ตั้ง `19:00–06:00` (ข้ามเที่ยงคืน) → `minutes` ติดลบ → `build_slot()` คืน `None` (ยืนยัน: 0 แถวใน `driver_ot_slot` ที่ `rate_config_id=6`) และ band ที่เขียนถูก (แยก 2 ท่อน) ถูกปิดไป |
+
+**ทำไมแก้ข้อมูลอย่างเดียวไม่พอ:** แก้ B1 ด้วยการตั้ง `end_time='24:00'` จะได้ ฿300 × ชั่วโมงจริง (ทริป 5 ชม. = ฿1,500) — ผิดคนละทางกับเดิม จึงต้องมี `rate_type`
+
+### `ot_rate_config` + 1 field
+
+| Field | เหตุผล |
+|-------|--------|
+| `rate_type` String(10) NOT NULL default `'hourly'` | หน่วยของ `rate` — `'hourly'` = บาท/ชม. (คูณนาทีที่ทับ band, พฤติกรรมเดิม 100%) · `'flat_day'` = เหมาจ่ายเต็มจำนวนไม่คูณเวลา. **จงใจไม่ใช้ `day_of_week IS NOT NULL` เป็นสัญญาณเหมาจ่าย** — เคยตีความแบบนั้นโดยปริยายก่อน 2026-07-28 แล้วทำให้ทาง manual กับ auto คิดคนละสูตร; `day_of_week` = "วันนั้นใช้ชุดอัตราไหน" เท่านั้น แยกจากหน่วยของเงินโดยสิ้นเชิง |
+
+### กติกา "เหมาจ่ายต่อวัน ไม่ใช่ต่อทริป" (เจ้าของเคาะ 2026-08-07)
+
+ระบบสร้าง OT **1 record ต่อ 1 booking** — คนขับคนเดียววิ่ง 3 ทริปวันอาทิตย์จะได้ 3 record ถ้าคิดเหมาตรงๆ = ฿900 ซึ่งขัดคำว่า "ทั้งวัน" · แก้โดย:
+
+- `claimed_flat_configs(driver_id, on_date, exclude_ot_id)` ([mileage_service.py](../../../app/services/vehicle/mileage_service.py)) query ว่า band เหมาจ่ายนั้นถูกเก็บเงินไปแล้วในวันนั้นหรือยัง (นับเฉพาะ slot ที่ `amount > 0` — ไม่งั้น slot ศูนย์บาทจะถูกนับเป็น "เก็บแล้ว" ต่อกันเป็นทอด)
+- ส่งเข้า `build_ot_specs(..., claimed_flat_ids)` → ทริปที่ 2+ ได้ slot ที่ `amount=0` แต่ `hours` ยังบันทึกจริง (เก็บประวัติว่าขับ ไม่คิดเงินซ้ำ)
+- `exclude_ot_id` จำเป็นตอน recompute — ไม่งั้น OT ก้อนที่กำลังคำนวณใหม่จะเห็นเงินของตัวเองแล้วกลายเป็น 0
+- บังคับทั้ง 3 ทาง: auto ตอนปิดทริป (`auto_generate_ot`), recompute (`_recompute_ot`), และ**แอดมินกรอกเอง** (`_parse_ot_slots` ใน `vehicle_cost.py`)
+
+### ข้อมูลที่ migration แก้ (นอกเหนือจาก schema)
+
+- band "วันอาทิตย์" → `rate_type='flat_day'`, ช่วงเป็น `00:00–24:00` (ครอบทั้งวันจริง)
+- เปิด band วิกาลที่เขียนถูก 2 ท่อนกลับ (`19:00–24:00`, `00:00–06:00`) · ปิด band `19:00–06:00` ที่ใช้ไม่ได้
+- **ระบบห้ามจองข้ามวันอยู่แล้ว** (`book_vehicle_simple`) → ทริปจบในวันเดียวเสมอ → band ข้ามเที่ยงคืนไม่มีความหมาย แยก 2 ท่อนคือรูปแบบที่ถูก ไม่ต้องเพิ่ม wrap-around logic
+
+**ผลกับข้อมูลเดิม:** OT ที่คำนวณไปแล้วไม่ถูกแตะ (`driver_ot_slot` เก็บ `amount` เป็น snapshot) · `OT-2026-0008` (7 มิ.ย. 69, วันอาทิตย์, ฿300) ยังถูกต้อง — สร้างก่อน refactor 2026-07-28 ตอนที่สูตรยังตีความ `day_of_week` เป็นเหมาจ่าย
+
+**Note:** table count คงที่ 26 · ข้ามเลข v2.29 (ใช้ไปกับ UI-only iteration ของ `vehicle_budget.html` ที่ไม่มี schema change) · test คลุมกติกาใหม่ 8 เคสใน [tests/test_ot_domain.py](../../../tests/test_ot_domain.py)
 
 ---
 

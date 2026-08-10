@@ -312,15 +312,14 @@
     gap: var(--vc-space-2);
     align-items: center;
 }
-.cost-rate-head {
+/* .cost-rate-head {
     padding: 0 var(--vc-space-2) var(--vc-space-1);
     margin-bottom: var(--vc-space-1);
-    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .04em;
     color: var(--vc-fg-subtle);
-}
+} */
 .cost-rate-row {
     padding: var(--vc-space-2);
     background: transparent;

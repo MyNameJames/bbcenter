@@ -4,8 +4,7 @@ from models import (db, get_bkk_time, Vehicle, Driver, VehicleMileage, VehicleBo
                     VehicleBudgetLog, OTRateConfig, DriverOT, DriverOTSlot)
 from sqlalchemy import extract, func
 from datetime import datetime, date
-from components import Table, Column
-from domain.vehicle.ot import build_slot
+from domain.vehicle.ot import build_slot, RATE_HOURLY, RATE_FLAT_DAY
 import services.vehicle.budget_service as budget_svc
 import services.vehicle.mileage_service as mileage_svc
 from views.vehicle.vehicle_common import (
@@ -29,13 +28,19 @@ def _apply_budget_filter(q, f_budget_type, f_budget_sub):
     return q
 
 
-def _parse_ot_slots(form):
+def _parse_ot_slots(form, driver_id=None, on_date=None, exclude_ot_id=None):
     """แปลง slot_cfg[]/slot_start[]/slot_end[] จากฟอร์ม modal → list[DriverOTSlot]
     (derive label/rate จาก OTRateConfig — snapshot ลง slot). ใช้ร่วม ot_create + ot_edit
 
     เงิน/ชั่วโมงคิดที่ domain/vehicle/ot.py::build_slot() ตัวเดียวกับที่ระบบใช้ตอนปิดทริป
     (2026-07-28) — ห้าม inline สูตรที่นี่ กติกาเดียวกับค่าน้ำมันที่ทุกทางเรียก calc_fuel_cost()
+
+    driver_id/on_date (2026-08-07) = ใช้เช็กว่า band เหมาจ่าย (flat_day) ถูกเก็บเงินไปแล้ว
+    ในวันนั้นหรือยัง — แอดมินกรอกเองก็ต้องอยู่ใต้กฎ "เหมาจ่ายต่อวัน" เหมือนทางอัตโนมัติ
+    (กติกา 6) ไม่ส่งมา = ไม่เช็ก (คิดเต็มทุก slot เหมือนเดิม)
     """
+    claimed = (mileage_svc.claimed_flat_configs(driver_id, on_date, exclude_ot_id)
+               if driver_id and on_date else frozenset())
     slot_cfgids = form.getlist('slot_cfg[]')
     slot_starts = form.getlist('slot_start[]')
     slot_ends   = form.getlist('slot_end[]')
@@ -47,7 +52,9 @@ def _parse_ot_slots(form):
             cfg    = OTRateConfig.query.get(cfg_id) if cfg_id else None
             if not cfg or not start or not end:
                 continue
-            spec = build_slot(cfg.label, start, end, float(cfg.rate), cfg_id)
+            charge = not (cfg.rate_type == RATE_FLAT_DAY and cfg_id in claimed)
+            spec = build_slot(cfg.label, start, end, float(cfg.rate), cfg_id,
+                              rate_type=cfg.rate_type, charge=charge)
             if not spec:
                 continue
             slots.append(DriverOTSlot(
@@ -104,56 +111,32 @@ def _ot_budget_label(booking):
     return ('—', '')
 
 
-def _calc_ot_kpi(all_ots):
-    live      = [o for o in all_ots if not o.is_deleted]
-    receipted = [o for o in live if not o.no_receipt]
-    unpaid    = [o for o in receipted if o.status == 'unpaid']
-    paid      = [o for o in receipted if o.status == 'paid']
-    self_paid = [o for o in live if o.no_receipt]
-    deleted   = [o for o in all_ots if o.is_deleted]
+def _ot_receipt_dict(ot):
+    """ot → dict ให้ buildReceiptPage()/list renderer ฝั่ง JS ใช้ (vehicle_ot.js) — โครง field
+    เดียวกับ otCostData JSON blob บนหน้า (ยังไม่รวมเป็นจุดเดียวกับ Jinja blob เดิม — คนละ endpoint
+    ใช้กันคนละที่ ผลจึงต้องตรงกันเป๊ะ ถ้าจะแก้ field ต้องแก้คู่กับ block scripts ในเทมเพลตด้วย)"""
+    d = ot.driver
     return {
-        'live':      live,
-        'unpaid':    unpaid,
-        'paid':      paid,
-        'self_paid': self_paid,
-        'deleted':   deleted,
-        'kpi_total':  round(sum(float(o.total_amount) for o in live),   2),
-        'kpi_unpaid': round(sum(float(o.total_amount) for o in unpaid), 2),
-        'kpi_paid':   round(sum(float(o.total_amount) for o in paid),   2),
-        'counts': {
-            'all':       len(live),
-            'unpaid':    len(unpaid),
-            'paid':      len(paid),
-            'self_paid': len(self_paid),
-            'deleted':   len(deleted),
-        },
+        'id': ot.id, 'ot_number': ot.ot_number, 'driver_id': ot.driver_id,
+        'driver_name': d.name if d else '',
+        'driver_phone': d.phone if d else '',
+        'driver_national_id': d.national_id if d else '',
+        'driver_addr_line': d.addr_line if d else '',
+        'driver_addr_subdistrict': d.addr_subdistrict if d else '',
+        'driver_addr_district': d.addr_district if d else '',
+        'driver_addr_province': d.addr_province if d else '',
+        'driver_addr_postal': d.addr_postal if d else '',
+        'driver_id_card_image': (url_for('static', filename='uploads/driver/' + d.id_card_image)
+                                  if d and d.id_card_image else ''),
+        'date': ot.date.strftime('%Y-%m-%d'),
+        'date_display': f"{ot.date.day:02d} {TH_MONTHS[ot.date.month]} {ot.date.year + 543}",
+        'destination': ot.booking.destination if ot.booking else '',
+        'total_hours': float(ot.total_hours), 'total_amount': float(ot.total_amount),
+        'status': ot.status, 'no_receipt': bool(ot.no_receipt), 'note': ot.note or '',
+        'slots': [{'label': s.slot_label, 'start': s.start_time, 'end': s.end_time,
+                   'rate': float(s.rate), 'hours': float(s.hours), 'amount': float(s.amount),
+                   'cfg_id': s.rate_config_id} for s in ot.slots],
     }
-
-
-def _build_ot_by_expense(ots):
-    """รวม OT ตามประเภทงาน → list เรียงยอดมากสุด."""
-    agg = {}
-    for o in ots:
-        if o.is_deleted:
-            continue
-        label, sub = _ot_budget_label(o.booking)
-        key = (label, sub or '')
-        a = agg.setdefault(key, {'amount': 0.0, 'hours': 0.0, 'count': 0})
-        a['amount'] += float(o.total_amount)
-        a['hours']  += float(o.total_hours)
-        a['count']  += 1
-    rows = [{'label': k[0], 'sub': k[1], **v} for k, v in agg.items()]
-    return sorted(rows, key=lambda r: r['amount'], reverse=True)
-
-
-def _personal_uncollected(ots):
-    """OT งานส่วนตัว (personal) ที่ยังไม่เรียกเก็บ = unpaid + ไม่ใช่ no_receipt."""
-    items = [o for o in ots
-             if not o.is_deleted and o.booking
-             and o.booking.expense_type == 'personal'
-             and o.status == 'unpaid' and not o.no_receipt]
-    total = round(sum(float(o.total_amount) for o in items), 2)
-    return items, total
 
 
 def _build_ot_pivot(from_year):
@@ -206,68 +189,63 @@ def cost_summary():
     from_year  = int(request.args.get('from_year',  now.year))
     to_month   = int(request.args.get('to_month',   now.month))
     to_year    = int(request.args.get('to_year',    now.year))
-    sel_driver = request.args.get('driver_id', type=int)
-    sel_status = request.args.get('status', '')
-    f_budget_type = request.args.get('budget_type', '').strip()
-    f_budget_sub  = request.args.get('budget_sub', '').strip()
 
-    from_date = date(from_year, from_month, 1)
-    to_date   = date(to_year + 1, 1, 1) if to_month == 12 else date(to_year, to_month + 1, 1)
-
-    base_q = DriverOT.query.filter(DriverOT.date >= from_date, DriverOT.date < to_date)
-    if sel_driver:
-        base_q = base_q.filter(DriverOT.driver_id == sel_driver)
-    base_q = _apply_budget_filter(base_q, f_budget_type, f_budget_sub)
-    kpi = _calc_ot_kpi(base_q.all())
-    ot_by_expense           = _build_ot_by_expense(kpi['live'])
-    ot_expense_table        = Table(data=ot_by_expense, columns=[
-        Column(key='label',  label='ประเภทงาน'),
-        Column(key='sub',    label='หมวด / กอง', cls='bb-cell-muted'),
-        Column(key='hours',  label='ชม.',       align='end', fmt='{:,.1f}'),
-        Column(key='amount', label='ยอด (฿)',   align='end', fmt='฿{:,.0f}'),
-        Column(key='count',  label='จำนวน',     align='end', fmt='num'),
-    ])
-    uncollected, uncoll_sum = _personal_uncollected(kpi['live'])
-
-    bucket = {
-        '': kpi['live'], 'unpaid': kpi['unpaid'], 'paid': kpi['paid'],
-        'self_paid': kpi['self_paid'], 'deleted': kpi['deleted'],
-    }.get(sel_status, kpi['live'])
-    ots = sorted(bucket, key=lambda o: o.date, reverse=True)
+    # แท็บ "ทั้งหมด" — OT ที่ไม่ถูกลบทั้งหมด ไม่มี filter เดือน/คนขับ/งบ/สถานะ (ตัดออก 2026-08-08
+    # ตามคำขอ — KPI strip/แถบอัตรา OT/ตารางแยกประเภทงาน ตัดออกด้วย เก็บไว้แค่ปุ่ม Excel ซึ่งยัง
+    # scope ตามเดือนปัจจุบัน (from_month/from_year ด้านบน) ไม่ได้ตามรายการที่เห็นทั้งหมด — ตั้งใจ
+    # ไม่แตะ cost_export ตอนนี้)
+    ots = (DriverOT.query
+           .filter(DriverOT.is_deleted.is_(False))
+           .order_by(DriverOT.date.desc())
+           .all())
     for o in ots:
         o.budget_label, o.budget_sub = _ot_budget_label(o.booking)
 
     drivers      = Driver.query.order_by(Driver.name).all()
     rate_configs = OTRateConfig.query.filter_by(is_active=True).order_by(OTRateConfig.sort_order).all()
 
-    range_label = TH_MONTHS[from_month] + ' ' + str(from_year + 543)
-    if from_month != to_month or from_year != to_year:
-        range_label += f" – {TH_MONTHS[to_month]} {to_year + 543}"
+    # แท็บ "ผู้ใช้จ่ายเอง" — รายการทั้งหมดไม่มี filter (ตามคำขอ) คนละชุดกับ ots ด้านบน
+    # ไม่ต้อง enrich budget_label (ตารางไม่มีคอลัมน์ งบ)
+    no_receipt_ots = (DriverOT.query
+                       .filter(DriverOT.no_receipt.is_(True), DriverOT.is_deleted.is_(False))
+                       .order_by(DriverOT.date.desc())
+                       .all())
 
     ot_pivot, ot_pivot_labels, row_totals, col_totals, grand_hours, grand_amount = \
         _build_ot_pivot(from_year)
 
-    filter_active = bool(sel_driver or f_budget_type
-                         or from_month != now.month or from_year != now.year
-                         or to_month != now.month or to_year != now.year)
-
     return render_template('vehicle/admin/vehicle_cost.html',
-        ots=ots, drivers=drivers, rate_configs=rate_configs,
+        ots=ots, drivers=drivers, rate_configs=rate_configs, no_receipt_ots=no_receipt_ots,
         from_month=from_month, from_year=from_year,
-        to_month=to_month, to_year=to_year,
-        sel_driver=sel_driver, sel_status=sel_status,
-        sel_budget_type=f_budget_type, sel_budget_sub=f_budget_sub,
-        budget_subs=_build_budget_subs(), filter_active=filter_active,
-        kpi_total=kpi['kpi_total'], kpi_unpaid=kpi['kpi_unpaid'], kpi_paid=kpi['kpi_paid'],
-        counts=kpi['counts'],
-        range_label=range_label, now=now,
+        to_month=to_month, to_year=to_year, now=now,
         ot_pivot=ot_pivot, ot_pivot_labels=ot_pivot_labels,
         ot_pivot_row_totals=row_totals, ot_pivot_col_totals=col_totals,
         ot_grand_hours=grand_hours, ot_grand_amount=grand_amount,
-        ot_by_expense=ot_by_expense, ot_expense_table=ot_expense_table,
-        uncollected_count=len(uncollected), uncollected_sum=uncoll_sum,
     )
 
+
+
+@admincost_bp.route('/admin/ot/slip', methods=['GET'])
+@login_required
+def ot_slip_data():
+    """OT ของคนขับคนเดียว เดือนเดียว → JSON ให้แท็บ "ใบจ่ายจริง" render list + receipt preview
+    (page contract redesign, 2026-08-08 — view-only, ไม่มี batch-payment entity)"""
+    if not is_vehicle_admin():
+        return jsonify(ok=False, msg='คุณไม่มีสิทธิ์'), 403
+    driver_id = request.args.get('driver_id', type=int)
+    year  = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    if not driver_id or not year or not month or not (1 <= month <= 12):
+        return jsonify(ok=False, msg='ข้อมูลไม่ครบ'), 400
+
+    from_date = date(year, month, 1)
+    to_date   = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    ots = (DriverOT.query
+           .filter(DriverOT.driver_id == driver_id,
+                   DriverOT.date >= from_date, DriverOT.date < to_date,
+                   DriverOT.is_deleted.is_(False))
+           .order_by(DriverOT.date).all())
+    return jsonify(ok=True, items=[_ot_receipt_dict(ot) for ot in ots])
 
 
 @admincost_bp.route('/admin/ot/<int:ot_id>/mark_paid', methods=['POST'])
@@ -329,7 +307,7 @@ def ot_create():
         flash('กรุณาเลือกคนขับและวันที่', 'danger')
         return redirect(request.referrer or url_for('admincost.cost_summary'))
 
-    new_slots = _parse_ot_slots(request.form)
+    new_slots = _parse_ot_slots(request.form, driver_id=driver_id, on_date=ot_date)
     if not new_slots:
         if _wants_json():
             return jsonify(ok=False, msg='ต้องมีช่วงเวลา OT อย่างน้อย 1 ช่วงที่ถูกต้อง'), 400
@@ -370,7 +348,8 @@ def ot_edit(ot_id):
     ot.date      = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
     ot.note      = request.form.get('note', '').strip() or None
 
-    new_slots       = _parse_ot_slots(request.form)
+    new_slots       = _parse_ot_slots(request.form, driver_id=ot.driver_id,
+                                      on_date=ot.date, exclude_ot_id=ot.id)
     ot.slots        = new_slots
     ot.total_hours  = round(sum(float(s.hours)  for s in new_slots), 2)
     ot.total_amount = round(sum(float(s.amount) for s in new_slots), 2)
@@ -419,47 +398,80 @@ def ot_restore(ot_id):
 
 
 
+def _reject_midnight_crossing(start, end):
+    """band ที่ end <= start (ข้ามเที่ยงคืน) คิดเงินไม่ได้ — build_ot_specs() จะได้ overlap ติดลบ
+    แล้วข้ามแถวนั้นเงียบๆ กลายเป็น OT 0 บาท (bug B2, 2026-08-07) จึงต้องกันตั้งแต่ตอนบันทึก
+    '24:00' = ปลายวัน ไม่ใช่ 00:00 ของวันถัดไป จึงเทียบเป็น 1440 นาที"""
+    to_min = lambda hm: 1440 if hm == '24:00' else int(hm[:2]) * 60 + int(hm[3:5])
+    try:
+        return to_min(end) <= to_min(start)
+    except (ValueError, IndexError):
+        return True
+
+
 @admincost_bp.route('/admin/ot/rate_config/update', methods=['POST'])
 @login_required
 def ot_rate_config_update():
+    """บันทึกอัตรา OT ทั้งชุด (แท็บ "ตั้งค่า OT") — แถวเดิมอัปเดต, แถวใหม่ (cfg_id ว่าง) สร้าง,
+    cfg_delete[] = soft-delete (is_active=False, JS ปิด input ก่อน submit แถวนั้นจึงไม่มีใน
+    cfg_id[]/cfg_label[]/... ที่เหลือ ไม่ถูกแตะซ้ำในลูปอัปเดตด้านล่าง) — pattern เดียวกับ
+    rateConfigModal เดิม (2026-08-08: เปลี่ยนกลับจาก toggle is_active ตามคำขอ — ลบแล้วลบเลย
+    ไม่มี UI เปิดกลับ ต้องแก้ DB มือถ้าจะเอาคืน เหมือนของเดิม)"""
     if not is_vehicle_admin():
+        if _wants_json():
+            return jsonify(ok=False, msg='คุณไม่มีสิทธิ์'), 403
         flash('คุณไม่มีสิทธิ์', 'danger')
         return redirect(url_for('vehicle.index'))
 
-    # Soft-delete existing rows the user removed in the modal
     for did in request.form.getlist('cfg_delete[]'):
         if did:
             cfg = OTRateConfig.query.get(int(did))
             if cfg:
                 cfg.is_active = False
 
-    # Update existing (cfg_id present) or create new (cfg_id == '')
-    max_order = db.session.query(db.func.coalesce(db.func.max(OTRateConfig.sort_order), 0)).scalar()
-    for cfg_id, label, start, end, rate, day in zip(
+    rows = list(zip(
         request.form.getlist('cfg_id[]'),
         request.form.getlist('cfg_label[]'),
         request.form.getlist('cfg_start[]'),
         request.form.getlist('cfg_end[]'),
         request.form.getlist('cfg_rate[]'),
         request.form.getlist('cfg_day[]'),
-    ):
+        request.form.getlist('cfg_rate_type[]'),
+    ))
+
+    bad = [label for _, label, start, end, rate, _, _ in rows
+           if label and start and end and rate != '' and _reject_midnight_crossing(start, end)]
+    if bad:
+        msg = f'ช่วงข้ามเที่ยงคืนใช้ไม่ได้ ต้องแยกเป็น 2 ท่อน: {", ".join(bad)}'
+        if _wants_json():
+            return jsonify(ok=False, msg=msg), 400
+        flash(msg, 'danger')
+        return redirect(request.referrer or url_for('admincost.cost_summary'))
+
+    max_order = db.session.query(db.func.coalesce(db.func.max(OTRateConfig.sort_order), 0)).scalar()
+    for cfg_id, label, start, end, rate, day, rtype in rows:
         if not label or not start or not end or rate == '':
             continue
-        day_val = int(day) if day not in ('', None) else None
+        day_val   = int(day) if day not in ('', None) else None
+        # ค่าที่ไม่รู้จักจาก form → hourly เสมอ (พฤติกรรมเดิม) ห้ามเชื่อ input ตรงๆ เพราะคุมเงิน
+        type_val  = RATE_FLAT_DAY if rtype == RATE_FLAT_DAY else RATE_HOURLY
         if cfg_id:
             cfg = OTRateConfig.query.get(int(cfg_id))
             if cfg:
                 cfg.label = label; cfg.start_time = start
                 cfg.end_time = end; cfg.rate = float(rate)
                 cfg.day_of_week = day_val
+                cfg.rate_type = type_val
         else:
             max_order += 10
             db.session.add(OTRateConfig(
                 label=label, start_time=start, end_time=end,
                 rate=float(rate), is_active=True, sort_order=max_order,
-                day_of_week=day_val,
+                day_of_week=day_val, rate_type=type_val,
             ))
     db.session.commit()
+    if _wants_json():
+        return jsonify(ok=True, msg='อัปเดตอัตรา OT เรียบร้อย')
     flash('อัปเดตอัตรา OT เรียบร้อย', 'success')
     return redirect(request.referrer or url_for('admincost.cost_summary'))
 

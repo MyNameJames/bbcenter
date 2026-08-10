@@ -369,20 +369,15 @@ document.addEventListener('submit', function (e) {
     if (!confirm(msg)) e.preventDefault();
 });
 
-// ── Phase 3E (2026-05-22): personal section client-side tab filter
-//    Tab pills [ทั้งหมด / ค้างรับ / รับแล้ว] toggles row visibility ผ่าน
-//    data-personal-row="paid|unpaid". ไม่ reload (data set เล็ก, snappy).
-document.addEventListener('click', function (e) {
-    const tab = e.target.closest('[data-personal-filter]');
-    if (!tab) return;
-    const filter = tab.dataset.personalFilter;
-    document.querySelectorAll('[data-personal-filter]').forEach(function (t) {
-        t.classList.toggle('is-on', t === tab);
-    });
-    document.querySelectorAll('[data-personal-row]').forEach(function (row) {
-        const s = row.dataset.personalRow;
-        row.hidden = (filter !== 'all' && s !== filter);
-    });
+// ── Confirm dialog ก่อนลบก้อนงบทิ้งถาวร (v2.30 — แท็บ "งบหลัก") — ลบพร้อม cascade งบย่อยที่ผูกอยู่ ──
+document.addEventListener('submit', function (e) {
+    const form = e.target.closest('form[data-confirm-delete-plan]');
+    if (!form) return;
+    const name = form.dataset.planName || 'ก้อนงบนี้';
+    const msg = 'ลบ "' + name + '" ทิ้งถาวรใช่หรือไม่?\n\n' +
+        '⚠️ กู้คืนไม่ได้ งบย่อยทั้งหมดที่ผูกกับก้อนนี้จะถูกลบไปด้วย ' +
+        '(ใช้ได้เฉพาะตอนใช้ไป 0 บาททั้งก้อน — ระบบจะบล็อกให้เองถ้ามีงบย่อยที่ใช้ไปแล้ว)';
+    if (!confirm(msg)) e.preventDefault();
 });
 
 // ── Main tabs (2026-07-29): ตารางรวม / กำลังใช้งาน / ไม่ได้ใช้งานแล้ว / ร่วมบุญส่วนตัว
@@ -422,8 +417,15 @@ document.addEventListener('click', function (e) {
 (function initYearlyPlanChip() {
     const dd = document.getElementById('ddYearlyPlan');
     if (!dd) return;
+    // initUeChipDd (bb-components.js) portals .ue-chip-pop ไป document.body ตอนเปิด (กัน overflow
+    // clip) — 'ue-chip:change' ยิงตอน dropdown ยังเปิดอยู่ (คลิก checkbox/radio ก่อนปิด panel) แปลว่า
+    // input ไม่ได้อยู่ใต้ dd ใน DOM แล้ว ณ ตอนนั้น dd.querySelector(...) จึงหาไม่เจอเสมอ (2026-08-07 bug)
+    // capture ตัว pop ไว้ตอน init แทน (เหมือนที่ initUeChipDd เก็บ body ไว้ใน closure ของมันเอง) —
+    // querySelector จาก node reference ตรงๆ ทำงานได้ไม่ว่า node นั้นจะอยู่ตรงไหนใน document ปัจจุบัน
+    const pop = dd.querySelector('[data-ue-chip-pop]');
+    if (!pop) return;
     dd.addEventListener('ue-chip:change', function () {
-        const radio = dd.querySelector('input[type="radio"]:checked');
+        const radio = pop.querySelector('input[type="radio"]:checked');
         if (!radio || !radio.value) return;
         const url = new URL(window.location.href);
         url.searchParams.set('plan_id', radio.value);
@@ -438,9 +440,13 @@ document.addEventListener('click', function (e) {
     const dd     = document.getElementById('ddPlanYear');
     const planDd = document.getElementById('ddYearlyPlan');
     if (!dd || !planDd) return;
+    // เหตุผลเดียวกับ initYearlyPlanChip ด้านบน — pop portal ไป document.body ตอนเปิด, capture
+    // reference ไว้ตอน init แทน dd.querySelector ตรงๆ ตอน event (2026-08-07 bug fix)
+    const pop = dd.querySelector('[data-ue-chip-pop]');
+    if (!pop) return;
 
     function apply() {
-        const radio = dd.querySelector('input[type="radio"]:checked');
+        const radio = pop.querySelector('input[type="radio"]:checked');
         const year  = radio ? Number(radio.value) : null;
         planDd.querySelectorAll('.ue-chip-opt').forEach(function (opt) {
             if (!year) { opt.hidden = false; return; }
@@ -463,13 +469,17 @@ document.addEventListener('click', function (e) {
     const ddType = document.getElementById('ddPivotBudgetType');
     const table  = document.getElementById('pivotMockupTable');
     if (!table || !ddType) return;
+    // เหตุผลเดียวกับ initYearlyPlanChip ด้านบน — pop portal ไป document.body ตอนเปิด, capture
+    // reference ไว้ตอน init แทน dd.querySelectorAll ตรงๆ ตอน event (2026-08-07 bug fix)
+    const pop = ddType.querySelector('[data-ue-chip-pop]');
+    if (!pop) return;
 
-    function checkedValues(dd) {
-        return Array.from(dd.querySelectorAll('input[type="checkbox"]:checked')).map(function (el) { return el.value; });
+    function checkedValues(popEl) {
+        return Array.from(popEl.querySelectorAll('input[type="checkbox"]:checked')).map(function (el) { return el.value; });
     }
 
     function apply() {
-        const types = checkedValues(ddType);
+        const types = checkedValues(pop);
         table.querySelectorAll('tbody[data-budget-type]').forEach(function (tbody) {
             const type = tbody.dataset.budgetType;
             tbody.hidden = !(types.length === 0 || types.includes(type));
@@ -542,6 +552,33 @@ document.addEventListener('change', function (e) {
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
 })();
 
+// ── ypTotal/ypCentral/ypDeptPreview — comma thousand-separator ระหว่างพิมพ์ (2026-08-07,
+//    ตามคำขอผู้ใช้ "จะได้รู้หลักของเลข") field เดิมเป็น <input type="number"> ซึ่ง browser
+//    ไม่ยอมให้พิมพ์ , เข้าไปเลย ต้องเปลี่ยนเป็น type="text" + inputmode="numeric" แล้ว mask เอง —
+//    fmtComma/parseComma ใช้ร่วมกันทั้ง initYearlyPlanModalMode (prefill ตอนแก้ไข) และ
+//    initYearlyPlanPreview (คำนวณ live) ต้อง stripComma ก่อน submit เสมอ (backend parse ด้วย
+//    float() ตรงๆ — comma หลุดไปจะ ValueError) ──
+function fmtComma(n) { return Math.round(Number(n) || 0).toLocaleString('en-US'); }
+function parseComma(v) { return Number(String(v || '').replace(/,/g, '')) || 0; }
+function stripComma(v) { return String(v || '').replace(/,/g, ''); }
+
+function bindMoneyInputFormat(input) {
+    if (!input) return;
+    input.addEventListener('input', function () {
+        const caret = input.selectionStart;
+        const digitsBeforeCaret = input.value.slice(0, caret).replace(/[^0-9]/g, '').length;
+        const raw = input.value.replace(/[^0-9]/g, '');
+        input.value = raw ? Number(raw).toLocaleString('en-US') : '';
+        let count = 0, pos = input.value.length;
+        for (let i = 0; i < input.value.length; i++) {
+            if (/[0-9]/.test(input.value[i])) count++;
+            if (count === digitsBeforeCaret) { pos = i + 1; break; }
+        }
+        if (digitsBeforeCaret === 0) pos = 0;
+        input.setSelectionRange(pos, pos);
+    });
+}
+
 (function initYearlyPlanModalMode() {
     const modal = document.getElementById('yearlyPlanModal');
     const form  = modal && modal.querySelector('form');
@@ -552,6 +589,8 @@ document.addEventListener('change', function (e) {
     const totalInput    = document.getElementById('ypTotal');
     const centralInput  = document.getElementById('ypCentral');
     const deptPreview   = document.getElementById('ypDeptPreview');
+    bindMoneyInputFormat(totalInput);
+    bindMoneyInputFormat(centralInput);
 
     const startDateHidden = document.getElementById('ypStartDate');
     const endDateHidden   = document.getElementById('ypEndDate');
@@ -644,6 +683,8 @@ document.addEventListener('change', function (e) {
     });
 
     form.addEventListener('submit', function (ev) {
+        if (totalInput)   totalInput.value   = stripComma(totalInput.value);
+        if (centralInput) centralInput.value = stripComma(centralInput.value);
         hideDateError();
         recomputeDates();
         if (!startDateHidden.value || !endDateHidden.value) {
@@ -687,9 +728,9 @@ document.addEventListener('change', function (e) {
         const central = Number(btn.dataset.planCentral) || 0;
         if (planIdInput)  planIdInput.value  = btn.dataset.planId || '';
         if (nameInput)    nameInput.value    = btn.dataset.planName || '';
-        if (totalInput)   totalInput.value   = btn.dataset.planTotal || '';
-        if (centralInput) centralInput.value = btn.dataset.planCentral || '';
-        if (deptPreview)  deptPreview.value  = total - central;
+        if (totalInput)   totalInput.value   = btn.dataset.planTotal ? fmtComma(total) : '';
+        if (centralInput) centralInput.value = btn.dataset.planCentral ? fmtComma(central) : '';
+        if (deptPreview)  deptPreview.value  = fmtComma(total - central);
 
         const start = btn.dataset.planStart ? new Date(btn.dataset.planStart + 'T00:00:00') : null;
         const end   = btn.dataset.planEnd   ? new Date(btn.dataset.planEnd   + 'T00:00:00')   : null;
@@ -705,8 +746,10 @@ document.addEventListener('change', function (e) {
 })();
 
 // ── Yearly plan modal: preview ส่วนกอง = ทั้งปี − ส่วนกลาง (2026-07-31)
-//    v2.28: ypDeptPreview เปลี่ยนจาก <strong> (textContent) เป็น <input type="number"> (ตาม
-//    ypTotal/ypCentral) เพื่อให้หน้าตาตรงกัน — set .value ไม่ใช่ .textContent (number input ไม่มี text node) ──
+//    v2.28: ypDeptPreview เปลี่ยนจาก <strong> (textContent) เป็น <input> (ตาม ypTotal/ypCentral)
+//    เพื่อให้หน้าตาตรงกัน — set .value ไม่ใช่ .textContent (input ไม่มี text node)
+//    v2.30 (2026-08-07): total/central เปลี่ยนเป็น type="text" + comma mask (bindMoneyInputFormat
+//    ด้านบน) — parse ผ่าน parseComma() แทน Number() ตรงๆ (value มี comma ปนอยู่) ──
 (function initYearlyPlanPreview() {
     const total   = document.getElementById('ypTotal');
     const central = document.getElementById('ypCentral');
@@ -714,8 +757,8 @@ document.addEventListener('change', function (e) {
     if (!total || !central || !preview) return;
 
     function update() {
-        const dept = (Number(total.value) || 0) - (Number(central.value) || 0);
-        preview.value = dept;
+        const dept = parseComma(total.value) - parseComma(central.value);
+        preview.value = fmtComma(dept);
     }
     total.addEventListener('input', update);
     central.addEventListener('input', update);

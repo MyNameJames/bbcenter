@@ -5,17 +5,20 @@ test_ot_domain.py — domain/vehicle/ot.py (pure logic, ไม่แตะ DB)
   1. ทริป < 30 นาที ไม่คิด OT                                    (2026-07-27)
   2. เงินเป็นจำนวนเต็มบาท (เศษสตางค์ปัดทิ้ง)                      (2026-07-27)
   3. slot ต้องอยู่ในกรอบทริป + ทริปต้องยังผ่านเกณฑ์ข้อ 1          (2026-07-27/28)
-  4. rate หน่วยเดียว = บาท/ชม. — build_slot() คิดเงินที่เดียวทั้งระบบ (2026-07-28)
+  4. หน่วยของ rate อยู่ที่ rate_type — build_slot() คิดเงินที่เดียวทั้งระบบ (2026-07-28/08-07)
   5. เงินคูณจากนาทีจริง ไม่ใช่ชั่วโมงที่ปัดแล้ว                     (2026-07-28)
+  6. flat_day = เหมาจ่ายต่อ "วัน" ไม่ใช่ต่อทริป                     (2026-08-07)
 """
 import pytest
 
-from domain.vehicle.ot import (OT_MIN_TRIP_MINUTES, build_ot_specs, build_slot,
+from domain.vehicle.ot import (OT_MIN_TRIP_MINUTES, RATE_FLAT_DAY, RATE_HOURLY,
+                               build_ot_specs, build_slot,
                                calc_slot_amount, calc_slot_hours, hm_to_min,
                                min_to_hm, slots_match_trip, trip_qualifies_for_ot)
 
-ALL_DAY  = [('ทั้งวัน', '00:00', '24:00', 20, 1)]
-EVENING  = [('หลังเลิกงาน', '17:00', '24:00', 20, 2)]
+ALL_DAY  = [('ทั้งวัน', '00:00', '24:00', 20, 1, RATE_HOURLY)]
+EVENING  = [('หลังเลิกงาน', '17:00', '24:00', 20, 2, RATE_HOURLY)]
+SUNDAY   = [('วันอาทิตย์', '00:00', '24:00', 300, 5, RATE_FLAT_DAY)]
 
 
 # ── กติกา 1: เกณฑ์ 30 นาที ───────────────────────────────────
@@ -133,3 +136,63 @@ def test_band_end_2400_covers_to_midnight():
 def test_threshold_constant_is_30():
     """กันแก้ค่าโดยไม่ตั้งใจ — เกณฑ์นี้ตกลงกับเจ้าของโปรเจกต์ไว้"""
     assert OT_MIN_TRIP_MINUTES == 30
+
+
+# ── กติกา 6: flat_day = เหมาจ่ายต่อวัน (2026-08-07) ──────────
+@pytest.mark.parametrize('start, end', [
+    ('13:01', '18:01'),   # 5 ชม.
+    ('08:00', '10:00'),   # 2 ชม.
+    ('09:00', '09:30'),   # 30 นาที (เกณฑ์ขั้นต่ำพอดี)
+])
+def test_flat_day_ignores_trip_length(start, end):
+    """เหมาจ่ายได้เท่ากันไม่ว่าขับกี่ชั่วโมง — เคสจริง: band 'วันอาทิตย์' 300 บาท
+    ถ้าคิดแบบ hourly ทริป 5 ชม. จะกลายเป็น 1,500 (บั๊ก B1 ที่แก้ 2026-08-07)"""
+    specs = build_ot_specs(SUNDAY, hm_to_min(start), hm_to_min(end))
+    assert sum(s['amount'] for s in specs) == 300
+
+
+def test_flat_day_charges_once_per_day():
+    """ทริปที่ 2+ ของคนขับคนเดิมในวันเดียวกัน → slot ยังอยู่ (เก็บประวัติว่าขับ) แต่ amount=0
+    caller ส่ง claimed_flat_ids มาให้ — domain ไม่ query เอง"""
+    first  = build_ot_specs(SUNDAY, hm_to_min('08:00'), hm_to_min('10:00'))
+    second = build_ot_specs(SUNDAY, hm_to_min('13:00'), hm_to_min('16:00'),
+                            claimed_flat_ids={5})
+    assert sum(s['amount'] for s in first) == 300
+    assert len(second) == 1 and second[0]['amount'] == 0
+    assert second[0]['hours'] == 3.0   # ชั่วโมงยังบันทึกจริง ไม่ถูกล้างไปด้วย
+
+
+def test_claimed_ids_do_not_affect_hourly_bands():
+    """claimed มีผลเฉพาะ flat_day — band รายชั่วโมงที่ config_id ตรงกันต้องคิดเงินตามปกติ"""
+    specs = build_ot_specs(ALL_DAY, hm_to_min('17:00'), hm_to_min('19:00'),
+                           claimed_flat_ids={1})
+    assert specs[0]['amount'] == 40   # 2 ชม. × 20
+
+
+def test_flat_day_amount_helper():
+    """calc_slot_amount ไม่คูณเวลาเมื่อเป็น flat_day"""
+    assert calc_slot_amount(300, 300, RATE_FLAT_DAY) == 300   # 5 ชม. → ยังเป็น 300
+    assert calc_slot_amount(300, 300, RATE_HOURLY) == 1500     # เทียบ: hourly = 1,500
+
+
+# ── กติกา 7: band ข้ามเที่ยงคืนใช้ไม่ได้ ต้องกันตั้งแต่ตอนบันทึก (bug B2, 2026-08-07/08) ──
+# _reject_midnight_crossing อยู่ที่ controller (ไม่ใช่ domain) เพราะเป็น input validation
+# ของฟอร์ม ไม่ใช่สูตรคิดเงิน — แต่ทดสอบคู่กันที่นี่เพราะปกป้องกติกาเดียวกับ build_ot_specs
+@pytest.mark.parametrize('start, end, rejected', [
+    ('06:00', '08:00', False),   # ปกติ
+    ('21:00', '24:00', False),   # ชนปลายวัน = ใช้ได้ (24:00 คือ 1440 ไม่ใช่ 0)
+    ('00:00', '24:00', False),   # เต็มวัน (เหมาจ่ายวันอาทิตย์)
+    ('22:00', '02:00', True),    # ข้ามเที่ยงคืน
+    ('19:00', '06:00', True),    # เคสจริงที่ทำให้ OT = 0 บาท (B2)
+    ('08:00', '08:00', True),    # ยาว 0 นาที
+    ('00:00', '00:00', True),    # เคสจริงที่ทำให้เหมาวันอาทิตย์ = 0 บาท (B1)
+])
+def test_reject_midnight_crossing(start, end, rejected):
+    from views.vehicle.vehicle_cost import _reject_midnight_crossing
+    assert _reject_midnight_crossing(start, end) is rejected
+
+
+def test_midnight_crossing_band_produces_no_slots():
+    """ยืนยันว่าทำไมต้อง reject: band ข้ามเที่ยงคืนให้ overlap ติดลบ → ไม่มี slot → OT 0 บาท"""
+    bands = [('กลางคืน', '19:00', '06:00', 200, 9, RATE_HOURLY)]
+    assert build_ot_specs(bands, 20 * 60, 23 * 60) == []

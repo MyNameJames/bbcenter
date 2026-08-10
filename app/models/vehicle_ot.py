@@ -14,6 +14,10 @@ class OTRateConfig(db.Model):
     is_active  = db.Column(db.Boolean, default=True)
     day_of_week = db.Column(db.Integer, nullable=True)  # NULL=any day, 0=Mon ... 6=Sun (Python weekday()); used by auto_generate_ot() override
     sort_order = db.Column(db.Integer, default=0)
+    # หน่วยของ rate (2026-08-07): 'hourly' = บาท/ชม. (คูณเวลาที่ทับ band)
+    # 'flat_day' = เหมาจ่ายต่อ "วัน" ไม่ใช่ต่อทริป — คนขับคนเดียวขับหลายทริปในวันเดียว
+    # ได้เงินก้อนนี้ครั้งเดียว (ทริปถัดไปได้ slot ที่ amount=0, ดู claimed_flat_configs())
+    rate_type  = db.Column(db.String(10), nullable=False, default='hourly')
 
 
 # ==========================================

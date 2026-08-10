@@ -36,6 +36,8 @@ const BADGE_STYLE = {
     complete: { text: 'กรอกเลขไมล์ครบ',  bg: '--bb-ok-bg', fg: '--bb-ok-tx' }
 };
 const AVATAR_ICON_COLOR = { none: '--bb-mut', partial: '--bb-wr', complete: '--bb-ok' };
+// ปุ่ม submit เปลี่ยนข้อความตามสถานะ (redesign 2026-08-07, ของใหม่ — เดิมเป็น "ยืนยัน" ตายตัว)
+const SUBMIT_TEXT = { none: 'บันทึกไมล์ออก', partial: 'บันทึกไมล์กลับ', complete: 'ยืนยัน' };
 
 function clearEndError() {
     mmOdoEnd.classList.remove('is-error');
@@ -126,19 +128,42 @@ function renderOtStop(ds, state) {
     const totalMinutes = slots.reduce((sum, s) => sum + Number(s.hours) * 60, 0);
     const totalHours   = slots.reduce((sum, s) => sum + Number(s.hours), 0);
     const otText = totalMinutes < 60 ? `${Math.round(totalMinutes)} นาที` : `${totalHours.toFixed(2)} ชม.`;
+    // redesign 2026-08-07: label "ค่าล่วงเวลา (OT)" ย้ายไปเป็น static text ใน template แล้ว —
+    // span นี้เหลือแค่ต่อท้าย (ช่วงเวลา + จำนวน) ไม่ต้องพูดคำว่า OT ซ้ำ
     document.getElementById('mmOtTimeRange').textContent =
-        `${actualStart || '—'} - ${actualEnd || '—'} (OT : ${otText})`;
+        `· ${actualStart || '—'}–${actualEnd || '—'} · ${otText}`;
 
-    document.getElementById('mmOtRates').innerHTML = slots.map(s => `
-        <div class="text-muted" style="font-size:.8125rem">
-            OT rate (${s.label}) : ${fmt(s.rate)} บาท/ชม. (รวมเป็น <b style="color:var(--bb-str)">${fmt(s.amount)} บาท</b>)
-        </div>
-    `).join('');
+    // flat_day (เหมาจ่ายรายวัน) คนละหน่วยเงินกับ hourly — เขียน "บาท/ชม." ทับไม่ได้ (เดิมเขียนทับ
+    // ทุก slot มาตลอด) และไม่ผูกกับสัดส่วนเวลาที่ทับทริปเลยตามกติกา 6 (domain/vehicle/ot.py)
+    // → แยกเป็น badge "เหมาจ่าย/วัน" ต่างหาก ไม่ปนกับ list rate/ชม. · already_claimed (server
+    // ส่งมา, ดู vehicle_mileage.py) = คนขับได้เหมาไปแล้วในทริปก่อนหน้าของวันเดียวกัน amount
+    // เลยเป็น 0 โดยตั้งใจ ไม่ใช่ข้อมูลผิด — ต้องบอกเหตุผลตรงๆ ไม่ปล่อยให้เห็นแค่ "0 บาท" เฉยๆ
+    document.getElementById('mmOtRates').innerHTML = slots.map(s => {
+        if (s.rate_type === 'flat_day') {
+            const detail = s.already_claimed
+                ? `${s.label} — ได้รับไปแล้วในทริปก่อนหน้าของวันนี้ (ไม่ได้รับซ้ำ)`
+                : `${s.label} — <b style="color:var(--bb-str)">${fmt(s.amount)} บาท</b>`;
+            return `
+                <div class="d-flex align-items-center gap-2 flex-wrap" style="font-size:.8125rem">
+                    <span class="bb-badge is-accent">เหมาจ่าย/วัน</span>
+                    <span class="text-muted">${detail}</span>
+                </div>
+            `;
+        }
+        return `
+            <div class="text-muted" style="font-size:.8125rem">
+                OT rate (${s.label}) : ${fmt(s.rate)} บาท/ชม. (รวมเป็น <b style="color:var(--bb-str)">${fmt(s.amount)} บาท</b>)
+            </div>
+        `;
+    }).join('');
 
     renderOtMismatch(ds, slots, actualStart, actualEnd);
 
     if (actualStart && actualEnd) {
-        const segments = buildOtBarSegments(actualStart, actualEnd, slots);
+        // แถบ/legend โชว์เฉพาะ hourly — flat_day ไม่ได้ผูกกับสัดส่วนเวลาที่ทับทริป เอาขึ้นแถบ
+        // จะสื่อว่า "ช่วงนี้ของเวลา = เงินก้อนนี้" ทั้งที่ไม่จริง (ตัดสินใจ 2026-08-07)
+        const hourlySlots = slots.filter(s => s.rate_type !== 'flat_day');
+        const segments = buildOtBarSegments(actualStart, actualEnd, hourlySlots);
         document.getElementById('mmOtBar').innerHTML = segments.map(s =>
             `<div style="width:${s.pct}%;background:var(${SEG_STYLE[s.type].varName})"></div>`
         ).join('');
@@ -147,7 +172,7 @@ function renderOtStop(ds, state) {
         document.getElementById('mmOtBarLabels').innerHTML =
             `<span>เริ่มทริป <span class="bb-num">${actualStart}</span></span>` +
             `<span>จบทริป <span class="bb-num">${actualEnd}</span></span>`;
-        renderOtBarLegend(segments, slots);
+        renderOtBarLegend(segments, hourlySlots);
     }
 }
 
@@ -167,6 +192,10 @@ function renderOtMismatch(ds, slots, actualStart, actualEnd) {
         `ตัวเลขนี้มาจากเวลาทริปชุดก่อนแก้ กรุณาตรวจสอบก่อนจ่าย`;
 }
 
+// redesign 2026-08-07: สรุปเงินเดิมเป็น 2 บรรทัดข้อความยาวในกล่องเทา (mmCostDistanceLine/
+// mmCostFuelInfo/mmCostBreakdown) → เปลี่ยนเป็นรายการแบบใบเสร็จ (ค่าน้ำมัน/ค่า OT แยกแถว
+// + เส้นคั่น + ยอดรวมตัวใหญ่) ให้เข้าชุดกับ setBudgetModal — รายละเอียดราคาน้ำมัน/กม. ย้ายไป
+// เป็น title attribute ของแถวค่าน้ำมันแทน (hover ดูได้ ไม่ต้องยัดเป็นบรรทัดแยก)
 function renderCostStop(ds, state) {
     const stop = document.getElementById('mmCostStop');
     if (state !== 'complete') {
@@ -178,13 +207,26 @@ function renderCostStop(ds, state) {
     const distance = ds.distance ? Number(ds.distance) : 0;
     const fuelCost = ds.cost     ? Number(ds.cost)      : 0;
     const otTotal  = ds.otTotal  ? Number(ds.otTotal)   : 0;
+    // ไม่มี data-ot-hours แยกบน row — รวมจาก ds.otSlots เอาเอง (เหมือนที่ renderOtStop ทำ)
+    let otSlots = [];
+    try { otSlots = JSON.parse(ds.otSlots || '[]'); } catch (e) { otSlots = []; }
+    const otHours = otSlots.reduce((sum, s) => sum + Number(s.hours || 0), 0);
 
-    document.getElementById('mmCostDistanceLine').textContent = `ระยะทางทั้งหมด ${fmt(distance)} กม.`;
-    document.getElementById('mmCostFuelInfo').textContent = (ds.fuelPrice && ds.fuelRate)
-        ? `ราคาน้ำมันต่อลิตร ${fmt(ds.fuelPrice)} บาท (${fmt(ds.fuelRate)} กม. ต่อลิตร)`
-        : '—';
-    document.getElementById('mmCostBreakdown').textContent = `ค่าน้ำมัน : ${fmt(fuelCost)} บาท / ค่า OT ${fmt(otTotal)} บาท`;
-    document.getElementById('mmCostTotal').textContent = `รวมทั้งหมด ${fmt(fuelCost + otTotal)} บาท`;
+    const fuelLabel = document.getElementById('mmCostFuelLabel');
+    fuelLabel.textContent = `ค่าน้ำมัน · ${fmt(distance)} กม.`;
+    fuelLabel.title = (ds.fuelPrice && ds.fuelRate)
+        ? `฿${fmt(ds.fuelPrice)}/ลิตร ÷ ${fmt(ds.fuelRate)} กม./ลิตร`
+        : '';
+    document.getElementById('mmCostFuelAmt').textContent = `฿${fmt(fuelCost)}`;
+
+    const otRow = document.getElementById('mmCostOtRow');
+    otRow.classList.toggle('d-none', otTotal <= 0);
+    if (otTotal > 0) {
+        document.getElementById('mmCostOtLabel').textContent = `ค่าล่วงเวลา · ${otHours.toFixed(2)} ชม.`;
+        document.getElementById('mmCostOtAmt').textContent   = `฿${fmt(otTotal)}`;
+    }
+
+    document.getElementById('mmCostTotal').textContent = `฿${fmt(fuelCost + otTotal)}`;
 }
 
 /* ── Modal open ───────────────────────────────── */
@@ -225,6 +267,8 @@ function openMileage(btn) {
     // page contract 2026-08-07 §4) — เผื่อ markup เก่าที่ยังไม่ migrate จุดอื่นด้วย 3 selector
     const avatarIcon = avatar.querySelector('.material-symbols-rounded, [data-lucide], svg, i');
     if (avatarIcon) avatarIcon.style.color = `var(${AVATAR_ICON_COLOR[state]})`;
+
+    document.getElementById('mmSubmit').textContent = SUBMIT_TEXT[state];
 
     clearEndError();
 

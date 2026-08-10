@@ -1,7 +1,7 @@
 # INDEX — Routes
 
 > Part ของ INDEX.md แยก เพื่อ token budget — [กลับ hub](INDEX.md)
-> **อัปเดตล่าสุด:** 2026-08-06
+> **อัปเดตล่าสุด:** 2026-08-07
 
 ---
 
@@ -76,7 +76,7 @@
 | GET/POST | `/admin/manage-fleet` | [vehicle_admin.py:278](../../app/views/vehicle/vehicle_admin.py#L278) — `manage_fleet()` |
 | POST | `/admin/manage-fleet/service` | [vehicle_admin.py:731](../../app/views/vehicle/vehicle_admin.py#L731) — `update_vehicle_service()` |
 | GET | `/api/vehicle/<vid>/history` | [vehicle_admin.py:700](../../app/views/vehicle/vehicle_admin.py#L700) — `vehicle_history()` |
-| GET/POST | `/admin/budget` | [vehicle_budget.py:557](../../app/views/vehicle/vehicle_budget.py#L557) — `budget_manage()` (POST action dispatch dict → `_handle_set_budget`/`_handle_top_up`/`_handle_manual_adjust`/`_handle_toggle_active`/`_handle_extend_period`/`_handle_cancel_booking`/`_handle_set_yearly_plan`/`_handle_set_default_plan`/`_handle_delete_budget` **(v2.29)**; `_handle_cancel_booking` → `booking_service.cancel(notify=False)`, **ปิด DEBT-3, Phase 3.5**. GET params: `?plan_id=` (v2.28) — `?plan_year=` server-side filter ตัดออกแล้ว v2.29 (chip "ปี" filter ฝั่ง client แทน)) |
+| GET/POST | `/admin/budget` | [vehicle_budget.py:612](../../app/views/vehicle/vehicle_budget.py#L612) — `budget_manage()` (POST action dispatch dict → `_handle_set_budget`/`_handle_top_up`/`_handle_manual_adjust`/`_handle_toggle_active`/`_handle_extend_period`/`_handle_cancel_booking`/`_handle_set_yearly_plan`/`_handle_set_default_plan`/`_handle_delete_budget`/`_handle_delete_plan` **(v2.30 — เพิ่ม `delete_plan`: ลบ `VehicleBudgetYearlyPlan` ทิ้งถาวรพร้อม cascade งบย่อยที่ผูกอยู่ ผ่าน `budget_svc.delete_yearly_plan()`, ปุ่ม icon delete ในแท็บ "งบหลัก")**; `_handle_cancel_booking` → `booking_service.cancel(notify=False)`, **ปิด DEBT-3, Phase 3.5**. GET params: `?plan_id=` (v2.28) — `?plan_year=` server-side filter ตัดออกแล้ว v2.29 (chip "ปี" filter ฝั่ง client แทน)) |
 | GET | `/admin/budget/personal` | [vehicle_budget.py:937](../../app/views/vehicle/vehicle_budget.py#L937) — `budget_personal()` |
 | POST | `/admin/budget/personal/mark_paid` | [vehicle_budget.py:1003](../../app/views/vehicle/vehicle_budget.py#L1003) — `budget_personal_mark_paid()` |
 | POST | `/admin/budget/personal/mark_unpaid` | [vehicle_budget.py:1031](../../app/views/vehicle/vehicle_budget.py#L1031) — `budget_personal_mark_unpaid()` |
@@ -86,13 +86,14 @@
 |--------|------|-----------|
 | POST | `/vehicle/mileage/override-fuel` | [vehicle_cost.py:72](../../app/views/vehicle/vehicle_cost.py#L72) |
 | GET | `/admin/cost` | [vehicle_cost.py:198](../../app/views/vehicle/vehicle_cost.py#L198) — tab `''`(live)/unpaid/paid/self_paid/deleted + KPI ยอดรวม/ยังไม่จ่าย/จ่ายแล้ว (ไม่นับ deleted) + col งบ per row. **2026-06-14:** query param `budget_type`/`budget_sub` → filter งบ (derive จาก booking ผ่าน `_apply_budget_filter`, กระทบทั้ง KPI + table) (**DEBT-5** — 61 logic-line เกิน 60, legacy ตั้งใจไม่แตะ) |
+| GET | `/admin/ot/slip` | [vehicle_cost.py:314](../../app/views/vehicle/vehicle_cost.py#L314) — JSON, คนขับ+เดือนเดียว (ทุกสถานะ ไม่กรอง paid/unpaid) ให้แท็บ "ใบจ่ายจริง" render list+receipt preview (page contract redesign, 2026-08-08, view-only) |
 | POST | `/admin/ot/<id>/mark_paid` | [vehicle_cost.py:274](../../app/views/vehicle/vehicle_cost.py#L274) — toggle จ่าย/ไม่จ่าย |
 | POST | `/admin/ot/<id>/toggle_no_receipt` | [vehicle_cost.py:299](../../app/views/vehicle/vehicle_cost.py#L299) — tab ผู้ใช้จ่ายเอง |
 | POST | `/admin/ot/create` | [vehicle_cost.py:319](../../app/views/vehicle/vehicle_cost.py#L319) — manual standalone OT (booking_id=None, ไม่หักงบ) |
 | POST | `/admin/ot/<id>/edit` | [vehicle_cost.py:361](../../app/views/vehicle/vehicle_cost.py#L361) |
 | POST | `/admin/ot/<id>/delete` | [vehicle_cost.py:385](../../app/views/vehicle/vehicle_cost.py#L385) — soft delete |
 | POST | `/admin/ot/<id>/restore` | [vehicle_cost.py:403](../../app/views/vehicle/vehicle_cost.py#L403) — กู้คืนจาก tab ลบ |
-| POST | `/admin/ot/rate_config/update` | [vehicle_cost.py:421](../../app/views/vehicle/vehicle_cost.py#L421) |
+| POST | `/admin/ot/rate_config/update` | [vehicle_cost.py:495](../../app/views/vehicle/vehicle_cost.py#L495) — บันทึกอัตรา OT ทั้งชุดจากแท็บ "ตั้งค่า OT" (2026-08-08). `cfg_delete[]` = soft-delete (`is_active=False`) เหมือน `rateConfigModal` เดิม — ลบแล้วลบเลย ไม่มี toggle เปิดกลับ (ตัดสินใจ 2026-08-08) · block band ข้ามเที่ยงคืนผ่าน `_reject_midnight_crossing` (กัน bug B2 ซ้ำ) · ตอบ JSON เมื่อเป็น AJAX |
 | GET | `/admin/cost/export` | [vehicle_cost.py:469](../../app/views/vehicle/vehicle_cost.py#L469) — filter ตาม tab status + งบ (`budget_type`/`budget_sub`) เดียวกับ `/admin/cost` (**DEBT-5** — 88 logic-line เกิน 60, legacy ตั้งใจไม่แตะ) |
 
 ### driver

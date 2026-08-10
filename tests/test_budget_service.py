@@ -339,3 +339,73 @@ def test_delete_budget_blocks_when_has_adjust_log(session, make_budget):
 
     from models import VehicleBudget
     assert VehicleBudget.query.get(bid) is not None
+
+
+def test_delete_budget_allows_when_only_set_active_log(session, make_budget):
+    """งบที่เคยถูกปิดใช้งาน (toggle_active) แต่ไม่เคยหักเงินจริง — ต้องลบได้ (bug 2026-08-07:
+    เดิม guard เช็ก event_type != 'set_budget' ทำให้ set_active/set_inactive log เองก็บล็อกไปด้วย
+    ทั้งที่ไม่ใช่ธุรกรรมเงินจริง — งบปิดแล้วทุกก้อนจึงลบไม่ได้เลยสักก้อน)"""
+    b = make_budget(used_amount=0)
+    bs.set_active(b, False, note='ปิดใช้งาน')
+    session.commit()
+    bid = b.id
+
+    bs.delete_budget(b)
+    session.commit()
+
+    from models import VehicleBudget
+    assert VehicleBudget.query.get(bid) is None
+    assert VehicleBudgetLog.query.filter_by(budget_id=bid).count() == 0
+
+
+# ──────────────────────────────────────────────────────────────
+# delete_yearly_plan (2026-08-07 — cascade ลบงบย่อยที่ผูกอยู่, อนุญาตเมื่อใช้ไป 0 บาททั้งก้อน
+# แม้จะเคยจัดสรรงบย่อยไปแล้วก็ตาม)
+# ──────────────────────────────────────────────────────────────
+def test_delete_yearly_plan_removes_plan_when_never_used(session):
+    plan = _make_plan(session, date(2026, 1, 1), date(2026, 12, 31))
+    pid = plan.id
+
+    bs.delete_yearly_plan(plan)
+    session.commit()
+
+    assert VehicleBudgetYearlyPlan.query.get(pid) is None
+
+
+def test_delete_yearly_plan_cascades_sub_budgets_when_used_zero(session, make_budget):
+    plan = _make_plan(session, date(2026, 1, 1), date(2026, 12, 31))
+    b1 = make_budget(budget_amount=1000, used_amount=0)
+    b2 = make_budget(budget_amount=2000, used_amount=0)
+    b1.yearly_plan_id = plan.id
+    b2.yearly_plan_id = plan.id
+    session.commit()
+    bs.set_budget_amount(b1, 1500, note='แก้เพดาน')  # set_budget log ไม่นับเป็น "ใช้ไป"
+    session.commit()
+    pid, b1id, b2id = plan.id, b1.id, b2.id
+
+    bs.delete_yearly_plan(plan)
+    session.commit()
+
+    from models import VehicleBudget
+    assert VehicleBudgetYearlyPlan.query.get(pid) is None
+    assert VehicleBudget.query.get(b1id) is None
+    assert VehicleBudget.query.get(b2id) is None
+    assert VehicleBudgetLog.query.filter_by(budget_id=b1id).count() == 0
+
+
+def test_delete_yearly_plan_blocks_when_any_sub_budget_used(session, make_budget, make_mileage):
+    from models import VehicleBudget
+    plan = _make_plan(session, date(2026, 1, 1), date(2026, 12, 31))
+    b1 = make_budget(budget_amount=1000, used_amount=0)
+    b1.yearly_plan_id = plan.id
+    session.commit()
+    _, m = make_mileage()
+    bs.deduct_for_mileage(m, b1, 350, snap=SNAP)
+    session.commit()
+    pid = plan.id
+
+    with pytest.raises(ValueError):
+        bs.delete_yearly_plan(plan)
+
+    assert VehicleBudgetYearlyPlan.query.get(pid) is not None
+    assert VehicleBudget.query.get(b1.id) is not None

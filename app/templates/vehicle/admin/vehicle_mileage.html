@@ -17,6 +17,12 @@
     }
     /* illustration (empty state) — เทาอ่อนกว่า n300 ปกติเล็กน้อยเพื่อไม่แย่ง content (page contract) */
     .mf-illust { color: #C9C9C9; }
+
+    /* mileageModal — redesign 2026-08-07: error state ของ #mmOdoEnd เดิมพึ่ง .bb-input.is-error
+       (border บน input เอง) ตอนนี้ input อยู่ใน .bb-field-box (validation ring ต้องอยู่ที่กรอบนอก
+       ตาม §13b/bookingModal pattern) — JS ยัง toggle 'is-error' บน input เหมือนเดิมทุกอย่าง
+       (ไม่แตะ JS) แค่ผูก CSS ใหม่ผ่าน :has() ให้ขึ้นที่กรอบนอกแทน */
+    #mileageModal .bb-field-box:has(.is-error) { border-color: var(--bb-dg); box-shadow: 0 0 0 3px rgba(220,38,38,.15); }
 </style>
 {% endblock %}
 
@@ -413,119 +419,126 @@
 {% endblock %}
 
 {% block modals %}
-{# ── Modal: Mileage Entry (Bootstrap modal JS + bb-modal look) ── #}
+{# ── Modal: Mileage Entry — redesign 2026-08-07 ตาม modal_pattern.md/design_guideline.md §13b
+   (โครงเดียวกับ yearlyPlanModal/setBudgetModal ที่ทำไปแล้ว: eyebrow/title/subtitle+avatar,
+   ไม่มีปุ่มปิด X, .card.modal-content.border-0, .bb-field-box, card-footer bg-white
+   border-top-0). ตัด .bb-timeline ออก — เดิม 3 ส่วน (กรอกไมล์ / OT / สรุปเงิน) ไม่ใช่ลำดับ
+   เวลาต่อกัน (ส่วน 1 คือสิ่งที่ต้องทำ ส่วน 2-3 เป็นผลลัพธ์ read-only) เส้น dot เชื่อมจึงสื่อผิด
+   → คั่นด้วย <hr> เส้นประเหมือน 3 modal ก่อนหน้าแทน · bg-light 3 จุด (กล่องเทาลอย) ตัดออกหมด
+   วางบนพื้นขาวตรงๆ ตาม UE style "ไม่มีกรอบการ์ดครอบ ใช้เส้นคั่นบางแทน"
+
+   สรุปค่าใช้จ่าย (เดิม mmCostDistanceLine/mmCostFuelInfo/mmCostBreakdown ข้อความรวมบรรทัดเดียว)
+   → เปลี่ยนเป็นรายการแบบใบเสร็จ (ค่าน้ำมัน/ค่า OT แยกแถว + เส้นคั่น + รวมตัวใหญ่) id ชุดใหม่
+   ทั้งหมด ดู renderCostStop() ใน vehicle_mileage.js — ปุ่ม submit เปลี่ยนข้อความตามสถานะด้วย
+   (ของใหม่ ไม่มีในเดิม ตามที่ตกลง) #}
 <div class="modal fade" id="mileageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="bb-modal-body modal-body">
-                <form id="formMileage" method="POST" action="{{ url_for('vehicle.mileage_log') }}">
-                    <input type="hidden" name="booking_id" id="mmFormBookingId">
-                    <input type="hidden" name="entry_type" id="mmEntryType" value="start">
-                    <input type="hidden" name="actual_start" id="mmActualStart">
-                    <input type="hidden" name="actual_end" id="mmActualEnd">
-                    <input type="hidden" name="confirm_distance" id="mmConfirmDistance" value="0">
+        <div class="card modal-content border-0">
+            <form id="formMileage" method="POST" action="{{ url_for('vehicle.mileage_log') }}">
+                <input type="hidden" name="booking_id" id="mmFormBookingId">
+                <input type="hidden" name="entry_type" id="mmEntryType" value="start">
+                <input type="hidden" name="actual_start" id="mmActualStart">
+                <input type="hidden" name="actual_end" id="mmActualEnd">
+                <input type="hidden" name="confirm_distance" id="mmConfirmDistance" value="0">
 
-                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3 pt-2">
-                        <div>
-                            <div class="text-uppercase" style="font-size:.75rem;color:var(--bb-mut)" id="mmBudgetSub">—</div>
-                            <div style="font-size:1.25rem;font-weight:700;color:var(--bb-str)" id="mmName">—</div>
+                <div style="padding:14px 20px 0">
+                    <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                        <div style="min-width:0">
+                            <div class="text-uppercase" style="font-size:12px;color:var(--bb-mut)" id="mmBudgetSub">—</div>
+                            <div style="font-size:20px;font-weight:700;color:var(--bb-str)" id="mmName">—</div>
                             <div class="d-flex align-items-center flex-wrap gap-2 mt-1">
                                 <span class="bb-num" style="font-size:.8125rem;color:var(--bb-mut)" id="mmTime">—</span>
                                 <span class="bb-badge" id="mmBadge">—</span>
                             </div>
                         </div>
-                        <div class="bb-avatar flex-shrink-0" style="width:3.5rem;height:3.5rem" id="mmAvatar">
+                        <div class="bb-avatar flex-shrink-0" style="width:64px;height:64px" id="mmAvatar">
                             <span class="material-symbols-rounded" style="font-size:1.75rem">directions_bus</span>
                         </div>
                     </div>
+                </div>
 
-                    <hr style="border-top:1px dashed var(--bb-n300);opacity:1" class="my-3">
+                <div class="card-body">
+                    <hr style="margin:4px 0 8px;border-top:1px dashed var(--bb-n300);opacity:1">
 
-                    <div class="bb-timeline">
-                        <div class="bb-tl-item done">
-                            <span class="bb-tl-dot"></span>
-                            <div class="bb-tl-title" id="mmDriver">—</div>
-                            <div class="bb-tl-desc" id="mmPlateDest">—</div>
-                            <div class="bb-tl-desc" id="mmDriverPhone">—</div>
-                            <div class="bb-tl-desc" id="mmBudgetLine">—</div>
+                    <div style="font-size:13px;color:var(--bb-mut);line-height:1.7;margin-bottom:14px">
+                        <div style="color:var(--bb-str);font-weight:600;font-size:14px" id="mmDriver">—</div>
+                        <div id="mmPlateDest">—</div>
+                        <div id="mmDriverPhone">—</div>
+                        <div id="mmBudgetLine">—</div>
+                    </div>
 
-                            <div class="bg-light rounded-3 p-3 mt-2">
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <div class="bb-field mb-0">
-                                            <label class="bb-label" for="mmOdoStart">เลขไมล์ออก</label>
-                                            <div class="bb-input-wrap">
-                                                <span class="material-symbols-rounded">speed</span>
-                                                <input id="mmOdoStart" name="odometer_start" type="number" class="bb-input" min="0" placeholder="0">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="bb-field mb-0">
-                                            <label class="bb-label" for="mmOdoEnd">เลขไมล์กลับ</label>
-                                            <div class="bb-input-wrap">
-                                                <span class="material-symbols-rounded">speed</span>
-                                                <input id="mmOdoEnd" name="odometer_end" type="number" class="bb-input" min="0" placeholder="0">
-                                            </div>
-                                            <div id="mmOdoEndErr" class="bb-hint is-error" style="display:none;">ต้องมากกว่าเลขไมล์ออก</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-2" style="font-size:.8125rem">
-                                    <span class="material-symbols-rounded" style="font-size:.875rem">flight_land</span>&nbsp;<span id="mmDistance">-</span> กม.
-                                    <span class="material-symbols-rounded" style="font-size:.875rem">fiber_manual_record</span>
-                                    <span class="material-symbols-rounded" style="font-size:.875rem">local_gas_station</span>&nbsp;฿<span id="mmCost">-</span>
-                                </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label" for="mmOdoStart">เลขไมล์ออก</label>
+                            <div class="bb-field-box">
+                                <span class="material-symbols-rounded bb-field-box-icon border-end">speed</span>
+                                <input id="mmOdoStart" name="odometer_start" type="number" class="form-control" min="0" placeholder="0" autocomplete="off">
                             </div>
                         </div>
-
-                        {# ── Stop 2/3: เฉพาะทริปที่ปิดแล้ว (state==='complete') — JS toggle display (Case 17 merge, 2026-07-22) ── #}
-                        <div class="bb-tl-item done" id="mmOtStop" style="display:none">
-                            <span class="bb-tl-dot"></span>
-                            <div class="bb-tl-title">ช่วงเวลา / ค่า OT</div>
-                            <div class="bb-tl-desc" id="mmOtTimeRange">—</div>
-                            {# เตือนเมื่อช่วง OT หลุดกรอบเวลาทริป — ตัวเลขเงินมาจากเวลาชุดเก่า (2026-07-27) #}
-                            <div class="bb-callout is-dg mt-2 mb-0" id="mmOtMismatch" style="display:none">
-                                <span class="material-symbols-rounded">warning</span>
-                                <div class="bb-callout-body">
-                                    <div class="bb-callout-title">ช่วง OT ไม่ตรงกับเวลาทริป</div>
-                                    <div id="mmOtMismatchDetail"></div>
-                                </div>
+                        <div class="col-6">
+                            <label class="form-label" for="mmOdoEnd">เลขไมล์กลับ</label>
+                            <div class="bb-field-box">
+                                <span class="material-symbols-rounded bb-field-box-icon border-end">speed</span>
+                                <input id="mmOdoEnd" name="odometer_end" type="number" class="form-control" min="0" placeholder="0" autocomplete="off">
                             </div>
-                            <div class="bg-light rounded-3 p-3 mt-2">
-                                <div id="mmOtRates"></div>
-                                <div class="mt-3">
-                                    {# ป้ายบนแถบ = เวลาทริปเท่านั้น (ปลายซ้าย-ขวา) · ช่วงเวลา OT ย้ายไปอยู่ใน
-                                       legend ใต้แถบ — เดิมเอาสองอย่างมาเรียงรวมแถวเดียวจนอ่านแล้วขัดกัน
-                                       (ทริป 15:59 · OT 08:53 · OT 19:53 · ทริป 16:00) (2026-07-27) #}
-                                    <div class="d-flex justify-content-between" id="mmOtBarLabels" style="font-size:.6875rem;color:var(--bb-mut)"></div>
-                                    <div class="d-flex mt-1" id="mmOtBar" style="height:.5rem;border-radius:999px;overflow:hidden"></div>
-                                    {# legend render จาก segment จริงใน renderOtStop() — โชว์เฉพาะชนิดที่มีอยู่จริงบน bar
-                                       (เดิม hardcode "Regular time"/"Overtime" ซ้าย-ขวาเสมอ → ทริปที่เป็น OT ล้วน
-                                       ยังโชว์ "Regular time" ทั้งที่ไม่มีช่วงนั้นบน bar เลย) #}
-                                    <div class="d-flex flex-wrap gap-3 mt-2" id="mmOtBarLegend" style="font-size:.6875rem;color:var(--bb-mut)"></div>
-                                </div>
+                            <p class="bb-hint is-error" id="mmOdoEndErr" style="display:none">ต้องมากกว่าเลขไมล์ออก</p>
+                        </div>
+                    </div>
+                    <p class="bb-hint">ระยะทาง <span id="mmDistance">-</span> กม. · ค่าน้ำมัน ฿<span id="mmCost">-</span></p>
+
+                    {# ── Stop 2/3: เฉพาะทริปที่ปิดแล้ว (state==='complete') — JS toggle display (Case 17 merge, 2026-07-22) ── #}
+                    <div id="mmOtStop" style="display:none">
+                        <hr style="margin:14px 0 12px;border-top:1px dashed var(--bb-n300);opacity:1">
+                        <p style="font-size:13px;font-weight:500;color:var(--bb-str);margin:0 0 8px">
+                            ค่าล่วงเวลา (OT) <span id="mmOtTimeRange" style="color:var(--bb-mut);font-weight:400"></span>
+                        </p>
+                        {# เตือนเมื่อช่วง OT หลุดกรอบเวลาทริป — ตัวเลขเงินมาจากเวลาชุดเก่า (2026-07-27) #}
+                        <div class="bb-callout is-wr mb-2" id="mmOtMismatch" style="display:none">
+                            <span class="material-symbols-rounded">warning</span>
+                            <div class="bb-callout-body">
+                                <div class="bb-callout-title">ช่วง OT ไม่ตรงกับเวลาทริป</div>
+                                <div id="mmOtMismatchDetail"></div>
                             </div>
                         </div>
-
-                        <div class="bb-tl-item done" id="mmCostStop" style="display:none">
-                            <span class="bb-tl-dot"></span>
-                            <div class="bb-tl-title">ค่าใช้จ่ายทั้งหมด</div>
-                            <div class="bb-tl-desc" id="mmCostDistanceLine">—</div>
-                            <div class="bb-tl-desc" id="mmCostFuelInfo">—</div>
-                            <div class="bg-light rounded-3 p-3 mt-2">
-                                <div class="text-muted" style="font-size:.8125rem" id="mmCostBreakdown">—</div>
-                                <div style="font-size:.9375rem;font-weight:700;color:var(--bb-str)" id="mmCostTotal">—</div>
-                            </div>
+                        <div id="mmOtRates" class="d-flex flex-column gap-2"></div>
+                        <div class="mt-3">
+                            {# ป้ายบนแถบ = เวลาทริปเท่านั้น (ปลายซ้าย-ขวา) · ช่วงเวลา OT ย้ายไปอยู่ใน
+                               legend ใต้แถบ — เดิมเอาสองอย่างมาเรียงรวมแถวเดียวจนอ่านแล้วขัดกัน
+                               (ทริป 15:59 · OT 08:53 · OT 19:53 · ทริป 16:00) (2026-07-27) #}
+                            <div class="d-flex justify-content-between" id="mmOtBarLabels" style="font-size:.6875rem;color:var(--bb-mut)"></div>
+                            <div class="d-flex mt-1" id="mmOtBar" style="height:.5rem;border-radius:999px;overflow:hidden;background:var(--bb-n200)"></div>
+                            {# legend render จาก segment จริงใน renderOtStop() — โชว์เฉพาะชนิดที่มีอยู่จริงบน bar
+                               (เดิม hardcode "Regular time"/"Overtime" ซ้าย-ขวาเสมอ → ทริปที่เป็น OT ล้วน
+                               ยังโชว์ "Regular time" ทั้งที่ไม่มีช่วงนั้นบน bar เลย) — flat_day ไม่ขึ้นแถบนี้
+                               เลย (ดู renderOtStop, 2026-08-07) แยกไปเป็น badge ใน #mmOtRates แทน #}
+                            <div class="d-flex flex-wrap gap-3 mt-2" id="mmOtBarLegend" style="font-size:.6875rem;color:var(--bb-mut)"></div>
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="submit" class="bb-btn is-pri" id="mmSubmit">ยืนยัน</button>
+                    <div id="mmCostStop" style="display:none">
+                        <hr style="margin:14px 0 12px;border-top:1px dashed var(--bb-n300);opacity:1">
+                        <p style="font-size:13px;font-weight:500;color:var(--bb-str);margin:0 0 4px">สรุปค่าใช้จ่าย</p>
+                        <div class="d-flex justify-content-between gap-3" style="font-size:14px;padding:5px 0">
+                            <span style="color:var(--bb-mut)" id="mmCostFuelLabel">ค่าน้ำมัน</span>
+                            <span class="bb-num" id="mmCostFuelAmt">฿0</span>
+                        </div>
+                        <div class="d-flex justify-content-between gap-3 d-none" id="mmCostOtRow" style="font-size:14px;padding:5px 0">
+                            <span style="color:var(--bb-mut)" id="mmCostOtLabel">ค่าล่วงเวลา</span>
+                            <span class="bb-num" id="mmCostOtAmt">฿0</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline gap-3"
+                             style="padding-top:10px;margin-top:6px;border-top:1px solid var(--bb-n200)">
+                            <span style="font-size:14px;font-weight:500;color:var(--bb-str)">รวมทั้งหมด</span>
+                            <span class="bb-num" style="font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--bb-str)" id="mmCostTotal">฿0</span>
+                        </div>
                     </div>
-                </form>
-            </div>{# /bb-modal-body #}
+                </div>
+
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-end gap-2 pt-2 pb-3">
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri" id="mmSubmit">ยืนยัน</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

@@ -159,17 +159,38 @@ def set_active(budget: VehicleBudget, active: bool, *, note: str = ''):
     )
 
 
+_MONEY_EVENT_TYPES = ('deduct', 'refund', 'adjust')
+
+
 def delete_budget(budget: VehicleBudget):
     """ลบงบย่อยทิ้งถาวร (v2.29) — เฉพาะงบที่ไม่เคยมีการหักเงิน/ปรับยอดจริง กัน ledger สูญหาย
-    บล็อกถ้ามี log event_type อื่นนอกจาก 'set_budget' (deduct/refund/adjust/top_up/set_active/
-    set_inactive) — 'set_budget' ล้วนแปลว่างบนี้แค่ถูกตั้ง/แก้เพดาน ไม่เคยมีธุรกรรมจริงเกิดขึ้น
-    ลบ log ที่เหลือทั้งหมดคู่กับตัว budget เอง (ไม่ orphan log ค้าง)"""
+    บล็อกถ้ามี log event_type ที่กระทบเงินจริง (deduct/refund/adjust) เท่านั้น — set_budget
+    (ตั้ง/แก้เพดาน) และ set_active/set_inactive (เปิด/ปิดใช้งาน) ไม่กระทบ used_amount จึงลบได้
+    (bug fix 2026-08-07: เดิมเช็ก "event_type != 'set_budget'" ทำให้ set_active/set_inactive
+    log เองก็บล็อกไปด้วย — งบที่เคยถูกปิดใช้งาน (ต้องมี set_inactive log เสมอ) จึงลบไม่ได้เลยสักก้อน
+    ทั้งที่ไม่เคยมีธุรกรรมเงินจริงเกิดขึ้น) ลบ log ที่เหลือทั้งหมดคู่กับตัว budget เอง (ไม่ orphan log ค้าง)"""
     logs = VehicleBudgetLog.query.filter_by(budget_id=budget.id).all()
-    if any(l.event_type != 'set_budget' for l in logs):
+    if any(l.event_type in _MONEY_EVENT_TYPES for l in logs):
         raise ValueError('งบนี้เคยมีการหักเงิน/ปรับยอดแล้ว ลบไม่ได้ — ปิดใช้งานแทน')
     for l in logs:
         db.session.delete(l)
     db.session.delete(budget)
+
+
+def delete_yearly_plan(plan: VehicleBudgetYearlyPlan):
+    """ลบเงินก้อนประจำปีทิ้งถาวร (2026-08-07) พร้อมงบย่อยที่ผูกอยู่ทั้งหมด (cascade) — อนุญาต
+    เฉพาะตอนใช้ไป 0 บาททั้งก้อน (ทุกงบย่อยที่ผูก yearly_plan_id นี้ used_amount == 0) แม้จะเคย
+    ตั้ง/แก้เพดานงบย่อยไปแล้วก็ตาม (ตกลงกับผู้ใช้: เข้มน้อยกว่า delete_budget ที่บล็อกด้วย log
+    event type — ที่นี่ยึด used_amount ปัจจุบันเป็นหลักเพราะเป็นการลบทั้งก้อนไม่ใช่ลบทีละงบ)
+    ลบ VehicleBudgetLog ของทุกงบย่อยคู่กันไปด้วย (ไม่ orphan log ค้าง)"""
+    sub_budgets = VehicleBudget.query.filter_by(yearly_plan_id=plan.id).all()
+    if any(Decimal(str(b.used_amount or 0)) != D0 for b in sub_budgets):
+        raise ValueError('เงินก้อนนี้มีงบย่อยที่ใช้ไปแล้ว ลบไม่ได้ — ปิดใช้งานงบย่อยนั้นแทน')
+    for b in sub_budgets:
+        for l in VehicleBudgetLog.query.filter_by(budget_id=b.id).all():
+            db.session.delete(l)
+        db.session.delete(b)
+    db.session.delete(plan)
 
 
 def set_yearly_plan(plan_id, fiscal_year: int, total_amount, central_allocation,

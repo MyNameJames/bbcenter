@@ -33,7 +33,8 @@ from models import (db, get_bkk_time, FuelPrice, SystemConfig, VehicleMileage,
                     VehicleBooking, DriverOT, DriverOTSlot, OTRateConfig)
 from domain.vehicle.fuel import calc_fuel_cost
 from domain.vehicle.ot import (build_ot_specs, slots_match_trip,
-                               trip_qualifies_for_ot, OT_MIN_TRIP_MINUTES)
+                               trip_qualifies_for_ot, OT_MIN_TRIP_MINUTES,
+                               RATE_FLAT_DAY)
 import services.vehicle.budget_service as budget_svc
 from services.vehicle.budget_service import _lookup_budget_for_booking
 from views.core.notification_service import (
@@ -75,13 +76,36 @@ def _select_rate_configs_for_weekday(rate_configs, weekday):
     return day_rows if day_rows else [c for c in rate_configs if c.day_of_week is None]
 
 
-def _build_ot_slots(rate_configs, trip_start_min, trip_end_min):
+def claimed_flat_configs(driver_id, on_date, exclude_ot_id=None) -> set:
+    """config_id ของ band แบบ flat_day ที่คนขับคนนี้ "เก็บเงินไปแล้ว" ในวันนั้น (2026-08-07)
+
+    เหมาจ่ายคิดต่อ **วัน** ไม่ใช่ต่อทริป (กติกา 6 ใน domain/vehicle/ot.py) — ทริปที่ 2+
+    ของวันเดียวกันต้องได้ slot ที่ amount=0. นับเฉพาะ slot ที่ amount > 0 เพื่อไม่ให้
+    slot ศูนย์บาทของทริปก่อนหน้าถูกนับเป็น "เก็บแล้ว" ซ้อนกันไปเรื่อยๆ
+    exclude_ot_id = ตัด OT ตัวที่กำลังคำนวณใหม่ออก (ไม่งั้นมันเห็นเงินของตัวเองแล้วคิดเป็น 0)
+    """
+    rows = (db.session.query(DriverOTSlot.rate_config_id)
+            .join(DriverOT, DriverOT.id == DriverOTSlot.driver_ot_id)
+            .join(OTRateConfig, OTRateConfig.id == DriverOTSlot.rate_config_id)
+            .filter(DriverOT.driver_id == driver_id,
+                    DriverOT.date == on_date,
+                    DriverOT.is_deleted.is_(False),
+                    OTRateConfig.rate_type == RATE_FLAT_DAY,
+                    DriverOTSlot.amount > 0))
+    if exclude_ot_id:
+        rows = rows.filter(DriverOT.id != exclude_ot_id)
+    return {r[0] for r in rows.all()}
+
+
+def _build_ot_slots(rate_configs, trip_start_min, trip_end_min, claimed_flat_ids=frozenset()):
     """คำนวณ overlap ของแต่ละ rate config band กับช่วงเวลาทริป (นาทีนับจาก 00:00) →
     list[DriverOTSlot]. logic จริงย้ายไป domain/vehicle/ot.py::build_ot_specs() แล้ว
-    (2026-07-27) — ที่นี่เหลือแค่แปลง ORM ↔ tuple/dict ให้ domain ไม่ต้องรู้จัก model"""
+    (2026-07-27) — ที่นี่เหลือแค่แปลง ORM ↔ tuple/dict ให้ domain ไม่ต้องรู้จัก model
+    claimed_flat_ids มาจาก claimed_flat_configs() (กติกา 6 — เหมาจ่ายต่อวัน)"""
     specs = build_ot_specs(
-        [(c.label, c.start_time, c.end_time, float(c.rate), c.id) for c in rate_configs],
-        trip_start_min, trip_end_min,
+        [(c.label, c.start_time, c.end_time, float(c.rate), c.id, c.rate_type)
+         for c in rate_configs],
+        trip_start_min, trip_end_min, claimed_flat_ids,
     )
     return [DriverOTSlot(
         rate_config_id=s['config_id'],
@@ -133,7 +157,8 @@ def auto_generate_ot(booking, mileage, *, actor_id, notify=True):
                   booking.id, trip_e - trip_s, OT_MIN_TRIP_MINUTES)
         return None
 
-    new_slots = _build_ot_slots(rate_configs, trip_s, trip_e)
+    claimed = claimed_flat_configs(booking.driver_id, mileage.actual_end.date())
+    new_slots = _build_ot_slots(rate_configs, trip_s, trip_e, claimed)
     if not new_slots:
         return None
 
@@ -170,7 +195,10 @@ def _recompute_ot(ot, booking, mileage, trip_s, trip_e):
     คืน (text, category) สำหรับ flash"""
     rate_configs = OTRateConfig.query.filter_by(is_active=True).order_by(OTRateConfig.sort_order).all()
     rate_configs = _select_rate_configs_for_weekday(rate_configs, mileage.actual_end.weekday())
-    new_slots    = _build_ot_slots(rate_configs, trip_s, trip_e) if rate_configs else []
+    # exclude ตัวเอง: OT ก้อนนี้อาจถือเงินเหมาจ่ายของวันนั้นอยู่ ถ้าไม่ตัดออกจะเห็นเงินตัวเอง
+    # แล้วคำนวณใหม่เป็น 0 (กติกา 6)
+    claimed      = claimed_flat_configs(ot.driver_id, mileage.actual_end.date(), exclude_ot_id=ot.id)
+    new_slots    = _build_ot_slots(rate_configs, trip_s, trip_e, claimed) if rate_configs else []
     old_amount   = float(ot.total_amount or 0)
 
     if not new_slots:

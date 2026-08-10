@@ -15,15 +15,25 @@ ot.py — OT slot calculation (pure logic, ไม่แตะ ORM/flask)
 2. เงินปัดเป็นจำนวนเต็มบาท (เศษสตางค์ = 0) — หน้าจอแสดงเลขเต็มบาทอยู่แล้ว (2026-07-27)
 3. slot ต้องอยู่ในกรอบเวลาทริปเสมอ + ทริปต้องยังผ่านเกณฑ์ข้อ 1 → slots_match_trip()
    ใช้ตรวจ OT เก่าที่เวลาทริปถูกแก้ทีหลัง (auto_generate_ot idempotent จึงไม่คำนวณใหม่)
-4. rate ทุกแถวมีหน่วยเดียว = **บาท/ชั่วโมง** — day_of_week เป็นแค่ตัวเลือกว่าวันนั้นใช้
-   ชุดอัตราไหน (ดู _select_rate_configs_for_weekday) ไม่ใช่ "เหมาจ่ายรายวัน" (2026-07-28)
+4. หน่วยของ rate อยู่ที่ `OTRateConfig.rate_type` (2026-08-07 — เดิม 2026-07-28 บังคับ
+   รายชั่วโมงอย่างเดียว): `hourly` = บาท/ชม. · `flat_day` = เหมาจ่ายรายวัน
+   `day_of_week` ยังเป็นแค่ตัวเลือกว่าวันนั้นใช้ชุดอัตราไหน (ดู _select_rate_configs_for_weekday)
+   **ไม่ได้แปลว่าเหมาจ่าย** — ต้องตั้ง rate_type='flat_day' เองถึงจะเหมา
 5. เงินคูณจาก **นาทีจริง** ไม่ใช่ชั่วโมงที่ปัดทศนิยม 2 ตำแหน่งแล้ว — เดิมทริป 1 นาที
    × 300 บาท/ชม. ได้ 6 บาทแทนที่จะเป็น 5 เพราะปัด 0.0167 → 0.02 ก่อนคูณ (2026-07-28)
    `hours` ที่เก็บลง slot จึงเป็นตัวเลขไว้ **แสดงผล** เท่านั้น ห้ามเอาไปคูณเงินต่อ
+6. `flat_day` = เหมาจ่ายต่อ **วัน** ไม่ใช่ต่อทริป (เจ้าของเคาะ 2026-08-07) — คนขับคนเดียว
+   ขับหลายทริปในวันเดียวได้เงินก้อนนี้ครั้งเดียว. domain ไม่รู้ว่า "เก็บไปแล้วหรือยัง"
+   (เป็น state ใน DB) → caller ส่ง `claimed_flat_ids` เข้ามา แล้ว build_ot_specs() จะสร้าง
+   slot ที่ `charge=False` (amount=0) ให้ทริปที่ 2+ เอง — เก็บประวัติว่าขับ แต่ไม่คิดเงินซ้ำ
 """
 
 OT_MIN_TRIP_MINUTES = 30
 """ทริปที่สั้นกว่านี้ไม่คิด OT (เจ้าของโปรเจกต์เคาะ 2026-07-27)"""
+
+RATE_HOURLY   = 'hourly'
+RATE_FLAT_DAY = 'flat_day'
+"""หน่วยของ OTRateConfig.rate — ดูกติกา 6"""
 
 
 def hm_to_min(hm: str) -> int:
@@ -47,17 +57,25 @@ def calc_slot_hours(minutes: int) -> float:
     return round(minutes / 60, 2)
 
 
-def calc_slot_amount(minutes: int, rate: float) -> int:
-    """ค่า OT ของช่วงหนึ่ง เป็นจำนวนเต็มบาท — กติกา 2 + 5
-    คูณจากนาทีจริงแล้วค่อยปัด (เทียบ calc_fuel_cost: ระยะทางจริง ÷ อัตรา × ราคา)"""
+def calc_slot_amount(minutes: int, rate: float, rate_type: str = RATE_HOURLY) -> int:
+    """ค่า OT ของช่วงหนึ่ง เป็นจำนวนเต็มบาท — กติกา 2 + 5 + 6
+
+    hourly   → คูณจากนาทีจริงแล้วค่อยปัด (เทียบ calc_fuel_cost: ระยะทางจริง ÷ อัตรา × ราคา)
+    flat_day → คืน rate เต็มจำนวน ไม่สนใจว่าทับ band กี่นาที (เหมาจ่าย)
+    """
+    if rate_type == RATE_FLAT_DAY:
+        return int(round(float(rate)))
     return int(round((minutes / 60) * float(rate)))
 
 
-def build_slot(label, start_time: str, end_time: str, rate, config_id=None):
+def build_slot(label, start_time: str, end_time: str, rate, config_id=None,
+               rate_type: str = RATE_HOURLY, charge: bool = True):
     """1 ช่วง OT → dict พร้อม hours/amount ที่คิดแล้ว — **จุดเดียวที่คิดเงิน OT ในระบบ**
     คืน None ถ้าช่วงเวลาไม่ถูกต้อง (end <= start)
 
     start_time/end_time = 'HH:MM' ('24:00' = เที่ยงคืน ใช้ในปลายของ rate band)
+    charge=False → สร้าง slot ตามปกติแต่ amount=0 ใช้กับ flat_day ที่เก็บเงินไปแล้วใน
+      ทริปก่อนหน้าของวันเดียวกัน (กติกา 6) — เก็บประวัติว่าขับจริง แต่ไม่คิดเงินซ้ำ
     """
     start_min = hm_to_min(start_time)
     end_min   = 1440 if end_time == '24:00' else hm_to_min(end_time)
@@ -72,27 +90,35 @@ def build_slot(label, start_time: str, end_time: str, rate, config_id=None):
         'minutes':    minutes,
         'hours':      calc_slot_hours(minutes),
         'rate':       float(rate),
-        'amount':     calc_slot_amount(minutes, rate),
+        'rate_type':  rate_type,
+        'amount':     calc_slot_amount(minutes, rate, rate_type) if charge else 0,
     }
 
 
-def build_ot_specs(rate_bands, trip_start_min: int, trip_end_min: int) -> list[dict]:
+def build_ot_specs(rate_bands, trip_start_min: int, trip_end_min: int,
+                   claimed_flat_ids=frozenset()) -> list[dict]:
     """overlap ของแต่ละ rate band กับช่วงทริป → list[dict] (เงินคิดที่ build_slot)
-    rate_bands = [(label, start_time, end_time, rate, config_id), ...] (tuple ไม่ใช่ ORM
-    object — domain ห้ามรู้จัก model). คืน [] ถ้าทริปสั้นเกินเกณฑ์
+    rate_bands = [(label, start_time, end_time, rate, config_id, rate_type), ...]
+    (tuple ไม่ใช่ ORM object — domain ห้ามรู้จัก model). คืน [] ถ้าทริปสั้นเกินเกณฑ์
+
+    claimed_flat_ids = config_id ของ band แบบ flat_day ที่ "คนขับคนนี้ วันนี้" เก็บเงินไปแล้ว
+      จากทริปก่อนหน้า → slot ที่ออกมาจะ amount=0 (กติกา 6) caller เป็นคน query มาให้
     """
     if not trip_qualifies_for_ot(trip_start_min, trip_end_min):
         return []
 
     specs = []
-    for label, start_time, end_time, rate, config_id in rate_bands:
+    for label, start_time, end_time, rate, config_id, rate_type in rate_bands:
         band_s = hm_to_min(start_time)
         band_e = 1440 if end_time == '24:00' else hm_to_min(end_time)
 
         ov_s = max(trip_start_min, band_s)
         ov_e = min(trip_end_min, band_e)
-        slot = build_slot(label, min_to_hm(ov_s), min_to_hm(ov_e), rate, config_id) \
-            if ov_e > ov_s else None
+        if ov_e <= ov_s:
+            continue
+        charge = not (rate_type == RATE_FLAT_DAY and config_id in claimed_flat_ids)
+        slot = build_slot(label, min_to_hm(ov_s), min_to_hm(ov_e), rate, config_id,
+                          rate_type=rate_type, charge=charge)
         if slot:
             specs.append(slot)
     return specs
