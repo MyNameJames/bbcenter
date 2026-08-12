@@ -316,7 +316,7 @@ function buildSlipSheet(records) {
         rows += `<tr><td>&nbsp;</td><td class="is-money"></td></tr>`;
     }
     const idImg = d.driver_id_card_image
-        ? `<div class="slipmk-idcard" style="border:0;background:none;justify-content:flex-start"><img src="${esc(d.driver_id_card_image)}" alt="บัตรประชาชน" style="max-width:60%;height:auto;border:1px solid var(--bb-n200);border-radius:.3em"></div>`
+        ? `<div class="slipmk-idcard" style="border:0;background:none;justify-content:flex-start"><img src="${esc(d.driver_id_card_image)}" alt="บัตรประชาชน" style="max-width:80%;height:auto;border:1px solid var(--bb-n200);border-radius:.3em"></div>`
         : `<div class="slipmk-idcard">ไม่มีรูปบัตรประชาชน</div>`;
 
     return `

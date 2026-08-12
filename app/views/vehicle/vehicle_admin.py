@@ -2,7 +2,8 @@ from flask import render_template, request, redirect, url_for, flash, jsonify, s
 from flask_login import login_required, current_user
 from models import (db, get_bkk_time, User, Vehicle, VehicleBooking, Driver, VehicleMileage,
                     SystemConfig, VehicleBudget, VehicleDepartment, DeptApprover, FuelPrice,
-                    DriverOT)
+                    DriverOT, ReimbursementSource)
+import services.vehicle.fuel_service as fuel_svc
 from sqlalchemy import func
 from datetime import date, datetime, timedelta
 from views.core.broadcast import notify_approved
@@ -109,7 +110,43 @@ def _fleet_edit_vehicle():
     tax_date_str = request.form.get('tax_due_date', '').strip()
     vehicle.tax_due_date = date.fromisoformat(tax_date_str) if tax_date_str else None
     db.session.commit()
+    _fleet_sync_vehicle_quota(vehicle)
     flash(f"อัปเดตข้อมูลรถ {vehicle.brand} {vehicle.model} สำเร็จ!", 'success')
+
+
+def _fleet_sync_vehicle_quota(vehicle):
+    """บันทึกวงเงินบัตร/สิทธิ์เบิก (§5.8) — insert แถวใหม่เท่านั้น (fuel_svc.set_vehicle_quota
+    no-op เองถ้าค่าไม่เปลี่ยน) ไม่ block การแก้ไขรถหลักถ้าตรงนี้พลาด
+
+    review 2026-08-10 #9: เดิมเลิกติ๊ก checkbox แล้วไม่ทำอะไรเลย — ปิดสิทธิ์ที่เคยเปิดไว้ไม่ได้
+    ตอนนี้ถ้าเคยมีวงเงิน > 0 อยู่ก่อนแล้วเลิกติ๊ก → insert แถวใหม่ limit=0 (ปิดสิทธิ์จริงตั้งแต่เดือนนี้)
+    ถ้าไม่เคยตั้งไว้เลย (None) หรือปิดอยู่แล้ว (0) → ไม่ทำอะไร กัน insert แถวเปล่าทุกครั้งที่แก้รถ
+    ที่ไม่เกี่ยวกับน้ำมันเลย (เช่น แก้แค่ที่นั่ง)
+
+    review 2026-08-10 #10: quota_source_id มาจาก <select> ที่ list ทุกแหล่งเบิก active (ไม่ใช่แหล่ง
+    เดียวที่ hardcode ไว้ก่อน) — เลือกจัดการได้ทีละแหล่งต่อการบันทึกหนึ่งครั้ง
+    """
+    today = get_bkk_time().date()
+
+    has_card = bool(request.form.get('has_card'))
+    current_card = fuel_svc.quota_limit(vehicle.id, 'card', today.year, today.month)
+    if has_card:
+        fuel_svc.set_vehicle_quota(vehicle.id, 'card', request.form.get('card_limit'),
+                                   None, current_user.id)
+    elif current_card:
+        fuel_svc.set_vehicle_quota(vehicle.id, 'card', '0', None, current_user.id)
+
+    quota_source_id_str = (request.form.get('quota_source_id') or '').strip()
+    quota_source_id = int(quota_source_id_str) if quota_source_id_str.isdigit() else None
+    if quota_source_id:
+        has_source = bool(request.form.get('has_source'))
+        current_source = fuel_svc.quota_limit(vehicle.id, 'source', today.year, today.month,
+                                              source_id=quota_source_id)
+        if has_source:
+            fuel_svc.set_vehicle_quota(vehicle.id, 'source', request.form.get('source_limit'),
+                                       quota_source_id, current_user.id)
+        elif current_source:
+            fuel_svc.set_vehicle_quota(vehicle.id, 'source', '0', quota_source_id, current_user.id)
 
 
 def _fleet_delete_vehicle():
@@ -300,6 +337,26 @@ def manage_fleet():
 
     (vehicles, drivers, users, depts, approvers, vehicle_odometers, driver_jobs, now_dt,
      driver_week_status, week_label, week_start) = _load_fleet_data()
+
+    # วงเงินโควตารถ (P5, §5.8) — เดือนปัจจุบันเท่านั้น (ตารางแสดง chip ปัจจุบัน)
+    # review 2026-08-10 #10: รองรับ "แหล่งเบิกพิเศษ" ได้ทุกแหล่ง active ไม่ hardcode ตัวแรกตัวเดียว
+    # (เดิมเพิ่มแหล่งที่ 3 แล้ว UI เงียบ ไม่มีทางตั้งวงเงินให้) — ต่อรถ 1 คัน ยังจัดการทีละแหล่งผ่าน
+    # dropdown ใน modal (ของจริงมีนอกจาก DCI ปกติแค่ 1 แหล่งพิเศษต่อคัน ไม่ต้องมี UI ซ้อนหลายแถว)
+    today = get_bkk_time().date()
+    quota_sources = (ReimbursementSource.query
+                     .filter_by(is_default=False, is_active=True)
+                     .order_by(ReimbursementSource.name).all())
+    vehicle_quotas = {
+        v.id: {
+            'card': fuel_svc.quota_limit(v.id, 'card', today.year, today.month),
+            'sources': {
+                s.id: fuel_svc.quota_limit(v.id, 'source', today.year, today.month, source_id=s.id)
+                for s in quota_sources
+            },
+        } for v in vehicles
+    }
+    quota_source_names = {s.id: s.name for s in quota_sources}
+
     return render_template('vehicle/admin/vehicle_fleet.html',
                            vehicles=vehicles, drivers=drivers, users=users,
                            depts=depts, approvers=approvers,
@@ -308,7 +365,10 @@ def manage_fleet():
                            driver_week_status=driver_week_status,
                            week_label=week_label,
                            week_start=week_start.isoformat(),
-                           now=now_dt)
+                           now=now_dt,
+                           vehicle_quotas=vehicle_quotas,
+                           quota_sources=quota_sources,
+                           quota_source_names=quota_source_names)
 
 
 @vehicle_bp.route('/vehicle/admin/driver-week', methods=['GET'])

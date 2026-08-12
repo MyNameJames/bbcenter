@@ -34,6 +34,10 @@ from .vehicle_fuel import (
     FuelPrice,
     FuelReserveConfig,
     FuelReserveLog,
+    ExpenseHolder,
+    ReimbursementSource,
+    VehicleQuota,
+    ReimbursementSettlement,
 )
 
 __all__ = [
@@ -50,4 +54,6 @@ __all__ = [
     'OTRateConfig', 'DriverOT', 'DriverOTSlot',
     'FuelBill', 'FuelReimbursement', 'FuelPrice',
     'FuelReserveConfig', 'FuelReserveLog',
+    'ExpenseHolder', 'ReimbursementSource', 'VehicleQuota',
+    'ReimbursementSettlement',
 ]

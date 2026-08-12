@@ -1,0 +1,149 @@
+{# fuel_holder.html — เจ้าหน้าที่ผู้สำรองเงิน (P2, 2026-08-10)
+   โครง visual ยกจาก setBudgetModal/yearlyPlanModal (card.modal-content.border-0 · header
+   eyebrow/title/subtitle + avatar ขวา · hr dashed · card-body · footer bg-white border-top-0)
+
+   holderManageModal รวม 3 action (ตั้ง/แก้วงเงิน · เติมเงิน · นับเงินจริง) ในโมดัลเดียว
+   สลับด้วย .bb-seg (เหมือน setBudgetModal ที่เพิ่งรวม 2 action คล้ายกันเป็นโมดัลเดียวมาก่อน) —
+   ปรับยอด (adjust, ขั้น 2 หลังนับเงินจริง — D8 auditable 2 ขั้น ไม่รวบ) เป็น mode ที่ 4
+   ประวัติ (แทน "ดูประวัติ" แยกปุ่ม) ต่อท้ายในโมดัลเดียวกัน — pattern เดียวกับ fuel_reserve.html
+   (adjust + history อยู่โมดัลเดียวกันอยู่แล้ว)
+   JS: wireHolderModals() ใน vehicle_fuel.js — data-holder-* จากปุ่มแถว
+#}
+
+{# ── เพิ่มเจ้าหน้าที่ ─────────────────────────────────────── #}
+<div class="modal fade" id="holderCreateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="card modal-content border-0">
+            <form method="POST" action="{{ url_for('fuel.holder_create') }}">
+                <div style="padding:14px 20px 0">
+                    <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                        <div class="flex-grow-1" style="min-width:0">
+                            <div class="text-uppercase" style="font-size:12px;color:var(--bb-mut)">#เจ้าหน้าที่ใหม่</div>
+                            <div style="font-size:20px;font-weight:700;color:var(--bb-str)">เพิ่มเจ้าหน้าที่ผู้สำรองเงิน</div>
+                            <div class="mt-1" style="font-size:.8125rem;color:var(--bb-mut)">เลือกผู้ใช้ + ตั้งวงเงินสำรองเริ่มต้น</div>
+                        </div>
+                        <div class="bb-avatar flex-shrink-0" style="width:56px;height:56px;background:var(--bb-n100);color:var(--bb-mut)">
+                            <span class="material-symbols-rounded" style="font-size:1.75rem">person_add</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <hr style="margin:4px 0 12px;border-top:1px dashed var(--bb-n300);opacity:1">
+
+                    <label class="bb-label" for="hcUser">ผู้ใช้</label>
+                    <select class="bb-input" id="hcUser" name="user_id" required>
+                        <option value="">— เลือกผู้ใช้ —</option>
+                        {% for u in holder_candidate_users %}
+                        <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.username }})</option>
+                        {% endfor %}
+                    </select>
+
+                    <div style="height:12px"></div>
+                    <label class="bb-label" for="hcFloat">วงเงินสำรองเริ่มต้น (บาท)</label>
+                    <input type="number" step="0.01" min="0" class="bb-input" id="hcFloat" name="float_amount" required placeholder="เช่น 20000">
+
+                    <div style="height:12px"></div>
+                    <label class="bb-label" for="hcNote">เหตุผล<span style="color:var(--bb-dg)">*</span></label>
+                    <textarea class="bb-input" id="hcNote" name="note" rows="2" required
+                              placeholder="เช่น 'มอบหมายเป็นผู้สำรองเงินคนใหม่'"></textarea>
+                </div>
+
+                <div class="modal-footer bg-white border-top-0">
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri">เพิ่มเจ้าหน้าที่</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── จัดการเงินสำรองรายคน — ตั้ง/แก้วงเงิน · เติมเงิน · นับเงินจริง · ปรับยอด + ประวัติ ── #}
+<div class="modal fade" id="holderManageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="card modal-content border-0">
+            <div style="padding:14px 20px 0">
+                <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                    <div class="flex-grow-1" style="min-width:0">
+                        <div class="text-uppercase" style="font-size:12px;color:var(--bb-mut)">#จัดการเงินสำรอง</div>
+                        <div style="font-size:20px;font-weight:700;color:var(--bb-str)" id="hmName">—</div>
+                        <div class="mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                            วงเงิน <span class="bb-num" id="hmFloat">0</span> ·
+                            ใช้ไปแล้ว <span class="bb-num" id="hmUsed">0</span> ·
+                            ทำเรื่องเบิกแล้ว <span class="bb-num" id="hmSubmitted">0</span> ·
+                            คงเหลือ <span class="bb-num" id="hmBalance">0</span>
+                        </div>
+                    </div>
+                    <div class="bb-avatar flex-shrink-0" style="width:56px;height:56px;background:var(--bb-n100);color:var(--bb-mut)">
+                        <span class="material-symbols-rounded" style="font-size:1.75rem">account_balance_wallet</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <hr style="margin:4px 0 12px;border-top:1px dashed var(--bb-n300);opacity:1">
+
+                <div class="bb-seg" id="hmModeSeg" role="tablist" aria-label="การจัดการ">
+                    <button type="button" class="bb-seg-btn is-on" data-hm-mode="set_float" role="tab">ตั้ง/แก้วงเงิน</button>
+                    <button type="button" class="bb-seg-btn" data-hm-mode="top_up" role="tab">เติมเงิน</button>
+                    <button type="button" class="bb-seg-btn" data-hm-mode="count" role="tab">นับเงินจริง</button>
+                    <button type="button" class="bb-seg-btn" data-hm-mode="adjust" role="tab">ปรับยอด</button>
+                </div>
+
+                <div style="height:14px"></div>
+
+                {# ตั้ง/แก้วงเงิน (absolute) #}
+                <form id="hmFormSetFloat" method="POST" class="hm-form">
+                    <label class="bb-label" for="hmSetFloatAmt">วงเงินสำรองใหม่ (บาท)</label>
+                    <input type="number" step="0.01" min="0" class="bb-input" id="hmSetFloatAmt" name="float_amount" required>
+                    <div style="height:10px"></div>
+                    <label class="bb-label" for="hmSetFloatNote">เหตุผล<span style="color:var(--bb-dg)">*</span></label>
+                    <textarea class="bb-input" id="hmSetFloatNote" name="note" rows="2" required
+                              placeholder="เช่น 'ปรับวงเงินประจำไตรมาส'"></textarea>
+                </form>
+
+                {# เติมเงิน (incremental, + เท่านั้น) #}
+                <form id="hmFormTopUp" method="POST" class="hm-form d-none">
+                    <label class="bb-label" for="hmTopUpAmt">จำนวนที่เติม (บาท)</label>
+                    <input type="number" step="0.01" min="0.01" class="bb-input" id="hmTopUpAmt" name="amount" required>
+                    <div style="height:10px"></div>
+                    <label class="bb-label" for="hmTopUpNote">เหตุผล<span style="color:var(--bb-dg)">*</span></label>
+                    <textarea class="bb-input" id="hmTopUpNote" name="note" rows="2" required
+                              placeholder="เช่น 'เติมเงินสำรองรอบเดือน'"></textarea>
+                </form>
+
+                {# นับเงินจริง — ไม่แก้ float_amount แค่เทียบกับคงเหลือ #}
+                <form id="hmFormCount" method="POST" class="hm-form d-none">
+                    <label class="bb-label" for="hmCountAmt">เงินสดในมือจริง (บาท)</label>
+                    <input type="number" step="0.01" min="0" class="bb-input" id="hmCountAmt" name="counted_amount" required>
+                    <p class="bb-hint" id="hmCountPreview">กรอกยอดที่นับได้จริง — ระบบจะเทียบกับคงเหลือให้</p>
+                    <div style="height:10px"></div>
+                    <label class="bb-label" for="hmCountNote">เหตุผล<span style="color:var(--bb-dg)">*</span></label>
+                    <textarea class="bb-input" id="hmCountNote" name="note" rows="2" required
+                              placeholder="เช่น 'นับเงินสิ้นวัน'"></textarea>
+                </form>
+
+                {# ปรับยอด — ขั้น 2 หลังนับเงินจริงเจอส่วนต่าง (D8 auditable 2 ขั้น ไม่รวบ) #}
+                <form id="hmFormAdjust" method="POST" class="hm-form d-none">
+                    <label class="bb-label" for="hmAdjustAmt">จำนวนที่ปรับ (บาท)
+                        <span style="font-weight:400;color:var(--bb-mut)">— ใส่ลบ (−) เพื่อหัก</span>
+                    </label>
+                    <input type="number" step="0.01" class="bb-input" id="hmAdjustAmt" name="change_amount" required placeholder="เช่น 500 หรือ -500">
+                    <div style="height:10px"></div>
+                    <label class="bb-label" for="hmAdjustNote">เหตุผล<span style="color:var(--bb-dg)">*</span></label>
+                    <textarea class="bb-input" id="hmAdjustNote" name="note" rows="2" required
+                              placeholder="เช่น 'ปรับตามผลนับเงินจริง'"></textarea>
+                </form>
+
+                <hr style="margin:16px 0 12px;border-top:1px solid var(--bb-n200);opacity:1">
+                <div style="font-size:13px;color:var(--bb-mut);margin-bottom:6px">ประวัติล่าสุด</div>
+                <div id="hmHistory" style="max-height:180px;overflow-y:auto;font-size:13px;color:var(--bb-mut)">—</div>
+            </div>
+
+            <div class="modal-footer bg-white border-top-0">
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="bb-btn is-pri" id="hmSubmitBtn">บันทึก</button>
+            </div>
+        </div>
+    </div>
+</div>

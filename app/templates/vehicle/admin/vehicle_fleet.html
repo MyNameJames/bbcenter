@@ -231,6 +231,7 @@
                         <th>ที่นั่ง</th>
                         <th class="text-end">ไมล์ล่าสุด</th>
                         <th>สถานะ</th>
+                        <th>โควตา</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -263,6 +264,22 @@
                             {% endif %}
                         </td>
                         <td>
+                            {% set vq = vehicle_quotas.get(v.id, {}) %}
+                            {% set _src_parts = [] %}
+                            {% for sid, lim in vq.get('sources', {}).items() %}
+                                {% if lim %}{% set _ = _src_parts.append(quota_source_names.get(sid, '') ~ ' ฿' ~ '{:,.0f}'.format(lim)) %}{% endif %}
+                            {% endfor %}
+                            {% if vq.card or _src_parts %}
+                            <span class="bb-cell-sub">
+                                {%- if vq.card %}บัตร ฿{{ '{:,.0f}'.format(vq.card) }}{% endif -%}
+                                {%- if vq.card and _src_parts %} · {% endif -%}
+                                {{ _src_parts|join(' · ') }}
+                            </span>
+                            {% else %}
+                            <span style="color:var(--bb-mut)">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <button type="button" class="bb-btn is-sec is-icon"
                                     data-bs-toggle="modal" data-bs-target="#addVehicleModal"
                                     data-id="{{ v.id }}"
@@ -276,6 +293,8 @@
                                     data-svc-date="{{ v.next_service_date.strftime('%Y-%m-%d') if v.next_service_date else '' }}"
                                     data-svc-km="{{ v.next_service_km or '' }}"
                                     data-tax-date="{{ v.tax_due_date.strftime('%Y-%m-%d') if v.tax_due_date else '' }}"
+                                    data-quota-card="{{ vq.card or '' }}"
+                                    data-quota-sources='{{ vq.get("sources", {})|tojson }}'
                                     title="แก้ไข">
                                 <span class="material-symbols-rounded">edit</span>
                             </button>
@@ -571,6 +590,51 @@
                                     <input type="date" id="av_tax_date" name="tax_due_date" class="form-control" autocomplete="off">
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {# วงเงินและสิทธิ์เบิก (P5, §5.8) — โผล่เฉพาะ edit เหมือน avServiceSection ด้านบน
+                       บันทึก = insert vehicle_quota แถวใหม่เท่านั้น (fuel_svc.set_vehicle_quota,
+                       ห้าม UPDATE แถวเดิม — ไม่งั้นเดือนย้อนหลังจะคำนวณผิด) ทำใน _fleet_sync_vehicle_quota()
+                       หลัง _fleet_edit_vehicle() คอมมิตแล้ว ไม่ block การแก้รถหลักถ้าพลาด #}
+                    <div id="avQuotaSection" class="d-none">
+                        <hr class="fleet-divider">
+                        <div class="mb-2">
+                            <label class="form-label fw-bold mb-0 text-dark">วงเงินและสิทธิ์เบิก</label>
+                            <div class="form-text mt-1 text-secondary" style="font-size: 0.875rem;">ใช้คุมวงเงินตอนกรอกบิลค่าน้ำมัน — แก้แล้วมีผลตั้งแต่เดือนนี้เป็นต้นไป เดือนเก่าไม่เปลี่ยน</div>
+                        </div>
+                        <div class="row g-2 mb-2 align-items-end">
+                            <div class="col-6">
+                                <div class="form-check mb-1">
+                                    <input type="checkbox" class="form-check-input" id="av_has_card" name="has_card" value="1">
+                                    <label class="form-check-label" for="av_has_card">มีบัตรน้ำมัน</label>
+                                </div>
+                                <div class="bb-field-box">
+                                    <input type="number" min="0" step="0.01" id="av_card_limit" name="card_limit" class="form-control" autocomplete="off" placeholder="วงเงิน/เดือน">
+                                </div>
+                            </div>
+                            {% if quota_sources %}
+                            <div class="col-6">
+                                <div class="form-check mb-1">
+                                    <input type="checkbox" class="form-check-input" id="av_has_source" name="has_source" value="1">
+                                    <label class="form-check-label" for="av_has_source">เบิกแหล่งอื่นได้</label>
+                                </div>
+                                <div class="row g-1">
+                                    <div class="col-6">
+                                        <select class="form-select" id="av_quota_source_id" name="quota_source_id">
+                                            {% for s in quota_sources %}
+                                            <option value="{{ s.id }}">{{ s.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="bb-field-box">
+                                            <input type="number" min="0" step="0.01" id="av_source_limit" name="source_limit" class="form-control" autocomplete="off" placeholder="วงเงิน/เดือน">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

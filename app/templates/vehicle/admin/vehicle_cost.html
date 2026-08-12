@@ -248,7 +248,7 @@
 .slipmk-sheet { aspect-ratio: 210 / 297; overflow: hidden; background: #fff; color: #18181B;
   box-shadow: var(--bb-shadow-lg); font-family: 'Sarabun', sans-serif;
   padding: 5.2cqw 6cqw; font-size: 1.65cqw; line-height: 1.65; }
-.slipmk-sheet-title { text-align: center; font-size: 1.35em; font-weight: 700; margin-bottom: 1.4em; }
+.slipmk-sheet-title { text-align: center; font-size: 1.45em; font-weight: 700; margin-bottom: 1.6em; }
 .slipmk-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2em 1.2em; margin-bottom: .55em; }
 .slipmk-k { font-weight: 700; white-space: nowrap; }
 .slipmk-v { flex: 0 1 auto; }
@@ -262,7 +262,7 @@
 .slipmk-sign { margin-top: 3.2em; text-align: right; }
 .slipmk-sign-inner { display: inline-block; text-align: center; min-width: 55%; }
 .slipmk-sign-name { margin-top: .6em; }
-.slipmk-idcard { margin-top: 2.4em; width: 42%; aspect-ratio: 1.58; display: flex; align-items: center;
+.slipmk-idcard { margin-top: 2.9em; width: 52%; aspect-ratio: 1.58; display: flex; align-items: center;
   justify-content: center; border: 1px dashed var(--bb-n300); border-radius: .3em;
   background: var(--bb-n50); color: var(--bb-n400); font-size: .85em; }
 
@@ -392,7 +392,7 @@
                     {# ── ซ้าย: ฟอร์มเลือก + ตารางรายการ ── #}
                     <div class="col-12 col-lg-6">
                         <div class="row g-3 mb-4">
-                            <div class="col-6 col-sm-5">
+                            <div class="col-6 col-sm-6">
                                 <label class="form-label" for="mkDriver">คนขับ <span style="color:var(--bb-dg-tx)">*</span></label>
                                 <div class="bb-field-box slipmk-dd" id="mkDriver" tabindex="0" role="button"
                                      aria-haspopup="listbox" aria-expanded="false">
@@ -409,7 +409,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-6 col-sm-5">
+                            <div class="col-6 col-sm-6">
                                 <label class="form-label" for="mkMonth">เดือน <span style="color:var(--bb-dg-tx)">*</span></label>
                                 <div class="bb-field-box slipmk-dd" id="mkMonth" tabindex="0" role="button"
                                      aria-haspopup="listbox" aria-expanded="false">
@@ -428,6 +428,91 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+
+                        <hr class="my-4 text-muted opacity-25">
+
+                        <div class="mb-3">
+                            
+                            <div class="d-flex text-muted small fw-semibold mb-2 px-1">
+                                <div style="flex: 2;">รายการ</div>
+                                <div style="flex: 0.8;">ชม.</div>
+                                <div style="flex: 1;">รวม</div>
+                                <div style="width: 30px;"></div>
+                            </div>
+
+                            <!-- Product Item Row -->
+                            <div class="rounded-2 d-flex align-items-center gap-2 mb-3 p-3" style="border: 1px solid var(--bb-n200);">
+                                <div class="d-flex align-items-center gap-2" style="flex: 2;">
+                                <div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">07 มิ.ย. 2569</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;"><span class="text-danger"> วันอาทิตย์</span> · 13:01 - 18:01</div>
+                                </div>
+                                </div>
+                                <div style="flex: 0.8;" class="text-start">
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">3 ชม.</div>
+                                </div>
+                                <div style="flex: 1;" class="text-start">
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">300 บาท</div>
+                                </div>
+                                <div style="width: 30px;" class="text-end">
+                                <button type="button" class="btn btn-link text-muted p-0 "><span class="material-symbols-rounded text-danger">delete</span></button>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2 d-flex align-items-center gap-2 mb-3 p-3" style="border: 1px solid var(--bb-n200);">
+                                <div class="d-flex align-items-center gap-2" style="flex: 2;">
+                                <div>
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">09 มิ.ย. 2569</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">หลังเวลางาน · 15:32 - 15:36</div>
+                                </div>
+                                </div>
+                                <div style="flex: 0.8;" class="text-start">
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">0:07 ชม.</div>
+                                </div>
+                                <div style="flex: 1;" class="text-start">
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">1.40 บาท</div>
+                                </div>
+                                <div style="width: 30px;" class="text-end">
+                                <button type="button" class="btn btn-link text-muted p-0 "><span class="material-symbols-rounded text-danger">delete</span></button>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2 d-flex align-items-center gap-2 mb-3 p-3" style="border: 1px solid var(--bb-n200);">
+                                <div class="d-flex align-items-center" style="flex: 2;">
+                                    <div class="gap-2 pe-3 col-auto" style="border-right: 1px solid var(--bb-n200);">
+                                        <div class="fw-semibold p-0 mb-2" style="font-size: 0.85rem;">
+                                            <input type="date" class="form-control form-control-sm text-center">
+                                        </div>
+                                        <div class="col p-0 mb-2 d-flex align-items-center" style="font-size: 0.85rem;">
+                                            <input type="time" class="form-control form-control-sm text-center" value="17:21">
+                                            <span class="text-muted px-3" style="font-size: 0.75rem;">-</span>
+                                            <input type="time" class="form-control form-control-sm text-center" value="17:22">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="flex: 0.8;" class="text-start">
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">0 ชม.</div>
+                                </div>
+                                <div style="flex: 1;" class="text-start">
+                                    <div class="fw-semibold" style="font-size: 0.85rem;">0 บาท</div>
+                                </div>
+                                <div style="width: 30px;" class="text-end">
+                                    <button type="button" class="btn btn-link text-muted p-0 "><span class="material-symbols-rounded text-danger">delete</span></button>
+                                </div>
+                            </div>
+
+                            <a href="#" class="btn-add-line d-inline-flex align-items-center gap-1" style="font-size: 0.85rem; color: var(--bb-accent-dk); text-decoration: none;">
+                                <span class="material-symbols-rounded ">add_circle</span> เพิ่มรายการ OT ด้วยตนเอง
+                            </a>
+                        </div>
+
+                        <hr class="my-4 text-muted opacity-25">
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="couponCheck">
+                            <label class="form-check-label text-muted small fw-medium" for="couponCheck">รวมค่าโทร</label>
                         </div>
 
                         <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
@@ -467,7 +552,7 @@
 
                     {# ── ขวา: preview panel (พื้นเทา + ปุ่มเครื่องมือ) → ข้างในคือกระดาษ A4 จริง ── #}
                     <div class="col-12 col-lg-6">
-                        <div class="slipmk-preview-wrap p-3 px-5" style="position:sticky;top:16px">
+                        <div class="slipmk-preview-wrap p-3 px-4" style="position:sticky;top:16px">
                             <div class="slipmk-preview-head">
                                 <span class="slipmk-preview-title">
                                     ตัวอย่างใบเสร็จ

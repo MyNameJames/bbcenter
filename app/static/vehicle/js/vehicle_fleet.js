@@ -65,6 +65,28 @@
             setVal('av_svc_date', isEdit ? (b.dataset.svcDate || '') : '');
             setVal('av_svc_km',   isEdit ? (b.dataset.svcKm  || '') : '');
             setVal('av_tax_date', isEdit ? (b.dataset.taxDate || '') : '');
+
+            // วงเงินและสิทธิ์เบิก (P5, §5.8) — โผล่เฉพาะ edit เหมือน avServiceSection
+            // review 2026-08-10 #10: quota_sources เป็น {source_id: limit} ตอนนี้รองรับหลายแหล่ง —
+            // dropdown จัดการทีละแหล่ง preselect แหล่งที่มีวงเงินตั้งไว้แล้ว (ถ้ามีหลายแหล่งพร้อมกัน
+            // แสดงแค่แหล่งแรกที่เจอ — เคสจริงมีไม่เกิน 1 แหล่งพิเศษต่อคันอยู่แล้ว)
+            const quotaSection = document.getElementById('avQuotaSection');
+            if (quotaSection) quotaSection.classList.toggle('d-none', !isEdit);
+            const quotaCard = isEdit ? b.dataset.quotaCard : '';
+            setChecked('av_has_card', !!quotaCard);
+            setVal('av_card_limit', quotaCard || '');
+
+            let quotaSources = {};
+            try { quotaSources = isEdit ? JSON.parse(b.dataset.quotaSources || '{}') : {}; }
+            catch (e) { quotaSources = {}; }
+            const sourceSel = document.getElementById('av_quota_source_id');
+            if (sourceSel) {
+                const configuredId = Object.keys(quotaSources).find(function (id) { return quotaSources[id]; });
+                if (configuredId) sourceSel.value = configuredId;
+                const limit = configuredId ? quotaSources[configuredId] : '';
+                setChecked('av_has_source', !!limit);
+                setVal('av_source_limit', limit || '');
+            }
         });
     }
 

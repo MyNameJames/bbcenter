@@ -15,4 +15,7 @@ logger: logging.getLogger(__name__) (ไม่ใช่ current_app.logger)
                       gateway เดียวของ VehicleBooking.status (Phase 2)
 - mileage_service.py  close_trip/auto_generate_ot/auto_close_stale_trips/
                       override_fuel_cost/get_fuel_price/get_distance_cap_km (Phase 3)
+- fuel_service.py     get_holder/holder_kpi/all_holder_kpis + quota_limit/quota_used/
+                      quota_status/quota_lines/card_quota_error — สูตรเงินสำรองรายคน +
+                      โควตารถต่อเดือน (fuel-reserve redesign P1, 2026-08-10)
 """

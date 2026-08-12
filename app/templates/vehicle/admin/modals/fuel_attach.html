@@ -1,0 +1,80 @@
+{# fuel_attach.html — "ใส่ใบเบิก" จาก tab ค้างเบิก (P3, 2026-08-10)
+   2 โหมดสลับด้วย .bb-seg: เลือกใบ draft ที่มีอยู่ (existing) หรือ "+ สร้างใบเบิกใหม่" (new) ในตัว —
+   ไม่บังคับให้ไป tab ใบเบิกก่อน (spec §5.3) · form action สลับตามโหมดด้วย JS (wireAttachModal)
+   existing → POST fuel.attach_bills · new → POST fuel.create_reimbursement_draft
+#}
+<div class="modal fade" id="attachBillsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="card modal-content border-0">
+            <form id="attachBillsForm" method="POST" action="{{ url_for('fuel.attach_bills') }}">
+                <div id="attachBillsHidden"></div>
+
+                <div style="padding:14px 20px 0">
+                    <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                        <div class="flex-grow-1" style="min-width:0">
+                            <div class="text-uppercase" style="font-size:12px;color:var(--bb-mut)">#ใส่ใบเบิก</div>
+                            <div style="font-size:20px;font-weight:700;color:var(--bb-str)">ใส่บิลเข้าใบเบิก</div>
+                            <div class="mt-1" style="font-size:.8125rem;color:var(--bb-mut)">
+                                เลือก <span id="attachBillCount">0</span> บิล · รวม <span class="bb-num" id="attachBillTotal">0</span> บาท
+                            </div>
+                        </div>
+                        <div class="bb-avatar flex-shrink-0" style="width:56px;height:56px;background:var(--bb-n100);color:var(--bb-mut)">
+                            <span class="material-symbols-rounded" style="font-size:1.75rem">receipt_long</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <hr style="margin:4px 0 12px;border-top:1px dashed var(--bb-n300);opacity:1">
+
+                    <div class="bb-seg" id="attachModeSeg" role="tablist" aria-label="เลือกใบเบิก">
+                        <button type="button" class="bb-seg-btn is-on" data-attach-mode="existing" role="tab">เลือกใบเบิกที่มีอยู่</button>
+                        <button type="button" class="bb-seg-btn" data-attach-mode="new" role="tab">+ สร้างใบเบิกใหม่</button>
+                    </div>
+
+                    <div style="height:14px"></div>
+
+                    <div id="attachExisting" class="attach-mode-panel">
+                        <input type="hidden" name="reimbursement_id" id="attachRbId">
+                        {% if draft_reimbursements %}
+                        <div style="max-height:220px;overflow-y:auto;border:1px solid var(--bb-n200);border-radius:var(--bb-r-md)">
+                            {% for rb in draft_reimbursements %}
+                            <label class="d-flex align-items-center gap-2" style="padding:10px 12px;border-bottom:1px solid var(--bb-n100);cursor:pointer">
+                                <input type="radio" name="_rb_pick" value="{{ rb.id }}" data-attach-rb-pick>
+                                <span class="flex-grow-1">
+                                    <span class="bb-cell-strong">{{ rb.reimbursement_no }}</span>
+                                    <span class="bb-cell-sub">{{ source_labels.get(rb.source_id, 'ยังไม่ระบุแหล่งเบิก') }} · {{ rb.bills|length }} บิล</span>
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="bb-hint">ยังไม่มีใบเบิกร่าง — กด "+ สร้างใบเบิกใหม่" ด้านบน</p>
+                        {% endif %}
+                    </div>
+
+                    <div id="attachNew" class="attach-mode-panel d-none">
+                        <label class="bb-label" for="attachRbNo">เลขที่ใบเบิก</label>
+                        <input type="text" class="bb-input" id="attachRbNo" name="reimbursement_no" placeholder="เช่น จ69-00165">
+                        <div style="height:12px"></div>
+                        <label class="bb-label" for="attachSourceId">แหล่งเบิก</label>
+                        <select class="bb-input" id="attachSourceId" name="source_id">
+                            <option value="">— ไม่ระบุ —</option>
+                            {% for s in reimbursement_sources %}
+                            <option value="{{ s.id }}" {% if s.is_default %}selected{% endif %}>{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div style="height:12px"></div>
+                        <label class="bb-label" for="attachNote">หมายเหตุ</label>
+                        <textarea class="bb-input" id="attachNote" name="note" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white border-top-0">
+                    <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="bb-btn is-pri">ใส่ใบเบิก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

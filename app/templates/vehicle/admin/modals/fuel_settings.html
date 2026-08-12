@@ -1,0 +1,174 @@
+{# fuel_settings.html — ตั้งค่า (review 2026-08-10 #7): รวม ราคาน้ำมัน / งบทั้งปี / แหล่งเบิก
+   เป็น modal เดียว สลับด้วย .bb-seg (pattern เดียวกับ holderManageModal/attachBillsModal) แทน
+   fuel_price.html + fuel_budget.html เดิม (ลบแล้ว) + เพิ่มแหล่งเบิก CRUD (#8) ที่ไม่เคยมี UI มาก่อน
+   JS: wireSettingsModal() ใน vehicle_fuel.js — เปิดจากปุ่ม "ตั้งค่า" มุมขวาบนของหน้า
+#}
+<div class="modal fade" id="fuelSettingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="card modal-content border-0">
+            <div style="padding:14px 20px 0">
+                <div class="d-flex justify-content-between align-items-start gap-3 pt-2">
+                    <div class="flex-grow-1" style="min-width:0">
+                        <div class="text-uppercase" style="font-size:12px;color:var(--bb-mut)">#ตั้งค่า</div>
+                        <div style="font-size:20px;font-weight:700;color:var(--bb-str)">ตั้งค่าเงินสำรองและค่าใช้จ่าย</div>
+                    </div>
+                    <div class="bb-avatar flex-shrink-0" style="width:56px;height:56px;background:var(--bb-n100);color:var(--bb-mut)">
+                        <span class="material-symbols-rounded" style="font-size:1.75rem">tune</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <hr style="margin:4px 0 12px;border-top:1px dashed var(--bb-n300);opacity:1">
+
+                <div class="bb-seg" id="settingsModeSeg" role="tablist" aria-label="ตั้งค่า">
+                    <button type="button" class="bb-seg-btn is-on" data-settings-mode="price" role="tab">ราคาน้ำมัน</button>
+                    <button type="button" class="bb-seg-btn" data-settings-mode="budget" role="tab">งบทั้งปี</button>
+                    <button type="button" class="bb-seg-btn" data-settings-mode="source" role="tab">แหล่งเบิก</button>
+                </div>
+
+                <div style="height:14px"></div>
+
+                {# ── ราคาน้ำมัน/ลิตร (effective-dated + ประวัติ) ───────────────── #}
+                <div class="settings-panel" data-settings-mode="price">
+                    <form method="POST" action="{{ url_for('fuel.add_price') }}" class="d-flex gap-2 align-items-end flex-wrap" style="margin-bottom:14px">
+                        <div>
+                            <label class="bb-label" for="price_effective_date">วันที่เริ่มใช้</label>
+                            <input type="date" class="bb-input" id="price_effective_date" name="effective_date" required style="width:150px">
+                        </div>
+                        <div>
+                            <label class="bb-label" for="price_per_liter">ราคา/ลิตร (บาท)</label>
+                            <input type="number" step="0.01" min="0.01" class="bb-input" id="price_per_liter" name="price_per_liter" required placeholder="0.00" style="width:120px">
+                        </div>
+                        <div class="flex-grow-1">
+                            <label class="bb-label" for="price_note">หมายเหตุ</label>
+                            <input type="text" class="bb-input" id="price_note" name="note" placeholder="—">
+                        </div>
+                        <button type="submit" class="bb-btn is-pri is-sm">
+                            <span class="material-symbols-rounded">add</span>
+                            <span class="bb-btn-text">เพิ่ม</span>
+                        </button>
+                    </form>
+
+                    {% if fuel_prices %}
+                    <table class="bb-table mb-0">
+                        <thead><tr><th>วันที่เริ่มใช้</th><th class="text-end">ราคา/ลิตร</th><th>หมายเหตุ</th><th></th></tr></thead>
+                        <tbody>
+                            {% for p in fuel_prices %}
+                            <tr>
+                                <td class="bb-cell-muted">{{ '%02d'|format(p.effective_date.day) }}/{{ '%02d'|format(p.effective_date.month) }}/{{ p.effective_date.year + 543 }}</td>
+                                <td class="bb-cell-num bb-cell-strong">{{ '{:,.2f}'.format(p.price_per_liter) }}</td>
+                                <td class="bb-cell-muted">{{ p.note or '—' }}</td>
+                                <td class="bb-table-actions">
+                                    <form method="POST" action="{{ url_for('fuel.delete_price', price_id=p.id) }}"
+                                          onsubmit="return confirm('ลบราคา/ลิตร วันที่ {{ p.effective_date.strftime('%d/%m/%Y') }} ใช่หรือไม่?');">
+                                        <button type="submit" class="bb-btn is-sec is-sm is-icon" title="ลบ">
+                                            <span class="material-symbols-rounded">delete</span>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="bb-hint">ยังไม่มีประวัติ — กรุณาเพิ่มราคาแรก</p>
+                    {% endif %}
+                </div>
+
+                {# ── งบทั้งปี ──────────────────────────────────────────────── #}
+                <div class="settings-panel d-none" data-settings-mode="budget">
+                    <div style="border:1px solid var(--bb-n200);border-radius:var(--bb-r-surface);padding:12px 16px;margin-bottom:14px">
+                        <div class="d-flex justify-content-between" style="padding:4px 0">
+                            <span class="bb-cell-muted">งบปัจจุบัน</span>
+                            <span class="bb-num bb-cell-strong">{{ '{:,.0f}'.format(annual_budget) }} ฿</span>
+                        </div>
+                        <div class="d-flex justify-content-between" style="padding:4px 0">
+                            <span class="bb-cell-muted">ใช้แล้ว ปี {{ f_year + 543 }}</span>
+                            <span class="bb-num bb-cell-muted">{{ '{:,.0f}'.format(year_used) }} ฿</span>
+                        </div>
+                        <div class="d-flex justify-content-between" style="padding:4px 0;border-top:1px dashed var(--bb-n300);margin-top:4px">
+                            <span class="bb-cell-strong">คงเหลือ</span>
+                            <span class="bb-num bb-cell-strong" style="{% if year_remaining < 0 %}color:var(--bb-dg-tx){% endif %}">{{ '{:,.0f}'.format(year_remaining) }} ฿</span>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('fuel.set_annual_budget') }}">
+                        <label class="bb-label" for="annual_budget_amount">งบใหม่ (บาท) <span class="bb-hint" style="display:inline">— 0 = ยกเลิก</span></label>
+                        <input type="number" step="1" min="0" class="bb-input" id="annual_budget_amount" name="amount" required
+                               value="{{ '{:.0f}'.format(annual_budget) if annual_budget else '' }}" placeholder="เช่น 500000">
+                        <div style="height:12px"></div>
+                        <button type="submit" class="bb-btn is-pri is-sm">บันทึก</button>
+                    </form>
+                </div>
+
+                {# ── แหล่งเบิก — CRUD (review 2026-08-10 #8, ยังไม่เคยมี UI มาก่อน) ─────── #}
+                <div class="settings-panel d-none" data-settings-mode="source">
+                    <form method="POST" action="{{ url_for('fuel.source_create') }}" class="d-flex gap-2 align-items-end flex-wrap" style="margin-bottom:14px">
+                        <div class="flex-grow-1">
+                            <label class="bb-label" for="source_name">ชื่อแหล่งเบิก</label>
+                            <input type="text" class="bb-input" id="source_name" name="name" required placeholder="เช่น วัดพระธรรมกาย">
+                        </div>
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="source_is_default" name="is_default" value="1">
+                            <label class="form-check-label" for="source_is_default" style="font-size:14px;color:var(--bb-mut)">ตั้งเป็นค่าเริ่มต้น</label>
+                        </div>
+                        <button type="submit" class="bb-btn is-pri is-sm">
+                            <span class="material-symbols-rounded">add</span>
+                            <span class="bb-btn-text">เพิ่ม</span>
+                        </button>
+                    </form>
+
+                    {% if sources_all %}
+                    <table class="bb-table mb-0">
+                        <thead><tr><th>ชื่อ</th><th>สถานะ</th><th></th></tr></thead>
+                        <tbody>
+                            {% for s in sources_all %}
+                            <tr>
+                                <td class="bb-cell-strong">
+                                    {{ s.name }}
+                                    {% if s.is_default %}<span class="bb-badge is-accent">ค่าเริ่มต้น</span>{% endif %}
+                                </td>
+                                <td>
+                                    {% if s.is_active %}
+                                    <span class="bb-status-inline is-ok"><span class="material-symbols-rounded" style="font-size:16px">check_circle</span>ใช้งาน</span>
+                                    {% else %}
+                                    <span class="bb-status-inline is-dg"><span class="material-symbols-rounded" style="font-size:16px">cancel</span>ปิดใช้งาน</span>
+                                    {% endif %}
+                                </td>
+                                <td class="bb-table-actions">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        {% if s.is_active and not s.is_default %}
+                                        <form method="POST" action="{{ url_for('fuel.source_set_default', source_id=s.id) }}">
+                                            <button type="submit" class="bb-btn is-sec is-sm" title="ตั้งเป็นค่าเริ่มต้น">ตั้งเริ่มต้น</button>
+                                        </form>
+                                        {% endif %}
+                                        <form method="POST" action="{{ url_for('fuel.source_toggle_active', source_id=s.id) }}">
+                                            <button type="submit" class="bb-btn is-sec is-sm is-icon" title="{{ 'ปิดใช้งาน' if s.is_active else 'เปิดใช้งาน' }}">
+                                                <span class="material-symbols-rounded">{{ 'visibility_off' if s.is_active else 'visibility' }}</span>
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('fuel.source_delete', source_id=s.id) }}"
+                                              onsubmit="return confirm('ลบแหล่งเบิก {{ s.name }}? (ลบได้เฉพาะที่ยังไม่เคยใช้)');">
+                                            <button type="submit" class="bb-btn is-danger-sec is-sm is-icon" title="ลบ">
+                                                <span class="material-symbols-rounded">delete</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="bb-hint">ยังไม่มีแหล่งเบิก — เพิ่มแหล่งแรกด้านบน</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="modal-footer bg-white border-top-0">
+                <button type="button" class="bb-btn is-sec" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>

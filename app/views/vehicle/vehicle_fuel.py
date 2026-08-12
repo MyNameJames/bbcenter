@@ -13,15 +13,18 @@ Phase 1: DB + backend routes (UI = phase 2, Excel/PDF = phase 4).
 """
 from datetime import datetime, date
 from decimal import Decimal
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort, current_app
 from flask_login import login_required, current_user
-from sqlalchemy import extract, func
+from sqlalchemy import extract, func, or_, and_
 from models import (
-    db, get_bkk_time, SystemConfig,
+    db, get_bkk_time, SystemConfig, User,
     Vehicle, Driver,
     FuelBill, FuelReimbursement, FuelPrice,
-    FuelReserveConfig, FuelReserveLog,
+    FuelReserveLog, ExpenseHolder, ReimbursementSource,
+    ReimbursementSettlement,
 )
+from domain.vehicle.fuel import PAYMENT_LABEL_TH, CATEGORY_LABEL_TH
+import services.vehicle.fuel_service as fuel_svc
 
 fuel_bp = Blueprint('fuel', __name__)
 
@@ -41,8 +44,6 @@ def _guard():
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
-PAYMENT_METHODS = ('transfer', 'card', 'self')   # เงินสด / ตัดบัตร / จ่ายเอง
-PAYMENT_LABEL_TH = {'transfer': 'เงินสด', 'card': 'ตัดบัตร', 'self': 'จ่ายเอง'}
 MONTH_LABEL_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
                   'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
@@ -56,10 +57,30 @@ def _bill_status(bill):
     return 'ได้เงิน'
 
 
-def _depletes_reserve(method):
-    """Only `transfer` (เงินสด — เบิกจากกองกลาง) depletes reserve.
-    `card` = company card (no reserve impact). `self` = ผู้โดยสารจ่ายเอง (เก็บประวัติเฉย ๆ)."""
-    return method == 'transfer'
+def _pending_status(bill):
+    """ใช้ไปแล้ว | อยู่ในใบร่าง | ทำเรื่องเบิกแล้ว — tab ค้างเบิก (§4.3, ปรับหลัง P4 มี submit จริง)
+    เช็กเลือกได้เฉพาะ "ใช้ไปแล้ว" เท่านั้น — 2 สถานะหลังแปลว่าเข้าใบเบิกไปแล้ว
+    (attach_bills_to_reimbursement กรองแค่ reimbursement_id IS NULL อยู่แล้ว ไม่ถูกดึงซ้ำ)
+    """
+    if bill.reimbursement_id is None:
+        return 'ใช้ไปแล้ว'
+    if bill.reimbursement.status == 'draft':
+        return 'อยู่ในใบร่าง'
+    return 'ทำเรื่องเบิกแล้ว'
+
+
+def _finished_status(bill):
+    """ได้เงินคืน | ตัดบัตร | จ่ายเอง — tab จบแล้ว (D4, §5.4)"""
+    if bill.payment_method == 'card':
+        return 'ตัดบัตร'
+    if bill.payment_method == 'self':
+        return 'จ่ายเอง'
+    return 'ได้เงินคืน'
+
+
+def _category_filter_key(bill):
+    """chip กรอง (D5) — ทะเบียนรถ ถ้าเป็นบิลน้ำมันที่ผูกรถ · ที่เหลือ (ไม่ใช่น้ำมัน/ไม่มีรถ) → 'other'"""
+    return str(bill.vehicle_id) if (bill.category == 'fuel' and bill.vehicle_id) else 'other'
 
 
 def _parse_date(s, default=None):
@@ -111,63 +132,24 @@ def _filtered_bills_query(year, month, vehicle_id, driver_id):
 @fuel_bp.route('/admin/fuel', methods=['GET'])
 @login_required
 def admin_fuel():
+    """หน้า "เงินสำรองและค่าใช้จ่าย" — 5 tab (review 2026-08-10 #6, spec §5.1)
+
+    KPI strip เดิม + ตาราง "บิลเบิก" ledger เดิม (ผูก FuelReserveConfig singleton ที่เลิกใช้แล้ว)
+    ถูกลบออกจากหน้านี้ทั้งคู่ — แทนที่ด้วย KPI เงินสำรองรายคน (my_kpi) + tab ค้างเบิก/จบแล้ว
+    ที่ query ตรงจาก FuelBill ตามสถานะจริง ไม่ต้องพึ่ง running-balance คำนวณสดทุก request แล้ว
+    """
     _guard()
 
-    # Filters
-    f_year, f_month, f_veh, f_drv = _read_filters(request.args)
+    today = get_bkk_time().date()
+    f_year = _parse_int(request.args.get('year'), today.year)
 
-    # Bill query (filtered)
-    bills = _filtered_bills_query(f_year, f_month, f_veh, f_drv).all()
+    # ปีที่มีบิลจริง (สำหรับ selector ของ pivot) — เสมอรวม f_year แม้ปีนั้นยังไม่มีบิล
+    year_rows = (db.session.query(extract('year', FuelBill.bill_date))
+                 .filter(FuelBill.bill_date.isnot(None))
+                 .distinct().all())
+    available_years = sorted({int(y[0]) for y in year_rows if y[0]} | {f_year}, reverse=True)
 
-    # Reimbursements (visible separately; shows all in current year regardless of bill filter)
-    reimbursements = (FuelReimbursement.query
-                      .filter(
-                          (extract('year', FuelReimbursement.submitted_at) == f_year) |
-                          (extract('year', FuelReimbursement.created_at) == f_year)
-                      )
-                      .order_by(FuelReimbursement.id.desc())
-                      .all())
-
-    # ── KPI: cash reserve side ─────────────────────────────────────
-    reserve_amount = FuelReserveConfig.get_amount()
-
-    # All bills not yet "ได้เงิน" (regardless of filter — reserve is global)
-    pending_q = FuelBill.query.outerjoin(FuelReimbursement,
-                                         FuelBill.reimbursement_id == FuelReimbursement.id)
-    pending_q = pending_q.filter(
-        (FuelBill.reimbursement_id.is_(None)) |
-        (FuelReimbursement.received_at.is_(None))
-    )
-    pending_bills = pending_q.all()
-
-    pending_total       = sum((float(b.amount) for b in pending_bills), 0.0)
-    reserve_used        = sum((float(b.amount) for b in pending_bills if _depletes_reserve(b.payment_method)), 0.0)
-    reserve_balance     = float(reserve_amount) - reserve_used
-
-    # "จ่ายเอง" tracker — ผู้โดยสารจ่ายเอง ไม่หัก reserve · pending scope
-    self_paid_bills  = [b for b in pending_bills if b.payment_method == 'self']
-    self_paid_total  = sum((float(b.amount) for b in self_paid_bills), 0.0)
-    self_paid_count  = len(self_paid_bills)
-
-    # ── KPI: annual budget side (sum across all bills in f_year, no other filter) ──
-    year_bills = FuelBill.query.filter(extract('year', FuelBill.bill_date) == f_year).all()
-    year_used  = sum((float(b.amount) for b in year_bills), 0.0)
-    annual_budget = float(SystemConfig.get('fuel_annual_budget', 0) or 0)
-    year_remaining = annual_budget - year_used
-
-    # ── KPI: by payment method (current filter scope) ──
-    by_method = {'transfer': 0.0, 'card': 0.0, 'self': 0.0}
-    for b in bills:
-        by_method[b.payment_method] = by_method.get(b.payment_method, 0.0) + float(b.amount)
-
-    # Pending breakdown for status chips — only bills that deplete reserve (transfer)
-    pending_by_status = {'รอเบิก': 0.0, 'อนุมัติ': 0.0}
-    for b in pending_bills:
-        if not _depletes_reserve(b.payment_method):
-            continue
-        pending_by_status[_bill_status(b)] = pending_by_status.get(_bill_status(b), 0.0) + float(b.amount)
-
-    # ── Pivot: vehicle × month for f_year ──────────────────────────
+    # ── tab ภาพรวมทั้งปี — pivot รถ × เดือน (นับทุก payment_method, มิติน้ำมัน) ──
     pivot_rows = (db.session.query(
                       FuelBill.vehicle_id,
                       extract('month', FuelBill.bill_date).label('m'),
@@ -179,106 +161,190 @@ def admin_fuel():
     for vid, m, total in pivot_rows:
         pivot.setdefault(vid, {})[int(m)] = float(total or 0)
 
-    # Status + balance-after-this-bill (computed running balance, descending date)
-    # Iterate bills in chronological order so balance_after reflects state when bill was created.
-    chrono = sorted(bills, key=lambda b: (b.bill_date, b.id))
-    running = float(reserve_amount)
-    bill_meta = {}  # {bill_id: {status, balance_after}}
-    for b in chrono:
-        if _depletes_reserve(b.payment_method):
-            running -= float(b.amount)
-        # if bill is already 'ได้เงิน', reserve was refunded — but we want snapshot at bill date
-        bill_meta[b.id] = {
-            'status': _bill_status(b),
-            'balance_after': running,
-        }
-
-    # Dropdowns
     vehicles = Vehicle.query.order_by(Vehicle.license_plate).all()
     drivers  = Driver.query.filter_by(is_active=True).order_by(Driver.name).all()
-
+    vehicle_labels = {v.id: v.license_plate for v in vehicles}
     pivot_labels = {v.id: v.license_plate for v in vehicles if v.id in pivot}
     all_pivot_vals = [val for row in pivot.values() for val in row.values()]
     pivot_max = max(all_pivot_vals) if all_pivot_vals else 1
-    year_bills_count = len(year_bills)
 
-    # Reserve history + price history (latest 20 each)
-    reserve_logs = FuelReserveLog.query.order_by(FuelReserveLog.created_at.desc()).limit(20).all()
-    fuel_prices  = FuelPrice.query.order_by(FuelPrice.effective_date.desc()).limit(20).all()
+    # ── งบทั้งปี (แสดงใน modal ตั้งค่า → segment "งบทั้งปี") ──
+    year_used_amt = (db.session.query(func.coalesce(func.sum(FuelBill.amount), 0))
+                     .filter(extract('year', FuelBill.bill_date) == f_year).scalar())
+    year_used = float(year_used_amt or 0)
+    annual_budget = float(SystemConfig.get('fuel_annual_budget', 0) or 0)
+    year_remaining = annual_budget - year_used
+    fuel_prices = FuelPrice.query.order_by(FuelPrice.effective_date.desc()).limit(20).all()
+    sources_all = ReimbursementSource.query.order_by(ReimbursementSource.is_default.desc(),
+                                                     ReimbursementSource.name).all()
 
-    # Distinct years that actually have bills (desc) — always include f_year
-    year_rows = (db.session.query(extract('year', FuelBill.bill_date))
-                 .filter(FuelBill.bill_date.isnot(None))
-                 .distinct().all())
-    available_years = sorted({int(y[0]) for y in year_rows if y[0]} | {f_year}, reverse=True)
+    # ── เงินสำรองรายคน (P2) — KPI ของคนล็อกอินคนเดียวเท่านั้น (D1) ──
+    # ไม่ใช่ผู้สำรองเงิน → my_holder เป็น None → holder_kpi คืนศูนย์ทั้งหมด (D2)
+    my_holder = fuel_svc.get_holder(current_user.id)
+    my_kpi = fuel_svc.holder_kpi(my_holder)
+    my_quota_lines = fuel_svc.quota_lines(today.year, today.month)
+    source_labels = {s.id: s.name for s in sources_all if s.is_active}
+
+    # tab เจ้าหน้าที่ — KPI ทุกคน + ประวัติปรับล่าสุดต่อคน (query อ่านล้วน ไม่ผ่าน service)
+    # log serialize เป็น dict เอง (ไม่ใช่ |tojson ตรงบน ORM object) เพื่อให้ jinja tojson ใช้ในโมดัลได้
+    holder_rows = fuel_svc.all_holder_kpis()
+    for row in holder_rows:
+        logs = (FuelReserveLog.query
+                .filter_by(holder_id=row['holder'].id)
+                .order_by(FuelReserveLog.created_at.desc())
+                .limit(15).all())
+        row['logs'] = [{
+            'date':    log.created_at.strftime('%d/%m/%Y %H:%M') if log.created_at else '',
+            'type':    log.log_type,
+            'change':  float(log.change_amount),
+            'balance': float(log.new_balance),
+            'note':    log.note,
+        } for log in logs]
+    holder_candidate_users = (User.query
+                              .filter(~User.id.in_(db.session.query(ExpenseHolder.user_id)))
+                              .order_by(User.full_name)
+                              .all())
+
+    # ── tab ค้างเบิก (P3) — เฉพาะบิล reserve ที่ยังไม่ "ได้เงินคืนแล้ว" (reimbursement.status != received) ──
+    pending_reserve_bills = (FuelBill.query
+                             .outerjoin(FuelReimbursement, FuelBill.reimbursement_id == FuelReimbursement.id)
+                             .filter(FuelBill.payment_method == 'reserve')
+                             .filter(or_(FuelBill.reimbursement_id.is_(None),
+                                        FuelReimbursement.status != 'received'))
+                             .order_by(FuelBill.bill_date.desc(), FuelBill.id.desc())
+                             .all())
+    pending_vehicle_ids = sorted(
+        {b.vehicle_id for b in pending_reserve_bills if b.vehicle_id},
+        key=lambda vid: vehicle_labels.get(vid, ''))
+    pending_meta = {
+        b.id: {'status': _pending_status(b), 'filter_key': _category_filter_key(b)}
+        for b in pending_reserve_bills
+    }
+
+    # ── tab จบแล้ว (P5, §5.4/D4) — reserve ที่ได้เงินคืนแล้ว + card + self ──
+    finished_bills = (FuelBill.query
+                      .outerjoin(FuelReimbursement, FuelBill.reimbursement_id == FuelReimbursement.id)
+                      .filter(or_(
+                          FuelBill.payment_method.in_(('card', 'self')),
+                          and_(FuelBill.payment_method == 'reserve', FuelReimbursement.status == 'received'),
+                      ))
+                      .order_by(FuelBill.bill_date.desc(), FuelBill.id.desc())
+                      .all())
+    finished_vehicle_ids = sorted(
+        {b.vehicle_id for b in finished_bills if b.vehicle_id},
+        key=lambda vid: vehicle_labels.get(vid, ''))
+    finished_meta = {
+        b.id: {'status': _finished_status(b), 'filter_key': _category_filter_key(b)}
+        for b in finished_bills
+    }
+    draft_reimbursements = (FuelReimbursement.query
+                            .filter_by(status='draft')
+                            .order_by(FuelReimbursement.id.desc())
+                            .all())
+    reimbursement_sources = (ReimbursementSource.query
+                             .filter_by(is_active=True)
+                             .order_by(ReimbursementSource.is_default.desc(), ReimbursementSource.name)
+                             .all())
+    all_holders = ExpenseHolder.query.filter_by(is_active=True).order_by(ExpenseHolder.id).all()
+
+    # ── tab ใบเบิกเงิน (P4) — ทุกสถานะ (ไม่กรองปี) + ตารางคืนเงินรายคนต่อใบ ──
+    all_reimbursements = FuelReimbursement.query.order_by(FuelReimbursement.id.desc()).all()
+    rb_meta = {}
+    for rb in all_reimbursements:
+        rb_bills = rb.bills
+        settlements = ReimbursementSettlement.query.filter_by(reimbursement_id=rb.id).all()
+        rb_meta[rb.id] = {
+            'bill_count': len(rb_bills),
+            'total': sum((float(b.amount) for b in rb_bills), 0.0),
+            'settlements': settlements,
+            'stale': (rb.status == 'draft' and rb.created_at is not None
+                     and (today - rb.created_at.date()).days > 14),
+        }
 
     return render_template(
         'vehicle/admin/admin_fuel.html',
         # data
-        bills=bills,
-        reimbursements=reimbursements,
-        bill_meta=bill_meta,
         vehicles=vehicles,
         drivers=drivers,
-        reserve_logs=reserve_logs,
         fuel_prices=fuel_prices,
+        sources_all=sources_all,
         pivot=pivot,
         pivot_labels=pivot_labels,
         pivot_max=pivot_max,
-        year_bills_count=year_bills_count,
-        # KPIs
-        reserve_amount=reserve_amount,
-        reserve_used=reserve_used,
-        reserve_balance=reserve_balance,
-        pending_total=pending_total,
-        pending_by_status=pending_by_status,
-        self_paid_total=self_paid_total,
-        self_paid_count=self_paid_count,
+        # งบทั้งปี (modal ตั้งค่า)
         annual_budget=annual_budget,
         year_used=year_used,
         year_remaining=year_remaining,
-        by_method=by_method,
+        # เงินสำรองรายคน
+        my_kpi=my_kpi,
+        my_quota_lines=my_quota_lines,
+        vehicle_labels=vehicle_labels,
+        source_labels=source_labels,
+        holder_rows=holder_rows,
+        holder_candidate_users=holder_candidate_users,
+        pending_reserve_bills=pending_reserve_bills,
+        pending_vehicle_ids=pending_vehicle_ids,
+        pending_meta=pending_meta,
+        finished_bills=finished_bills,
+        finished_vehicle_ids=finished_vehicle_ids,
+        finished_meta=finished_meta,
+        category_labels=CATEGORY_LABEL_TH,
+        PAYMENT_LABEL_TH=PAYMENT_LABEL_TH,
+        draft_reimbursements=draft_reimbursements,
+        reimbursement_sources=reimbursement_sources,
+        all_holders=all_holders,
+        all_reimbursements=all_reimbursements,
+        rb_meta=rb_meta,
+        today=today,
         # filters
         f_year=f_year,
-        f_month=f_month,
-        f_veh=f_veh,
-        f_drv=f_drv,
         available_years=available_years,
     )
 
 
 # ─────────────────────────────────────────────
-# Bills CRUD
+# Bills CRUD — validation (§4.5) อยู่ services/vehicle/fuel_service.py ทั้งหมด (ADR 0001)
 # ─────────────────────────────────────────────
+def _read_bill_form():
+    """parse ค่าจากฟอร์มบิล (ใช้ร่วม create/edit) — คืน dict ตรงกับ kwargs ของ fuel_svc.create_bill/update_bill"""
+    return dict(
+        bill_date=_parse_date(request.form.get('bill_date')),
+        vehicle_id=_parse_int(request.form.get('vehicle_id')),
+        driver_id=_parse_int(request.form.get('driver_id')),
+        amount=_parse_decimal(request.form.get('amount')),
+        method=(request.form.get('payment_method') or '').strip(),
+        category=(request.form.get('category') or 'fuel').strip(),
+        liters=_parse_decimal(request.form.get('liters'), None),
+        mileage=_parse_int(request.form.get('mileage')),
+        note=(request.form.get('note') or '').strip() or None,
+        paid_by_holder_id=_parse_int(request.form.get('paid_by_holder_id')),
+    )
+
+
+def _flash_bill_warnings(warnings):
+    for w in warnings:
+        flash(w, 'warning')
+
+
 @fuel_bp.route('/admin/fuel/bill', methods=['POST'])
 @login_required
 def create_bill():
     _guard()
-    bill_date = _parse_date(request.form.get('bill_date'))
-    vehicle_id = _parse_int(request.form.get('vehicle_id'))
-    driver_id  = _parse_int(request.form.get('driver_id'))
-    amount     = _parse_decimal(request.form.get('amount'))
-    method     = (request.form.get('payment_method') or '').strip()
-    mileage    = _parse_int(request.form.get('mileage'))
-    note       = (request.form.get('note') or '').strip() or None
-
-    if not (bill_date and vehicle_id and driver_id and amount > 0 and method in PAYMENT_METHODS):
-        flash('กรุณากรอกข้อมูลให้ครบ (วันที่, รถ, ผู้เติม, จำนวนเงิน, ช่องทาง)', 'danger')
+    form = _read_bill_form()
+    if not (form['bill_date'] and form['driver_id'] and form['amount'] and form['amount'] > 0):
+        flash('กรุณากรอกข้อมูลให้ครบ (วันที่, ผู้เติม, จำนวนเงิน, ช่องทาง)', 'danger')
         return redirect(request.referrer or url_for('fuel.admin_fuel'))
-
-    bill = FuelBill(
-        bill_date=bill_date,
-        vehicle_id=vehicle_id,
-        driver_id=driver_id,
-        amount=amount,
-        payment_method=method,
-        mileage=mileage,
-        note=note,
-        created_by=current_user.id,
-    )
-    db.session.add(bill)
-    db.session.commit()
-    flash('บันทึกบิลเรียบร้อย', 'success')
+    try:
+        bill, warnings = fuel_svc.create_bill(actor_id=current_user.id, **form)
+        flash('บันทึกบิลเรียบร้อย', 'success')
+        _flash_bill_warnings(warnings)
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('create_bill failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
 
 
@@ -287,19 +353,18 @@ def create_bill():
 def edit_bill(bill_id):
     _guard()
     bill = FuelBill.query.get_or_404(bill_id)
-
-    bill.bill_date = _parse_date(request.form.get('bill_date'), bill.bill_date)
-    bill.vehicle_id = _parse_int(request.form.get('vehicle_id'), bill.vehicle_id)
-    bill.driver_id  = _parse_int(request.form.get('driver_id'),  bill.driver_id)
-    bill.amount     = _parse_decimal(request.form.get('amount'), bill.amount)
-    method = (request.form.get('payment_method') or '').strip()
-    if method in PAYMENT_METHODS:
-        bill.payment_method = method
-    bill.mileage = _parse_int(request.form.get('mileage'), bill.mileage)
-    bill.note    = (request.form.get('note') or '').strip() or None
-
-    db.session.commit()
-    flash('แก้ไขบิลเรียบร้อย', 'success')
+    form = _read_bill_form()
+    try:
+        bill, warnings = fuel_svc.update_bill(bill, actor_id=current_user.id, **form)
+        flash('แก้ไขบิลเรียบร้อย', 'success')
+        _flash_bill_warnings(warnings)
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('edit_bill failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
 
 
@@ -308,123 +373,237 @@ def edit_bill(bill_id):
 def delete_bill(bill_id):
     _guard()
     bill = FuelBill.query.get_or_404(bill_id)
-    db.session.delete(bill)
-    db.session.commit()
-    flash('ลบบิลเรียบร้อย', 'success')
+    try:
+        fuel_svc.delete_bill(bill, current_user.id)
+        flash('ลบบิลเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('delete_bill failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/bill/<int:bill_id>/detach', methods=['POST'])
+@login_required
+def detach_bill(bill_id):
+    _guard()
+    bill = FuelBill.query.get_or_404(bill_id)
+    try:
+        fuel_svc.detach_bill(bill, current_user.id)
+        flash('ถอดบิลออกจากใบเบิกเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('detach_bill failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
 
 
 # ─────────────────────────────────────────────
-# Reimbursement (รวมบิล)
+# Reimbursement — ใบเบิกเงิน (tab ใบเบิกเงิน, P4)
+# วงจรสถานะ: draft (แก้/ลบ/ใส่-ถอดบิลได้) → submitted (ล็อก, snapshot settlement) → received (ล็อก)
+# logic ทั้งหมดอยู่ fuel_service.py (ADR 0001)
 # ─────────────────────────────────────────────
 @fuel_bp.route('/admin/fuel/reimbursement', methods=['POST'])
 @login_required
 def create_reimbursement():
+    """สร้างใบเบิกเปล่า (draft, ไม่ต้องมีบิล) — ปุ่ม "สร้างใบเบิก" ใน tab ใบเบิกเงิน"""
     _guard()
     rb_no = (request.form.get('reimbursement_no') or '').strip()
-    source = (request.form.get('source') or '').strip() or None
-    submitted_at = _parse_date(request.form.get('submitted_at'), get_bkk_time().date())
+    source_id = _parse_int(request.form.get('source_id'))
     note = (request.form.get('note') or '').strip() or None
-    bill_ids = request.form.getlist('bill_ids')
-    bill_ids = [int(x) for x in bill_ids if x.isdigit()]
-
-    if not rb_no or not bill_ids:
-        flash('กรุณาเลือกบิลและกรอกเลขใบเบิก', 'danger')
-        return redirect(request.referrer or url_for('fuel.admin_fuel'))
-
-    rb = FuelReimbursement(
-        reimbursement_no=rb_no,
-        source=source,
-        submitted_at=submitted_at,
-        note=note,
-        created_by=current_user.id,
-    )
-    db.session.add(rb)
-    db.session.flush()   # get rb.id
-
-    # Attach bills (only those still รอเบิก)
-    bills = FuelBill.query.filter(FuelBill.id.in_(bill_ids),
-                                  FuelBill.reimbursement_id.is_(None)).all()
-    for b in bills:
-        b.reimbursement_id = rb.id
-
-    db.session.commit()
-    flash(f'รวม {len(bills)} บิลเป็นใบเบิก {rb_no} เรียบร้อย', 'success')
+    try:
+        rb = fuel_svc.create_draft_reimbursement(rb_no, source_id, note, current_user.id)
+        flash(f'สร้างใบเบิก {rb.reimbursement_no} เรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('create_reimbursement failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
 
 
 @fuel_bp.route('/admin/fuel/reimbursement/<int:rb_id>/edit', methods=['POST'])
 @login_required
 def edit_reimbursement(rb_id):
+    """แก้เลขที่/แหล่งเบิก/หมายเหตุ — เฉพาะใบ draft"""
     _guard()
     rb = FuelReimbursement.query.get_or_404(rb_id)
-    rb.reimbursement_no = (request.form.get('reimbursement_no') or rb.reimbursement_no).strip()
-    rb.source = (request.form.get('source') or '').strip() or None
-    rb.submitted_at = _parse_date(request.form.get('submitted_at'), rb.submitted_at)
-    rb.received_at  = _parse_date(request.form.get('received_at'),  rb.received_at)
-    rb.note = (request.form.get('note') or '').strip() or None
-    db.session.commit()
-    flash('แก้ไขใบเบิกเรียบร้อย', 'success')
+    rb_no = (request.form.get('reimbursement_no') or '').strip()
+    source_id = _parse_int(request.form.get('source_id'))
+    note = (request.form.get('note') or '').strip()
+    try:
+        fuel_svc.update_reimbursement_meta(rb, reimbursement_no=rb_no, source_id=source_id,
+                                           note=note, actor_id=current_user.id)
+        flash('แก้ไขใบเบิกเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('edit_reimbursement failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/reimbursement/<int:rb_id>/submit', methods=['POST'])
+@login_required
+def submit_reimbursement(rb_id):
+    """draft → submitted: snapshot settlement รายคน + ล็อกบิลข้างใน"""
+    _guard()
+    rb = FuelReimbursement.query.get_or_404(rb_id)
+    amount_requested = _parse_decimal(request.form.get('amount_requested'), None)
+    try:
+        fuel_svc.submit_reimbursement(rb, amount_requested, current_user.id)
+        flash(f'ส่งเรื่องใบเบิก {rb.reimbursement_no} เรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('submit_reimbursement failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
 
 
 @fuel_bp.route('/admin/fuel/reimbursement/<int:rb_id>/receive', methods=['POST'])
 @login_required
 def receive_reimbursement(rb_id):
+    """submitted → received: บันทึกยอดที่ได้เงินจริง"""
     _guard()
     rb = FuelReimbursement.query.get_or_404(rb_id)
-    rb.received_at = _parse_date(request.form.get('received_at'), get_bkk_time().date())
-    db.session.commit()
-    flash(f'บันทึกได้เงินคืน ใบเบิก {rb.reimbursement_no}', 'success')
+    amount_received = _parse_decimal(request.form.get('amount_received'))
+    received_at = _parse_date(request.form.get('received_at'), get_bkk_time().date())
+    try:
+        fuel_svc.receive_reimbursement(rb, amount_received, received_at, current_user.id)
+        flash(f'บันทึกได้เงินคืน ใบเบิก {rb.reimbursement_no}', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('receive_reimbursement failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
 
 
 @fuel_bp.route('/admin/fuel/reimbursement/<int:rb_id>/delete', methods=['POST'])
 @login_required
 def delete_reimbursement(rb_id):
+    """ลบใบเบิก — เฉพาะ draft (บิลข้างในกลับสู่ "ใช้ไปแล้ว")"""
     _guard()
     rb = FuelReimbursement.query.get_or_404(rb_id)
-    # Detach all bills (set reimbursement_id back to NULL)
-    FuelBill.query.filter_by(reimbursement_id=rb.id).update({'reimbursement_id': None})
-    db.session.delete(rb)
-    db.session.commit()
-    flash('ลบใบเบิกเรียบร้อย (บิลกลับสู่สถานะรอเบิก)', 'success')
+    try:
+        fuel_svc.delete_draft_reimbursement(rb, current_user.id)
+        flash('ลบใบเบิกเรียบร้อย (บิลกลับสู่สถานะใช้ไปแล้ว)', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('delete_reimbursement failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
 
 
-# ─────────────────────────────────────────────
-# Reserve config + log
-# ─────────────────────────────────────────────
-@fuel_bp.route('/admin/fuel/reserve', methods=['POST'])
+@fuel_bp.route('/admin/fuel/settlement/<int:settlement_id>/settle', methods=['POST'])
 @login_required
-def adjust_reserve():
+def settle_holder(settlement_id):
+    """คืนเงินให้ผู้สำรอง 1 คน — คืนคนละวันได้ (§5.5 ตารางคืนเงินรายคน)"""
     _guard()
-    change = _parse_decimal(request.form.get('change_amount'))
-    note   = (request.form.get('note') or '').strip()
-
-    if change == 0 or not note:
-        flash('กรุณากรอกจำนวนเงิน (≠ 0) และเหตุผล', 'danger')
-        return redirect(request.referrer or url_for('fuel.admin_fuel'))
-
-    cfg = FuelReserveConfig.query.get(1)
-    if not cfg:
-        cfg = FuelReserveConfig(id=1, amount=Decimal('0'))
-        db.session.add(cfg)
-        db.session.flush()
-
-    cfg.amount = (cfg.amount or Decimal('0')) + change
-    cfg.updated_by = current_user.id
-
-    log = FuelReserveLog(
-        change_amount=change,
-        new_balance=cfg.amount,
-        note=note,
-        created_by=current_user.id,
-    )
-    db.session.add(log)
-    db.session.commit()
-    flash('ปรับเงินสำรองเรียบร้อย', 'success')
+    settlement = ReimbursementSettlement.query.get_or_404(settlement_id)
+    settled_at = _parse_date(request.form.get('settled_at'), get_bkk_time().date())
+    try:
+        fuel_svc.settle_holder(settlement, settled_at, current_user.id)
+        flash('บันทึกคืนเงินเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('settle_holder failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+# ─────────────────────────────────────────────
+# tab ค้างเบิก — "ใส่ใบเบิก" (P3): เลือกใบ draft ที่มีอยู่ หรือสร้างใหม่ในตัว
+# logic (attach/quota check) อยู่ fuel_service.py ทั้งหมด (ADR 0001)
+# ─────────────────────────────────────────────
+@fuel_bp.route('/admin/fuel/attach-bills', methods=['POST'])
+@login_required
+def attach_bills():
+    _guard()
+    rb_id = _parse_int(request.form.get('reimbursement_id'))
+    bill_ids = [int(x) for x in request.form.getlist('bill_ids') if x.isdigit()]
+    if not (rb_id and bill_ids):
+        flash('กรุณาเลือกบิลและใบเบิก', 'danger')
+        return redirect(request.referrer or url_for('fuel.admin_fuel'))
+    rb = FuelReimbursement.query.get_or_404(rb_id)
+    try:
+        warnings = fuel_svc.attach_bills_to_reimbursement(bill_ids, rb, current_user.id)
+        flash(f'ใส่ {len(bill_ids)} บิลเข้าใบเบิก {rb.reimbursement_no} เรียบร้อย', 'success')
+        _flash_bill_warnings(warnings)
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('attach_bills failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/reimbursement/draft', methods=['POST'])
+@login_required
+def create_reimbursement_draft():
+    """"+ สร้างใบเบิกใหม่" ในตัว modal ใส่ใบเบิก — ต่างจาก create_reimbursement เดิม
+    (legacy, มี submitted_at ทันที) ตัวนี้สร้าง status='draft' + source_id (FK) ล้วนๆ"""
+    _guard()
+    rb_no = (request.form.get('reimbursement_no') or '').strip()
+    source_id = _parse_int(request.form.get('source_id'))
+    note = (request.form.get('note') or '').strip() or None
+    bill_ids = [int(x) for x in request.form.getlist('bill_ids') if x.isdigit()]
+    if not (rb_no and bill_ids):
+        flash('กรุณาเลือกบิลและกรอกเลขใบเบิก', 'danger')
+        return redirect(request.referrer or url_for('fuel.admin_fuel'))
+    try:
+        rb = fuel_svc.create_draft_with_bills(bill_ids, rb_no, source_id, note, current_user.id)
+        flash(f'สร้างใบเบิก {rb.reimbursement_no} + ใส่ {len(bill_ids)} บิลเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('create_reimbursement_draft failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+# ─────────────────────────────────────────────
+# API โควตา — ให้ JS ตอนกรอกบิล (§4.2 จุดที่ 2)
+# ─────────────────────────────────────────────
+@fuel_bp.route('/api/fuel/quota', methods=['GET'])
+@login_required
+def api_quota():
+    _guard()
+    vid = _parse_int(request.args.get('vehicle_id'))
+    d   = _parse_date(request.args.get('bill_date'), get_bkk_time().date())
+    if not vid:
+        return jsonify({'ok': True, 'card': None})
+    st = fuel_svc.quota_status(vid, 'card', d.year, d.month)
+    if st is None:
+        return jsonify({'ok': True, 'card': None})
+    return jsonify({'ok': True, 'card': {
+        'limit': float(st['limit']), 'used': float(st['used']), 'remaining': float(st['remaining']),
+    }})
 
 
 # ─────────────────────────────────────────────
@@ -484,6 +663,195 @@ def set_annual_budget():
         return redirect(request.referrer or url_for('fuel.admin_fuel'))
     SystemConfig.set('fuel_annual_budget', float(amount))
     flash('ตั้งงบน้ำมันรายปีเรียบร้อย', 'success')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+# ─────────────────────────────────────────────
+# แหล่งเบิก (ReimbursementSource) — CRUD (review 2026-08-10 #8)
+# logic อยู่ fuel_service.py ทั้งหมด (ADR 0001) — route แค่ parse form → เรียก service → flash
+# ─────────────────────────────────────────────
+@fuel_bp.route('/admin/fuel/source', methods=['POST'])
+@login_required
+def source_create():
+    _guard()
+    try:
+        src = fuel_svc.create_source(request.form.get('name'),
+                                     bool(request.form.get('is_default')), current_user.id)
+        flash(f'เพิ่มแหล่งเบิก {src.name} เรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('source_create failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/source/<int:source_id>/toggle-active', methods=['POST'])
+@login_required
+def source_toggle_active(source_id):
+    _guard()
+    source = ReimbursementSource.query.get_or_404(source_id)
+    try:
+        fuel_svc.toggle_source_active(source, current_user.id)
+        flash('เปิด/ปิดใช้งานแหล่งเบิกเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('source_toggle_active failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/source/<int:source_id>/set-default', methods=['POST'])
+@login_required
+def source_set_default(source_id):
+    _guard()
+    source = ReimbursementSource.query.get_or_404(source_id)
+    try:
+        fuel_svc.set_default_source(source, current_user.id)
+        flash(f'ตั้ง {source.name} เป็นแหล่งเบิกค่าเริ่มต้นเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('source_set_default failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/source/<int:source_id>/delete', methods=['POST'])
+@login_required
+def source_delete(source_id):
+    _guard()
+    source = ReimbursementSource.query.get_or_404(source_id)
+    try:
+        fuel_svc.delete_source(source, current_user.id)
+        flash('ลบแหล่งเบิกเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('source_delete failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+# ─────────────────────────────────────────────
+# เจ้าหน้าที่ผู้สำรองเงิน (ExpenseHolder) — Phase 2
+# logic เงินอยู่ services/vehicle/fuel_service.py ทั้งหมด (ADR 0001) —
+# route แค่ parse form → เรียก service → flash ผลลัพธ์
+# ─────────────────────────────────────────────
+@fuel_bp.route('/admin/fuel/holder', methods=['POST'])
+@login_required
+def holder_create():
+    _guard()
+    try:
+        uid  = _parse_int(request.form.get('user_id'))
+        amt  = _parse_decimal(request.form.get('float_amount'))
+        note = (request.form.get('note') or '').strip()
+        if not uid:
+            raise ValueError('กรุณาเลือกผู้ใช้')
+        holder = fuel_svc.create_holder(uid, amt, note, current_user.id)
+        name = holder.user.full_name or holder.user.username
+        flash(f'เพิ่มเจ้าหน้าที่ {name} เป็นผู้สำรองเงินเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('holder_create failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/holder/<int:holder_id>/set-float', methods=['POST'])
+@login_required
+def holder_update(holder_id):
+    _guard()
+    holder = ExpenseHolder.query.get_or_404(holder_id)
+    try:
+        amt  = _parse_decimal(request.form.get('float_amount'))
+        note = (request.form.get('note') or '').strip()
+        fuel_svc.set_float(holder, amt, note, current_user.id)
+        flash('ตั้งวงเงินสำรองเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('holder_update failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/holder/<int:holder_id>/topup', methods=['POST'])
+@login_required
+def holder_topup(holder_id):
+    _guard()
+    holder = ExpenseHolder.query.get_or_404(holder_id)
+    try:
+        amt  = _parse_decimal(request.form.get('amount'))
+        note = (request.form.get('note') or '').strip()
+        fuel_svc.top_up(holder, amt, note, current_user.id)
+        flash('เติมเงินสำรองเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('holder_topup failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/holder/<int:holder_id>/adjust', methods=['POST'])
+@login_required
+def holder_adjust(holder_id):
+    _guard()
+    holder = ExpenseHolder.query.get_or_404(holder_id)
+    try:
+        change = _parse_decimal(request.form.get('change_amount'))
+        note   = (request.form.get('note') or '').strip()
+        fuel_svc.adjust_float(holder, change, note, current_user.id)
+        flash('ปรับวงเงินสำรองเรียบร้อย', 'success')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('holder_adjust failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
+    return redirect(request.referrer or url_for('fuel.admin_fuel'))
+
+
+@fuel_bp.route('/admin/fuel/holder/<int:holder_id>/count', methods=['POST'])
+@login_required
+def holder_count(holder_id):
+    _guard()
+    holder = ExpenseHolder.query.get_or_404(holder_id)
+    try:
+        counted = _parse_decimal(request.form.get('counted_amount'))
+        note    = (request.form.get('note') or '').strip()
+        variance = fuel_svc.count_cash(holder, counted, note, current_user.id)
+        if variance == 0:
+            flash('นับเงินตรงกับคงเหลือในระบบพอดี', 'success')
+        else:
+            sign = '+' if variance > 0 else ''
+            flash(f'นับเงินจริงต่างจากระบบ {sign}{variance:,.2f} บาท — บันทึกไว้แล้ว '
+                  f'กด "ปรับยอด" ถ้าต้องการแก้ให้ตรง', 'warning')
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('holder_count failed')
+        flash('เกิดข้อผิดพลาด กรุณาลองใหม่', 'danger')
     return redirect(request.referrer or url_for('fuel.admin_fuel'))
 
 

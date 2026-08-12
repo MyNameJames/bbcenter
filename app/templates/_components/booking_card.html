@@ -1,0 +1,158 @@
+{# ══════════════════════════════════════════════════════════════
+   booking_card.html — การ์ด booking ของหน้า approver (3 โหมด)
+
+   เดิม markup ชุดนี้ถูก copy 3 ก้อนใน vehicle_approver.html
+   (tab รออนุมัติ / อนุมัติแล้ว / ปฏิเสธ) ทำให้แก้ design แล้ว
+   หลุดไม่ครบทุก tab → สกัดเป็น macro เดียว 2026-08-12
+
+   ใช้:
+     {% from '_components/booking_card.html'
+        import th_date, booking_card with context %}
+     {{ booking_card(b, fuel_costs.get(b.id, 0), 'pending') }}
+
+   ⚠️ ต้อง import `with context` — macro ใช้ url_for()
+   ⚠️ .ac-header ต้องเป็น previousElementSibling ของ .collapse
+      (vehicle_approver.js ผูก chevron rotation ผ่าน sibling)
+   ══════════════════════════════════════════════════════════════ #}
+
+{# ── Thai date → "พ. 10 มิ.ย. 2569" ── #}
+{% macro th_date(dt) -%}
+    {%- set th_days = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'] -%}
+    {%- set th_mons = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] -%}
+    {{- th_days[dt.strftime('%w')|int] }} {{ dt.day }} {{ th_mons[dt.month] }} {{ dt.year + 543 -}}
+{%- endmacro %}
+
+
+{# ── รายละเอียด booking (เหมือนกันทั้ง 3 โหมด) ── #}
+{% macro booking_detail(b) -%}
+<div class="ac-detail-card">
+    <div class="ac-detail__head">
+        <span class="ac-detail__requester">
+            {{ b.user.full_name or b.user.username }}
+        </span>
+        <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
+            <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
+        </span>
+    </div>
+    <div class="ac-detail__trip border-bottom pb-2 mb-2">
+        <span class="ac-detail__purpose">{{ b.purpose }}</span>
+        <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
+        <span class="ac-detail__dest">{{ b.destination }}</span>
+    </div>
+    <div class="ac-detail__pickup pt-2">
+        คนขับรถ : {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
+    </div>
+    <div class="ac-detail__pickup">
+        ขึ้นรถ: {{ b.pickup_location or '—' }}
+    </div>
+</div>
+{%- endmacro %}
+
+
+{# ── ปุ่มอนุมัติ/ปฏิเสธ + inline reject form (โหมด pending) ── #}
+{% macro booking_actions(b) -%}
+<div id="action-btns-{{ b.id }}" class="ac-action-row pt-2">
+    <button type="button"
+            class="btn-reject-action"
+            onclick="showRejectForm({{ b.id }})"
+            title="ปฏิเสธ">
+        <i data-lucide="circle-x" class="vc-icon-sm"></i>
+        ปฏิเสธ
+    </button>
+    <form method="post"
+          action="{{ url_for('vehicle.approve_booking', booking_id=b.id) }}"
+          class="ac-action-form">
+        <input type="hidden" name="action" value="approve">
+        <button type="submit" class="btn-approve-action" title="อนุมัติ">
+            <i data-lucide="circle-check" class="vc-icon-sm"></i>
+            อนุมัติ
+        </button>
+    </form>
+</div>
+
+<div id="reject-form-{{ b.id }}" class="d-none ac-reject-wrap">
+    <form method="post"
+          action="{{ url_for('vehicle.approve_booking', booking_id=b.id) }}">
+        <input type="hidden" name="action" value="reject">
+        <input type="text" name="reject_reason"
+               class="form-control form-control-sm ac-reject-input"
+               placeholder="ระบุเหตุผลที่ปฏิเสธ..." required>
+        <div class="ac-action-row">
+            <button type="button"
+                    class="ac-reject-cancel"
+                    onclick="hideRejectForm({{ b.id }})"
+                    title="ยกเลิก">
+                ยกเลิก
+            </button>
+            <button type="submit"
+                    class="btn-reject-confirm"
+                    title="ยืนยันปฏิเสธ">
+                ยืนยันปฏิเสธ
+            </button>
+        </div>
+    </form>
+</div>
+{%- endmacro %}
+
+
+{# ══════════════════════════════════════════════════════════════
+   booking_card(b, fuel_cost, mode)
+     b         = VehicleBooking
+     fuel_cost = ค่าน้ำมันของทริป (0 = ยังไม่เดินทาง)
+     mode      = 'pending' | 'approved' | 'rejected'
+   ══════════════════════════════════════════════════════════════ #}
+{% macro booking_card(b, fuel_cost=0, mode='pending') -%}
+{% set cfg = {
+    'pending':  {'body': 'card', 'chev': 'chev',      'tone': '',           'label': ''},
+    'approved': {'body': 'hist', 'chev': 'chev-hist', 'tone': 'vc-badge-success', 'label': 'อนุมัติแล้ว'},
+    'rejected': {'body': 'rej',  'chev': 'chev-rej',  'tone': 'vc-badge-danger',  'label': 'ปฏิเสธ'}
+}[mode] %}
+{% set body_id = cfg.body ~ '-' ~ b.id %}
+{% set _fc = fuel_cost | float %}
+<div class="approver-card">
+    <div class="ac-header"
+         data-bs-toggle="collapse"
+         data-bs-target="#{{ body_id }}"
+         aria-expanded="false">
+        <div class="ac-header-row">
+            <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
+            <div class="ac-header-right">
+                <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
+                    <i data-lucide="fuel" class="vc-icon-sm"></i>
+                    {% if _fc > 0 %}฿{{ '{:,.0f}'.format(_fc) }}{% else %}ยังไม่เดินทาง{% endif %}
+                </span>
+                {% if cfg.label %}
+                <span class="vc-badge {{ cfg.tone }} vc-badge-dot">{{ cfg.label }}</span>
+                {% endif %}
+                <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="{{ cfg.chev }}-{{ b.id }}"></i>
+            </div>
+        </div>
+        <div class="ac-detail__trip">
+            <span class="ac-detail__purpose"><i data-lucide="clock" class="vc-icon-sm mb-1 me-1"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}</span>
+            <i data-lucide="dot" class="vc-icon-sm"></i>
+            <span class="ac-detail__dest"><i data-lucide="map-pin" class="vc-icon-sm mb-1 me-1"></i>{{ b.destination }}</span>
+        </div>
+    </div>
+
+    <div class="collapse" id="{{ body_id }}">
+        <div class="ac-body">
+            {% if mode == 'pending' %}
+            <div class="ac-detail__datetime pb-2 pt-2">
+                <span class="ac-ref">รายละเอียดการจอง</span>
+            </div>
+            {% endif %}
+
+            {{ booking_detail(b) }}
+
+            {% if mode == 'pending' %}
+            {{ booking_actions(b) }}
+            {% elif mode == 'rejected' and b.reject_reason %}
+            <div class="ac-reject-note">
+                <i data-lucide="message-square-x" class="vc-icon-sm"></i>
+                <span>{{ b.reject_reason }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{%- endmacro %}

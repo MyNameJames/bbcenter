@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from models import (db, get_bkk_time, Vehicle, VehicleBooking, Driver,
                     VehicleBudget, DeptApprover, OTRateConfig)
 from datetime import datetime, date
-from components import DateField, TimeRangeField
+from components import DateField, TimeRangeField, KPI
 from views.core.notification_service import (
     notify_booking_created      as _n_booking_created,
     notify_admin_deleted        as _n_admin_deleted,
@@ -330,7 +330,6 @@ def approver_inbox():
                .limit(20)
                .all())
 
-    from models import get_bkk_time
     today = get_bkk_time().date()
     # งบช่วงเวลา (active period) — year/month เป็น anchor เลิกใช้กรองตรงๆ
     # ต้องกรอง is_active + start_date<=today<=end_date (mirror _lookup_budget_for_booking)
@@ -345,6 +344,15 @@ def approver_inbox():
                )
                .all())
 
+    budget_kpis = [{
+        'name': b.department.name,
+        'kpis': [
+            KPI('งบทั้งหมด', f'฿{float(b.budget_amount):,.0f}'),
+            KPI('ใช้ไปแล้ว', f'฿{float(b.used_amount):,.0f}'),
+            KPI('คงเหลือ', f'฿{float(b.remaining):,.0f}'),
+        ],
+    } for b in budgets]
+
     fuel_costs = {}
     for bk in (pending + history):
         m = bk.mileage[0] if bk.mileage else None
@@ -357,7 +365,8 @@ def approver_inbox():
 
     return render_template('vehicle/vehicle_approver.html',
                            pending=pending, history=history,
-                           budgets=budgets, fuel_costs=fuel_costs,
+                           budgets=budgets, budget_kpis=budget_kpis,
+                           fuel_costs=fuel_costs,
                            active_menu='approver')
 
 

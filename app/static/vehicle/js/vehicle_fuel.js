@@ -1,14 +1,14 @@
 /* ══════════════════════════════════════════════════
-   pages/fuel-admin.js — Fuel Admin Page (ES module)
-   - Bill checkbox → enable "รวมบิลที่เลือก" + count
+   pages/fuel-admin.js — Fuel Admin Page ("เงินสำรองและค่าใช้จ่าย", ES module)
+   - Tabs (tab2) — ภาพรวมทั้งปี / ค้างเบิก / จบแล้ว / ใบเบิกเงิน / เจ้าหน้าที่
    - Bill kebab → open #fuelBillModal in edit mode (pre-filled)
-   - "+ บิลใหม่" / empty CTA → open #fuelBillModal in create mode
-   - "รวมบิลที่เลือก" → open #fuelReimbModal in create mode
-   - Reimb collapse: "บันทึกได้เงิน" / "แก้ไข" / "ลบ"
-   - KPI "ตั้งค่า" → reserve / budget modals
-   - Header "ตั้งค่าราคา" → price modal
-   - Reserve modal: live preview of new balance
-   - Re-init Lucide icons on shown.bs.modal
+   - "บิลใหม่" (tab ค้างเบิก) → open #fuelBillModal in create mode
+   - tab ค้างเบิก: filter chip + checkbox (เฉพาะ "ใช้ไปแล้ว") → "ใส่ใบเบิก" (#attachBillsModal)
+   - tab ใบเบิกเงิน: "เปิด" → clone <template id="rbDetail{id}"> เข้า #reimbursementDetailModal
+     (ฟอร์ม submit/receive/settle เป็น real DOM จริงจาก server เลย ไม่ reconstruct)
+   - tab เจ้าหน้าที่: "จัดการ" → #holderManageModal (set_float/top_up/count/adjust)
+   - ปุ่ม "ตั้งค่า" → #fuelSettingsModal (ราคาน้ำมัน/งบทั้งปี/แหล่งเบิก สลับด้วย .bb-seg)
+   - Re-init Material icons on shown.bs.modal
 ══════════════════════════════════════════════════ */
 import { initIcons, bindModalReinit } from '../../core/js/icons.js';
 
@@ -29,59 +29,63 @@ function fmtMoney(n) {
     });
 }
 
-/* ── State ─────────────────────────────────────── */
-const state = {
-    bills: new Map(),
-};
-
-function indexBillRows() {
-    $$('#fuelBillsBody tr[data-bill-id]').forEach(tr => {
-        const id = tr.dataset.billId;
-        state.bills.set(id, {
-            date:    tr.dataset.billDate    || '',
-            vehicle: tr.dataset.billVehicle || '',
-            driver:  tr.dataset.billDriver  || '',
-            amount:  parseFloat(tr.dataset.billAmount || '0'),
-        });
-    });
-}
-
 /* ─────────────────────────────────────────────
-   1. BILL CHECKBOXES → merge button enable
+   1. TABS — ภาพรวมทั้งปี/ค้างเบิก/จบแล้ว/ใบเบิกเงิน/เจ้าหน้าที่
+   (.tab2-tab underline slide เป็น JS กลางของ tab2.html อยู่แล้ว — ที่นี่แค่สลับ panel)
 ───────────────────────────────────────────── */
-function getCheckedBills() {
-    return $$('.bill-check:checked').map(cb => cb.value);
+function showFuelTab(value) {
+    $$('#fuelTabWrap .tab2-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === value));
+    $$('.fuel-tab-panel').forEach(p => p.classList.toggle('d-none', p.dataset.tabPanel !== value));
 }
 
-function refreshMergeButton() {
-    const ids = getCheckedBills();
-    const btn = $('#mergeBillsBtn');
-    const lbl = $('#selectedCount');
-    if (!btn) return;
-    btn.disabled = (ids.length === 0);
-    if (lbl) lbl.textContent = ids.length ? ` (${ids.length})` : '';
-}
-
-function wireBillCheckboxes() {
-    const checkAll = $('#checkAll');
-    if (checkAll) {
-        checkAll.disabled = false;
-        checkAll.addEventListener('change', () => {
-            $$('.bill-check:not(:disabled)').forEach(cb => { cb.checked = checkAll.checked; });
-            refreshMergeButton();
-        });
-    }
-    $$('.bill-check').forEach(cb => {
-        const tr = cb.closest('tr');
-        if (tr && tr.dataset.status === 'รอเบิก') cb.disabled = false;
-        cb.addEventListener('change', refreshMergeButton);
+function bindFuelTabs() {
+    const wrap = $('#fuelTabWrap');
+    if (!wrap) return;
+    wrap.addEventListener('click', (e) => {
+        const tab = e.target.closest('.tab2-tab');
+        if (tab && tab.dataset.tab) showFuelTab(tab.dataset.tab);
     });
-    refreshMergeButton();
+    $$('[data-tab-goto]').forEach(btn => {
+        btn.addEventListener('click', () => showFuelTab(btn.dataset.tabGoto));
+    });
 }
 
 /* ─────────────────────────────────────────────
    2. BILL MODAL — create / edit / delete
 ───────────────────────────────────────────── */
+function billFieldVisibility() {
+    const method = ($('input[name="payment_method"]:checked') || {}).value || 'reserve';
+    const holderGroup = $('#bill_holder_group');
+    const holderSel = $('#bill_holder_id');
+    if (holderGroup) holderGroup.style.display = (method === 'reserve') ? '' : 'none';
+    if (holderSel) holderSel.required = (method === 'reserve');
+
+    const category = ($('#bill_category') || {}).value || 'fuel';
+    const fuelFields = $('#bill_fuel_fields');
+    if (fuelFields) fuelFields.style.display = (category === 'fuel') ? '' : 'none';
+
+    updateQuotaHint();
+}
+
+function updateQuotaHint() {
+    const hint   = $('#bill_quota_hint');
+    const method = ($('input[name="payment_method"]:checked') || {}).value || 'reserve';
+    const vid    = ($('#bill_vehicle_id') || {}).value;
+    if (!hint) return;
+    if (method !== 'card' || !vid) { hint.style.display = 'none'; return; }
+
+    const billDate = ($('#bill_date') || {}).value || todayISO();
+    fetch('/api/fuel/quota?vehicle_id=' + encodeURIComponent(vid) + '&bill_date=' + encodeURIComponent(billDate))
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok || !data.card) { hint.style.display = 'none'; return; }
+            hint.style.display = '';
+            hint.textContent = 'วงเงินบัตรเดือนนี้เหลือ ' + fmtMoney(data.card.remaining) + ' ฿ (จาก ' + fmtMoney(data.card.limit) + ' ฿)';
+            hint.classList.toggle('is-error', data.card.remaining <= 0);
+        })
+        .catch(() => { hint.style.display = 'none'; });
+}
+
 function openBillModal(mode, bill) {
     const modalEl = $('#fuelBillModal');
     const form    = $('#fuelBillForm');
@@ -100,9 +104,12 @@ function openBillModal(mode, bill) {
         $('#bill_amount').value       = bill.amount || '';
         $('#bill_vehicle_id').value   = bill.vehicle_id || '';
         $('#bill_driver_id').value    = bill.driver_id || '';
+        $('#bill_category').value     = bill.category || 'fuel';
+        $('#bill_liters').value       = bill.liters || '';
         $('#bill_mileage').value      = bill.mileage || '';
         $('#bill_note').value         = bill.note || '';
-        const radio = $('input[name="payment_method"][value="' + (bill.payment_method || 'transfer') + '"]');
+        $('#bill_holder_id').value    = bill.paid_by_holder_id || '';
+        const radio = $('input[name="payment_method"][value="' + (bill.payment_method || 'reserve') + '"]');
         if (radio) radio.checked = true;
         delBtn.style.display = '';
         delBtn.dataset.billId = bill.id;
@@ -111,12 +118,14 @@ function openBillModal(mode, bill) {
         submit.textContent = 'บันทึก';
         form.action = '/admin/fuel/bill';
         $('#bill_date').value = todayISO();
-        const tr = $('input[name="payment_method"][value="transfer"]');
+        $('#bill_category').value = 'fuel';
+        const tr = $('input[name="payment_method"][value="reserve"]');
         if (tr) tr.checked = true;
         delBtn.style.display = 'none';
         delete delBtn.dataset.billId;
     }
 
+    billFieldVisibility();
     const m = bootstrap.Modal.getOrCreateInstance(modalEl);
     m.show();
     initIcons(modalEl);
@@ -124,21 +133,24 @@ function openBillModal(mode, bill) {
 
 function wireBillModal() {
     $$('[data-fuel-action="bill-create"]').forEach(btn => {
-        btn.addEventListener('click', () => openBillModal('create'));
+        btn.addEventListener('click', (e) => { e.stopPropagation(); openBillModal('create'); });
     });
     $$('[data-fuel-action="bill-edit"]').forEach(btn => {
         btn.addEventListener('click', () => {
             const tr = btn.closest('tr');
             if (!tr) return;
             openBillModal('edit', {
-                id:              tr.dataset.billId,
-                date:            tr.dataset.billDate,
-                amount:          tr.dataset.billAmount,
-                vehicle_id:      tr.dataset.billVehicleId,
-                driver_id:       tr.dataset.billDriverId,
-                mileage:         tr.dataset.billMileage,
-                payment_method:  tr.dataset.billPaymentMethod,
-                note:            tr.dataset.billNote,
+                id:                tr.dataset.billId,
+                date:              tr.dataset.billDate,
+                amount:            tr.dataset.billAmount,
+                vehicle_id:        tr.dataset.billVehicleId,
+                driver_id:         tr.dataset.billDriverId,
+                category:          tr.dataset.billCategory,
+                liters:            tr.dataset.billLiters,
+                mileage:           tr.dataset.billMileage,
+                payment_method:    tr.dataset.billPaymentMethod,
+                paid_by_holder_id: tr.dataset.billHolderId,
+                note:              tr.dataset.billNote,
             });
         });
     });
@@ -153,242 +165,317 @@ function wireBillModal() {
             f.submit();
         });
     }
+
+    $$('input[name="payment_method"]').forEach(r => r.addEventListener('change', billFieldVisibility));
+    const catSel = $('#bill_category');
+    if (catSel) catSel.addEventListener('change', billFieldVisibility);
+    const vehSel = $('#bill_vehicle_id');
+    if (vehSel) vehSel.addEventListener('change', updateQuotaHint);
+    const dateInp = $('#bill_date');
+    if (dateInp) dateInp.addEventListener('change', updateQuotaHint);
 }
 
 /* ─────────────────────────────────────────────
-   3. REIMBURSEMENT MODAL — create + edit
+   3. REIMBURSEMENT MODAL — tab ใบเบิกเงิน (P4)
+   เปิดใบ = clone เนื้อหาจริงจาก <template id="rbDetail{id}"> (server-rendered, มี form/action
+   จริงอยู่แล้ว) เข้า modal — ไม่ reconstruct จาก JSON เพราะเนื้อหามีทั้งฟอร์ม/ตาราง/ปุ่มหลายแบบ
 ───────────────────────────────────────────── */
-function renderReimbBillRows(billIds) {
-    const tbody  = $('#fuelReimbBillTbody');
-    const hidden = $('#fuelReimbBillHidden');
-    const cnt    = $('#fuelReimbBillCount');
-    const tot    = $('#fuelReimbBillTotal');
-    if (!tbody) return 0;
+function openReimbursementDetail(rbId, title) {
+    const modalEl = $('#reimbursementDetailModal');
+    const tpl     = document.getElementById('rbDetail' + rbId);
+    const content = $('#rbDetailContent');
+    if (!modalEl || !tpl || !content) return;
 
-    tbody.innerHTML = '';
+    content.innerHTML = '';
+    content.appendChild(tpl.content.cloneNode(true));
+    $('#rbDetailTitle').textContent = title || ('ใบเบิก #' + rbId);
+
+    const m = bootstrap.Modal.getOrCreateInstance(modalEl);
+    m.show();
+    initIcons(modalEl);
+}
+
+function wireReimbursementModals() {
+    $$('[data-rb-open]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            openReimbursementDetail(btn.dataset.rbOpen, btn.dataset.rbTitle);
+        });
+    });
+
+    // ส่งเรื่อง — เตือนถ้ายอดที่พิมพ์ไม่ตรงยอดรวมบิล (spec §5.5)
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (!form.dataset || form.dataset.rbSubmitTotal === undefined) return;
+        const total = parseFloat(form.dataset.rbSubmitTotal);
+        const typed = parseFloat((form.querySelector('[name="amount_requested"]') || {}).value);
+        if (!isNaN(typed) && Math.abs(typed - total) > 0.01) {
+            if (!confirm('ยอดที่พิมพ์ (' + fmtMoney(typed) + ') ไม่ตรงกับยอดรวมบิล (' + fmtMoney(total) + ') ยืนยันส่งเรื่องด้วยยอดนี้?')) {
+                e.preventDefault();
+            }
+        }
+    });
+}
+
+/* ─────────────────────────────────────────────
+   4. SETTINGS MODAL — ราคาน้ำมัน / งบทั้งปี / แหล่งเบิก (.bb-seg สลับ panel)
+───────────────────────────────────────────── */
+function settingsSetMode(mode) {
+    $$('#settingsModeSeg [data-settings-mode]').forEach(b => b.classList.toggle('is-on', b.dataset.settingsMode === mode));
+    $$('.settings-panel').forEach(p => p.classList.toggle('d-none', p.dataset.settingsMode !== mode));
+}
+
+function wireSettingsModal() {
+    const modalEl = $('#fuelSettingsModal');
+    if (!modalEl) return;
+    modalEl.addEventListener('show.bs.modal', () => {
+        const d = $('#price_effective_date');
+        if (d && !d.value) d.value = todayISO();
+    });
+    $$('#settingsModeSeg [data-settings-mode]').forEach(b => {
+        b.addEventListener('click', () => settingsSetMode(b.dataset.settingsMode));
+    });
+}
+
+/* ─────────────────────────────────────────────
+   5. PENDING BILLS (ค้างเบิก) — filter chip + checkbox + ใส่ใบเบิก
+───────────────────────────────────────────── */
+function wirePendingFilterChips() {
+    const wrap = $('#pendingFilterChips');
+    if (!wrap) return;
+    wrap.querySelectorAll('[data-vehicle-filter]').forEach(chip => {
+        chip.addEventListener('click', () => {
+            wrap.querySelectorAll('[data-vehicle-filter]').forEach(c => c.classList.remove('is-on'));
+            chip.classList.add('is-on');
+            const key = chip.dataset.vehicleFilter;
+            $$('#pendingBillsBody tr[data-bill-id]').forEach(tr => {
+                const show = !key || tr.dataset.vehicleKey === key;
+                tr.style.display = show ? '' : 'none';
+            });
+        });
+    });
+}
+
+function refreshAttachButton() {
+    const ids = $$('.pending-check:checked').map(cb => cb.value);
+    const btn = $('#attachBillsBtn');
+    const lbl = $('#pendingSelectedCount');
+    if (!btn) return;
+    btn.disabled = (ids.length === 0);
+    if (lbl) lbl.textContent = ids.length ? ' (' + ids.length + ')' : '';
+}
+
+function wirePendingCheckboxes() {
+    const checkAll = $('#pendingCheckAll');
+    if (checkAll) {
+        checkAll.addEventListener('change', () => {
+            $$('.pending-check:not(:disabled)').forEach(cb => {
+                if (cb.closest('tr').style.display !== 'none') cb.checked = checkAll.checked;
+            });
+            refreshAttachButton();
+        });
+    }
+    $$('.pending-check').forEach(cb => cb.addEventListener('change', refreshAttachButton));
+    refreshAttachButton();
+}
+
+function openAttachModal() {
+    const ids = $$('.pending-check:checked').map(cb => cb.value);
+    if (!ids.length) return;
+    const modalEl = $('#attachBillsModal');
+    const hidden  = $('#attachBillsHidden');
+    if (!modalEl || !hidden) return;
+
     hidden.innerHTML = '';
     let total = 0;
-    billIds.forEach(id => {
-        const b = state.bills.get(String(id));
-        if (!b) return;
-        total += b.amount;
-        const tr = document.createElement('tr');
-        tr.innerHTML =
-            '<td class="vc-td-muted">' + (b.date || '—') + '</td>' +
-            '<td>' + (b.vehicle || '—') + '</td>' +
-            '<td class="vc-td-muted">' + (b.driver || '—') + '</td>' +
-            '<td class="vc-td-num">' + fmtMoney(b.amount) + '</td>';
-        tbody.appendChild(tr);
+    ids.forEach(id => {
+        const tr = document.querySelector('#pendingBillsBody tr[data-bill-id="' + id + '"]');
+        if (tr) total += parseFloat(tr.dataset.billAmount || '0');
         const inp = document.createElement('input');
-        inp.type = 'hidden';
-        inp.name = 'bill_ids';
-        inp.value = id;
+        inp.type = 'hidden'; inp.name = 'bill_ids'; inp.value = id;
         hidden.appendChild(inp);
     });
-    cnt.textContent = billIds.length;
-    tot.textContent = fmtMoney(total);
-    return total;
-}
-
-function openReimbCreate() {
-    const ids = getCheckedBills();
-    if (ids.length === 0) {
-        alert('กรุณาเลือกบิลที่ "รอเบิก" ก่อน');
-        return;
-    }
-    const modalEl = $('#fuelReimbModal');
-    const form    = $('#fuelReimbForm');
-    if (!modalEl || !form) return;
-
-    form.reset();
-    form.action = '/admin/fuel/reimbursement';
-    $('#fuelReimbModalTitle').textContent = 'รวม ' + ids.length + ' บิลเป็นใบเบิก';
-    $('#fuelReimbSubmitLabel').textContent = 'สร้างใบเบิก';
-    $('#fuelReimbReceivedWrap').style.display = 'none';
-    $('#reimb_submitted_at').value = todayISO();
-
-    renderReimbBillRows(ids);
+    $('#attachBillCount').textContent = ids.length;
+    $('#attachBillTotal').textContent = fmtMoney(total);
 
     const m = bootstrap.Modal.getOrCreateInstance(modalEl);
     m.show();
     initIcons(modalEl);
 }
 
-function openReimbEdit(rb) {
-    const modalEl = $('#fuelReimbModal');
-    const form    = $('#fuelReimbForm');
-    if (!modalEl || !form) return;
+function attachSetMode(mode) {
+    $$('#attachModeSeg [data-attach-mode]').forEach(b => b.classList.toggle('is-on', b.dataset.attachMode === mode));
+    $$('.attach-mode-panel').forEach(p => {
+        p.classList.toggle('d-none', (mode === 'existing') !== (p.id === 'attachExisting'));
+    });
+    const form = $('#attachBillsForm');
+    if (form) form.action = (mode === 'existing') ? '/admin/fuel/attach-bills' : '/admin/fuel/reimbursement/draft';
+}
 
-    form.reset();
-    form.action = '/admin/fuel/reimbursement/' + rb.id + '/edit';
-    $('#fuelReimbModalTitle').textContent = 'แก้ไขใบเบิก ' + (rb.no || '');
-    $('#fuelReimbSubmitLabel').textContent = 'บันทึกการแก้ไข';
-    $('#reimbursement_no').value      = rb.no || '';
-    $('#reimb_source').value          = rb.source || '';
-    $('#reimb_submitted_at').value    = rb.submitted_at || '';
-    $('#reimb_received_at').value     = rb.received_at || '';
-    $('#reimb_note').value            = rb.note || '';
-    $('#fuelReimbReceivedWrap').style.display = '';
+function wireAttachModal() {
+    const btn = $('#attachBillsBtn');
+    if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); openAttachModal(); });
 
-    renderReimbBillRows(rb.bill_ids || []);
+    $$('#attachModeSeg [data-attach-mode]').forEach(b => {
+        b.addEventListener('click', () => attachSetMode(b.dataset.attachMode));
+    });
+    $$('[data-attach-rb-pick]').forEach(r => {
+        r.addEventListener('change', () => { $('#attachRbId').value = r.value; });
+    });
+}
+
+/* ─────────────────────────────────────────────
+   6. FINISHED BILLS (จบแล้ว) — filter chip รถ + chip สถานะย่อย (AND กัน, client-side)
+───────────────────────────────────────────── */
+function applyFinishedFilters() {
+    const vehKey = ($('#finishedFilterChips .ue-chip.is-on') || {}).dataset?.vehicleFilter || '';
+    const status = ($('#finishedStatusChips .ue-chip.is-on') || {}).dataset?.statusFilter || '';
+    $$('#finishedBillsBody tr[data-bill-id]').forEach(tr => {
+        const matchVeh = !vehKey || tr.dataset.vehicleKey === vehKey;
+        const matchStatus = !status || tr.dataset.finishedStatus === status;
+        tr.style.display = (matchVeh && matchStatus) ? '' : 'none';
+    });
+}
+
+function wireFinishedFilterChips() {
+    const vehWrap = $('#finishedFilterChips');
+    if (vehWrap) {
+        vehWrap.querySelectorAll('[data-vehicle-filter]').forEach(chip => {
+            chip.addEventListener('click', () => {
+                vehWrap.querySelectorAll('[data-vehicle-filter]').forEach(c => c.classList.remove('is-on'));
+                chip.classList.add('is-on');
+                applyFinishedFilters();
+            });
+        });
+    }
+    const statusWrap = $('#finishedStatusChips');
+    if (statusWrap) {
+        statusWrap.querySelectorAll('[data-status-filter]').forEach(chip => {
+            chip.addEventListener('click', () => {
+                statusWrap.querySelectorAll('[data-status-filter]').forEach(c => c.classList.remove('is-on'));
+                chip.classList.add('is-on');
+                applyFinishedFilters();
+            });
+        });
+    }
+}
+
+/* ─────────────────────────────────────────────
+   7. HOLDER MODALS — เพิ่มเจ้าหน้าที่ + จัดการเงินสำรอง
+   (set_float / top_up / count / adjust ใน modal เดียว สลับด้วย .bb-seg)
+───────────────────────────────────────────── */
+const HM_TYPE_LABEL = {
+    set_float: 'ตั้ง/แก้วงเงิน', top_up: 'เติมเงิน',
+    adjust: 'ปรับยอด', count: 'นับเงินจริง',
+};
+
+function hmRenderHistory(logs) {
+    const box = $('#hmHistory');
+    if (!box) return;
+    if (!logs || !logs.length) { box.textContent = 'ยังไม่มีประวัติ'; return; }
+    box.innerHTML = logs.map(function (log) {
+        const label = HM_TYPE_LABEL[log.type] || log.type;
+        const sign  = log.change > 0 ? '+' : '';
+        const color = log.change > 0 ? 'var(--bb-ok-tx)' : (log.change < 0 ? 'var(--bb-dg-tx)' : 'var(--bb-mut)');
+        return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--bb-n100)">' +
+            '<span>' + log.date + ' · ' + label + (log.note ? ' — ' + log.note : '') + '</span>' +
+            '<span class="bb-num" style="color:' + color + ';white-space:nowrap">' + sign + fmtMoney(log.change) + '</span>' +
+            '</div>';
+    }).join('');
+}
+
+function hmSetMode(mode) {
+    $$('#hmModeSeg [data-hm-mode]').forEach(function (b) {
+        b.classList.toggle('is-on', b.dataset.hmMode === mode);
+    });
+    $$('.hm-form').forEach(function (f) {
+        f.classList.toggle('d-none', f.dataset.hmMode !== mode);
+    });
+}
+
+function openHolderManageModal(data) {
+    const modalEl = $('#holderManageModal');
+    if (!modalEl) return;
+
+    $('#hmName').textContent      = data.name || '—';
+    $('#hmFloat').textContent     = fmtMoney(data.float_amount);
+    $('#hmUsed').textContent      = fmtMoney(data.used);
+    $('#hmSubmitted').textContent = fmtMoney(data.submitted);
+    $('#hmBalance').textContent   = fmtMoney(data.balance);
+
+    const base = '/admin/fuel/holder/' + data.id;
+    $('#hmFormSetFloat').action = base + '/set-float';
+    $('#hmFormTopUp').action    = base + '/topup';
+    $('#hmFormCount').action    = base + '/count';
+    $('#hmFormAdjust').action   = base + '/adjust';
+    $('#hmFormSetFloat').dataset.hmMode = 'set_float';
+    $('#hmFormTopUp').dataset.hmMode    = 'top_up';
+    $('#hmFormCount').dataset.hmMode    = 'count';
+    $('#hmFormAdjust').dataset.hmMode   = 'adjust';
+
+    $('#hmSetFloatAmt').value = data.float_amount;
+    $('#hmTopUpAmt').value = '';
+    $('#hmCountAmt').value = '';
+    $('#hmAdjustAmt').value = '';
+    $('#hmSetFloatNote').value = '';
+    $('#hmTopUpNote').value = '';
+    $('#hmCountNote').value = '';
+    $('#hmAdjustNote').value = '';
+    $('#hmCountPreview').textContent = 'กรอกยอดที่นับได้จริง — ระบบจะเทียบกับคงเหลือให้';
+
+    const balance = parseFloat(data.balance) || 0;
+    const countInp = $('#hmCountAmt');
+    if (countInp && countInp.dataset.wired === undefined) {
+        countInp.dataset.wired = '1';
+        countInp.addEventListener('input', function () {
+            const v = parseFloat(countInp.value);
+            const prev = $('#hmCountPreview');
+            if (isNaN(v)) { prev.textContent = 'กรอกยอดที่นับได้จริง — ระบบจะเทียบกับคงเหลือให้'; return; }
+            const diff = v - parseFloat($('#holderManageModal').dataset.balance || '0');
+            if (diff === 0) { prev.textContent = 'ตรงกับคงเหลือในระบบพอดี'; return; }
+            const sign = diff > 0 ? '+' : '';
+            prev.textContent = 'ต่างจากคงเหลือในระบบ ' + sign + fmtMoney(diff) + ' บาท';
+        });
+    }
+    modalEl.dataset.balance = balance;
+
+    hmRenderHistory(data.logs || []);
+    hmSetMode('set_float');
 
     const m = bootstrap.Modal.getOrCreateInstance(modalEl);
     m.show();
     initIcons(modalEl);
 }
 
-function wireReimbModal() {
-    const mergeBtn = $('#mergeBillsBtn');
-    if (mergeBtn) {
-        mergeBtn.disabled = false;
-        refreshMergeButton();
-        mergeBtn.addEventListener('click', openReimbCreate);
-    }
-
-    $$('[data-fuel-action="reimb-edit"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            openReimbEdit({
-                id:           btn.dataset.rbId,
-                no:           btn.dataset.rbNo,
-                source:       btn.dataset.rbSource,
-                submitted_at: btn.dataset.rbSubmittedAt,
-                received_at:  btn.dataset.rbReceivedAt,
-                note:         btn.dataset.rbNote,
-                bill_ids:     (btn.dataset.rbBillIds || '').split(',').filter(Boolean),
+function wireHolderModals() {
+    $$('[data-holder-action="manage"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            let logs = [];
+            try { logs = JSON.parse(btn.dataset.holderLogs || '[]'); } catch (e) { logs = []; }
+            openHolderManageModal({
+                id: btn.dataset.holderId,
+                name: btn.dataset.holderName,
+                float_amount: btn.dataset.holderFloat,
+                used: btn.dataset.holderUsed,
+                submitted: btn.dataset.holderSubmitted,
+                balance: btn.dataset.holderBalance,
+                logs: logs,
             });
         });
     });
 
-    $$('[data-fuel-action="reimb-receive"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (!confirm('บันทึกว่าได้รับเงินคืนสำหรับใบเบิก ' + (btn.dataset.rbNo || '') + ' วันนี้ใช่หรือไม่?')) return;
-            const id = btn.dataset.rbId;
-            const f  = document.createElement('form');
-            f.method = 'POST';
-            f.action = '/admin/fuel/reimbursement/' + id + '/receive';
-            document.body.appendChild(f);
-            f.submit();
-        });
+    $$('#hmModeSeg [data-hm-mode]').forEach(function (b) {
+        b.addEventListener('click', function () { hmSetMode(b.dataset.hmMode); });
     });
 
-    $$('[data-fuel-action="reimb-delete"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (!confirm('ลบใบเบิก ' + (btn.dataset.rbNo || '') + ' ?\nบิลที่อยู่ในใบเบิกนี้จะกลับเป็นสถานะ "รอเบิก"')) return;
-            const id = btn.dataset.rbId;
-            const f  = document.createElement('form');
-            f.method = 'POST';
-            f.action = '/admin/fuel/reimbursement/' + id + '/delete';
-            document.body.appendChild(f);
-            f.submit();
+    const submitBtn = $('#hmSubmitBtn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function () {
+            const form = $('.hm-form:not(.d-none)');
+            if (!form) return;
+            if (!form.reportValidity()) return;
+            form.submit();
         });
-    });
-}
-
-/* ─────────────────────────────────────────────
-   4. RESERVE MODAL — open + live preview
-───────────────────────────────────────────── */
-function wireReserveModal() {
-    $$('[data-fuel-action="reserve-open"]').forEach(btn => {
-        btn.disabled = false;
-        btn.addEventListener('click', () => {
-            const modalEl = $('#fuelReserveModal');
-            if (!modalEl) return;
-            const m = bootstrap.Modal.getOrCreateInstance(modalEl);
-            m.show();
-            initIcons(modalEl);
-        });
-    });
-
-    const changeInp  = $('#reserve_change');
-    const previewInp = $('#reserve_preview');
-    if (changeInp && previewInp && previewInp.dataset.current === undefined) {
-        const current = parseFloat(
-            ($('[data-fuel-kpi="reserve-amount"]')?.dataset.value) || '0'
-        );
-        const update = () => {
-            const v = parseFloat(changeInp.value);
-            if (isNaN(v)) { previewInp.value = '—'; return; }
-            const after = current + v;
-            previewInp.value = fmtMoney(after) + ' ฿';
-        };
-        changeInp.addEventListener('input', update);
     }
-}
-
-/* ─────────────────────────────────────────────
-   5. PRICE MODAL — open
-───────────────────────────────────────────── */
-function wirePriceModal() {
-    $$('[data-fuel-action="price-open"]').forEach(btn => {
-        btn.disabled = false;
-        btn.addEventListener('click', () => {
-            const modalEl = $('#fuelPriceModal');
-            if (!modalEl) return;
-            const d = $('#price_effective_date');
-            if (d && !d.value) d.value = todayISO();
-            const m = bootstrap.Modal.getOrCreateInstance(modalEl);
-            m.show();
-            initIcons(modalEl);
-        });
-    });
-}
-
-/* ─────────────────────────────────────────────
-   6. ANNUAL BUDGET MODAL — open
-───────────────────────────────────────────── */
-function wireBudgetModal() {
-    $$('[data-fuel-action="budget-open"]').forEach(btn => {
-        btn.disabled = false;
-        btn.addEventListener('click', () => {
-            const modalEl = $('#fuelBudgetModal');
-            if (!modalEl) return;
-            const m = bootstrap.Modal.getOrCreateInstance(modalEl);
-            m.show();
-            initIcons(modalEl);
-        });
-    });
-}
-
-/* ─────────────────────────────────────────────
-   7. FILTER — auto-submit on change + popover toggle
-───────────────────────────────────────────── */
-function wireFilterBar() {
-    const form = $('#filterForm');
-    if (!form) return;
-    $$('.vc-filter-select', form).forEach(sel => {
-        sel.addEventListener('change', () => form.submit());
-    });
-}
-
-/* ปุ่ม "ตัวกรอง" ใน card-head-actions → popover (position:fixed กัน overflow clip) */
-function wireFilterPopover() {
-    const toggle = $('#filterToggle');
-    const panel  = $('#filterForm');
-    if (!toggle || !panel) return;
-
-    const place = () => {
-        const r = toggle.getBoundingClientRect();
-        const w = panel.offsetWidth || 260;
-        panel.style.top  = (r.bottom + 6) + 'px';
-        panel.style.left = Math.max(8, r.right - w) + 'px';
-    };
-    const close = () => panel.classList.remove('is-open');
-    const open  = () => { panel.classList.add('is-open'); place(); };
-
-    toggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        panel.classList.contains('is-open') ? close() : open();
-    });
-    document.addEventListener('click', (e) => {
-        if (panel.classList.contains('is-open') &&
-            !panel.contains(e.target) && !toggle.contains(e.target)) close();
-    });
-    window.addEventListener('resize', () => {
-        if (panel.classList.contains('is-open')) place();
-    });
-    window.addEventListener('scroll', () => {
-        if (panel.classList.contains('is-open')) place();
-    }, true);
 }
 
 /* ─────────────────────────────────────────────
@@ -397,14 +484,14 @@ function wireFilterPopover() {
 if (typeof bootstrap === 'undefined') {
     console.warn('[fuel-admin] bootstrap not loaded yet — modals will not work');
 } else {
-    indexBillRows();
-    wireBillCheckboxes();
+    bindFuelTabs();
     wireBillModal();
-    wireReimbModal();
-    wireReserveModal();
-    wirePriceModal();
-    wireBudgetModal();
-    wireFilterBar();
-    wireFilterPopover();
+    wireReimbursementModals();
+    wireSettingsModal();
+    wirePendingFilterChips();
+    wireFinishedFilterChips();
+    wirePendingCheckboxes();
+    wireAttachModal();
+    wireHolderModals();
     bindModalReinit();
 }

@@ -1,368 +1,109 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายการรออนุมัติ - BBCenter</title>
-    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
-    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_approver.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
-</head>
-<body>
+{% extends '_base_ue.html' %}
 
-<div class="container-fluid container-p-y">
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
+{% block title %}<title>รายการรออนุมัติ - BBCenter</title>{% endblock %}
+{% block page_title %}รายการรออนุมัติ{% endblock %}
 
-{% set active_menu = 'approver' %}
-{% include '_shared/sidebar.html' %}
+{% block head %}
+{# legacy CSS — ยังต้องใช้ให้ .budget-card/.inbox-tabs/.approver-card เดิมด้านล่างแสดงผลได้
+   จะตัดออกตอนย้าย body ทั้งก้อนเข้า bb-* (migrate step 2) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_approver.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
+{% endblock %}
 
-<main class="main-content vc-scope">
-    {% set page_section = 'ผู้อนุมัติ' %}
-    {% set page_title = 'รายการรออนุมัติ' %}
-    {% include '_shared/header.html' %}
+{% block content %}
+{% from '_components/booking_card.html' import booking_card with context %}
+{% include '_shared/tab2.html' %}
+{% from '_shared/tab2.html' import tab2_tabs %}
 
-    {# ── Thai date macro → "พ. 10 มิ.ย. 2569" ── #}
-    {% macro th_date(dt) -%}
-        {%- set th_days = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'] -%}
-        {%- set th_mons = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] -%}
-        {{- th_days[dt.strftime('%w')|int] }} {{ dt.day }} {{ th_mons[dt.month] }} {{ dt.year + 543 -}}
-    {%- endmacro %}
-
-    <div class="container-xxl px-3 py-4 approver-wrap">
-
-        {# ── Flash messages ──────────────────── #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for cat, msg in messages %}
-        <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3 approver-flash">
-            {{ msg }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+{# ══════════════════════════════════════════════════════════════
+   NEW — KPI bar ต่อกอง (migrate step 1, 2026-08-12)
+   แทน .budget-card เดิม · loop ต่อกองรองรับผู้ประสานงานที่ดูแลหลายกอง
+   ══════════════════════════════════════════════════════════════ #}
+{% for grp in budget_kpis %}
+<div class="{{ 'pt-4' if not loop.first else '' }}">
+    <div class="pb-2" style="font-size:13px;color:var(--bb-mut)">{{ grp.name }}</div>
+    <div class="row g-3">
+        {% for k in grp.kpis %}
+        <div class="col-4">{{ component(k) }}</div>
         {% endfor %}
-        {% endwith %}
-
-        {# ── Page Header (เหมือนหน้า admin) ───── #}
-        <div class="approver-header">
-            <div>
-                <h1 class="approver-title">รายการรออนุมัติ</h1>
-                <p class="approver-subtitle">อนุมัติ/ปฏิเสธ การจองรถของกองที่คุณดูแล</p>
-            </div>
-        </div>
-
-        {# ── Budget Cards ────────────────────── #}
-        {% for budget in budgets %}
-        <div class="budget-card">
-            <div class="budget-card-row">
-                <div class="budget-card-left">
-                    <i data-lucide="credit-card" class="vc-icon-sm budget-card-icon"></i>
-                    <span class="budget-card-name">งบ {{ budget.department.name }}</span>
-                </div>
-                <div class="budget-card-amount">
-                    ฿{{ '{:,.0f}'.format(budget.used_amount | float) }}
-                    <span class="budget-card-total">/ {{ '{:,.0f}'.format(budget.budget_amount | float) }}</span>
-                </div>
-            </div>
-            <div class="budget-progress">
-                <div class="budget-bar" style="width:{{ budget.percent_used }}%;"></div>
-            </div>
-            <div class="budget-card-used">
-                ใช้แล้ว ฿{{ '{:,.0f}'.format(budget.used_amount | float) }}
-                <span class="budget-card-sep">·</span>
-                {{ budget.percent_used }}%
-            </div>
-            {% if budget.remaining < 0 %}
-            <div class="budget-card-warn">
-                <i data-lucide="triangle-alert" class="vc-icon-sm"></i>
-                งบเกิน ฿{{ '{:,.0f}'.format((-budget.remaining) | float) }}
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
-
-        {# ── Split history ───────────────────── #}
-        {% set approved_list = history | selectattr('status', 'equalto', 'approved') | list %}
-        {% set rejected_list = history | selectattr('status', 'equalto', 'rejected') | list %}
-
-        {# ── Tabs (pill style) ───────────────── #}
-        <div class="inbox-tabs">
-            <button type="button" class="inbox-tab active" onclick="switchTab('pending', this)" title="รออนุมัติ">
-                รออนุมัติ{% if pending %} ({{ pending | length }}){% endif %}
-            </button>
-            <button type="button" class="inbox-tab" onclick="switchTab('approved', this)" title="อนุมัติแล้ว">
-                อนุมัติแล้ว
-            </button>
-            <button type="button" class="inbox-tab" onclick="switchTab('rejected', this)" title="ปฏิเสธ">
-                ปฏิเสธ
-            </button>
-        </div>
-
-        {# ════════════════════════════════════════
-           TAB: รออนุมัติ
-           ════════════════════════════════════════ #}
-        <div id="tab-pending" class="tab-content-section">
-            {% if pending %}
-            {% for b in pending %}
-            <div class="approver-card">
-                <div class="ac-header"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#card-{{ b.id }}"
-                     aria-expanded="false">
-                    <div class="ac-header-row">
-                        <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
-                        <div class="ac-header-right">
-                            {% set _fc = fuel_costs.get(b.id, 0) | float %}
-                            <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
-                                <i data-lucide="fuel" class="vc-icon-sm"></i>
-                                {% if _fc > 0 %}฿{{ '{:,.0f}'.format(_fc) }}{% else %}ยังไม่เดินทาง{% endif %}
-                            </span>
-                            <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-{{ b.id }}"></i>
-                        </div>
-                    </div>
-                    <div class="ac-detail__trip">
-                        <span class="ac-detail__purpose"><i data-lucide="clock" class="vc-icon-sm mb-1 me-1"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}</span>
-                        <i data-lucide="dot" class="vc-icon-sm"></i>
-                        <span class="ac-detail__dest"><i data-lucide="map-pin" class="vc-icon-sm mb-1 me-1"></i>{{ b.destination }}</span>
-                    </div>
-                </div>
-
-                <div class="collapse" id="card-{{ b.id }}">
-                    <div class="ac-body">
-                        {# ── Booking detail (driver-detail-card layout) ── #}
-                        <div class="ac-detail__datetime pb-2 pt-2">
-                            <span class="ac-ref">รายละเอียดการจอง</span>
-                        </div>
-
-                        <div class="ac-detail-card">
-                            <div class="ac-detail__head">
-                                <span class="ac-detail__requester">
-                                    {{ b.user.full_name or b.user.username }}
-                                </span>
-                                <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
-                                    <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
-                                </span>
-                            </div>
-                            <div class="ac-detail__trip border-bottom pb-2 mb-2">
-                                <span class="ac-detail__purpose">{{ b.purpose }}</span>
-                                <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
-                                <span class="ac-detail__dest">{{ b.destination }}</span>
-                            </div>
-                            <div class="ac-detail__pickup pt-2">
-                                คนขับรถ : {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
-                            </div>
-                            <div class="ac-detail__pickup">
-                                ขึ้นรถ: {{ b.pickup_location or '—' }}
-                            </div>
-                        </div>
-
-                        {# Action buttons #}
-                        <div id="action-btns-{{ b.id }}" class="ac-action-row pt-2">
-                            <button type="button"
-                                    class="btn-reject-action"
-                                    onclick="showRejectForm({{ b.id }})"
-                                    title="ปฏิเสธ">
-                                <i data-lucide="circle-x" class="vc-icon-sm"></i>
-                                ปฏิเสธ
-                            </button>
-                            <form method="post"
-                                  action="{{ url_for('vehicle.approve_booking', booking_id=b.id) }}"
-                                  class="ac-action-form">
-                                <input type="hidden" name="action" value="approve">
-                                <button type="submit" class="btn-approve-action" title="อนุมัติ">
-                                    <i data-lucide="circle-check" class="vc-icon-sm"></i>
-                                    อนุมัติ
-                                </button>
-                            </form>
-                        </div>
-
-                        {# Reject inline form (hidden by default) #}
-                        <div id="reject-form-{{ b.id }}" class="d-none ac-reject-wrap">
-                            <form method="post"
-                                  action="{{ url_for('vehicle.approve_booking', booking_id=b.id) }}">
-                                <input type="hidden" name="action" value="reject">
-                                <input type="text" name="reject_reason"
-                                       class="form-control form-control-sm ac-reject-input"
-                                       placeholder="ระบุเหตุผลที่ปฏิเสธ..." required>
-                                <div class="ac-action-row">
-                                    <button type="button"
-                                            class="ac-reject-cancel"
-                                            onclick="hideRejectForm({{ b.id }})"
-                                            title="ยกเลิก">
-                                        ยกเลิก
-                                    </button>
-                                    <button type="submit"
-                                            class="btn-reject-confirm"
-                                            title="ยืนยันปฏิเสธ">
-                                        ยืนยันปฏิเสธ
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="approver-card">
-                <div class="vc-empty">
-                    <div class="vc-empty-icon">
-                        <i data-lucide="circle-check" class="vc-icon-sm"></i>
-                    </div>
-                    <p class="vc-empty-title">ยังไม่มีรายการที่รออนุมัติ</p>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        {# ════════════════════════════════════════
-           TAB: อนุมัติแล้ว
-           ════════════════════════════════════════ #}
-        <div id="tab-approved" class="tab-content-section d-none">
-            {% if approved_list %}
-            {% for b in approved_list %}
-            <div class="approver-card">
-                <div class="ac-header"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#hist-{{ b.id }}"
-                     aria-expanded="false">
-                    <div class="ac-header-row">
-                        <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
-                        <div class="ac-header-right">
-                            {% set _fc = fuel_costs.get(b.id, 0) | float %}
-                            <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
-                                <i data-lucide="fuel" class="vc-icon-sm"></i>
-                                {% if _fc > 0 %}฿{{ '{:,.0f}'.format(_fc) }}{% else %}ยังไม่เดินทาง{% endif %}
-                            </span>
-                            <span class="vc-badge vc-badge-success vc-badge-dot">อนุมัติแล้ว</span>
-                            <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-hist-{{ b.id }}"></i>
-                        </div>
-                    </div>
-                    <div class="ac-detail__trip">
-                        <span class="ac-detail__purpose"><i data-lucide="clock" class="vc-icon-sm mb-1 me-1"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}</span>
-                        <i data-lucide="dot" class="vc-icon-sm"></i>
-                        <span class="ac-detail__dest"><i data-lucide="map-pin" class="vc-icon-sm mb-1 me-1"></i>{{ b.destination }}</span>
-                    </div>
-                </div>
-                <div class="collapse" id="hist-{{ b.id }}">
-                    <div class="ac-body">
-                        <div class="ac-detail-card">
-                            <div class="ac-detail__head">
-                                <span class="ac-detail__requester">
-                                    {{ b.user.full_name or b.user.username }}
-                                </span>
-                                <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
-                                    <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
-                                </span>
-                            </div>
-                            <div class="ac-detail__trip border-bottom pb-2 mb-2">
-                                <span class="ac-detail__purpose">{{ b.purpose }}</span>
-                                <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
-                                <span class="ac-detail__dest">{{ b.destination }}</span>
-                            </div>
-                            <div class="ac-detail__pickup pt-2">
-                                คนขับรถ : {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
-                            </div>
-                            <div class="ac-detail__pickup">
-                                ขึ้นรถ: {{ b.pickup_location or '—' }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="approver-card">
-                <div class="vc-empty">
-                    <div class="vc-empty-icon">
-                        <i data-lucide="circle-check" class="vc-icon-sm"></i>
-                    </div>
-                    <p class="vc-empty-title">ยังไม่มีรายการที่อนุมัติ</p>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        {# ════════════════════════════════════════
-           TAB: ปฏิเสธ
-           ════════════════════════════════════════ #}
-        <div id="tab-rejected" class="tab-content-section d-none">
-            {% if rejected_list %}
-            {% for b in rejected_list %}
-            <div class="approver-card">
-                <div class="ac-header"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#rej-{{ b.id }}"
-                     aria-expanded="false">
-                    <div class="ac-header-row">
-                        <span class="ac-ref">{{ th_date(b.start_datetime) }}</span>
-                        <div class="ac-header-right">
-                            {% set _fc = fuel_costs.get(b.id, 0) | float %}
-                            <span class="ac-fuel-badge" title="ค่าน้ำมันที่ใช้ในทริป">
-                                <i data-lucide="fuel" class="vc-icon-sm"></i>
-                                {% if _fc > 0 %}฿{{ '{:,.0f}'.format(_fc) }}{% else %}ยังไม่เดินทาง{% endif %}
-                            </span>
-                            <span class="vc-badge vc-badge-danger vc-badge-dot">ปฏิเสธ</span>
-                            <i data-lucide="chevron-down" class="vc-icon-sm ac-chevron" id="chev-rej-{{ b.id }}"></i>
-                        </div>
-                    </div>
-                    <div class="ac-detail__trip">
-                        <span class="ac-detail__purpose"><i data-lucide="clock" class="vc-icon-sm mb-1 me-1"></i>{{ b.start_datetime.strftime('%H:%M') }}–{{ b.end_datetime.strftime('%H:%M') }}</span>
-                        <i data-lucide="dot" class="vc-icon-sm"></i>
-                        <span class="ac-detail__dest"><i data-lucide="map-pin" class="vc-icon-sm mb-1 me-1"></i>{{ b.destination }}</span>
-                    </div>
-                </div>
-                <div class="collapse" id="rej-{{ b.id }}">
-                    <div class="ac-body">
-                        <div class="ac-detail-card">
-                            <div class="ac-detail__head">
-                                <span class="ac-detail__requester">
-                                    {{ b.user.full_name or b.user.username }}
-                                </span>
-                                <span class="ac-detail__pax" title="จำนวนผู้โดยสาร">
-                                    <i data-lucide="users" class="vc-icon-sm"></i>{{ b.passenger_count }}
-                                </span>
-                            </div>
-                            <div class="ac-detail__trip border-bottom pb-2 mb-2">
-                                <span class="ac-detail__purpose">{{ b.purpose }}</span>
-                                <i data-lucide="arrow-right" class="vc-icon-sm ac-detail__arrow"></i>
-                                <span class="ac-detail__dest">{{ b.destination }}</span>
-                            </div>
-                            <div class="ac-detail__pickup pt-2">
-                                คนขับรถ : {{ b.driver.name if b.driver else (b.snap_driver_name or ('ไม่ใช้คนขับ' if not b.need_driver else 'ยังไม่กำหนด')) }}
-                            </div>
-                            <div class="ac-detail__pickup">
-                                ขึ้นรถ: {{ b.pickup_location or '—' }}
-                            </div>
-                        </div>
-                        {% if b.reject_reason %}
-                        <div class="ac-reject-note">
-                            <i data-lucide="message-square-x" class="vc-icon-sm"></i>
-                            <span>{{ b.reject_reason }}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="approver-card">
-                <div class="vc-empty">
-                    <div class="vc-empty-icon">
-                        <i data-lucide="circle-x" class="vc-icon-sm"></i>
-                    </div>
-                    <p class="vc-empty-title">ยังไม่มีรายการที่ปฏิเสธ</p>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
     </div>
-</main>
+</div>
+{% endfor %}
+
+{# ── NEW — tab2 (แทน .inbox-tabs pill เดิม) ── #}
+<div class="pt-4" id="approverTab2Wrap">
+    {{ tab2_tabs([
+        {'label':'รอพิจารณา',  'value':'pending',  'active': True},
+        {'label':'อนุมัติแล้ว', 'value':'approved'},
+        {'label':'ไม่อนุมัติ',  'value':'rejected'},
+    ]) }}
 </div>
 
-<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+{% set approved_list = history | selectattr('status', 'equalto', 'approved') | list %}
+{% set rejected_list = history | selectattr('status', 'equalto', 'rejected') | list %}
+
+{# ════════════════════════════════════════
+   TAB: รออนุมัติ (ของเก่า — ยังไม่แก้รอบนี้)
+   ════════════════════════════════════════ #}
+<div id="tab-pending" class="tab-content-section pt-3">
+    {% if pending %}
+    {% for b in pending %}
+    {{ booking_card(b, fuel_costs.get(b.id, 0), 'pending') }}
+    {% endfor %}
+    {% else %}
+    <div class="approver-card">
+        <div class="vc-empty">
+            <div class="vc-empty-icon">
+                <i data-lucide="circle-check" class="vc-icon-sm"></i>
+            </div>
+            <p class="vc-empty-title">ยังไม่มีรายการที่รออนุมัติ</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{# ════════════════════════════════════════
+   TAB: อนุมัติแล้ว
+   ════════════════════════════════════════ #}
+<div id="tab-approved" class="tab-content-section d-none pt-3">
+    {% if approved_list %}
+    {% for b in approved_list %}
+    {{ booking_card(b, fuel_costs.get(b.id, 0), 'approved') }}
+    {% endfor %}
+    {% else %}
+    <div class="approver-card">
+        <div class="vc-empty">
+            <div class="vc-empty-icon">
+                <i data-lucide="circle-check" class="vc-icon-sm"></i>
+            </div>
+            <p class="vc-empty-title">ยังไม่มีรายการที่อนุมัติ</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{# ════════════════════════════════════════
+   TAB: ปฏิเสธ
+   ════════════════════════════════════════ #}
+<div id="tab-rejected" class="tab-content-section d-none pt-3">
+    {% if rejected_list %}
+    {% for b in rejected_list %}
+    {{ booking_card(b, fuel_costs.get(b.id, 0), 'rejected') }}
+    {% endfor %}
+    {% else %}
+    <div class="approver-card">
+        <div class="vc-empty">
+            <div class="vc-empty-icon">
+                <i data-lucide="circle-x" class="vc-icon-sm"></i>
+            </div>
+            <p class="vc-empty-title">ยังไม่มีรายการที่ปฏิเสธ</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_approver.js') }}"></script>
-</body>
-</html>
+{% endblock %}

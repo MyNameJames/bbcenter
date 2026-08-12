@@ -1,549 +1,670 @@
-{# Fuel Management — Admin Page
-   Phase 3: canonical reference for /bbcenter-design skill.
-   • KPI / filter / table / pivot kept RAW (copy-paste source of truth).
-   • Empty states use the empty_state macro (clean shorthand).
+{# Fuel Management — Admin Page ("เงินสำรองและค่าใช้จ่าย")
+   Shell: _base_ue.html (migrated 2026-08-10)
+   Redesign (2026-08-10, spec: docs/notes/log/2026-08-10_fuel-reserve-redesign.md):
+   5 tab (tab2_tabs) — ภาพรวมทั้งปี / ค้างเบิก / จบแล้ว / ใบเบิกเงิน / เจ้าหน้าที่ — แทน layout เดิม
+   ที่เป็น <details> เรียงต่อกันซ้ำซ้อนกับ KPI strip/ตาราง legacy (ลบแล้ว, review #6)
+   retokenize vc-* → bb-* + data-lucide → material-symbols-rounded ตรงๆ ทั้งไฟล์ (review — ไม่แก้
+   เฉพาะ inline style="" เดิมที่มีอยู่ก่อนแล้ว นอกขอบเขตรอบนี้)
 #}
-{% from '_components/empty_state.html' import empty_state %}
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>ค่าน้ำมัน - BBCenter</title>
-    <link rel="icon" href="{{ url_for('static', filename='fonts/favicon_io/favicon-32x32.png') }}">
-    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='core/css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_admin.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vehicle/css/vehicle_fuel.css') }}">
-</head>
-<body>
+{% extends '_base_ue.html' %}
+
+{% block title %}<title>เงินสำรองและค่าใช้จ่าย - BBCenter</title>{% endblock %}
+{% block page_title %}ค่าน้ำมัน{% endblock %}
+
 {% set TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'] %}
 
-<div class="container-fluid container-p-y">
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-    {% set active_menu = 'fuel' %}
-    {% include '_shared/sidebar.html' %}
+{% block head %}
+<style>
+/* Pivot รถ × เดือน (tab ภาพรวมทั้งปี) — ยังไม่มี bb-* component สำเร็จรูปสำหรับตาราง sticky+heatmap
+   (ของเดิมอยู่ vehicle_fuel.css ที่เลิกโหลดแล้ว) เขียนใหม่เป็น token --bb-* ล้วน scope เฉพาะหน้านี้
+   ตาม pattern เดียวกับ vehicle_fleet.html/vehicle_cost.html (custom เฉพาะจุดที่ยังไม่ promote) */
+.fp-pivot-scroll { overflow-x: auto; }
+.fp-pivot-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.fp-pivot-table th, .fp-pivot-table td { padding: 10px 14px; white-space: nowrap; border-bottom: 1px solid var(--bb-n200); text-align: right; }
+.fp-pivot-table thead th { font-weight: 500; color: var(--bb-mut); background: #fff; }
+.fp-pivot-th-sticky, .fp-pivot-td-sticky {
+    position: sticky; left: 0; background: #fff; z-index: 1;
+    text-align: left; font-weight: 600; color: var(--bb-str);
+}
+.fp-pivot-cell { color: var(--bb-body); background: rgba(0,0,0, calc(var(--cell-heat, 0) / 100 * .08)); }
+.fp-pivot-cell-empty { color: var(--bb-n400); }
+.fp-pivot-total-col { font-weight: 600; color: var(--bb-str); background: var(--bb-n50); }
+.fp-pivot-table tfoot td { font-weight: 600; }
 
-    <main class="main-content vc-scope">
-        {% set page_section = 'ผู้ดูแลระบบ' %}
-        {% set page_title = 'ค่าน้ำมัน' %}
-        {% include '_shared/header.html' %}
+/* Tab panel — ซ่อน/โชว์ตาม .active ของ tab2 (bindFuelTabs ใน vehicle_fuel.js) */
+.fuel-tab-panel.d-none { display: none; }
 
-        <div class="container-fluid p-md-3 p-2">
+/* filter chip แถวเดียวกับหัวการ์ด — ห่อบรรทัดเมื่อจอแคบ */
+.fp-chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px 0; }
+</style>
+{% endblock %}
 
-            {# ── Flash messages ─────────────────────────── #}
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                <div class="vc-stack" style="margin-bottom: var(--vc-space-4);">
-                    {% for category, message in messages %}
-                    <div class="ds-alert ds-alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            {% endwith %}
+{% block content %}
+{% include '_shared/tab2.html' %}
+{% from '_shared/tab2.html' import tab2_tabs %}
 
-            {# ── Page actions ย้ายเข้า bills card-head-actions แล้ว (DNA 2026-06-17) ── #}
-
-            {# ────────────────────────────────────────────────
-               KPI STRIP (DNA 2026-06-17) — งบทั้งปี / เงินสำรอง / รอเบิก
-               รูปแบบ icon tile + ใช้/ทั้งหมด (Manrope) แบบ Zendenta
-               layout = bootstrap .row.row-cols-md-3.g-0
-            ──────────────────────────────────────────────── #}
-            <div class="fuel-kpi-strip" style="margin-bottom: var(--vc-space-6);">
-                <div class="row row-cols-1 row-cols-md-3 g-0">
-
-                    {# 1. งบทั้งปี — ใช้ไป / เพดาน #}
-                    <div class="col fuel-kpi">
-                        <span class="fuel-kpi-icon"><i data-lucide="folder-open"></i></span>
-                        <div class="fuel-kpi-body">
-                            <p class="fuel-kpi-label">งบทั้งปี {{ f_year + 543 }}</p>
-                            <p class="fuel-kpi-value vc-mono">
-                                {{ '{:,.0f}'.format(year_used) }}<span class="fuel-kpi-cap">/ {{ '{:,.0f}'.format(annual_budget) }}</span><span class="fuel-kpi-unit">บาท</span>
-                            </p>
-                            <p class="fuel-kpi-sub">
-                                {% if annual_budget > 0 %}
-                                    {{ '{:.0f}'.format(year_used / annual_budget * 100) }}% ของงบ ·
-                                    คงเหลือ <span class="vc-mono {% if year_remaining < 0 %}is-danger{% elif year_remaining > 0 %}is-success{% endif %}">{{ '{:,.0f}'.format(year_remaining) }}</span> บาท
-                                {% else %}ยังไม่ได้ตั้งงบรายปี{% endif %}
-                            </p>
-                        </div>
-                        <div class="fuel-kpi-action">
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" data-fuel-action="budget-open" title="ตั้งงบรายปี">
-                                <i data-lucide="settings-2" class="vc-icon-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    {# 2. เงินสำรอง — ใช้ไป / วงเงิน (คง data-fuel-kpi ให้ vehicle_fuel.js) #}
-                    <div class="col fuel-kpi" data-fuel-kpi="reserve-amount" data-value="{{ reserve_amount }}">
-                        <span class="fuel-kpi-icon"><i data-lucide="wallet"></i></span>
-                        <div class="fuel-kpi-body">
-                            <p class="fuel-kpi-label">เงินสำรอง</p>
-                            <p class="fuel-kpi-value vc-mono">
-                                {{ '{:,.0f}'.format(reserve_used) }}<span class="fuel-kpi-cap">/ {{ '{:,.0f}'.format(reserve_amount) }}</span><span class="fuel-kpi-unit">บาท</span>
-                            </p>
-                            <p class="fuel-kpi-sub">
-                                {% if reserve_amount > 0 %}
-                                    {{ '{:.0f}'.format(reserve_used / reserve_amount * 100) }}% ของวงเงิน ·
-                                    คงเหลือ <span class="vc-mono {% if reserve_balance < 0 %}is-danger{% endif %}">{{ '{:,.0f}'.format(reserve_balance) }}</span> บาท
-                                {% else %}ยังไม่ได้ตั้งเงินสำรอง{% endif %}
-                            </p>
-                        </div>
-                        <div class="fuel-kpi-action">
-                            <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm" data-fuel-action="reserve-open" title="ปรับเงินสำรอง">
-                                <i data-lucide="settings-2" class="vc-icon-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    {# 3. รอเบิก — ยอดบิลเงินสดที่รอทำใบเบิกคืน #}
-                    <div class="col fuel-kpi">
-                        <span class="fuel-kpi-icon"><i data-lucide="coins"></i></span>
-                        <div class="fuel-kpi-body">
-                            <p class="fuel-kpi-label">รอเบิกคืน</p>
-                            <p class="fuel-kpi-value vc-mono">
-                                {{ '{:,.0f}'.format(pending_by_status.get('รอเบิก', 0)) }}<span class="fuel-kpi-unit">บาท</span>
-                            </p>
-                            <p class="fuel-kpi-sub">ยอดบิลเงินสดที่รอทำใบเบิกคืน</p>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            {# ── Filter ย้ายเข้าปุ่ม "ตัวกรอง" ใน bills card-head-actions (DNA 2026-06-17) ── #}
-
-            {# ── Pivot รถ × เดือน ─────────────────────────────────── #}
-            <details class="vc-card vc-pivot-wrap" id="pivotDetails">
-                <summary class="vc-pivot-summary">
-                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
-                        <i data-lucide="grid-3x3" class="vc-icon-sm"></i>
-                        <span>Pivot รถ × เดือน (ปี {{ f_year + 543 }})</span>
-                        <span class="vc-card-head-meta">{{ pivot|length }} คัน</span>
-                    </div>
-                    <i data-lucide="chevron-down" class="vc-icon-sm vc-collapse-chevron"></i>
-                </summary>
-                {% if pivot %}
-                <div class="vc-pivot-scroll">
-                    <table class="vc-pivot-table">
-                        <thead>
-                            <tr>
-                                <th class="vc-pivot-th-sticky">รถ</th>
-                                {% for m in range(1, 13) %}
-                                <th class="text-end">{{ TH_MONTHS[m-1] }}</th>
-                                {% endfor %}
-                                <th class="text-end vc-pivot-total-col">รวมทั้งปี</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for vid, row in pivot.items() %}
-                            {% set veh_label = pivot_labels.get(vid, vid|string) %}
-                            {% set row_total = namespace(v=0) %}
-                            {% for rv in row.values() %}{% set row_total.v = row_total.v + rv %}{% endfor %}
-                            <tr>
-                                <td class="vc-pivot-td-sticky" title="{{ veh_label }}">
-                                    <a class="vc-pivot-link" href="{{ url_for('fuel.admin_fuel', year=f_year, vehicle_id=vid, driver_id=(f_drv or '')) }}#billsCard"
-                                       title="ดูบิลทั้งปีของ {{ veh_label }}">{{ veh_label }}</a>
-                                </td>
-                                {% for m in range(1, 13) %}
-                                {% set cv = row.get(m, 0) %}
-                                {% if cv > 0 %}
-                                {% set heat = (cv / pivot_max * 100)|int %}
-                                <td class="text-end vc-pivot-cell" style="--cell-heat:{{ heat }};">
-                                    <a class="vc-pivot-link vc-mono"
-                                       href="{{ url_for('fuel.admin_fuel', year=f_year, month=m, vehicle_id=vid, driver_id=(f_drv or '')) }}#billsCard"
-                                       title="ดูบิล {{ veh_label }} เดือน {{ TH_MONTHS[m-1] }}">{{ '{:,.0f}'.format(cv) }}</a>
-                                </td>
-                                {% else %}
-                                <td class="text-end vc-pivot-cell-empty">—</td>
-                                {% endif %}
-                                {% endfor %}
-                                <td class="text-end vc-pivot-total-col">
-                                    <a class="vc-pivot-link vc-mono"
-                                       href="{{ url_for('fuel.admin_fuel', year=f_year, vehicle_id=vid, driver_id=(f_drv or '')) }}#billsCard"
-                                       title="รวมทั้งปีของ {{ veh_label }}">{{ '{:,.0f}'.format(row_total.v) }}</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td class="vc-pivot-td-sticky">รวม</td>
-                                {% for m in range(1, 13) %}
-                                {% set col = namespace(v=0) %}
-                                {% for vid, row in pivot.items() %}{% set col.v = col.v + row.get(m, 0) %}{% endfor %}
-                                <td class="text-end">
-                                    {% if col.v %}
-                                    <a class="vc-pivot-link vc-mono"
-                                       href="{{ url_for('fuel.admin_fuel', year=f_year, month=m, driver_id=(f_drv or '')) }}#billsCard"
-                                       title="รวมทุกคัน เดือน {{ TH_MONTHS[m-1] }}">{{ '{:,.0f}'.format(col.v) }}</a>
-                                    {% else %}<span style="color:var(--vc-fg-subtle);">—</span>{% endif %}
-                                </td>
-                                {% endfor %}
-                                {% set grand = namespace(v=0) %}
-                                {% for vid, row in pivot.items() %}{% for rv in row.values() %}{% set grand.v = grand.v + rv %}{% endfor %}{% endfor %}
-                                <td class="text-end vc-pivot-total-col vc-mono">{{ '{:,.0f}'.format(grand.v) }}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-                {% else %}
-                <div class="vc-empty" style="padding: var(--vc-space-5);">
-                    <p class="vc-empty-desc">ไม่มีข้อมูลบิลในปี {{ f_year + 543 }}</p>
-                </div>
-                {% endif %}
-            </details>
-
-            <div class="fuel-grid-2">
-
-                {# ────────────────────────────────────────────────
-                   Bills (col-8) — Phase 2.4 ✓ Vercel data table
-                ──────────────────────────────────────────────── #}
-                <div class="vc-card" id="billsCard">
-                    <div class="vc-card-head">
-                        <h3 class="vc-card-head-title">
-                            บิลเบิก
-                            <span class="vc-card-head-meta">{{ bills|length }} รายการ</span>
-                        </h3>
-                        <div class="vc-card-head-actions">
-                            {# ตัวกรอง → popover (filter form ย้ายมาจาก filter bar เดิม) #}
-                            <div class="fuel-filter">
-                                {% set active_filters = (1 if f_month else 0) + (1 if f_veh else 0) + (1 if f_drv else 0) %}
-                                <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="filterToggle"
-                                        title="ตัวกรอง: ปี / เดือน / รถ / คนขับ">
-                                    <i data-lucide="filter" class="vc-icon-sm"></i>
-                                    ตัวกรอง{% if active_filters %}<span class="fuel-filter-badge">{{ active_filters }}</span>{% endif %}
-                                </button>
-                                <form method="get" action="{{ url_for('fuel.admin_fuel') }}" class="fuel-filter-panel" id="filterForm">
-                                    <div class="vc-filter-group">
-                                        <span class="vc-filter-label">ปี</span>
-                                        <select name="year" class="vc-filter-select">
-                                            {% for y in available_years %}
-                                            <option value="{{ y }}" {% if y == f_year %}selected{% endif %}>{{ y + 543 }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="vc-filter-group">
-                                        <span class="vc-filter-label">เดือน</span>
-                                        <select name="month" class="vc-filter-select">
-                                            <option value="0" {% if f_month == 0 %}selected{% endif %}>ทั้งปี</option>
-                                            {% for m in range(1, 13) %}
-                                            <option value="{{ m }}" {% if m == f_month %}selected{% endif %}>{{ TH_MONTHS[m-1] }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="vc-filter-group">
-                                        <span class="vc-filter-label">รถ</span>
-                                        <select name="vehicle_id" class="vc-filter-select">
-                                            <option value="">ทั้งหมด</option>
-                                            {% for v in vehicles %}
-                                            <option value="{{ v.id }}" {% if f_veh == v.id %}selected{% endif %}>{{ v.license_plate }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="vc-filter-group">
-                                        <span class="vc-filter-label">คนขับ</span>
-                                        <select name="driver_id" class="vc-filter-select">
-                                            <option value="">ทั้งหมด</option>
-                                            {% for d in drivers %}
-                                            <option value="{{ d.id }}" {% if f_drv == d.id %}selected{% endif %}>{{ d.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    {% if active_filters %}
-                                    <div class="fuel-filter-actions">
-                                        <a href="{{ url_for('fuel.admin_fuel', year=f_year) }}" class="vc-btn vc-btn-ghost vc-btn-sm" title="ล้างตัวกรองทั้งหมด">
-                                            <i data-lucide="x" class="vc-icon-sm"></i>
-                                            ล้างตัวกรอง
-                                        </a>
-                                    </div>
-                                    {% endif %}
-                                </form>
-                            </div>
-                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" id="mergeBillsBtn" disabled title="เลือกบิล 'รอเบิก' อย่างน้อย 1 ใบก่อน">
-                                <i data-lucide="list-filter" class="vc-icon-sm"></i>
-                                รวมบิลที่เลือก<span id="selectedCount" class="vc-card-head-meta"></span>
-                            </button>
-                            <a href="{{ url_for('fuel.export_excel', year=f_year, month=(f_month or ''), vehicle_id=(f_veh or ''), driver_id=(f_drv or '')) }}"
-                               class="vc-btn vc-btn-secondary vc-btn-sm"
-                               title="ดาวน์โหลด Excel (3 sheets: บิล / ใบเบิก / Pivot)">
-                                <i data-lucide="download" class="vc-icon-sm"></i>
-                                Excel
-                            </a>
-                            <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm" data-fuel-action="price-open" title="ตั้งค่าราคาน้ำมัน/ลิตร">
-                                <i data-lucide="banknote" class="vc-icon-sm"></i>
-                                ตั้งค่าราคา
-                            </button>
-                            <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
-                                    data-fuel-action="bill-create" title="กรอกบิลใหม่">
-                                <i data-lucide="plus" class="vc-icon-sm"></i>
-                                บิลใหม่
-                            </button>
-                        </div>
-                    </div>
-
-                    {% if bills %}
-                    <div class="table-responsive">
-                        <table class="vc-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="vc-table-check">
-                                        <input type="checkbox" class="vc-checkbox" id="checkAll" disabled
-                                               title="เลือกบิลรอเบิกทั้งหมด">
-                                    </th>
-                                    <th>วันที่</th>
-                                    <th>รถ</th>
-                                    <th>ผู้เติม</th>
-                                    <th class="text-end">จำนวน</th>
-                                    <th>ช่องทาง</th>
-                                    <th class="text-end">ไมล์</th>
-                                    <th class="text-end">คงเหลือตอนนั้น</th>
-                                    <th>สถานะ</th>
-                                    <th class="vc-table-actions"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="fuelBillsBody">
-                                {% for b in bills %}
-                                {% set st = bill_meta[b.id].status %}
-                                {% set veh_label = b.vehicle.license_plate if b.vehicle else '' %}
-                                {% set drv_label = b.driver.name if b.driver else '' %}
-                                <tr data-bill-id="{{ b.id }}"
-                                    data-status="{{ st }}"
-                                    data-bill-date="{{ b.bill_date.isoformat() if b.bill_date else '' }}"
-                                    data-bill-amount="{{ b.amount }}"
-                                    data-bill-vehicle-id="{{ b.vehicle_id or '' }}"
-                                    data-bill-driver-id="{{ b.driver_id or '' }}"
-                                    data-bill-mileage="{{ b.mileage or '' }}"
-                                    data-bill-payment-method="{{ b.payment_method }}"
-                                    data-bill-note="{{ b.note or '' }}"
-                                    data-bill-vehicle="{{ veh_label }}"
-                                    data-bill-driver="{{ drv_label }}">
-                                    <td class="vc-table-check">
-                                        <input type="checkbox" class="vc-checkbox bill-check"
-                                               value="{{ b.id }}"
-                                               disabled
-                                               {% if st != 'รอเบิก' %}title="เลือกได้เฉพาะ 'รอเบิก'"{% else %}title="เลือกเพื่อรวมบิล"{% endif %}>
-                                    </td>
-                                    <td class="vc-td-muted">
-                                        {%- if b.bill_date -%}
-                                        {{ '%02d'|format(b.bill_date.day) }} {{ TH_MONTHS[b.bill_date.month - 1] }} {{ b.bill_date.year + 543 }}
-                                        {%- else -%}—{%- endif -%}
-                                    </td>
-                                    <td class="vc-td-strong">{{ veh_label or '—' }}</td>
-                                    <td class="vc-td-muted">{{ drv_label or '—' }}</td>
-                                    <td class="vc-td-num vc-td-strong">{{ '{:,.2f}'.format(b.amount) }}</td>
-                                    <td>
-                                        {% if b.payment_method == 'transfer' %}
-                                            <span class="vc-badge vc-badge-neutral" title="เบิกจากกองกลางมาจ่าย · ต้องเอาบิลมาคืน">เงินสด</span>
-                                        {% elif b.payment_method == 'card' %}
-                                            <span class="vc-badge vc-badge-neutral" title="บัตรส่วนกลาง · เก็บประวัติการใช้งาน">ตัดบัตร</span>
-                                        {% elif b.payment_method == 'self' %}
-                                            <span class="vc-badge vc-badge-neutral" title="ผู้โดยสารจ่ายเอง · เก็บประวัติ">จ่ายเอง</span>
-                                        {% else %}
-                                            <span class="vc-td-muted">—</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="vc-td-num vc-td-muted">
-                                        {{ '{:,}'.format(b.mileage) if b.mileage else '—' }}
-                                    </td>
-                                    <td class="vc-td-num vc-td-muted">
-                                        {{ '{:,.2f}'.format(bill_meta[b.id].balance_after) }}
-                                    </td>
-                                    <td>
-                                        {% if b.payment_method == 'self' %}
-                                            <span class="vc-td-muted">—</span>
-                                        {% elif st == 'รอเบิก' %}
-                                            <span class="vc-badge vc-badge-warning vc-badge-dot">รอเบิก</span>
-                                        {% elif st == 'อนุมัติ' %}
-                                            <span class="vc-badge vc-badge-blue vc-badge-dot">อนุมัติ</span>
-                                        {% elif st == 'ได้เงิน' %}
-                                            <span class="vc-badge vc-badge-success vc-badge-dot">ได้เงิน</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="vc-table-actions">
-                                        <button type="button" class="vc-btn vc-btn-ghost vc-btn-icon vc-btn-sm"
-                                                data-fuel-action="bill-edit" title="แก้ไข / ลบ">
-                                            <i data-lucide="more-horizontal" class="vc-icon-sm"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                        {% call empty_state(
-                            title='ยังไม่มีบิลในช่วงที่เลือก',
-                            desc='เริ่มต้นด้วยการบันทึกบิลค่าน้ำมันใบแรกของปีนี้',
-                            icon='receipt') %}
-                            <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
-                                    data-fuel-action="bill-create" title="กรอกบิลใหม่">
-                                <i data-lucide="plus" class="vc-icon-sm"></i>
-                                บิลใหม่
-                            </button>
-                        {% endcall %}
-                    {% endif %}
-                </div>
-
-                {# ────────────────────────────────────────────────
-                   Reimbursements (col-4) — Phase 2.5 ✓ list-card + accordion
-                ──────────────────────────────────────────────── #}
-                <div class="vc-card">
-                    <div class="vc-card-head">
-                        <h3 class="vc-card-head-title">
-                            <i data-lucide="file-text" class="vc-icon-sm"></i>
-                            ใบเบิกรวม
-                            <span class="vc-card-head-meta">{{ reimbursements|length }} ใบ</span>
-                        </h3>
-                    </div>
-
-                    {% if reimbursements %}
-                    <ul class="vc-list">
-                        {% for rb in reimbursements %}
-                        {% set rb_total = rb.bills|sum(attribute='amount')|float %}
-                        <li class="vc-list-item">
-                            <details class="vc-collapse">
-                                <summary>
-                                    <div class="vc-collapse-main">
-                                        <div class="vc-collapse-title">
-                                            <span class="vc-td-strong">{{ rb.reimbursement_no or '—' }}</span>
-                                            {% if rb.received_at %}
-                                                <span class="vc-badge vc-badge-success vc-badge-dot">ได้เงิน</span>
-                                            {% else %}
-                                                <span class="vc-badge vc-badge-blue vc-badge-dot">อนุมัติ</span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="vc-collapse-meta">
-                                            {% if rb.submitted_at %}
-                                                {{ '%02d'|format(rb.submitted_at.day) }} {{ TH_MONTHS[rb.submitted_at.month - 1] }}
-                                            {% else %}—{% endif %}
-                                            <span class="vc-dot-sep">·</span>
-                                            {{ rb.bills|length }} บิล
-                                            <span class="vc-dot-sep">·</span>
-                                            <span class="vc-mono">{{ '{:,.0f}'.format(rb_total) }}</span>&nbsp;฿
-                                        </div>
-                                    </div>
-                                    <i data-lucide="chevron-down" class="vc-icon-sm vc-collapse-chevron"></i>
-                                </summary>
-
-                                <div class="vc-collapse-body">
-
-                                    {# bills bundle #}
-                                    {% if rb.bills %}
-                                    <table class="vc-table vc-table-sm mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>วันที่</th>
-                                                <th>รถ</th>
-                                                <th class="text-end">จำนวน</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for b in rb.bills %}
-                                            <tr>
-                                                <td class="vc-td-muted">
-                                                    {% if b.bill_date %}
-                                                        {{ '%02d'|format(b.bill_date.day) }}/{{ '%02d'|format(b.bill_date.month) }}
-                                                    {% else %}—{% endif %}
-                                                </td>
-                                                <td>{{ b.vehicle.license_plate if b.vehicle else '—' }}</td>
-                                                <td class="vc-td-num">{{ '{:,.2f}'.format(b.amount) }}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                    {% endif %}
-
-                                    {# meta detail #}
-                                    <dl class="vc-meta-grid">
-                                        <dt>แหล่งเบิก</dt>
-                                        <dd>{{ rb.source or '—' }}</dd>
-
-                                        <dt>วันส่ง</dt>
-                                        <dd>
-                                            {% if rb.submitted_at %}
-                                                {{ '%02d'|format(rb.submitted_at.day) }} {{ TH_MONTHS[rb.submitted_at.month - 1] }} {{ rb.submitted_at.year + 543 }}
-                                            {% else %}<span class="vc-td-muted">—</span>{% endif %}
-                                        </dd>
-
-                                        <dt>วันได้เงิน</dt>
-                                        <dd>
-                                            {% if rb.received_at %}
-                                                {{ '%02d'|format(rb.received_at.day) }} {{ TH_MONTHS[rb.received_at.month - 1] }} {{ rb.received_at.year + 543 }}
-                                            {% else %}<span class="vc-td-muted">ยังไม่ได้รับ</span>{% endif %}
-                                        </dd>
-
-                                        {% if rb.note %}
-                                        <dt>หมายเหตุ</dt>
-                                        <dd>{{ rb.note }}</dd>
-                                        {% endif %}
-                                    </dl>
-
-                                    {# actions #}
-                                    <div class="vc-action-row">
-                                        {% if not rb.received_at %}
-                                        <button type="button" class="vc-btn vc-btn-primary vc-btn-sm"
-                                                data-fuel-action="reimb-receive"
-                                                data-rb-id="{{ rb.id }}"
-                                                data-rb-no="{{ rb.reimbursement_no }}"
-                                                title="บันทึกว่าได้รับเงินคืนวันนี้">
-                                            <i data-lucide="check" class="vc-icon-sm"></i>
-                                            บันทึกได้เงิน
-                                        </button>
-                                        {% endif %}
-                                        <button type="button" class="vc-btn vc-btn-secondary vc-btn-sm"
-                                                data-fuel-action="reimb-edit"
-                                                data-rb-id="{{ rb.id }}"
-                                                data-rb-no="{{ rb.reimbursement_no }}"
-                                                data-rb-source="{{ rb.source or '' }}"
-                                                data-rb-submitted-at="{{ rb.submitted_at.isoformat() if rb.submitted_at else '' }}"
-                                                data-rb-received-at="{{ rb.received_at.isoformat() if rb.received_at else '' }}"
-                                                data-rb-note="{{ rb.note or '' }}"
-                                                data-rb-bill-ids="{{ rb.bills|map(attribute='id')|join(',') }}"
-                                                title="แก้ไขข้อมูลใบเบิก">
-                                            <i data-lucide="pencil" class="vc-icon-sm"></i>
-                                            แก้ไข
-                                        </button>
-                                        <button type="button" class="vc-btn vc-btn-danger vc-btn-sm"
-                                                data-fuel-action="reimb-delete"
-                                                data-rb-id="{{ rb.id }}"
-                                                data-rb-no="{{ rb.reimbursement_no }}"
-                                                title="ลบใบเบิก (detach บิลกลับเป็น 'รอเบิก')">
-                                            <i data-lucide="trash-2" class="vc-icon-sm"></i>
-                                            ลบ
-                                        </button>
-                                    </div>
-                                </div>
-                            </details>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                        {{ empty_state(
-                            title='ยังไม่มีใบเบิก',
-                            desc='เลือกบิล "รอเบิก" หลายใบในตารางซ้ายแล้วกด "รวมบิลที่เลือก"',
-                            icon='file-text') }}
-                    {% endif %}
-                </div>
-            </div>
-
-        </div>
-    </main>
+{# ── ปุ่มตั้งค่า (review #7) — ราคาน้ำมัน/งบทั้งปี/แหล่งเบิก รวม modal เดียว ── #}
+<div class="d-flex justify-content-end mb-2">
+    <button type="button" class="bb-btn is-sec is-sm" data-bs-toggle="modal" data-bs-target="#fuelSettingsModal" title="ตั้งค่า">
+        <span class="material-symbols-rounded">tune</span>
+        <span class="bb-btn-text">ตั้งค่า</span>
+    </button>
 </div>
 
-{# ── Modals (Phase 2.6) ──────────────────────────── #}
+{# ────────────────────────────────────────────────
+   เงินสำรองรายคน — ของคนล็อกอินคนเดียว (D1) · ไม่ใช่ผู้สำรองเงิน → ข้อความบรรทัดเดียว (D2)
+──────────────────────────────────────────────── #}
+<div class="mb-4" id="myReserveKpi">
+    <div style="font-size:14px;color:var(--bb-mut)">เงินสำรอง</div>
+    {% if my_kpi.has_holder %}
+    {% set _used_pct = (my_kpi.used / my_kpi.float_amount * 100) if my_kpi.float_amount > 0 else 0 %}
+    {% set _sub_pct  = (my_kpi.submitted / my_kpi.float_amount * 100) if my_kpi.float_amount > 0 else 0 %}
+    <div class="d-flex align-items-baseline flex-wrap gap-2 mb-2">
+        <span class="bb-num" style="font-size:30px;font-weight:600;color:var(--bb-str);letter-spacing:-.02em">฿{{ '{:,.0f}'.format(my_kpi.float_amount) }}</span>
+    </div>
+    <div class="d-flex mb-2" style="height:6px;border-radius:999px;overflow:hidden;background:var(--bb-n100)">
+        <span style="width:{{ '{:.2f}'.format(_used_pct) }}%;background:var(--bb-ink)"></span>
+        <span style="width:{{ '{:.2f}'.format(_sub_pct) }}%;background:var(--bb-accent-dk)"></span>
+    </div>
+    <div class="d-flex gap-3 flex-wrap pb-3{% if my_quota_lines %} mb-3{% endif %}" style="font-size:14px;color:var(--bb-mut);border-bottom:1px dashed var(--bb-n300)">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--bb-ink);margin-right:6px"></span>ใช้ไปแล้ว <span class="bb-num" style="color:var(--bb-str);font-weight:600">฿{{ '{:,.0f}'.format(my_kpi.used) }}</span></span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--bb-accent-dk);margin-right:6px"></span>ทำเรื่องเบิกแล้ว <span class="bb-num" style="color:var(--bb-str);font-weight:600">฿{{ '{:,.0f}'.format(my_kpi.submitted) }}</span></span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--bb-n300);margin-right:6px"></span>คงเหลือ <span class="bb-num" style="color:var(--bb-str);font-weight:600">฿{{ '{:,.0f}'.format(my_kpi.balance) }}</span></span>
+    </div>
+    {% if my_quota_lines %}
+    <div style="font-size:14px;color:var(--bb-mut)">
+        {% for q in my_quota_lines %}
+        {{ vehicle_labels.get(q.vehicle_id, q.vehicle_id) }}
+        {% if q.kind == 'card' %}ตัดบัตรได้อีก{% else %}เบิก{{ source_labels.get(q.source_id, '') }}ได้อีก{% endif %}
+        <span class="bb-num" style="color:var(--bb-str);font-weight:600">฿{{ '{:,.0f}'.format(q.remaining) }}</span>
+        {%- if not loop.last %}<span class="mx-1">·</span>{% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <p style="font-size:14px;color:var(--bb-mut);margin:4px 0 0">
+        คุณไม่ได้เป็นผู้สำรองเงิน — ดูวงเงินของเจ้าหน้าที่คนอื่นได้ที่
+        <button type="button" class="bb-cell-link" data-tab-goto="holders" style="padding:0;font-size:inherit">เจ้าหน้าที่</button>
+    </p>
+    {% endif %}
+</div>
+
+{# ── Tabs ── #}
+<div class="pt-1 pb-3" id="fuelTabWrap">
+    {{ tab2_tabs([
+        {'label':'ภาพรวมทั้งปี',  'value':'overview',       'active': True},
+        {'label':'ค้างเบิก',      'value':'pending'},
+        {'label':'จบแล้ว',        'value':'finished'},
+        {'label':'ใบเบิกเงิน',    'value':'reimbursement'},
+        {'label':'เจ้าหน้าที่',   'value':'holders'},
+    ]) }}
+</div>
+
+{# ═══════════════════ TAB: ภาพรวมทั้งปี — pivot รถ × เดือน ═══════════════════
+   นับทุก payment_method (มิติน้ำมัน ต้องนับทุกใบรวม card/self — spec หลักการ ข.) #}
+<div class="fuel-tab-panel" data-tab-panel="overview">
+    <div class="bb-card">
+        <div class="bb-card-head">
+            <h3 class="bb-card-title">
+                Pivot รถ × เดือน
+                <span class="bb-cell-muted" style="font-weight:400;font-size:.8125rem">{{ pivot|length }} คัน</span>
+            </h3>
+            <form method="GET" action="{{ url_for('fuel.admin_fuel') }}">
+                <select name="year" class="bb-input" style="width:100px" onchange="this.form.submit()">
+                    {% for y in available_years %}
+                    <option value="{{ y }}" {% if y == f_year %}selected{% endif %}>{{ y + 543 }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div class="bb-card-body p-0">
+            {% if pivot %}
+            <div class="fp-pivot-scroll">
+                <table class="fp-pivot-table">
+                    <thead>
+                        <tr>
+                            <th class="fp-pivot-th-sticky">รถ</th>
+                            {% for m in range(1, 13) %}
+                            <th>{{ TH_MONTHS[m-1] }}</th>
+                            {% endfor %}
+                            <th class="fp-pivot-total-col">รวมทั้งปี</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vid, row in pivot.items() %}
+                        {% set veh_label = pivot_labels.get(vid, vid|string) %}
+                        {% set row_total = namespace(v=0) %}
+                        {% for rv in row.values() %}{% set row_total.v = row_total.v + rv %}{% endfor %}
+                        <tr>
+                            <td class="fp-pivot-td-sticky" title="{{ veh_label }}">{{ veh_label }}</td>
+                            {% for m in range(1, 13) %}
+                            {% set cv = row.get(m, 0) %}
+                            {% if cv > 0 %}
+                            {% set heat = (cv / pivot_max * 100)|int %}
+                            <td class="fp-pivot-cell bb-num" style="--cell-heat:{{ heat }}">{{ '{:,.0f}'.format(cv) }}</td>
+                            {% else %}
+                            <td class="fp-pivot-cell-empty">—</td>
+                            {% endif %}
+                            {% endfor %}
+                            <td class="fp-pivot-total-col bb-num">{{ '{:,.0f}'.format(row_total.v) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="fp-pivot-th-sticky">รวม</td>
+                            {% for m in range(1, 13) %}
+                            {% set col = namespace(v=0) %}
+                            {% for vid, row in pivot.items() %}{% set col.v = col.v + row.get(m, 0) %}{% endfor %}
+                            <td class="bb-num">{% if col.v %}{{ '{:,.0f}'.format(col.v) }}{% else %}<span class="fp-pivot-cell-empty">—</span>{% endif %}</td>
+                            {% endfor %}
+                            {% set grand = namespace(v=0) %}
+                            {% for vid, row in pivot.items() %}{% for rv in row.values() %}{% set grand.v = grand.v + rv %}{% endfor %}{% endfor %}
+                            <td class="fp-pivot-total-col bb-num">{{ '{:,.0f}'.format(grand.v) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="bb-empty py-4">
+                <p class="bb-empty-title">ไม่มีข้อมูลบิลในปี {{ f_year + 543 }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ═══════════════════ TAB: ค้างเบิก ═══════════════════
+   เฉพาะบิล reserve ที่ยังไม่ "ได้เงินคืนแล้ว" · ปุ่ม "บิลใหม่" อยู่ที่นี่ที่เดียว (D)
+   filter chip (D5): ทะเบียนรถ + "อื่นๆ" — client-side · checkbox เฉพาะแถว "ใช้ไปแล้ว" #}
+<div class="fuel-tab-panel d-none" data-tab-panel="pending">
+    <div class="bb-card" id="pendingSection">
+        <div class="bb-card-head">
+            <h3 class="bb-card-title">
+                ค้างเบิก
+                <span class="bb-cell-muted" style="font-weight:400;font-size:.8125rem">{{ pending_reserve_bills|length }} บิล</span>
+            </h3>
+            <div class="d-flex gap-2">
+                <button type="button" class="bb-btn is-sec is-sm" id="attachBillsBtn" disabled
+                        title="ใส่บิลที่เลือกเข้าใบเบิก (เลือก ≥1 บิลก่อน)">
+                    <span class="material-symbols-rounded">assignment_turned_in</span>
+                    <span class="bb-btn-text">ใส่ใบเบิก<span id="pendingSelectedCount"></span></span>
+                </button>
+                <button type="button" class="bb-btn is-pri is-sm" id="pendingBillNewBtn" data-fuel-action="bill-create" title="กรอกบิลใหม่">
+                    <span class="material-symbols-rounded">add</span>
+                    <span class="bb-btn-text">บิลใหม่</span>
+                </button>
+            </div>
+        </div>
+
+        {% if pending_vehicle_ids %}
+        <div class="fp-chip-row" id="pendingFilterChips">
+            <button type="button" class="ue-chip is-on" data-vehicle-filter="">ทั้งหมด</button>
+            {% for vid in pending_vehicle_ids %}
+            <button type="button" class="ue-chip" data-vehicle-filter="{{ vid }}">{{ vehicle_labels.get(vid, vid) }}</button>
+            {% endfor %}
+            <button type="button" class="ue-chip" data-vehicle-filter="other">อื่นๆ</button>
+        </div>
+        {% endif %}
+
+        {% if pending_reserve_bills %}
+        <div class="bb-card-body p-0 table-responsive">
+            <table class="bb-table mb-0" id="pendingBillsTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="pendingCheckAll" title="เลือกบิล 'ใช้ไปแล้ว' ทั้งหมด"></th>
+                        <th>วันที่</th>
+                        <th>รถ</th>
+                        <th>คนขับ</th>
+                        <th class="text-end">จำนวน</th>
+                        <th>ช่องทาง</th>
+                        <th class="text-end">ไมล์</th>
+                        <th>ผู้สำรอง</th>
+                        <th>สถานะ</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="pendingBillsBody">
+                    {% for b in pending_reserve_bills %}
+                    {% set meta = pending_meta[b.id] %}
+                    <tr data-bill-id="{{ b.id }}"
+                        data-status="{{ meta.status }}"
+                        data-vehicle-key="{{ meta.filter_key }}"
+                        data-bill-date="{{ b.bill_date.isoformat() if b.bill_date else '' }}"
+                        data-bill-amount="{{ b.amount }}"
+                        data-bill-vehicle-id="{{ b.vehicle_id or '' }}"
+                        data-bill-driver-id="{{ b.driver_id or '' }}"
+                        data-bill-category="{{ b.category }}"
+                        data-bill-liters="{{ b.liters or '' }}"
+                        data-bill-mileage="{{ b.mileage or '' }}"
+                        data-bill-payment-method="{{ b.payment_method }}"
+                        data-bill-holder-id="{{ b.paid_by_holder_id or '' }}"
+                        data-bill-note="{{ b.note or '' }}">
+                        <td>
+                            <input type="checkbox" class="pending-check" value="{{ b.id }}"
+                                   {% if meta.status != 'ใช้ไปแล้ว' %}disabled title="เข้าใบเบิกแล้ว — เลือกซ้ำไม่ได้"{% endif %}>
+                        </td>
+                        <td class="bb-cell-muted">
+                            {%- if b.bill_date -%}
+                            {{ '%02d'|format(b.bill_date.day) }} {{ TH_MONTHS[b.bill_date.month - 1] }} {{ b.bill_date.year + 543 }}
+                            {%- else -%}—{%- endif -%}
+                        </td>
+                        <td class="bb-cell-strong">
+                            {{ vehicle_labels.get(b.vehicle_id, '—') if b.vehicle_id else '—' }}
+                            {% if b.category != 'fuel' %}<span class="bb-cell-sub">{{ category_labels.get(b.category, b.category) }}</span>{% endif %}
+                        </td>
+                        <td class="bb-cell-muted">{{ b.driver.name if b.driver else '—' }}</td>
+                        <td class="bb-cell-num">{{ '{:,.2f}'.format(b.amount) }}</td>
+                        <td><span class="bb-badge is-neutral">{{ PAYMENT_LABEL_TH.get(b.payment_method, b.payment_method) }}</span></td>
+                        <td class="bb-cell-num">{{ '{:,}'.format(b.mileage) if b.mileage else '—' }}</td>
+                        <td class="bb-cell-muted">{{ (b.paid_by.user.full_name or b.paid_by.user.username) if b.paid_by else '—' }}</td>
+                        <td>
+                            {% if meta.status == 'ใช้ไปแล้ว' %}
+                            <span class="bb-status-inline is-wr"><span class="material-symbols-rounded" style="font-size:18px">schedule</span>ใช้ไปแล้ว</span>
+                            {% else %}
+                            <span class="bb-status-inline is-info"><span class="material-symbols-rounded" style="font-size:18px">assignment_turned_in</span>ทำเรื่องเบิกแล้ว</span>
+                            {% endif %}
+                        </td>
+                        <td class="bb-table-actions">
+                            <button type="button" class="bb-btn is-sec is-sm is-icon" title="แก้ไข / ลบ" data-fuel-action="bill-edit">
+                                <span class="material-symbols-rounded">more_horiz</span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bb-empty py-4">
+            <div class="bb-empty-icon"><span class="material-symbols-rounded">receipt_long</span></div>
+            <p class="bb-empty-title">ยังไม่มีบิลค้างเบิก</p>
+            <p class="bb-empty-desc">กดปุ่ม "บิลใหม่" ด้านบนเพื่อเริ่มต้น</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ═══════════════════ TAB: จบแล้ว (D4) ═══════════════════
+   บิล reserve ที่ได้เงินคืนแล้ว + ตัดบัตร + จ่ายเอง — filter chip เดียวกับค้างเบิก
+   + chip สถานะย่อย (ได้เงินคืน/ตัดบัตร/จ่ายเอง) client-side ทั้งคู่ #}
+<div class="fuel-tab-panel d-none" data-tab-panel="finished">
+    <div class="bb-card" id="finishedSection">
+        <div class="bb-card-head">
+            <h3 class="bb-card-title">
+                จบแล้ว
+                <span class="bb-cell-muted" style="font-weight:400;font-size:.8125rem">{{ finished_bills|length }} บิล</span>
+            </h3>
+            <a href="{{ url_for('fuel.export_excel', year=f_year) }}" class="bb-btn is-sec is-sm" title="ดาวน์โหลด Excel (3 sheets: บิล / ใบเบิก / Pivot)">
+                <span class="material-symbols-rounded">download</span>
+                <span class="bb-btn-text">Excel</span>
+            </a>
+        </div>
+
+        {% if finished_vehicle_ids or finished_bills %}
+        <div class="fp-chip-row" id="finishedFilterChips">
+            <button type="button" class="ue-chip is-on" data-vehicle-filter="">ทั้งหมด</button>
+            {% for vid in finished_vehicle_ids %}
+            <button type="button" class="ue-chip" data-vehicle-filter="{{ vid }}">{{ vehicle_labels.get(vid, vid) }}</button>
+            {% endfor %}
+            <button type="button" class="ue-chip" data-vehicle-filter="other">อื่นๆ</button>
+        </div>
+        <div class="fp-chip-row" id="finishedStatusChips" style="padding-top:8px">
+            <button type="button" class="ue-chip is-on" data-status-filter="">ทุกสถานะ</button>
+            <button type="button" class="ue-chip" data-status-filter="ได้เงินคืน">ได้เงินคืน</button>
+            <button type="button" class="ue-chip" data-status-filter="ตัดบัตร">ตัดบัตร</button>
+            <button type="button" class="ue-chip" data-status-filter="จ่ายเอง">จ่ายเอง</button>
+        </div>
+        {% endif %}
+
+        {% if finished_bills %}
+        <div class="bb-card-body p-0 table-responsive">
+            <table class="bb-table mb-0" id="finishedBillsTable">
+                <thead>
+                    <tr>
+                        <th>วันที่</th>
+                        <th>รถ</th>
+                        <th>คนขับ</th>
+                        <th class="text-end">จำนวน</th>
+                        <th>ช่องทาง</th>
+                        <th>ผู้สำรอง</th>
+                        <th>สถานะ</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="finishedBillsBody">
+                    {% for b in finished_bills %}
+                    {% set meta = finished_meta[b.id] %}
+                    <tr data-bill-id="{{ b.id }}"
+                        data-vehicle-key="{{ meta.filter_key }}"
+                        data-finished-status="{{ meta.status }}"
+                        data-bill-date="{{ b.bill_date.isoformat() if b.bill_date else '' }}"
+                        data-bill-amount="{{ b.amount }}"
+                        data-bill-vehicle-id="{{ b.vehicle_id or '' }}"
+                        data-bill-driver-id="{{ b.driver_id or '' }}"
+                        data-bill-category="{{ b.category }}"
+                        data-bill-liters="{{ b.liters or '' }}"
+                        data-bill-mileage="{{ b.mileage or '' }}"
+                        data-bill-payment-method="{{ b.payment_method }}"
+                        data-bill-holder-id="{{ b.paid_by_holder_id or '' }}"
+                        data-bill-note="{{ b.note or '' }}">
+                        <td class="bb-cell-muted">
+                            {%- if b.bill_date -%}
+                            {{ '%02d'|format(b.bill_date.day) }} {{ TH_MONTHS[b.bill_date.month - 1] }} {{ b.bill_date.year + 543 }}
+                            {%- else -%}—{%- endif -%}
+                        </td>
+                        <td class="bb-cell-strong">
+                            {{ vehicle_labels.get(b.vehicle_id, '—') if b.vehicle_id else '—' }}
+                            {% if b.category != 'fuel' %}<span class="bb-cell-sub">{{ category_labels.get(b.category, b.category) }}</span>{% endif %}
+                        </td>
+                        <td class="bb-cell-muted">{{ b.driver.name if b.driver else '—' }}</td>
+                        <td class="bb-cell-num">{{ '{:,.2f}'.format(b.amount) }}</td>
+                        <td><span class="bb-badge is-neutral">{{ PAYMENT_LABEL_TH.get(b.payment_method, b.payment_method) }}</span></td>
+                        <td class="bb-cell-muted">{{ (b.paid_by.user.full_name or b.paid_by.user.username) if b.paid_by else '—' }}</td>
+                        <td>
+                            {% if meta.status == 'ได้เงินคืน' %}
+                            <span class="bb-status-inline is-ok"><span class="material-symbols-rounded" style="font-size:18px">check_circle</span>ได้เงินคืน</span>
+                            {% elif meta.status == 'ตัดบัตร' %}
+                            <span class="bb-status-inline is-info"><span class="material-symbols-rounded" style="font-size:18px">credit_card</span>ตัดบัตร</span>
+                            {% else %}
+                            <span class="bb-status-inline is-info"><span class="material-symbols-rounded" style="font-size:18px">volunteer_activism</span>จ่ายเอง</span>
+                            {% endif %}
+                        </td>
+                        <td class="bb-table-actions">
+                            <button type="button" class="bb-btn is-sec is-sm is-icon" title="แก้ไข / ลบ" data-fuel-action="bill-edit">
+                                <span class="material-symbols-rounded">more_horiz</span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bb-empty py-4">
+            <div class="bb-empty-icon"><span class="material-symbols-rounded">task_alt</span></div>
+            <p class="bb-empty-title">ยังไม่มีบิลที่จบแล้ว</p>
+            <p class="bb-empty-desc">บิลจะย้ายมาที่นี่หลังได้เงินคืน หรือถ้าเป็นบิลตัดบัตร/จ่ายเอง</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ═══════════════════ TAB: ใบเบิกเงิน ═══════════════════
+   วงจร: draft (แก้/ลบ/ใส่-ถอดบิลได้) → submitted (ล็อก, มีตารางคืนเงินรายคน) → received
+   detail รายใบ render จริงด้วย Jinja ใน <template> ซ่อนไว้ แล้ว JS ย้าย innerHTML เข้า modal #}
+<div class="fuel-tab-panel d-none" data-tab-panel="reimbursement">
+    <div class="bb-card" id="reimbursementSection">
+        <div class="bb-card-head">
+            <h3 class="bb-card-title">
+                ใบเบิกเงิน
+                <span class="bb-cell-muted" style="font-weight:400;font-size:.8125rem">{{ all_reimbursements|length }} ใบ</span>
+            </h3>
+            <button type="button" class="bb-btn is-pri is-sm" id="rbCreateBtn"
+                    data-bs-toggle="modal" data-bs-target="#reimbursementCreateModal" title="สร้างใบเบิกใหม่">
+                <span class="material-symbols-rounded">add</span>
+                <span class="bb-btn-text">สร้างใบเบิก</span>
+            </button>
+        </div>
+
+        {% if all_reimbursements %}
+        <div class="bb-card-body p-0 table-responsive">
+            <table class="bb-table mb-0">
+                <thead>
+                    <tr>
+                        <th>เลขที่</th>
+                        <th>แหล่งเบิก</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">จำนวนบิล</th>
+                        <th class="text-end">ยอดรวม</th>
+                        <th>วันส่ง</th>
+                        <th>วันได้เงิน</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rb in all_reimbursements %}
+                    {% set meta = rb_meta[rb.id] %}
+                    <tr>
+                        <td class="bb-cell-strong">
+                            {{ rb.reimbursement_no }}
+                            {% if meta.stale %}<span class="bb-badge is-wr" title="สร้างมาเกิน 14 วันแล้วยังไม่ส่งเรื่อง">ค้างนาน</span>{% endif %}
+                        </td>
+                        <td class="bb-cell-muted">{{ source_labels.get(rb.source_id, rb.source or '—') }}</td>
+                        <td>
+                            {% if rb.status == 'draft' %}
+                            <span class="bb-status-inline is-wr"><span class="material-symbols-rounded" style="font-size:18px">edit_note</span>ร่าง</span>
+                            {% elif rb.status == 'submitted' %}
+                            <span class="bb-status-inline is-info"><span class="material-symbols-rounded" style="font-size:18px">send</span>ส่งเรื่องแล้ว</span>
+                            {% else %}
+                            <span class="bb-status-inline is-ok"><span class="material-symbols-rounded" style="font-size:18px">check_circle</span>ได้เงินแล้ว</span>
+                            {% endif %}
+                        </td>
+                        <td class="bb-cell-num">{{ meta.bill_count }}</td>
+                        <td class="bb-cell-num bb-cell-strong">{{ '{:,.2f}'.format(meta.total) }}</td>
+                        <td class="bb-cell-muted">{{ rb.submitted_at.strftime('%d/%m/%Y') if rb.submitted_at else '—' }}</td>
+                        <td class="bb-cell-muted">{{ rb.received_at.strftime('%d/%m/%Y') if rb.received_at else '—' }}</td>
+                        <td class="bb-table-actions">
+                            <button type="button" class="bb-btn is-sec is-sm" data-rb-open="{{ rb.id }}"
+                                    data-rb-title="{{ rb.reimbursement_no }} · {{ source_labels.get(rb.source_id, rb.source or 'ไม่ระบุแหล่งเบิก') }}">
+                                เปิด
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bb-empty py-4">
+            <div class="bb-empty-icon"><span class="material-symbols-rounded">request_quote</span></div>
+            <p class="bb-empty-title">ยังไม่มีใบเบิก</p>
+            <p class="bb-empty-desc">กดปุ่ม "สร้างใบเบิก" ด้านบน หรือใส่บิลจาก tab "ค้างเบิก"</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# hidden — เนื้อหา detail ต่อใบเบิก (real DOM, ไม่ใช่ JSON) ให้ JS ย้ายเข้า modal #}
+<div class="d-none">
+    {% for rb in all_reimbursements %}
+    {% set meta = rb_meta[rb.id] %}
+    <template id="rbDetail{{ rb.id }}">
+        <div style="font-size:14px;color:var(--bb-mut)">ยอดรวมในใบเบิก</div>
+        <div class="bb-num" style="font-size:32px;font-weight:700;color:var(--bb-str);letter-spacing:-.02em;margin-bottom:14px">
+            ฿{{ '{:,.2f}'.format(meta.total) }}
+        </div>
+
+        {% if rb.status == 'draft' %}
+        <form method="POST" action="{{ url_for('fuel.edit_reimbursement', rb_id=rb.id) }}"
+              class="d-flex gap-2 align-items-end flex-wrap" style="margin-bottom:16px">
+            <div>
+                <label class="bb-label">เลขที่ใบเบิก</label>
+                <input type="text" class="bb-input" name="reimbursement_no" value="{{ rb.reimbursement_no }}" style="width:160px">
+            </div>
+            <div>
+                <label class="bb-label">แหล่งเบิก</label>
+                <select class="bb-input" name="source_id" style="width:160px">
+                    <option value="">— ไม่ระบุ —</option>
+                    {% for s in reimbursement_sources %}
+                    <option value="{{ s.id }}" {% if rb.source_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="bb-btn is-sec is-sm">บันทึก</button>
+        </form>
+        {% endif %}
+
+        {% if meta.bill_count %}
+        <table class="bb-table mb-0" style="margin-bottom:16px">
+            <thead><tr><th>วันที่</th><th>รถ</th><th>ผู้สำรอง</th><th class="text-end">จำนวน</th><th></th></tr></thead>
+            <tbody>
+                {% for b in rb.bills %}
+                <tr>
+                    <td class="bb-cell-muted">{{ b.bill_date.strftime('%d/%m/%Y') if b.bill_date else '—' }}</td>
+                    <td>{{ vehicle_labels.get(b.vehicle_id, '—') if b.vehicle_id else '—' }}</td>
+                    <td class="bb-cell-muted">{{ (b.paid_by.user.full_name or b.paid_by.user.username) if b.paid_by else '—' }}</td>
+                    <td class="bb-cell-num">{{ '{:,.2f}'.format(b.amount) }}</td>
+                    <td class="bb-table-actions">
+                        {% if rb.status == 'draft' %}
+                        <form method="POST" action="{{ url_for('fuel.detach_bill', bill_id=b.id) }}"
+                              onsubmit="return confirm('ถอดบิลนี้ออกจากใบเบิก?')">
+                            <button type="submit" class="bb-btn is-sec is-sm is-icon" title="ถอดบิล">
+                                <span class="material-symbols-rounded">remove_circle_outline</span>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="bb-hint" style="margin-bottom:16px">ยังไม่มีบิลในใบเบิกนี้ — ไปที่ tab "ค้างเบิก" เพื่อเลือกบิลเข้าใบนี้</p>
+        {% endif %}
+
+        {% if rb.status == 'draft' %}
+        <form method="POST" action="{{ url_for('fuel.submit_reimbursement', rb_id=rb.id) }}"
+              data-rb-submit-total="{{ meta.total }}" style="margin-bottom:10px">
+            <label class="bb-label" for="rbAmountReq{{ rb.id }}">ยอดที่เขียนในใบเบิกจริง (บาท)</label>
+            <input type="number" step="0.01" class="bb-input" id="rbAmountReq{{ rb.id }}"
+                   name="amount_requested" value="{{ '%.2f'|format(meta.total) }}">
+            <div style="height:10px"></div>
+            <button type="submit" class="bb-btn is-pri" {% if not meta.bill_count %}disabled{% endif %}>ส่งเรื่อง</button>
+        </form>
+        <form method="POST" action="{{ url_for('fuel.delete_reimbursement', rb_id=rb.id) }}"
+              onsubmit="return confirm('ลบใบเบิกนี้? บิลข้างในจะกลับสู่สถานะใช้ไปแล้ว')">
+            <button type="submit" class="bb-btn is-danger-sec is-sm">ลบใบเบิก</button>
+        </form>
+        {% endif %}
+
+        {% if rb.status == 'submitted' %}
+        <form method="POST" action="{{ url_for('fuel.receive_reimbursement', rb_id=rb.id) }}"
+              class="d-flex gap-2 align-items-end flex-wrap" style="margin-bottom:16px">
+            <div class="flex-grow-1">
+                <label class="bb-label" for="rbAmountRecv{{ rb.id }}">ยอดที่ได้เงินจริง</label>
+                <input type="number" step="0.01" class="bb-input" id="rbAmountRecv{{ rb.id }}"
+                       name="amount_received" value="{{ '%.2f'|format(rb.amount_requested or meta.total) }}" required>
+            </div>
+            <div>
+                <label class="bb-label">วันที่ได้เงิน</label>
+                <input type="date" class="bb-input" name="received_at" value="{{ today.isoformat() }}">
+            </div>
+            <button type="submit" class="bb-btn is-pri">บันทึกได้เงิน</button>
+        </form>
+        {% endif %}
+
+        {% if rb.status in ('submitted', 'received') %}
+        <div style="font-size:13px;color:var(--bb-mut);margin-bottom:6px">คืนเงินรายคน</div>
+        {% for st in meta.settlements %}
+        <div class="d-flex align-items-center justify-content-between" style="padding:8px 0;border-bottom:1px solid var(--bb-n100)">
+            <span>
+                {{ (st.holder.user.full_name or st.holder.user.username) if st.holder else '—' }}
+                <span class="bb-num">฿{{ '{:,.2f}'.format(st.amount) }}</span>
+            </span>
+            {% if st.settled_at %}
+            <span class="bb-status-inline is-ok"><span class="material-symbols-rounded" style="font-size:16px">check</span>คืนแล้ว {{ st.settled_at.strftime('%d/%m/%Y') }}</span>
+            {% elif rb.status == 'received' %}
+            <form method="POST" action="{{ url_for('fuel.settle_holder', settlement_id=st.id) }}">
+                <input type="hidden" name="settled_at" value="{{ today.isoformat() }}">
+                <button type="submit" class="bb-btn is-sec is-sm">คืนเงิน</button>
+            </form>
+            {% else %}
+            <span class="bb-cell-muted" style="font-size:13px">รอได้เงินคืนก่อน</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+    </template>
+    {% endfor %}
+</div>
+
+{# ═══════════════════ TAB: เจ้าหน้าที่ผู้สำรองเงิน ═══════════════════ #}
+<div class="fuel-tab-panel d-none" data-tab-panel="holders">
+    <div class="bb-card" id="holderSection">
+        <div class="bb-card-head">
+            <h3 class="bb-card-title">
+                เจ้าหน้าที่ผู้สำรองเงิน
+                <span class="bb-cell-muted" style="font-weight:400;font-size:.8125rem">{{ holder_rows|length }} คน</span>
+            </h3>
+            <button type="button" class="bb-btn is-pri is-sm" data-bs-toggle="modal" data-bs-target="#holderCreateModal"
+                    id="holderCreateBtn" title="เพิ่มเจ้าหน้าที่ผู้สำรองเงินคนใหม่">
+                <span class="material-symbols-rounded">person_add</span>
+                <span class="bb-btn-text">เพิ่มเจ้าหน้าที่</span>
+            </button>
+        </div>
+
+        {% if holder_rows %}
+        <div class="bb-card-body p-0 table-responsive">
+            <table class="bb-table mb-0">
+                <thead>
+                    <tr>
+                        <th>ชื่อ</th>
+                        <th>account</th>
+                        <th class="text-end">วงเงินสำรอง</th>
+                        <th class="text-end">ใช้ไปแล้ว</th>
+                        <th class="text-end">ทำเรื่องเบิกแล้ว</th>
+                        <th class="text-end">คงเหลือ</th>
+                        <th>สถานะ</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in holder_rows %}
+                    {% set h = row.holder %}
+                    <tr>
+                        <td class="bb-cell-strong">{{ h.user.full_name or h.user.username }}</td>
+                        <td class="bb-cell-muted">{{ h.user.username }}</td>
+                        <td class="bb-cell-num">{{ '{:,.0f}'.format(row.float_amount) }}</td>
+                        <td class="bb-cell-num">{{ '{:,.0f}'.format(row.used) }}</td>
+                        <td class="bb-cell-num">{{ '{:,.0f}'.format(row.submitted) }}</td>
+                        <td class="bb-cell-num bb-cell-strong">{{ '{:,.0f}'.format(row.balance) }}</td>
+                        <td>
+                            {% if h.is_active %}
+                            <span class="bb-status-inline is-ok"><span class="material-symbols-rounded" style="font-size:18px">check_circle</span>ทำงาน</span>
+                            {% else %}
+                            <span class="bb-status-inline is-dg"><span class="material-symbols-rounded" style="font-size:18px">cancel</span>ปิดใช้งาน</span>
+                            {% endif %}
+                        </td>
+                        <td class="bb-table-actions">
+                            <button type="button" class="bb-btn is-sec is-sm is-icon" title="จัดการเงินสำรอง"
+                                    data-holder-action="manage"
+                                    data-holder-id="{{ h.id }}"
+                                    data-holder-name="{{ h.user.full_name or h.user.username }}"
+                                    data-holder-float="{{ row.float_amount }}"
+                                    data-holder-used="{{ row.used }}"
+                                    data-holder-submitted="{{ row.submitted }}"
+                                    data-holder-balance="{{ row.balance }}"
+                                    data-holder-logs='{{ row.logs|tojson }}'>
+                                <span class="material-symbols-rounded">tune</span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bb-empty py-4">
+            <div class="bb-empty-icon"><span class="material-symbols-rounded">group</span></div>
+            <p class="bb-empty-title">ยังไม่มีเจ้าหน้าที่ผู้สำรองเงิน</p>
+            <p class="bb-empty-desc">กดปุ่ม "เพิ่มเจ้าหน้าที่" ด้านบนเพื่อเริ่มต้น</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block modals %}
 {% include 'vehicle/admin/modals/fuel_bill.html' %}
 {% include 'vehicle/admin/modals/fuel_reimbursement.html' %}
-{% include 'vehicle/admin/modals/fuel_reserve.html' %}
-{% include 'vehicle/admin/modals/fuel_price.html' %}
-{% include 'vehicle/admin/modals/fuel_budget.html' %}
+{% include 'vehicle/admin/modals/fuel_holder.html' %}
+{% include 'vehicle/admin/modals/fuel_attach.html' %}
+{% include 'vehicle/admin/modals/fuel_settings.html' %}
+{% endblock %}
 
-<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+{% block scripts %}
 <script type="module" src="{{ url_for('static', filename='vehicle/js/vehicle_fuel.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='core/js/dropdown.js') }}"></script>
-</body>
-</html>
+{% endblock %}
